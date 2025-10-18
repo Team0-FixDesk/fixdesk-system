@@ -1,33 +1,45 @@
-หน้าที่:
-ส่วนที่ผู้ใช้เห็นทั้งหมด (Vue 3 + Vite)
-เป็นระบบหน้าเว็บที่เชื่อมต่อกับ backend ผ่าน API
+# 🧰 FixDesk Frontend
 
-frontend/
-├── public/          # ไฟล์สาธารณะ (favicon, index.html)
+ส่วนของระบบที่ผู้ใช้เห็นทั้งหมด (Vue 3 + Vite + TailwindCSS)  
+เป็นหน้าเว็บที่เชื่อมต่อกับ Backend ผ่าน RESTful API
+
+---
+
+## ⚙️ เทคโนโลยีที่ใช้
+- **Vue 3 (Composition API)** – โครงสร้างหลักของ frontend  
+- **Vite** – เครื่องมือ build ที่รวดเร็ว  
+- **TailwindCSS** – ใช้ตกแต่ง UI  
+- **Pinia** – สำหรับจัดการ state ภายในระบบ  
+- **Vue Router** – จัดการเส้นทางภายในแอป  
+
+---
+
+## 📂 โครงสร้างโปรเจกต์
+
+```bash
+fixdesk-frontend/
+├── public/                # ไฟล์สาธารณะ (favicon, index.html)
 ├── src/
-│   ├── assets/      # ไฟล์ภาพ, CSS, icon
-│   ├── components/  # ส่วนย่อย ๆ ของ UI (ปุ่ม, input, card)
-│   ├── layouts/     # โครงร่างหลัก เช่น Navbar, Sidebar
-│   ├── pages/       # หน้าเต็ม เช่น Login, Dashboard, Report
-│   ├── router/      # เส้นทางหน้าเว็บ
-│   ├── store/       # จัดการ state (Pinia)
-│   ├── utils/       # ฟังก์ชันช่วย เช่น formatDate, validateForm
-│   ├── App.vue      # Component หลักของระบบ
-│   └── main.js      # จุดเริ่มต้นรัน Vue App
-├── package.json     # dependency และ script ของ frontend
-├── vite.config.js   # ตั้งค่า build / proxy
-└── README.md        # อธิบายวิธีรัน frontend
+│   ├── assets/            # ไฟล์ภาพ, CSS, icon, font
+│   │   └── main.css       # CSS หลัก (import Tailwind)
+│   ├── components/        # ส่วนย่อย ๆ ของ UI เช่น ปุ่ม, input, modal
+│   ├── layouts/           # โครงร่างหลัก เช่น Navbar, Sidebar, Footer
+│   ├── pages/             # หน้าหลัก เช่น Login, Dashboard, Report
+│   ├── router/            # เส้นทางหน้าเว็บ (index.js)
+│   ├── stores/            # จัดการ state ด้วย Pinia เช่น userStore, ticketStore
+│   ├── utils/             # ฟังก์ชันช่วย เช่น formatDate, validateForm
+│   ├── App.vue            # Component หลักของระบบ
+│   └── main.js            # จุดเริ่มต้นรัน Vue App
+│
+├── .vscode/               # การตั้งค่า VSCode (optional)
+├── .gitignore             # ไฟล์ที่ไม่ต้องการให้ git track
+├── .editorconfig          # มาตรฐานการจัดรูปแบบโค้ด
+├── package.json           # dependency และ script ของ frontend
+├── vite.config.js         # ตั้งค่า build / proxy ไป backend
+├── postcss.config.js      # ตั้งค่า Tailwind + Autoprefixer
+├── tailwind.config.js     # ตั้งค่า content scope ของ Tailwind
+└── README.md              # คำอธิบายโครงสร้างและวิธีใช้งาน
 
-รายละเอียดไฟล์สำคัญ
-
-ไฟล์	                หน้าที่
-src/main.js	          จุดเริ่มต้นของ Vue App
-src/App.vue	          หน้าแม่ของเว็บ มี <router-view>
-src/router/index.js	  กำหนดเส้นทางหน้า เช่น /login /dashboard
-src/store/	          จัดการข้อมูลผู้ใช้, token, ticket
-src/pages/	          หน้าที่สมบูรณ์ เช่น Login, Dashboard
-src/layouts/	        โครงร่างหน้าจอหลัก (Navbar, Sidebar)
-vite.config.js	      ใช้ตั้ง proxy ไป backend เช่น /api → localhost:5000
 
 # fixdesk-frontend
 
