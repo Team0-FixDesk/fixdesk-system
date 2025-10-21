@@ -60,9 +60,9 @@ const router = createRouter({
     { path: '/technician-my-stock',name: 'technician-my-stock', component: TechnicianMyStockView,},
 
     { path: '/stock-home',name: 'stock-home', component: StockHomeView,},
-    { path: '/stock-withdraw-list',name: 'technician-home', component: StockWithdrawListView,},
-    { path: '/stock-withdraw-history',name: 'technician-home', component: StockWithdrawHistoryView,},
-    { path: '/stock-manage-inventory',name: 'technician-home', component: StockManageInventoryView,},
+    { path: '/stock-withdraw-list',name: 'stock-withdraw-list', component: StockWithdrawListView,},
+    { path: '/stock-withdraw-history',name: 'stock-withdraw-history', component: StockWithdrawHistoryView,},
+    { path: '/stock-manage-inventory',name: 'stock-manage-inventory', component: StockManageInventoryView,},
 
 
   ],
