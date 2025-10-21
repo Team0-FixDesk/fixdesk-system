@@ -29,6 +29,10 @@ import StockWithdrawHistoryView from '../views/stock/stock-withdraw-history-view
 import StockWithdrawListView from '../views/stock/stock-withdraw-list-view.vue'
 
 
+
+
+
+
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
