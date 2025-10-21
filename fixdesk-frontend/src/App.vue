@@ -1,10 +1,18 @@
+<script setup>
+import Sidebar from './layouts/stock-sidebar.vue'
+</script>
+
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-gradient-to-r from-sky-400 to-indigo-600">
-    <h1 class="text-white text-4xl font-bold drop-shadow-lg">
-      🎉 Tailwind ทำงานแล้ว!
-    </h1>
+  <div class="relative">
+    <!-- Sidebar อยู่บนสุด -->
+    <Sidebar class="z-50" />
+
+    <!-- เนื้อหาหลัก -->
+    <main
+      class="p-6 bg-gray-50 min-h-screen transition-all duration-300"
+      style="padding-left: 120px;"
+    >
+      <RouterView />
+    </main>
   </div>
-
-
-  <RouterView />
 </template>
