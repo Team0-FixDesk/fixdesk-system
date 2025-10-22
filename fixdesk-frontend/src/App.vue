@@ -1,18 +1,8 @@
 <script setup>
-import Sidebar from './layouts/stock-sidebar.vue'
+import { RouterView } from 'vue-router'
 </script>
 
 <template>
-  <div class="relative">
-    <!-- Sidebar อยู่บนสุด -->
-    <Sidebar class="z-50" />
-
-    <!-- เนื้อหาหลัก -->
-    <main
-      class="p-6 bg-gray-50 min-h-screen transition-all duration-300"
-      style="padding-left: 120px;"
-    >
-      <RouterView />
-    </main>
-  </div>
+  <!-- App.vue แค่เป็น container -->
+  <RouterView />
 </template>
