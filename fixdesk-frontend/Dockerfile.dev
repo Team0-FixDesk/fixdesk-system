@@ -1,0 +1,25 @@
+# ================================
+# Dockerfile.dev (Frontend)
+# ================================
+
+FROM node:lts-alpine
+
+WORKDIR /app
+
+# คัดลอกไฟล์ package.json และ package-lock.json
+COPY package*.json ./
+
+# ติดตั้ง dependencies
+RUN npm install
+
+# ✅ ล้าง node_modules และ lock แล้วติดตั้งใหม่ + rebuild rollup (แก้บั๊ก rollup-linux-x64-gnu)
+RUN rm -rf node_modules package-lock.json && npm install && npm rebuild rollup
+
+# คัดลอกโค้ดทั้งหมด
+COPY . .
+
+# เปิดพอร์ต 5173 (vite)
+EXPOSE 5173
+
+# รัน dev server
+CMD ["npm", "run", "dev"]
