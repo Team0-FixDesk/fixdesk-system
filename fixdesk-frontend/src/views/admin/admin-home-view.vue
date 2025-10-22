@@ -16,34 +16,34 @@
 
     <!-- Stats cards -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-      <!-- Card 1 -->
+      <!-- Card 1: งานทั้งหมดในวันนี้ -->
       <div class="bg-white rounded-lg shadow p-6">
         <div class="text-center">
-          <h2 class="text-2xl font-bold text-blue-600">5 งาน</h2>
+          <h2 class="text-2xl font-bold text-blue-600">{{ todayTasksCount }} งาน</h2>
           <p class="text-gray-600 text-sm">งานทั้งหมดในวันนี้</p>
         </div>
       </div>
 
-      <!-- Card 2 -->
+      <!-- Card 2: กำลังดำเนินการ -->
       <div class="bg-white rounded-lg shadow p-6">
         <div class="text-center">
-          <h2 class="text-2xl font-bold text-orange-500">5 งาน</h2>
+          <h2 class="text-2xl font-bold text-orange-500">{{ inProgressTasksCount }} งาน</h2>
           <p class="text-gray-600 text-sm">กำลังดำเนินการ</p>
         </div>
       </div>
 
-      <!-- Card 3 -->
+      <!-- Card 3: เสร็จสิ้น (7 วัน) -->
       <div class="bg-white rounded-lg shadow p-6">
         <div class="text-center">
-          <h2 class="text-2xl font-bold text-green-600">7 งาน</h2>
+          <h2 class="text-2xl font-bold text-green-600">{{ completedTasksCount }} งาน</h2>
           <p class="text-gray-600 text-sm">เสร็จสิ้น (7 วัน)</p>
         </div>
       </div>
 
-      <!-- Card 4 -->
+      <!-- Card 4: ยกเลิก (7 วัน) -->
       <div class="bg-white rounded-lg shadow p-6">
         <div class="text-center">
-          <h2 class="text-2xl font-bold text-red-600">1 งาน</h2>
+          <h2 class="text-2xl font-bold text-red-600">{{ cancelledTasksCount }} งาน</h2>
           <p class="text-gray-600 text-sm">ยกเลิก (7 วัน)</p>
         </div>
       </div>
@@ -56,46 +56,62 @@
       </div>
 
       <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200">
-          <thead class="bg-gray-50">
-            <tr>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">วันที่</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ใบแจ้งซ่อม</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ชื่อผู้แจ้ง</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ประเภท</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">หมายเลขครุภัณฑ์</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">หน่วยงาน</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ความเร่งด่วน</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">สถานะงาน</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">รายละเอียด</th>
-            </tr>
-          </thead>
-          <tbody class="bg-white divide-y divide-gray-200">
-            <tr v-for="(request, index) in repairRequests" :key="index" class="hover:bg-gray-50">
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ request.date }}</td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ request.ticketId }}</td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ request.requesterName }}</td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ request.type }}</td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ request.assetId }}</td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ request.department }}</td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <span :class="`inline-flex px-2 py-1 text-xs font-medium rounded-full ${request.urgency === 'เร่งด่วนมาก' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}`">
-                  {{ request.urgency }}
-                </span>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <span :class="`inline-flex px-2 py-1 text-xs font-medium rounded-full ${request.status === 'รอดำเนินการ' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`">
-                  {{ request.status }}
-                </span>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm">
-                <button class="text-blue-600 border border-blue-600 hover:bg-blue-50 px-3 py-1 rounded-md text-sm">
-                  รายละเอียด
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <div class="min-h-[372px]"> <!-- กำหนดความสูงขั้นต่ำคงที่ -->
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">วันที่</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ใบแจ้งซ่อม</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ชื่อผู้แจ้ง</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ประเภท</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">หมายเลขครุภัณฑ์</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">หน่วยงาน</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ความเร่งด่วน</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">สถานะงาน</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">รายละเอียด</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              <!-- แสดงข้อมูลในหน้าปัจจุบัน -->
+              <tr v-for="(request, index) in paginatedRequests" :key="request.ticketId" class="hover:bg-gray-50">
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ request.date }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ request.ticketId }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ request.requesterName }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ request.type }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ request.assetId }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ request.department }}</td>
+                <!-- ส่วนแสดงความเร่งด่วน -->
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span :class="getUrgencyClass(request.urgency)" class="inline-flex w-28 justify-center items-center px-3 py-1 text-xs font-medium rounded-full">
+                    {{ request.urgency }}
+                  </span>
+                </td>
+
+                <!-- ส่วนแสดงสถานะ -->
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span :class="getStatusClass(request.status)" class="inline-flex w-28 justify-center items-center px-3 py-1 text-xs font-medium rounded-full">
+                    {{ request.status }}
+                  </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm">
+                  <button class="text-blue-600 border border-blue-600 hover:bg-blue-50 px-3 py-1 rounded-md text-sm">
+                    รายละเอียด
+                  </button>
+                </td>
+              </tr>
+
+              <!-- เพิ่มแถวว่างเพื่อให้ตารางมีความสูงคงที่เสมอ -->
+              <tr v-for="i in Math.max(0, itemsPerPage - paginatedRequests.length)" :key="`empty-${i}`" class="h-[53px] empty-row">
+                <td v-for="j in 9" :key="`empty-cell-${j}`" class="px-6 py-4 whitespace-nowrap"></td>
+              </tr>
+
+              <!-- แสดงข้อความเมื่อไม่มีข้อมูล -->
+              <tr v-if="paginatedRequests.length === 0" key="no-data">
+                <td colspan="9" class="px-6 py-8 text-center text-gray-500">ไม่พบข้อมูลรายการแจ้งซ่อม</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <!-- Pagination -->
@@ -103,38 +119,67 @@
         <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
           <div>
             <p class="text-sm text-gray-700">
-              แสดง <span class="font-medium">1</span> ถึง <span class="font-medium">5</span> จากทั้งหมด <span class="font-medium">20</span> รายการ
+              แสดง
+              <span class="font-medium">{{ startItem }}</span>
+              ถึง
+              <span class="font-medium">{{ endItem }}</span>
+              จากทั้งหมด
+              <span class="font-medium">{{ repairRequests.length }}</span>
+              รายการ
             </p>
           </div>
           <div>
             <nav class="inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-              <a href="#" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+              <!-- ปุ่มก่อนหน้า -->
+              <button
+                @click="prevPage"
+                :disabled="currentPage === 1"
+                :class="[
+                  'relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium',
+                  currentPage === 1
+                    ? 'text-gray-300 cursor-not-allowed'
+                    : 'text-gray-500 hover:bg-gray-50 cursor-pointer'
+                ]"
+              >
                 <span class="sr-only">Previous</span>
                 <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                 </svg>
-              </a>
-              <a href="#" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
-                1
-              </a>
-              <a href="#" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-blue-50 text-sm font-medium text-blue-600 hover:bg-blue-100">
-                2
-              </a>
-              <a href="#" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
-                3
-              </a>
-              <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
-                ...
-              </span>
-              <a href="#" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
-                10
-              </a>
-              <a href="#" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+              </button>
+
+              <!-- หมายเลขหน้า -->
+              <button
+                v-for="page in displayedPageNumbers"
+                :key="page"
+                @click="page === '...' ? null : goToPage(page)"
+                :class="[
+                  'relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium',
+                  page === '...'
+                    ? 'bg-white text-gray-700 cursor-default'
+                    : page === currentPage
+                    ? 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+                    : 'bg-white text-gray-700 hover:bg-gray-50 cursor-pointer'
+                ]"
+              >
+                {{ page }}
+              </button>
+
+              <!-- ปุ่มถัดไป -->
+              <button
+                @click="nextPage"
+                :disabled="currentPage === totalPages"
+                :class="[
+                  'relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium',
+                  currentPage === totalPages
+                    ? 'text-gray-300 cursor-not-allowed'
+                    : 'text-gray-500 hover:bg-gray-50 cursor-pointer'
+                ]"
+              >
                 <span class="sr-only">Next</span>
                 <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                 </svg>
-              </a>
+              </button>
             </nav>
           </div>
         </div>
@@ -144,13 +189,13 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 
-// Mock data สำหรับแสดงในตาราง
+// Mock data สำหรับแสดงในตาราง และการทดสอบ stats
 const repairRequests = ref([
   {
-    date: '11/11/1111',
-    ticketId: 'ABC-000',
+    date: '10/23/2025', // วันนี้
+    ticketId: 'ABC-001',
     requesterName: 'ABC',
     type: 'ไฟฟ้า',
     assetId: 'ABC-000',
@@ -159,46 +204,204 @@ const repairRequests = ref([
     status: 'รอดำเนินการ'
   },
   {
-    date: '11/11/1111',
-    ticketId: 'ABC-000',
+    date: '10/23/2025', // วันนี้
+    ticketId: 'ABC-888',
     requesterName: 'ABC',
     type: 'ไฟฟ้า',
-    assetId: 'ABC-000',
-    department: 'ABC-000',
+    assetId: 'ABC-888',
+    department: 'ABC-888',
     urgency: 'เร่งด่วนมาก',
     status: 'รอดำเนินการ'
   },
   {
-    date: '11/11/1111',
-    ticketId: 'ABC-000',
-    requesterName: 'ABC',
+    date: '10/23/2025', // วันนี้
+    ticketId: 'ABC-002',
+    requesterName: 'DEF',
     type: 'ไฟฟ้า',
     assetId: 'ABC-000',
     department: 'ABC-000',
     urgency: 'เร่งด่วนมาก',
-    status: 'รอดำเนินการ'
+    status: 'กำลังดำเนินการ'
   },
   {
-    date: '11/11/1111',
-    ticketId: 'ABC-000',
-    requesterName: 'ABC',
+    date: '10/20/2025', // ภายใน 7 วัน
+    ticketId: 'ABC-003',
+    requesterName: 'GHI',
     type: 'ไฟฟ้า',
     assetId: 'ABC-000',
     department: 'ABC-000',
     urgency: 'เร่งด่วนมาก',
-    status: 'รอดำเนินการ'
+    status: 'เสร็จสิ้น'
   },
   {
-    date: '11/11/1111',
-    ticketId: 'ABC-000',
-    requesterName: 'ABC',
+    date: '10/19/2025', // ภายใน 7 วัน
+    ticketId: 'ABC-004',
+    requesterName: 'JKL',
     type: 'ไฟฟ้า',
     assetId: 'ABC-000',
     department: 'ABC-000',
-    urgency: 'เร่งด่วนมาก',
-    status: 'รอดำเนินการ'
+    urgency: 'ปกติ',
+    status: 'ยกเลิก'
+  },
+  {
+    date: '10/10/2025', // เกิน 7 วัน
+    ticketId: 'ABC-005',
+    requesterName: 'MNO',
+    type: 'ไฟฟ้า',
+    assetId: 'ABC-000',
+    department: 'ABC-000',
+    urgency: 'ปกติ',
+    status: 'เสร็จสิ้น'
   }
 ])
+
+// ฟังก์ชันช่วยเหลือสำหรับการเปรียบเทียบวันที่
+const isToday = (dateString) => {
+  const today = new Date()
+  const date = new Date(dateString)
+  return date.toDateString() === today.toDateString()
+}
+
+const isWithinLastSevenDays = (dateString) => {
+  const today = new Date()
+  const date = new Date(dateString)
+  const diffTime = Math.abs(today - date)
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+  return diffDays <= 7
+}
+
+// คำนวณจำนวนงานตามเงื่อนไขต่างๆ
+const todayTasksCount = computed(() => {
+  return repairRequests.value.filter(request => isToday(request.date)).length
+})
+
+const inProgressTasksCount = computed(() => {
+  return repairRequests.value.filter(request => request.status === 'กำลังดำเนินการ').length
+})
+
+const completedTasksCount = computed(() => {
+  return repairRequests.value.filter(request =>
+    request.status === 'เสร็จสิ้น' && isWithinLastSevenDays(request.date)
+  ).length
+})
+
+const cancelledTasksCount = computed(() => {
+  return repairRequests.value.filter(request =>
+    request.status === 'ยกเลิก' && isWithinLastSevenDays(request.date)
+  ).length
+})
+
+// ฟังก์ชันสำหรับการกำหนดคลาสของสถานะ
+const getStatusClass = (status) => {
+  switch (status) {
+    case 'รอดำเนินการ':
+      return 'bg-[#FFF3D4] text-[#D97706]'
+    case 'กำลังดำเนินการ':
+      return 'bg-[#CFEBFF] text-[#005D9F]'
+    case 'เสร็จสิ้น':
+      return 'bg-[#D1FAE5] text-[#059669]'
+    case 'ยกเลิก':
+      return 'bg-red-100 text-red-800'
+    default:
+      return 'bg-gray-100 text-gray-800'
+  }
+}
+
+// ฟังก์ชันสำหรับการกำหนดคลาสของความเร่งด่วน
+const getUrgencyClass = (urgency) => {
+  switch (urgency) {
+    case 'เร่งด่วนมาก':
+      return 'bg-red-100 text-red-800'
+    case 'เร่งด่วน':
+      return 'bg-orange-100 text-orange-800'
+    case 'ปกติ':
+      return 'bg-yellow-100 text-yellow-800'
+    default:
+      return 'bg-gray-100 text-gray-800'
+  }
+}
+
+// ตัวแปรสำหรับ Pagination
+const currentPage = ref(1)
+const itemsPerPage = 5
+
+// ข้อมูลที่แสดงในหน้าปัจจุบัน
+const paginatedRequests = computed(() => {
+  const startIndex = (currentPage.value - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  return repairRequests.value.slice(startIndex, endIndex)
+})
+
+// คำนวณจำนวนหน้าทั้งหมด
+const totalPages = computed(() => {
+  return Math.ceil(repairRequests.value.length / itemsPerPage)
+})
+
+// แสดงเลขหน้าแบบฉลาด (เช่น 1, 2, 3, ..., 10)
+const displayedPageNumbers = computed(() => {
+  const total = totalPages.value
+  const current = currentPage.value
+  const delta = 1 // จำนวนหน้าที่แสดงก่อนและหลังหน้าปัจจุบัน
+
+  let pages = []
+
+  // แสดงหน้าแรกเสมอ
+  pages.push(1)
+
+  // คำนวณช่วงรอบหน้าปัจจุบัน
+  const rangeStart = Math.max(2, current - delta)
+  const rangeEnd = Math.min(total - 1, current + delta)
+
+  // เพิ่ม ... หลังหน้าแรก (ถ้าจำเป็น)
+  if (rangeStart > 2) {
+    pages.push('...')
+  }
+
+  // เพิ่มหน้าในช่วงกลาง
+  for (let i = rangeStart; i <= rangeEnd; i++) {
+    pages.push(i)
+  }
+
+  // เพิ่ม ... ก่อนหน้าสุดท้าย (ถ้าจำเป็น)
+  if (rangeEnd < total - 1 && total > 1) {
+    pages.push('...')
+  }
+
+  // แสดงหน้าสุดท้ายเสมอ (ถ้ามีมากกว่า 1 หน้า)
+  if (total > 1) {
+    pages.push(total)
+  }
+
+  return pages
+})
+
+// คำนวณตำแหน่งรายการแรกและสุดท้ายในหน้าปัจจุบัน
+const startItem = computed(() => {
+  return repairRequests.value.length === 0
+    ? 0
+    : (currentPage.value - 1) * itemsPerPage + 1
+})
+
+const endItem = computed(() => {
+  return Math.min(currentPage.value * itemsPerPage, repairRequests.value.length)
+})
+
+// ฟังก์ชันสำหรับการนำทางไปยังหน้าต่างๆ
+const goToPage = (page) => {
+  currentPage.value = Number(page)
+}
+
+const prevPage = () => {
+  if (currentPage.value > 1) {
+    currentPage.value--
+  }
+}
+
+const nextPage = () => {
+  if (currentPage.value < totalPages.value) {
+    currentPage.value++
+  }
+}
 
 // เตรียมสำหรับการเชื่อมต่อ API ในอนาคต
 // const fetchRepairRequests = async () => {
@@ -218,3 +421,10 @@ const repairRequests = ref([
 
 defineOptions({ name: 'AdminHomeView' })
 </script>
+
+<style>
+/* แก้ไข border ของ cell ที่ว่างเปล่า - ส่วนนี้ยังคงไว้ */
+.empty-row td {
+  border-bottom: 1px solid #e5e7eb;
+}
+</style>
