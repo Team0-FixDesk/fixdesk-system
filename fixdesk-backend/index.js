@@ -37,7 +37,7 @@ app.post('/auth/login', (req, res) => {
     return res.status(400).json({ message: 'กรุณากรอก user_name และ password' })
 
   const query = `
-    SELECT u.us_id, u.us_user_name, u.us_user_pass, r.role_name
+    SELECT u.us_id, u.us_user_name, u.us_user_pass, u.us_name, r.role_name
     FROM user u
     LEFT JOIN role r ON u.us_role_id = r.role_id
     WHERE u.us_user_name=? LIMIT 1
@@ -47,13 +47,13 @@ app.post('/auth/login', (req, res) => {
     if (!results.length) return res.status(401).json({ message: 'ชื่อผู้ใช้ไม่ถูกต้อง' })
 
     const user = results[0]
-    const match = await bcrypt.compare(password, user.us_user_pass) // ✅ ตรวจรหัสผ่านแบบเข้ารหัส
-
+    const match = await bcrypt.compare(password, user.us_user_pass)
     if (!match) return res.status(401).json({ message: 'รหัสผ่านไม่ถูกต้อง' })
 
     const payload = {
       us_id: user.us_id,
       us_user_name: user.us_user_name,
+      us_name: user.us_name,       // ✅ เพิ่มชื่อจริง
       role_name: user.role_name,
     }
 
@@ -61,6 +61,7 @@ app.post('/auth/login', (req, res) => {
     res.json({ token })
   })
 })
+
 
 /* =========================
    POST /users (add user) — with bcrypt
