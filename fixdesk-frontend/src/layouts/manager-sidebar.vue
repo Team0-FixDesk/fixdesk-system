@@ -1,26 +1,9 @@
 <script setup>
-import { ref, onMounted } from 'vue'
-import { jwtDecode } from 'jwt-decode'
+import { ref } from 'vue'
+import SidebarProfile from '@/components/sidebar-profile.vue'
 
 // สถานะเปิด/ปิด sidebar
 const isOpen = ref(false)
-const showDropdown = ref(false)
-
-// ชื่อผู้ใช้จาก token
-const userFullname = ref('')
-
-// โหลด token ตอนเข้าเว็บ
-onMounted(() => {
-  const token = localStorage.getItem('token')
-  if (token) {
-    try {
-      const decoded = jwtDecode(token)
-      userFullname.value = decoded.us_name || decoded.us_user_name || 'ผู้ใช้ระบบ'
-    } catch (err) {
-      console.error('❌ Decode token error:', err)
-    }
-  }
-})
 
 // รายการเมนู
 const menus = [
@@ -31,11 +14,6 @@ const menus = [
   { icon: '/icon/sidebar/report-icon.svg', label: 'สร้างรายงาน', path: '/main/manager-summary' },
 ]
 
-// ออกจากระบบ
-function logout() {
-  localStorage.removeItem('token')
-  window.location.href = '/login'
-}
 </script>
 
 <template>
@@ -76,50 +54,6 @@ function logout() {
         </span>
       </RouterLink>
     </nav>
-
-    <!-- Footer โปรไฟล์ผู้ใช้ -->
-    <footer
-      class="relative border-t border-blue-700 px-4 py-3 flex items-center gap-3 hover:bg-blue-800 transition-all duration-300 cursor-pointer select-none"
-      @click="showDropdown = !showDropdown"
-    >
-      <!-- icon ผู้ใช้ -->
-      <div class="flex items-center justify-center w-10 h-10 rounded-full bg-blue-600 shrink-0">
-        <img src="/icon/sidebar/person-icon.svg" alt="User Icon" class="w-6 h-6" />
-      </div>
-
-      <!-- ชื่อผู้ใช้ -->
-      <div v-show="isOpen" class="flex flex-col text-white leading-tight">
-        <span class="text-lg font-semibold">{{ userFullname }}</span>
-      </div>
-
-      <!-- ลูกศร -->
-      <img
-        v-if="isOpen"
-        :src="showDropdown ? '/icon/sidebar/chevron-down-icon.svg' : '/icon/sidebar/chevron-up-icon.svg'"
-        alt="Chevron Icon"
-        class="w-5 h-5 ml-auto transition-transform duration-200"
-      />
-
-      <!-- เมนูย่อย -->
-      <div
-        v-if="showDropdown && isOpen"
-        class="absolute bottom-16 left-0 w-full bg-blue-900 rounded-lg shadow-lg py-2 z-50"
-      >
-        <button
-          class="flex items-center w-full gap-2 px-4 py-2 text-left hover:bg-blue-800 transition-all"
-        >
-          <img src="/icon/sidebar/settings-icon.svg" class="w-4 h-4" />
-          <span class="text-white text-sm">ตั้งค่าบัญชี</span>
-        </button>
-
-        <button
-          @click="logout"
-          class="flex items-center w-full gap-2 px-4 py-2 text-left hover:bg-blue-800 transition-all"
-        >
-          <img src="/icon/sidebar/logout-icon.svg" class="w-4 h-4" />
-          <span class="text-white text-sm">ออกจากระบบ</span>
-        </button>
-      </div>
-    </footer>
+    <SidebarProfile :expanded="isOpen" />
   </aside>
 </template>

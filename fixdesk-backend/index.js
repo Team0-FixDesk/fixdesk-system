@@ -2,7 +2,7 @@ require('dotenv').config()
 const express = require('express')
 const mysql = require('mysql2')
 const cors = require('cors')
-const bcrypt = require('bcrypt') // ✅ เพิ่มเข้ามา
+const bcrypt = require('bcrypt')
 const { authMiddleware, signToken } = require('./auth')
 
 const app = express()
@@ -37,11 +37,14 @@ app.post('/auth/login', (req, res) => {
     return res.status(400).json({ message: 'กรุณากรอก user_name และ password' })
 
   const query = `
-    SELECT u.us_id, u.us_user_name, u.us_user_pass, u.us_name, r.role_name
+    SELECT u.us_id, u.us_user_name, u.us_user_pass,
+           u.us_first_name_th, u.us_last_name_th,
+           r.role_name
     FROM user u
     LEFT JOIN role r ON u.us_role_id = r.role_id
     WHERE u.us_user_name=? LIMIT 1
   `
+
   db.query(query, [user_name], async (err, results) => {
     if (err) return res.status(500).json({ message: 'เกิดข้อผิดพลาด', error: err.message })
     if (!results.length) return res.status(401).json({ message: 'ชื่อผู้ใช้ไม่ถูกต้อง' })
@@ -50,10 +53,11 @@ app.post('/auth/login', (req, res) => {
     const match = await bcrypt.compare(password, user.us_user_pass)
     if (!match) return res.status(401).json({ message: 'รหัสผ่านไม่ถูกต้อง' })
 
+    // ✅ ส่งชื่อจริงภาษาไทยไปใน token ด้วย
     const payload = {
       us_id: user.us_id,
       us_user_name: user.us_user_name,
-      us_name: user.us_name,       // ✅ เพิ่มชื่อจริง
+      us_first_name_th: user.us_first_name_th, // 👈 เพิ่มตรงนี้
       role_name: user.role_name,
     }
 
@@ -64,22 +68,52 @@ app.post('/auth/login', (req, res) => {
 
 
 /* =========================
-   POST /users (add user) — with bcrypt
+   POST /users (add user)
    ========================= */
 app.post('/users', async (req, res) => {
-  const { us_user_name, us_user_pass, us_name, us_phone, us_department, us_role_id, us_tt_id } = req.body
+  const {
+    us_user_name,
+    us_user_pass,
+    us_ttn_id,
+    us_first_name_th,
+    us_last_name_th,
+    us_first_name_en,
+    us_last_name_en,
+    us_phone,
+    us_department,
+    us_role_id,
+    us_tt_id,
+  } = req.body
 
-  if (!us_user_name || !us_user_pass || !us_name || !us_role_id)
+  if (!us_user_name || !us_user_pass || !us_first_name_th || !us_last_name_th || !us_role_id)
     return res.status(400).json({ message: 'กรุณากรอกข้อมูลให้ครบ' })
 
   try {
-    const hashedPassword = await bcrypt.hash(us_user_pass, 10) // ✅ เข้ารหัสก่อนบันทึก
+    const hashedPassword = await bcrypt.hash(us_user_pass, 10)
 
     const query = `
-      INSERT INTO user (us_user_name, us_user_pass, us_name, us_phone, us_department, us_role_id, us_tt_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO user (
+        us_user_name, us_user_pass, us_ttn_id,
+        us_first_name_th, us_last_name_th,
+        us_first_name_en, us_last_name_en,
+        us_phone, us_department,
+        us_role_id, us_tt_id
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `
-    const params = [us_user_name, hashedPassword, us_name, us_phone, us_department, us_role_id, us_tt_id ?? null]
+    const params = [
+      us_user_name,
+      hashedPassword,
+      us_ttn_id || null,
+      us_first_name_th,
+      us_last_name_th,
+      us_first_name_en || null,
+      us_last_name_en || null,
+      us_phone || null,
+      us_department || null,
+      us_role_id,
+      us_tt_id || null,
+    ]
 
     db.query(query, params, (err, result) => {
       if (err) {
@@ -95,15 +129,23 @@ app.post('/users', async (req, res) => {
 })
 
 /* =========================
-   GET /users
+   GET /users (list all)
    ========================= */
 app.get('/users', (req, res) => {
   const query = `
-    SELECT u.us_id, u.us_user_name, u.us_name, u.us_phone,
-           u.us_department, r.role_name, t.tt_name
+    SELECT
+      u.us_id,
+      u.us_user_name,
+      CONCAT(tn.ttn_title_th, '', u.us_first_name_th, ' ', u.us_last_name_th) AS full_name,
+      u.us_phone,
+      u.us_department,
+      r.role_name,
+      t.tt_name AS technician_type,
+      tn.ttn_title_th AS title_name
     FROM user u
     LEFT JOIN role r ON u.us_role_id = r.role_id
     LEFT JOIN technician_type t ON u.us_tt_id = t.tt_id
+    LEFT JOIN title_name tn ON u.us_ttn_id = tn.ttn_id
     ORDER BY u.us_id ASC
   `
   db.query(query, (err, results) => {
@@ -113,19 +155,52 @@ app.get('/users', (req, res) => {
 })
 
 /* =========================
-   PUT /users/:id
+   PUT /users/:id (update)
    ========================= */
 app.put('/users/:id', (req, res) => {
   const id = Number(req.params.id)
-  const { us_name, us_phone, us_department, us_role_id, us_tt_id } = req.body
   if (!Number.isFinite(id)) return res.status(400).json({ message: 'id ไม่ถูกต้อง' })
+
+  const {
+    us_ttn_id,
+    us_first_name_th,
+    us_last_name_th,
+    us_first_name_en,
+    us_last_name_en,
+    us_phone,
+    us_department,
+    us_role_id,
+    us_tt_id,
+  } = req.body
 
   const query = `
     UPDATE user
-    SET us_name=?, us_phone=?, us_department=?, us_role_id=?, us_tt_id=?
+    SET
+      us_ttn_id=?,
+      us_first_name_th=?,
+      us_last_name_th=?,
+      us_first_name_en=?,
+      us_last_name_en=?,
+      us_phone=?,
+      us_department=?,
+      us_role_id=?,
+      us_tt_id=?
     WHERE us_id=?
   `
-  db.query(query, [us_name, us_phone, us_department, us_role_id, us_tt_id, id], (err, result) => {
+  const params = [
+    us_ttn_id || null,
+    us_first_name_th,
+    us_last_name_th,
+    us_first_name_en || null,
+    us_last_name_en || null,
+    us_phone || null,
+    us_department || null,
+    us_role_id,
+    us_tt_id || null,
+    id,
+  ]
+
+  db.query(query, params, (err, result) => {
     if (err) return res.status(500).json({ message: 'อัปเดตไม่สำเร็จ', error: err.message })
     res.json({ updated: result.affectedRows })
   })
@@ -148,4 +223,4 @@ app.delete('/users/:id', (req, res) => {
    SERVER START
    ========================= */
 const PORT = process.env.PORT || 3000
-app.listen(PORT, () => console.log(`🚀 FixDesk User API running on port ${PORT}`))
+app.listen(PORT, () => console.log(`🚀 FixDesk User API (v2.0.1) running on port ${PORT}`))

@@ -46,11 +46,38 @@ const handleLogin = async (e) => {
     // ✅ เก็บ token
     localStorage.setItem('token', data.token)
 
-    // ✅ ไปหน้า home-admin
-    router.push('/main')
+    // ✅ decode token เพื่ออ่าน role_name
+    const payload = JSON.parse(atob(data.token.split('.')[1]))
+    const role = payload.role_name
+    console.log('✅ role:', role)
+
+    // ✅ redirect ตาม role_name
+    switch (role) {
+      case 'Admin':
+        router.push('/main/admin-home')
+        break
+      case 'Technician':
+        router.push('/main/technician-home')
+        break
+      case 'Stock':
+        router.push('/main/stock-home')
+        break
+      case 'Manager':
+        router.push('/main/manager-home')
+        break
+      default:
+        router.push('/main/user-home')
+        break
+    }
   } catch (err) {
     console.error('❌ Login error:', err)
-    errorMessage.value = err.message
+    if (err.message.includes('ชื่อผู้ใช้')) {
+      errorMessage.value = 'ไม่พบชื่อผู้ใช้นี้ในระบบ'
+    } else if (err.message.includes('รหัสผ่าน')) {
+      errorMessage.value = 'รหัสผ่านไม่ถูกต้อง'
+    } else {
+      errorMessage.value = 'เข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่อีกครั้ง'
+    }
   } finally {
     isLoading.value = false
   }
@@ -100,10 +127,19 @@ const handleLogin = async (e) => {
         </form>
 
         <!-- แสดงข้อความ error -->
-        <p v-if="errorMessage" class="text-red-600 text-center text-sm font-medium mt-3">
+        <p
+          v-if="errorMessage"
+          class="text-red-600 text-center text-sm font-medium mt-3 bg-red-50 px-3 py-2 rounded-md"
+        >
           {{ errorMessage }}
         </p>
       </div>
     </div>
   </div>
 </template>
+
+<style scoped>
+input::placeholder {
+  color: #a0aec0;
+}
+</style>

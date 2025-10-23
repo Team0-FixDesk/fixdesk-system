@@ -5,7 +5,7 @@ const mysql = require('mysql2')
 // CONFIGURATION
 // =============================
 const DB_NAME = process.env.DB_NAME || 'fixdesk_db'
-const RESET_DB = true // ⚠️ ตั้งค่า true จะลบ DB เดิมก่อนสร้างใหม่ (ใช้เฉพาะตอนทดสอบ)
+const RESET_DB = true // ⚠️ true = ล้าง DB เดิมก่อนสร้างใหม่ (ใช้เฉพาะตอนทดสอบ)
 
 const db = mysql.createConnection({
   host: process.env.DB_HOST || 'dekdee2.informatics.buu.ac.th',
@@ -44,7 +44,7 @@ SET NAMES utf8mb4 COLLATE utf8mb4_general_ci;
   const createTablesSQL = `
 -- ===================================
 -- DATABASE STRUCTURE : FIXDESK SYSTEM (UTF8MB4)
--- Version: 2.0.0  (2025-10-23)
+-- Version: 2.0.1  (2025-10-23)
 -- ===================================
 -- ✔ Compliant with FixDesk Coding Standard v1.5.2
 -- ✔ Aligned with DGA 4-2565 (Mapping-ready)
@@ -54,7 +54,7 @@ CREATE TABLE title_name (
   ttn_id INT AUTO_INCREMENT PRIMARY KEY,
   ttn_title_th VARCHAR(50) NOT NULL,       -- ชื่อคำนำหน้า (ไทย)
   ttn_title_en VARCHAR(50),                -- ชื่อคำนำหน้า (อังกฤษ)
-  ttn_sex ENUM('M','F','O') DEFAULT 'O'    -- เพศ (M=ชาย, F=หญิง, O=อื่นๆ)
+  ttn_sex ENUM('M','F','O') DEFAULT 'O'    -- เพศของคำนำหน้า (M=ชาย, F=หญิง, O=อื่นๆ)
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
 
 INSERT INTO title_name (ttn_title_th, ttn_title_en, ttn_sex) VALUES
@@ -137,7 +137,7 @@ CREATE TABLE user (
     ON DELETE SET NULL
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
 
--- ⚠️ User data will be inserted via system (password hashing required)
+-- ⚠️ ข้อมูลผู้ใช้จะถูกเพิ่มผ่านระบบ (เข้ารหัสผ่าน Backend)
 
 -- 8️⃣ Repair Form (Transaction Data)
 CREATE TABLE repair_form (
@@ -178,7 +178,6 @@ CREATE TABLE stock_form (
   sf_rf_id INT,                               -- ใบแจ้งซ่อมที่เกี่ยวข้อง
   sf_urgency ENUM('low','medium','high') DEFAULT 'medium',
   sf_status ENUM('waiting','approved','rejected','completed') DEFAULT 'waiting',
-  sf_bd_id INT,                               -- อาคารที่เบิกของ
   sf_create_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,    -- Mapping: DateFormat:basicDateTH
   sf_update_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     ON UPDATE CURRENT_TIMESTAMP,
@@ -186,9 +185,6 @@ CREATE TABLE stock_form (
     ON UPDATE CASCADE
     ON DELETE SET NULL,
   FOREIGN KEY (sf_rf_id) REFERENCES repair_form(rf_id)
-    ON UPDATE CASCADE
-    ON DELETE SET NULL,
-  FOREIGN KEY (sf_bd_id) REFERENCES building(bd_id)
     ON UPDATE CASCADE
     ON DELETE SET NULL
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
@@ -202,7 +198,7 @@ CREATE TABLE stock_form (
       console.error('❌ Failed to create database/tables:', err)
     } else {
       console.log('✅ Database and tables created successfully!')
-      console.log('📘 Schema is fully compliant with FixDesk + DGA standards.')
+      console.log('📘 Schema is fully compliant with FixDesk v2.0.1 (no building link in stock_form).')
     }
     db.end()
   })
