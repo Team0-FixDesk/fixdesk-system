@@ -56,7 +56,7 @@ function prevPage() {
         <tr
           v-for="(row, ri) in paginatedRows"
           :key="ri"
-          class="bg-white border-b border-[#E9E9E9]"
+          class="bg-white border-b border-[#E9E9E9] hover:bg-gray-50"
         >
           <template v-for="(cell, ci) in row" :key="ci">
             <th
@@ -65,7 +65,19 @@ function prevPage() {
             >
               {{ cell }}
             </th>
-            <td v-else class="px-6 py-4">{{ cell }}</td>
+            <td v-else class="px-6 py-4">
+              <!-- ถ้ามี slot สำหรับ column นี้ ให้ใช้ slot -->
+              <slot
+                :name="`cell-${ci}`"
+                :row="row"
+                :cell="cell"
+                :rowIndex="ri"
+                :columnIndex="ci"
+              >
+                <!-- ถ้าไม่มี slot ให้แสดงข้อความปกติ -->
+                {{ cell }}
+              </slot>
+            </td>
           </template>
         </tr>
       </tbody>

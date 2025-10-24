@@ -164,9 +164,14 @@ app.get("/users", authMiddleware, (req, res) => {
       CONCAT(tn.ttn_title_th, '', u.us_first_name_th, ' ', u.us_last_name_th) AS full_name,
       u.us_phone,
       u.us_department,
+      u.us_role_id,
       r.role_name,
+      u.us_tt_id,
       t.tt_name AS technician_type,
-      tn.ttn_title_th AS title_name
+      tn.ttn_title_th AS title_name,
+      tn.ttn_title_th AS us_prefix_th,
+      u.us_first_name_th,
+      u.us_last_name_th
     FROM user u
     LEFT JOIN role r ON u.us_role_id = r.role_id
     LEFT JOIN technician_type t ON u.us_tt_id = t.tt_id
@@ -179,6 +184,49 @@ app.get("/users", authMiddleware, (req, res) => {
         .status(500)
         .json({ message: "ดึงข้อมูลผู้ใช้ไม่สำเร็จ", error: err.message });
     res.json(results);
+  });
+});
+
+/* =========================
+   GET /users/:id (single user)
+   ========================= */
+app.get("/users/:id", authMiddleware, (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id))
+    return res.status(400).json({ message: "id ไม่ถูกต้อง" });
+
+  const query = `
+    SELECT
+      u.us_id,
+      u.us_user_name,
+      u.us_ttn_id,
+      u.us_first_name_th,
+      u.us_last_name_th,
+      u.us_first_name_en,
+      u.us_last_name_en,
+      u.us_phone,
+      u.us_department,
+      u.us_role_id,
+      u.us_tt_id,
+      r.role_name,
+      t.tt_name AS technician_type,
+      tn.ttn_title_th AS title_name
+    FROM user u
+    LEFT JOIN role r ON u.us_role_id = r.role_id
+    LEFT JOIN technician_type t ON u.us_tt_id = t.tt_id
+    LEFT JOIN title_name tn ON u.us_ttn_id = tn.ttn_id
+    WHERE u.us_id = ?
+    LIMIT 1
+  `;
+
+  db.query(query, [id], (err, results) => {
+    if (err)
+      return res
+        .status(500)
+        .json({ message: "ดึงข้อมูลผู้ใช้ไม่สำเร็จ", error: err.message });
+    if (!results.length)
+      return res.status(404).json({ message: "ไม่พบข้อมูลผู้ใช้" });
+    res.json(results[0]);
   });
 });
 
