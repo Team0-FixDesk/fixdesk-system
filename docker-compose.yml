@@ -7,38 +7,40 @@ services:
       dockerfile: Dockerfile
     container_name: fixdesk-backend
     ports:
-      - "3000:3000"
-    environment:
-      - NODE_ENV=development
+      - "8057:3000"     # ใช้พอร์ตที่ dekdee ให้
+    env_file:
+      - .env
     volumes:
-      # ผูกโค้ด backend จากเครื่องจริงเข้า container
-      - ./fixdesk-backend:/app
-      # กัน node_modules ไม่ให้ถูกทับจากเครื่องจริง
-      - /app/node_modules
-      # volume สำหรับไฟล์ upload
       - fixdesk_uploads:/app/uploads
-    command: npx nodemon index.js   # ใช้ nodemon เพื่อ reload อัตโนมัติ
-    restart: unless-stopped
+    restart: always
+    depends_on:
+      - db
 
   frontend:
     build:
       context: ./fixdesk-frontend
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile
     container_name: fixdesk-frontend
     ports:
-      # พอร์ตฝั่งเครื่องจริง : พอร์ต dev server ภายใน container
-      - "8080:5173"
+      - "8058:80"       # ใช้ nginx serve build แล้ว
+    restart: always
     depends_on:
       - backend
+
+  db:
+    image: mariadb:10.11
+    container_name: fixdesk-db
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
     volumes:
-      # ผูกโค้ด frontend จากเครื่องจริงเข้า container
-      - ./fixdesk-frontend:/app
-      # กัน node_modules ไม่ให้ถูกทับจากเครื่องจริง
-      - /app/node_modules
-    working_dir: /app
-    command: npm run dev   # ให้รัน Vite dev server (Hot Reload)
-    restart: unless-stopped
+      - fixdesk_db_data:/var/lib/mysql
+    ports:
+      - "8059:3306"
+    restart: always
 
 volumes:
   fixdesk_uploads:
-    driver: local
+  fixdesk_db_data:
