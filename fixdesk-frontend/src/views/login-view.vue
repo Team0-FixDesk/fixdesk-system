@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { jwtDecode } from 'jwt-decode'
 
 const router = useRouter()
 
@@ -33,8 +34,8 @@ const handleLogin = async (e) => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        user_name: username.value,
-        password: password.value,
+        user_name: username.value.trim(),
+        password: password.value.trim(),
       }),
     })
 
@@ -46,13 +47,26 @@ const handleLogin = async (e) => {
     // ✅ เก็บ token
     localStorage.setItem('token', data.token)
 
-    // ✅ decode token เพื่ออ่าน role_name
-    const payload = JSON.parse(atob(data.token.split('.')[1]))
-    const role = payload.role_name
-    console.log('✅ role:', role)
+    // ✅ decode token เพื่ออ่านข้อมูลผู้ใช้
+    const payload = jwtDecode(data.token)
+    console.log('✅ ข้อมูลใน token:', payload)
+
+    // ✅ เก็บข้อมูลผู้ใช้ใน localStorage เผื่อหน้าอื่นต้องใช้
+    const sessionUser = {
+      id: payload.us_id,
+      username: payload.us_user_name,
+      prefix: payload.us_prefix_th,
+      firstName: payload.us_first_name_th,
+      lastName: payload.us_last_name_th,
+      fullName: `${payload.us_prefix_th || ''}${payload.us_first_name_th || ''} ${payload.us_last_name_th || ''}`,
+      tel: payload.us_tel,
+      department: payload.us_department,
+      role: payload.role_name,
+    }
+    localStorage.setItem('session_user', JSON.stringify(sessionUser))
 
     // ✅ redirect ตาม role_name
-    switch (role) {
+    switch (payload.role_name) {
       case 'Admin':
         router.push('/main/admin-home')
         break
@@ -100,7 +114,7 @@ const handleLogin = async (e) => {
 
       <!-- ฟอร์มล็อกอิน -->
       <div class="flex-1 flex flex-col items-center">
-        <h1 class="text-3xl font-bold text-[#4db5ff] mb-6">LOGIN</h1>
+        <h1 class="text-3xl font-bold text-[#1E48D1] mb-6">LOGIN</h1>
 
         <form class="flex flex-col gap-4 w-full max-w-sm" @submit.prevent="handleLogin">
           <input
@@ -120,7 +134,7 @@ const handleLogin = async (e) => {
           <button
             type="submit"
             :disabled="isLoading"
-            class="w-full py-2 rounded-md bg-[#4db5ff] text-white font-medium text-base hover:bg-blue-500 transition-colors disabled:opacity-60"
+            class="w-full py-2 rounded-md bg-[#1E48D1] text-white font-medium text-base hover:bg-blue-700 transition-colors disabled:opacity-60"
           >
             {{ isLoading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ' }}
           </button>

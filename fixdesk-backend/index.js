@@ -1,7 +1,7 @@
 require('dotenv').config()
 const express = require('express')
-const mysql = require('mysql2')
 const cors = require('cors')
+const mysql = require('mysql2')
 const bcrypt = require('bcrypt')
 const { authMiddleware, signToken } = require('./auth')
 
@@ -18,6 +18,7 @@ const db = mysql.createConnection({
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'fixdesk_db',
   port: process.env.DB_PORT ? Number(process.env.DB_PORT) : 3306,
+  charset: 'utf8mb4',
 })
 
 db.connect((err) => {
@@ -38,9 +39,11 @@ app.post('/auth/login', (req, res) => {
 
   const query = `
     SELECT u.us_id, u.us_user_name, u.us_user_pass,
-           u.us_first_name_th, u.us_last_name_th,
+           t.ttn_title_th, u.us_first_name_th, u.us_last_name_th,
+           u.us_phone, u.us_department,
            r.role_name
     FROM user u
+    LEFT JOIN title_name t ON u.us_ttn_id = t.ttn_id
     LEFT JOIN role r ON u.us_role_id = r.role_id
     WHERE u.us_user_name=? LIMIT 1
   `
@@ -53,19 +56,22 @@ app.post('/auth/login', (req, res) => {
     const match = await bcrypt.compare(password, user.us_user_pass)
     if (!match) return res.status(401).json({ message: 'รหัสผ่านไม่ถูกต้อง' })
 
-    // ✅ ส่งชื่อจริงภาษาไทยไปใน token ด้วย
+    // ✅ ใส่ข้อมูลทั้งหมดใน token
     const payload = {
       us_id: user.us_id,
       us_user_name: user.us_user_name,
-      us_first_name_th: user.us_first_name_th, // 👈 เพิ่มตรงนี้
-      role_name: user.role_name,
+      us_prefix_th: user.ttn_title_th || '',
+      us_first_name_th: user.us_first_name_th || '',
+      us_last_name_th: user.us_last_name_th || '',
+      us_tel: user.us_phone || '',
+      us_department: user.us_department || '',
+      role_name: user.role_name || '',
     }
 
     const token = signToken(payload)
     res.json({ token })
   })
 })
-
 
 /* =========================
    POST /users (add user)
@@ -131,7 +137,7 @@ app.post('/users', async (req, res) => {
 /* =========================
    GET /users (list all)
    ========================= */
-app.get('/users', (req, res) => {
+app.get('/users', authMiddleware, (req, res) => {
   const query = `
     SELECT
       u.us_id,
@@ -157,7 +163,7 @@ app.get('/users', (req, res) => {
 /* =========================
    PUT /users/:id (update)
    ========================= */
-app.put('/users/:id', (req, res) => {
+app.put('/users/:id', authMiddleware, (req, res) => {
   const id = Number(req.params.id)
   if (!Number.isFinite(id)) return res.status(400).json({ message: 'id ไม่ถูกต้อง' })
 
@@ -176,15 +182,9 @@ app.put('/users/:id', (req, res) => {
   const query = `
     UPDATE user
     SET
-      us_ttn_id=?,
-      us_first_name_th=?,
-      us_last_name_th=?,
-      us_first_name_en=?,
-      us_last_name_en=?,
-      us_phone=?,
-      us_department=?,
-      us_role_id=?,
-      us_tt_id=?
+      us_ttn_id=?, us_first_name_th=?, us_last_name_th=?,
+      us_first_name_en=?, us_last_name_en=?,
+      us_phone=?, us_department=?, us_role_id=?, us_tt_id=?
     WHERE us_id=?
   `
   const params = [
@@ -209,7 +209,7 @@ app.put('/users/:id', (req, res) => {
 /* =========================
    DELETE /users/:id
    ========================= */
-app.delete('/users/:id', (req, res) => {
+app.delete('/users/:id', authMiddleware, (req, res) => {
   const id = Number(req.params.id)
   if (!Number.isFinite(id)) return res.status(400).json({ message: 'id ไม่ถูกต้อง' })
 
@@ -219,8 +219,12 @@ app.delete('/users/:id', (req, res) => {
   })
 })
 
+
 /* =========================
    SERVER START
    ========================= */
 const PORT = process.env.PORT || 3000
+if (!process.env.JWT_SECRET)
+  console.warn('⚠️ WARNING: JWT_SECRET is not set in .env')
+
 app.listen(PORT, () => console.log(`🚀 FixDesk User API (v2.0.1) running on port ${PORT}`))
