@@ -34,7 +34,7 @@ async function fetchRepairDetail() {
   try {
     const id = route.params.id
     const token = localStorage.getItem('token')
-    
+
     console.log('🔍 Fetching repair detail for ID:', id)
 
     if (token) {
@@ -44,7 +44,7 @@ async function fetchRepairDetail() {
 
     const res = await fetch(`${API_BASE}/repair-requests/${id}`)
     console.log('📡 Response status:', res.status)
-    
+
     if (!res.ok) {
       const errorData = await res.json()
       console.error('❌ API Error:', errorData)
@@ -53,7 +53,7 @@ async function fetchRepairDetail() {
 
     const data = await res.json()
     console.log('✅ Received data:', data)
-    
+
     repair.value = {
       ...data,
       reporter_name: data.reporter_name || reporterFromToken.value,
@@ -137,7 +137,7 @@ onMounted(fetchRepairDetail)
 
         <p><strong>ประเภทที่แจ้งซ่อม:</strong> {{ repair.repair_type_name || '-' }}</p>
 
-        <p><strong>หมายเลขทรัพย์สิน:</strong> {{ repair.rf_prop_number || '-' }}</p>
+        <p><strong>หมายเลขครุภัณฑ์:</strong> {{ repair.rf_prop_number || '-' }}</p>
 
         <!-- 🏢 สถานที่ -->
         <p class="col-span-2">
