@@ -74,6 +74,12 @@ const router = createRouter({
 
         { path: 'repair-request', component: RepairRequestView },
         { path: 'my-list', component: MyListView },
+        // 🧩 Repair Detail (dynamic route)
+        {
+          path: 'repair-detail/:id',
+          name: 'RepairDetailView',
+          component: () => import('@/views/repair-detail-view.vue'),
+        },
       ],
     },
   ],
