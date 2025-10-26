@@ -297,17 +297,158 @@ app.delete("/users/:id", authMiddleware, (req, res) => {
   });
 });
 
-/* =========================
-   GET /technician-types
-   ========================= */
-app.get("/technician-types", (req, res) => {
-  const query = "SELECT tt_id, tt_name FROM technician_type ORDER BY tt_id ASC";
+/* ================
+   GET /technicians (ดึงรายชื่อช่างทั้งหมด)
+=================== */
+app.get("/technicians", authMiddleware, (req, res) => {
+  const query = `
+    SELECT 
+      u.us_id,
+      u.us_user_name,
+      u.us_first_name_th,
+      u.us_last_name_th,
+      u.us_phone,
+      u.us_tt_id,
+      tt.tt_name,
+      tn.ttn_title_th
+    FROM user u
+    LEFT JOIN technician_type tt ON u.us_tt_id = tt.tt_id
+    LEFT JOIN title_name tn ON u.us_ttn_id = tn.ttn_id
+    WHERE u.us_role_id = 2
+    ORDER BY u.us_first_name_th ASC
+  `;
+  
   db.query(query, (err, results) => {
-    if (err)
-      return res
-        .status(500)
-        .json({ message: "ดึงข้อมูลประเภทช่างไม่สำเร็จ", error: err.message });
+    if (err) {
+      console.error("❌ Error fetching technicians:", err);
+      return res.status(500).json({ message: "ดึงข้อมูลช่างไม่สำเร็จ", error: err.message });
+    }
     res.json(results);
+  });
+});
+
+/* ================
+TECHNICIAN TYPE CRUD
+=================== */
+
+// GET all technician types
+app.get("/technician-types", (req, res) => {
+  const query = "SELECT tt_id, tt_name FROM technician_type ORDER BY tt_name";
+  
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error("Error fetching technician types:", err);
+      return res.status(500).json({ message: "เกิดข้อผิดพลาดในการดึงข้อมูลประเภทงาน" });
+    }
+    res.json(results);
+  });
+});
+
+// POST create new technician type
+app.post("/technician-types", (req, res) => {
+  const { tt_name } = req.body;
+  
+  if (!tt_name || !tt_name.trim()) {
+    return res.status(400).json({ message: "กรุณากรอกชื่อประเภทงาน" });
+  }
+
+  // ตรวจสอบชื่อซ้ำ
+  const checkQuery = "SELECT COUNT(*) as count FROM technician_type WHERE LOWER(tt_name) = LOWER(?)";
+  
+  db.query(checkQuery, [tt_name.trim()], (err, results) => {
+    if (err) {
+      console.error("Error checking duplicate technician type:", err);
+      return res.status(500).json({ message: "เกิดข้อผิดพลาดในการตรวจสอบข้อมูล" });
+    }
+    
+    if (results[0].count > 0) {
+      return res.status(400).json({ message: "ชื่อประเภทงานนี้มีอยู่ในระบบแล้ว" });
+    }
+
+    const insertQuery = "INSERT INTO technician_type (tt_name) VALUES (?)";
+    
+    db.query(insertQuery, [tt_name.trim()], (err, result) => {
+      if (err) {
+        console.error("Error creating technician type:", err);
+        return res.status(500).json({ message: "เกิดข้อผิดพลาดในการเพิ่มประเภทงาน" });
+      }
+      res.status(201).json({ 
+        message: "เพิ่มประเภทงานสำเร็จ",
+        tt_id: result.insertId,
+        tt_name: tt_name.trim()
+      });
+    });
+  });
+});
+
+// PUT update technician type
+app.put("/technician-types/:id", (req, res) => {
+  const { id } = req.params;
+  const { tt_name } = req.body;
+  
+  if (!tt_name || !tt_name.trim()) {
+    return res.status(400).json({ message: "กรุณากรอกชื่อประเภทงาน" });
+  }
+
+  // ตรวจสอบชื่อซ้ำ (ยกเว้น record ปัจจุบัน)
+  const checkQuery = "SELECT COUNT(*) as count FROM technician_type WHERE LOWER(tt_name) = LOWER(?) AND tt_id != ?";
+  
+  db.query(checkQuery, [tt_name.trim(), id], (err, results) => {
+    if (err) {
+      console.error("Error checking duplicate technician type:", err);
+      return res.status(500).json({ message: "เกิดข้อผิดพลาดในการตรวจสอบข้อมูล" });
+    }
+    
+    if (results[0].count > 0) {
+      return res.status(400).json({ message: "ชื่อประเภทงานนี้มีอยู่ในระบบแล้ว" });
+    }
+
+    const updateQuery = "UPDATE technician_type SET tt_name = ? WHERE tt_id = ?";
+    
+    db.query(updateQuery, [tt_name.trim(), id], (err, result) => {
+      if (err) {
+        console.error("Error updating technician type:", err);
+        return res.status(500).json({ message: "เกิดข้อผิดพลาดในการแก้ไขประเภทงาน" });
+      }
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ message: "ไม่พบประเภทงานที่ต้องการแก้ไข" });
+      }
+      res.json({ message: "แก้ไขประเภทงานสำเร็จ" });
+    });
+  });
+});
+
+// DELETE technician type
+app.delete("/technician-types/:id", (req, res) => {
+  const { id } = req.params;
+  
+  // ตรวจสอบว่ามีการใช้งานประเภทงานนี้อยู่หรือไม่
+  const checkQuery = "SELECT COUNT(*) as count FROM user WHERE us_tt_id = ?";
+  
+  db.query(checkQuery, [id], (err, results) => {
+    if (err) {
+      console.error("Error checking technician type usage:", err);
+      return res.status(500).json({ message: "เกิดข้อผิดพลาดในการตรวจสอบข้อมูล" });
+    }
+    
+    if (results[0].count > 0) {
+      return res.status(400).json({ 
+        message: "ไม่สามารถลบประเภทงานนี้ได้ เนื่องจากมีช่างที่ใช้ประเภทงานนี้อยู่" 
+      });
+    }
+    
+    const deleteQuery = "DELETE FROM technician_type WHERE tt_id = ?";
+    
+    db.query(deleteQuery, [id], (err, result) => {
+      if (err) {
+        console.error("Error deleting technician type:", err);
+        return res.status(500).json({ message: "เกิดข้อผิดพลาดในการลบประเภทงาน" });
+      }
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ message: "ไม่พบประเภทงานที่ต้องการลบ" });
+      }
+      res.json({ message: "ลบประเภทงานสำเร็จ" });
+    });
   });
 });
 
@@ -429,6 +570,149 @@ app.post('/repair-requests', express.json(), (req, res) => {
     )
   })
 })
+
+/* ================
+   GET /admin/repairs (ดึงรายการแจ้งซ่อมทั้งหมด)
+=================== */
+app.get("/admin/repairs", authMiddleware, (req, res) => {
+  const query = `
+    SELECT 
+      rf.rf_id,
+      rf.rf_code,
+      rf.rf_create_at,
+      rf.rf_user_status,
+      COALESCE(rf.rf_urgency, 'medium') AS rf_urgency,
+      u.us_first_name_th AS us_first_name,
+      u.us_last_name_th AS us_last_name,
+      tt.tt_name,
+      tech.us_first_name_th AS tech_first_name,
+      tech.us_last_name_th AS tech_last_name
+    FROM repair_form rf
+    LEFT JOIN user u ON rf.rf_us_id = u.us_id
+    LEFT JOIN technician_type tt ON rf.rf_tt_id = tt.tt_id
+    LEFT JOIN user tech ON rf.rf_assigned_tech_id = tech.us_id
+    ORDER BY rf.rf_create_at DESC
+  `;
+  
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error("❌ Error fetching repairs:", err);
+      return res.status(500).json({ message: "ดึงข้อมูลรายการแจ้งซ่อมไม่สำเร็จ", error: err.message });
+    }
+    res.json(results);
+  });
+});
+
+/* ================
+   POST /assign-repair (มอบหมายงานให้ช่าง)
+=================== */
+app.post("/assign-repair", authMiddleware, (req, res) => {
+  const { rf_id, technician_id } = req.body;
+  
+  if (!rf_id || !technician_id) {
+    return res.status(400).json({ message: "ข้อมูลไม่ครบถ้วน" });
+  }
+
+  // Verify technician exists and has correct role
+  const techQuery = `
+    SELECT u.us_tt_id, r.role_name
+    FROM user u
+    LEFT JOIN role r ON u.us_role_id = r.role_id
+    WHERE u.us_id = ?
+  `;
+
+  db.query(techQuery, [technician_id], (err, results) => {
+    if (err) {
+      console.error("❌ Error checking technician:", err);
+      return res.status(500).json({ message: "เกิดข้อผิดพลาดในการค้นหาช่าง", error: err.message });
+    }
+
+    if (!results.length) {
+      return res.status(404).json({ message: "ไม่พบข้อมูลช่าง" });
+    }
+
+    if (results[0].role_name !== 'Technician') {
+      return res.status(400).json({ message: "ผู้ใช้นี้ไม่ใช่ช่าง" });
+    }
+
+    const techTypeId = results[0].us_tt_id;
+
+    // Update repair_form with assigned technician
+    const updateQuery = `
+      UPDATE repair_form
+      SET rf_tt_id = ?, rf_assigned_tech_id = ?, rf_user_status = 'in_progress'
+      WHERE rf_id = ? AND rf_user_status = 'pending'
+    `;
+
+    db.query(updateQuery, [techTypeId, technician_id, rf_id], (err2, result) => {
+      if (err2) {
+        console.error("❌ Error assigning repair:", err2);
+        return res.status(500).json({ message: "มอบหมายงานไม่สำเร็จ", error: err2.message });
+      }
+
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ message: "ไม่พบรายการแจ้งซ่อมหรือถูกมอบหมายแล้ว" });
+      }
+
+      res.json({ message: "มอบหมายงานสำเร็จ", updated: result.affectedRows });
+    });
+  });
+});
+
+/* ================
+   GET /repair-requests/:id (ดูรายละเอียดใบแจ้งซ่อม)
+=================== */
+app.get("/repair-requests/:id", (req, res) => {
+  const { id } = req.params;
+  
+  const query = `
+    SELECT 
+      rf.rf_id,
+      rf.rf_code,
+      rf.rf_create_at,
+      rf.rf_user_status,
+      COALESCE(rf.rf_urgency, 'medium') AS rf_urgency,
+      rf.rf_problem,
+      rf.rf_detail,
+      rf.rf_phone,
+      rf.rf_prop_number,
+      u.us_ttn_id,
+      u.us_first_name_th,
+      u.us_last_name_th,
+      u.us_phone,
+      tt.tt_name AS repair_type_name,
+      b.bd_name AS rf_building,
+      f.fl_name AS rf_floor,
+      r.room_name AS rf_room,
+      tech.us_first_name_th AS technician_first_name,
+      tech.us_last_name_th AS technician_last_name
+    FROM repair_form rf
+    LEFT JOIN user u ON rf.rf_us_id = u.us_id
+    LEFT JOIN technician_type tt ON rf.rf_tt_id = tt.tt_id
+    LEFT JOIN room r ON rf.rf_room_id = r.room_id
+    LEFT JOIN floor f ON r.room_fl_id = f.fl_id
+    LEFT JOIN building b ON f.fl_bd_id = b.bd_id
+    LEFT JOIN user tech ON rf.rf_assigned_tech_id = tech.us_id
+    WHERE rf.rf_id = ?
+  `;
+  
+  db.query(query, [id], (err, results) => {
+    if (err) {
+      console.error("❌ Error fetching repair detail:", err);
+      return res.status(500).json({ message: "ดึงข้อมูลรายละเอียดไม่สำเร็จ", error: err.message });
+    }
+    
+    if (results.length === 0) {
+      return res.status(404).json({ message: "ไม่พบรายการแจ้งซ่อมนี้" });
+    }
+    
+    // Format reporter name
+    const repair = results[0];
+    repair.reporter_name = `${repair.us_first_name_th || ''} ${repair.us_last_name_th || ''}`.trim();
+    
+    res.json(repair);
+  });
+});
 
 
 
