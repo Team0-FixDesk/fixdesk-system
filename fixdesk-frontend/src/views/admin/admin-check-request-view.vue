@@ -442,23 +442,17 @@ onBeforeUnmount(() => {
         class="border border-gray-300 rounded-lg px-3 py-2 w-64 focus:ring-2 focus:ring-blue-400 focus:outline-none"
       />
 
-      <!-- � ปุ่มเรียงวันที่ -->
+      <!-- 🔹 ปุ่มเรียงวันที่ -->
       <button
         @click="toggleDateSort"
         class="flex items-center gap-1 border border-gray-300 rounded-lg px-4 py-2 bg-white hover:bg-gray-50 text-sm text-gray-700 font-medium"
       >
         วันที่
         <img
-          v-if="sortAsc"
-          src="/icon/sidebar/chevron-up-icon.svg"
-          class="w-4 h-4 opacity-70"
-          alt="up"
-        />
-        <img
-          v-else
           src="/icon/sidebar/chevron-down-icon.svg"
-          class="w-4 h-4 opacity-70"
-          alt="down"
+          class="w-4 h-4 opacity-70 transition-transform duration-200"
+          :class="{ 'rotate-180': sortAsc }"
+          alt="sort"
         />
       </button>
 
@@ -473,16 +467,10 @@ onBeforeUnmount(() => {
             {{ selectedStatuses.length }}
           </span>
           <img
-            v-if="!showStatusFilter"
             src="/icon/sidebar/chevron-down-icon.svg"
-            class="w-4 h-4 opacity-70"
-            alt="down"
-          />
-          <img
-            v-else
-            src="/icon/sidebar/chevron-up-icon.svg"
-            class="w-4 h-4 opacity-70"
-            alt="up"
+            class="w-4 h-4 opacity-70 transition-transform duration-200"
+            :class="{ 'rotate-180': showStatusFilter }"
+            alt="toggle"
           />
         </button>
 
@@ -517,16 +505,10 @@ onBeforeUnmount(() => {
             {{ selectedTechTypes.length }}
           </span>
           <img
-            v-if="!showTechTypeFilter"
             src="/icon/sidebar/chevron-down-icon.svg"
-            class="w-4 h-4"
-            alt="down"
-          />
-          <img
-            v-else
-            src="/icon/sidebar/chevron-up-icon.svg"
-            class="w-4 h-4"
-            alt="up"
+            class="w-4 h-4 opacity-70 transition-transform duration-200"
+            :class="{ 'rotate-180': showTechTypeFilter }"
+            alt="toggle"
           />
         </button>
 
@@ -573,16 +555,10 @@ onBeforeUnmount(() => {
             {{ selectedUrgencies.length }}
           </span>
           <img
-            v-if="!showUrgencyFilter"
             src="/icon/sidebar/chevron-down-icon.svg"
-            class="w-4 h-4 opacity-70"
-            alt="down"
-          />
-          <img
-            v-else
-            src="/icon/sidebar/chevron-up-icon.svg"
-            class="w-4 h-4 opacity-70"
-            alt="up"
+            class="w-4 h-4 opacity-70 transition-transform duration-200"
+            :class="{ 'rotate-180': showUrgencyFilter }"
+            alt="toggle"
           />
         </button>
 
@@ -606,11 +582,11 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
-      <!-- ล้างตัวกรอง -->
+      <!-- ล้างตัวกรอง (ใช้ visibility แทน v-if เพื่อไม่ให้ layout กระโดด) -->
       <button
-        v-if="selectedStatuses.length > 0 || selectedTechTypes.length > 0 || selectedUrgencies.length > 0"
         @click="clearFilters"
-        class="text-sm text-blue-600 hover:text-blue-700 font-medium"
+        class="text-sm text-blue-600 hover:text-blue-700 font-medium transition-opacity duration-200"
+        :class="{ 'opacity-0 pointer-events-none': selectedStatuses.length === 0 && selectedTechTypes.length === 0 && selectedUrgencies.length === 0 }"
       >
         ล้างตัวกรอง
       </button>
@@ -659,7 +635,7 @@ onBeforeUnmount(() => {
                   <img src="/icon/info-icon.svg" class="w-5 h-5" />
                 </button>
 
-                <!-- 🧑‍🔧 มอบหมายงาน -->
+                <!-- 🧑‍🔧 มอบหมายงาน (หรือ placeholder) -->
                 <button
                   v-if="row.rf_user_status === 'pending'"
                   @click="openAssignPopup(row.rf_id)"
@@ -669,6 +645,8 @@ onBeforeUnmount(() => {
                 >
                   <img src="/icon/arrow-right.svg" class="w-5 h-5" />
                 </button>
+                <!-- Placeholder เพื่อให้ปุ่มรายละเอียดอยู่ตำแหน่งเดิม -->
+                <div v-else class="w-9 h-8"></div>
               </div>
             </td>
           </tr>
@@ -687,7 +665,10 @@ onBeforeUnmount(() => {
         แสดง {{ startEntry }}–{{ endEntry }} จากทั้งหมด {{ totalEntries }} รายการ
       </div>
 
-      <div v-if="totalPages > 1" class="flex items-center gap-2">
+      <div 
+        class="flex items-center gap-2 transition-opacity duration-200"
+        :class="{ 'opacity-0 pointer-events-none': totalPages <= 1 }"
+      >
         <button
           @click="prevPage"
           :disabled="currentPage === 1"
@@ -812,21 +793,23 @@ onBeforeUnmount(() => {
 
         <!-- Content -->
         <div class="p-6 flex-shrink-0">
-          <!-- ปุ่มเพิ่มประเภทงาน -->
-          <button
-            v-if="!showAddForm && !isEditingTechType"
-            @click="openAddTechTypeForm"
-            class="w-full mb-4 px-4 py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium flex items-center justify-center gap-2 transition"
-          >
-            <span class="text-xl">+</span>
-            <span>เพิ่มประเภทงาน</span>
-          </button>
+          <!-- Container ความสูงคงที่เพื่อป้องกัน layout shift -->
+          <div class="mb-4" style="min-height: 160px;">
+            <!-- ปุ่มเพิ่มประเภทงาน -->
+            <button
+              v-if="!showAddForm && !isEditingTechType"
+              @click="openAddTechTypeForm"
+              class="w-full px-4 py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium flex items-center justify-center gap-2 transition"
+            >
+              <span class="text-xl">+</span>
+              <span>เพิ่มประเภทงาน</span>
+            </button>
 
-          <!-- ฟอร์มเพิ่มประเภทงาน (สีเขียว) -->
-          <div
-            v-if="showAddForm && !isEditingTechType"
-            class="mb-4 p-4 bg-green-50 rounded-lg border-2 border-green-200"
-          >
+            <!-- ฟอร์มเพิ่มประเภทงาน (สีเขียว) -->
+            <div
+              v-if="showAddForm && !isEditingTechType"
+              class="p-4 bg-green-50 rounded-lg border-2 border-green-200"
+            >
             <h3 class="text-lg font-semibold mb-3 text-green-700 flex items-center gap-2">
               <span class="text-xl">+</span>
               <span>เพิ่มประเภทงานใหม่</span>
@@ -857,7 +840,7 @@ onBeforeUnmount(() => {
           <!-- ฟอร์มแก้ไขประเภทงาน (สีเหลือง) -->
           <div
             v-if="isEditingTechType"
-            class="mb-4 p-4 bg-yellow-50 rounded-lg border-2 border-yellow-400"
+            class="p-4 bg-yellow-50 rounded-lg border-2 border-yellow-400"
           >
             <h3 class="text-lg font-semibold mb-3 text-yellow-700 flex items-center gap-2">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -887,6 +870,8 @@ onBeforeUnmount(() => {
               </button>
             </div>
           </div>
+          </div>
+          <!-- /End Container ความสูงคงที่ -->
 
           <!-- หัวข้อรายการ -->
           <div class="mb-3">
@@ -989,6 +974,42 @@ onBeforeUnmount(() => {
   </div>
 </template>
 
+<style scoped>
+/* 🎯 แก้ปัญหา layout shift จาก scrollbar */
+/* ใช้ scrollbar-gutter เพื่อจองพื้นที่ให้ scrollbar ตลอดเวลา */
+html {
+  scrollbar-gutter: stable;
+}
+
+/* สำหรับ modal/popup ที่มี overflow */
+.overflow-y-auto,
+.overflow-auto {
+  scrollbar-gutter: stable;
+}
+
+/* Custom scrollbar styles (optional - ทำให้สวยขึ้น) */
+.overflow-y-auto::-webkit-scrollbar,
+.overflow-auto::-webkit-scrollbar {
+  width: 8px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-track,
+.overflow-auto::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb,
+.overflow-auto::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 10px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb:hover,
+.overflow-auto::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+</style>
 
 
 
