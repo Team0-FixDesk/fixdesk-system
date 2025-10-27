@@ -382,6 +382,37 @@ app.post('/repair-requests', express.json(), (req, res) => {
   })
 })
 
+// ดึงข้อมูลรายการแจ้งซ่อมของผู้ใช้
+app.get('/my-repairs/:userId', (req, res) => {
+  const { userId } = req.params
+
+  const query = `
+    SELECT 
+      rf.rf_id,
+      rf.rf_code,
+      rf.rf_prop_number,
+      rf.rf_problem,
+      rf.rf_urgency,
+      rf.rf_user_status,
+      rf.rf_create_at,
+      b.bd_name AS building_name
+    FROM repair_form rf
+    LEFT JOIN room r ON rf.rf_room_id = r.room_id
+    LEFT JOIN floor f ON r.room_fl_id = f.fl_id
+    LEFT JOIN building b ON f.fl_bd_id = b.bd_id
+    WHERE rf.rf_us_id = ?
+    ORDER BY rf.rf_create_at DESC
+  `
+
+  db.query(query, [userId], (err, results) => {
+    if (err) {
+      console.error('❌ Error fetching user repairs:', err)
+      return res.status(500).json({ message: 'ไม่สามารถโหลดข้อมูลรายการแจ้งซ่อมได้' })
+    }
+    res.json(results)
+  })
+})
+
 
 
 
