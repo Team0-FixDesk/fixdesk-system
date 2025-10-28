@@ -11,6 +11,8 @@ COPY package*.json ./
 
 # ติดตั้ง dependencies
 RUN npm install
+RUN npm install sweetalert2
+
 
 # ✅ ล้าง node_modules และ lock แล้วติดตั้งใหม่ + rebuild rollup (แก้บั๊ก rollup-linux-x64-gnu)
 RUN rm -rf node_modules package-lock.json && npm install && npm rebuild rollup

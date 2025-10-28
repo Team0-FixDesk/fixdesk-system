@@ -32,7 +32,6 @@ function nextPage() {
 function prevPage() {
   if (currentPage.value > 1) currentPage.value--
 }
-
 </script>
 
 <template>
@@ -64,6 +63,7 @@ function prevPage() {
                 <div
                   class="w-12 h-8 flex items-center justify-center bg-[#60A5FA] rounded-md hover:opacity-90 transition cursor-pointer"
                   title="รายละเอียด"
+                  @click="$emit('detail', row[1])"
                 >
                   <img src="/icon/info-icon.svg" alt="info" class="w-5 h-5" />
                 </div>
@@ -72,16 +72,17 @@ function prevPage() {
                 <div
                   class="w-12 h-8 flex items-center justify-center bg-[#FCD34D] rounded-md hover:opacity-90 transition cursor-pointer"
                   title="แก้ไข"
+                  @click="$emit('edit', row[1])"
                 >
                   <img src="/icon/edit-icon.svg" alt="edit" class="w-5 h-5" />
                 </div>
 
                 <!-- ลบ -->
-                <!-- ปุ่มลบ -->
                 <div
                   class="w-12 h-8 flex items-center justify-center bg-[#F87171] rounded-md hover:opacity-90 transition cursor-pointer"
                   title="ลบ"
-                >
+                  @click="$emit('delete', row[1])"
+                  >
                   <img src="/icon/bin-icon.svg" alt="delete" class="w-5 h-5" />
                 </div>
               </div>
