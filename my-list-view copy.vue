@@ -1,16 +1,17 @@
 <script setup>
-
 import { ref, computed, onMounted } from 'vue'
 import TableComponent from '@/components/table-component.vue'
 import { useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
 
+const router = useRouter()
 defineOptions({ name: 'MyListView' })
 
-const router = useRouter()
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
 
-// 📋 Columns
+/* ===========================
+   📄 Columns & States
+   =========================== */
 const columns = [
   'วันที่',
   'ใบแจ้งซ่อม',
@@ -21,16 +22,20 @@ const columns = [
   'ตัวดำเนินการ',
 ]
 
-const rows = ref([])
+const rows = ref([]) // raw data
 const currentPage = ref(1)
 
-// 🔍 Filter states
+/* ===========================
+   🔍 Filter States
+   =========================== */
 const searchQuery = ref('')
 const selectedUrgency = ref('ทั้งหมด')
 const selectedStatus = ref('ทั้งหมด')
-const selectedDate = ref('')
+const selectedDate = ref('') // YYYY-MM-DD
 
-// 🔐 Decode JWT
+/* ===========================
+   🧩 JWT Decode
+   =========================== */
 function parseJwt(token) {
   try {
     const base64Url = token.split('.')[1]
@@ -42,15 +47,18 @@ function parseJwt(token) {
         .join(''),
     )
     return JSON.parse(jsonPayload)
-  } catch {
+  } catch (err) {
+    console.error('decode token error:', err)
     return {}
   }
 }
 
-// 📦 ดึงข้อมูลรายการแจ้งซ่อม
+/* ===========================
+   📦 Fetch My Repairs
+   =========================== */
 async function fetchMyRepairs() {
   const token = localStorage.getItem('token')
-  if (!token) return
+  if (!token) return console.warn('⚠️ ไม่มี token')
 
   const payload = parseJwt(token)
   const userId = payload.us_id
@@ -60,79 +68,45 @@ async function fetchMyRepairs() {
     const data = await res.json()
     if (!res.ok) throw new Error(data.message || 'โหลดข้อมูลไม่สำเร็จ')
 
-    // ✅ map แปลงเป็นแถวของตาราง (HTML Badge)
-    rows.value = data.map((r) => {
-      let urgencyBadge = '-'
-      switch (r.rf_urgency) {
-        case 'high':
-          urgencyBadge = `<span class='inline-flex justify-center items-center w-36 h-8 rounded-full bg-red-100 text-red-600 font-semibold'>เร่งด่วนมาก</span>`
-          break
-        case 'medium':
-          urgencyBadge = `<span class='inline-flex justify-center items-center w-36 h-8 rounded-full bg-amber-50 text-amber-500 font-semibold'>เร่งด่วน</span>`
-          break
-        case 'low':
-          urgencyBadge = `<span class='inline-flex justify-center items-center w-36 h-8 rounded-full bg-green-100 text-green-600 font-semibold'>ไม่เร่งด่วน</span>`
-          break
-      }
-
-      const statusBadge = (() => {
-        switch (r.rf_user_status) {
-          case 'pending':
-            return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-amber-50 text-amber-500 font-semibold">รอดำเนินการ</span>`
-          case 'in_progress':
-            return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-blue-100 text-blue-600 font-semibold">กำลังดำเนินการ</span>`
-          case 'done':
-            return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-green-100 text-green-600 font-semibold">ดำเนินการเสร็จสิ้น</span>`
-          default:
-            return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-gray-100 text-gray-500 font-semibold">ยกเลิก</span>`
-        }
-      })()
-
-      return [
-        new Date(r.rf_create_at).toLocaleDateString('th-TH'),
-        r.rf_code,
-        r.rf_prop_number || '-',
-        r.department_name || '-',
-        urgencyBadge,
-        statusBadge,
-        'actions',
-      ]
-    })
+    rows.value = data.map((r) => ({
+      date: new Date(r.rf_create_at).toLocaleDateString('th-TH'),
+      code: r.rf_code,
+      asset: r.rf_prop_number || '-',
+      department: r.department_name || '-',
+      urgency: r.rf_urgency || '-',
+      status: r.rf_user_status || '-',
+    }))
   } catch (err) {
-    console.error('❌ โหลดข้อมูลไม่สำเร็จ:', err)
+    console.error('❌ โหลดข้อมูลรายการแจ้งซ่อมไม่สำเร็จ:', err)
   }
 }
 
-// 🎯 ฟิลเตอร์ข้อมูล (ตามช่องค้นหา + ตัวเลือก)
+/* ===========================
+   🎯 Computed Filter
+   =========================== */
 const filteredRows = computed(() => {
   return rows.value.filter((r) => {
     const matchSearch =
-      r[1].includes(searchQuery.value) ||
-      r[2].includes(searchQuery.value) ||
-      r[3].includes(searchQuery.value)
+      r.code.includes(searchQuery.value) ||
+      r.asset.includes(searchQuery.value) ||
+      r.department.includes(searchQuery.value)
 
-    const urgencyText = ['-', 'low', 'medium', 'high'].find((key) =>
-      r[4].includes(key),
-    )
-    const statusText = ['pending', 'in_progress', 'done'].find((key) =>
-      r[5].includes(key),
-    )
+    const matchUrgency = selectedUrgency.value === 'ทั้งหมด' || r.urgency === selectedUrgency.value
 
-    const matchUrgency =
-      selectedUrgency.value === 'ทั้งหมด' || urgencyText === selectedUrgency.value
-    const matchStatus =
-      selectedStatus.value === 'ทั้งหมด' || statusText === selectedStatus.value
+    const matchStatus = selectedStatus.value === 'ทั้งหมด' || r.status === selectedStatus.value
 
     const matchDate =
       !selectedDate.value ||
-      new Date(r[0]).toLocaleDateString('th-TH') ===
+      new Date(r.date).toLocaleDateString('th-TH') ===
         new Date(selectedDate.value).toLocaleDateString('th-TH')
 
     return matchSearch && matchUrgency && matchStatus && matchDate
   })
 })
 
-// 🗑️ ลบรายการ
+/* ===========================
+   🗑️ ลบรายการ
+   =========================== */
 async function handleDelete(repairCode) {
   const result = await Swal.fire({
     title: 'ลบรายการนี้?',
@@ -151,38 +125,47 @@ async function handleDelete(repairCode) {
       method: 'DELETE',
     })
     if (!res.ok) throw new Error('ลบไม่สำเร็จ')
-    rows.value = rows.value.filter((r) => r[1] !== repairCode)
+    rows.value = rows.value.filter((r) => r.code !== repairCode)
     Swal.fire('สำเร็จ', 'ลบรายการเรียบร้อยแล้ว', 'success')
   } catch {
     Swal.fire('ผิดพลาด', 'ไม่สามารถลบข้อมูลได้', 'error')
   }
 }
 
-// 🔗 ปุ่มดำเนินการ
+/* ===========================
+   🔗 Navigation
+   =========================== */
 const goToCreate = () => router.push('/main/repair-request')
 const goToDetail = (code) => router.push(`/main/repair-detail/${code}`)
 const goToEdit = (code) => router.push(`/main/repair-edit/${code}`)
 
+/* ===========================
+   🚀 Lifecycle
+   =========================== */
 onMounted(fetchMyRepairs)
 </script>
 
 <template>
   <div class="bg-gray-50 rounded-xl p-1 mx-auto max-w-7xl">
-    <!-- ฟิลเตอร์ -->
+    <!-- แถบเครื่องมือด้านบน -->
+    <!-- แถบเครื่องมือด้านบน -->
     <div class="mb-6">
-      <div class="flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center justify-between">
+        <!-- ซ้าย: ฟิลเตอร์ -->
         <div class="flex flex-wrap items-center gap-3">
           <input
             v-model="searchQuery"
             type="text"
-            placeholder="ค้นหาใบแจ้งซ่อม / หน่วยงาน / ครุภัณฑ์"
+            placeholder="ค้นหา"
             class="w-[260px] h-10 px-4 rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
+
           <input
             v-model="selectedDate"
             type="date"
             class="h-10 px-3 rounded-lg border border-gray-300 bg-white text-gray-700"
           />
+
           <select
             v-model="selectedUrgency"
             class="h-10 px-3 rounded-lg border border-gray-300 bg-white text-gray-700"
@@ -192,6 +175,7 @@ onMounted(fetchMyRepairs)
             <option value="medium">เร่งด่วน</option>
             <option value="low">ไม่เร่งด่วน</option>
           </select>
+
           <select
             v-model="selectedStatus"
             class="h-10 px-3 rounded-lg border border-gray-300 bg-white text-gray-700"
@@ -203,6 +187,7 @@ onMounted(fetchMyRepairs)
           </select>
         </div>
 
+        <!-- ขวา: ปุ่มแจ้งซ่อม -->
         <button
           @click="goToCreate"
           class="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-[#1E48D1] hover:bg-[#1539a9] text-white font-medium shadow-sm transition"
@@ -222,16 +207,26 @@ onMounted(fetchMyRepairs)
       </div>
     </div>
   </div>
-
-  <!-- ตาราง -->
   <div class="bg-white rounded-xl shadow-md p-12 mx-auto max-w-7xl">
     <h1 class="text-xl font-bold text-black mb-6">รายการของฉัน</h1>
 
     <div class="p-5 mx-auto max-w-8xl">
+      <!-- ตาราง -->
       <TableComponent
         :columns="columns"
-        :rows="filteredRows"
+        :rows="
+          filteredRows.map((r) => [
+            r.date,
+            r.code,
+            r.asset,
+            r.department,
+            r.urgency,
+            r.status,
+            'actions',
+          ])
+        "
         :perPage="10"
+        v-model:currentPage="currentPage"
         @delete="handleDelete"
         @detail="goToDetail"
         @edit="goToEdit"
@@ -239,7 +234,6 @@ onMounted(fetchMyRepairs)
     </div>
   </div>
 </template>
-
 
 <style scoped>
 td,

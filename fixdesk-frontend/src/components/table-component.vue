@@ -42,11 +42,7 @@ function prevPage() {
         class="text-l border-b border-[#E9E9E9] text-gray-700 uppercase bg-white text-[#444D5C]"
       >
         <tr>
-          <th
-            v-for="(col, i) in props.columns"
-            :key="i"
-            class="px-6 py-3"
-          >
+          <th v-for="(col, i) in props.columns" :key="i" class="px-6 py-3">
             {{ col }}
           </th>
         </tr>
@@ -77,6 +73,46 @@ function prevPage() {
                 <!-- ถ้าไม่มี slot ให้แสดงข้อความปกติ -->
                 {{ cell }}
               </slot>
+        <tr v-for="(row, ri) in paginatedRows" :key="ri" class="bg-white border-b border-[#E9E9E9]">
+          <template v-for="(cell, ci) in row" :key="ci">
+            <th
+              v-if="ci === 0"
+              class="px-6 py-4 font-normal text-sm text-black text-center"
+              v-html="cell"
+            />
+            <td v-else class="px-6 py-2 font-normal text-sm text-black text-center">
+              <!-- ✅ ถ้า cell เป็น actions -->
+              <div v-if="cell === 'actions'" class="flex justify-center gap-2">
+                <!-- รายละเอียด -->
+                <div
+                  class="w-12 h-8 flex items-center justify-center bg-[#60A5FA] rounded-md hover:opacity-90 transition cursor-pointer"
+                  title="รายละเอียด"
+                  @click="$emit('detail', row[1])"
+                >
+                  <img src="/icon/info-icon.svg" alt="info" class="w-5 h-5" />
+                </div>
+
+                <!-- แก้ไข -->
+                <div
+                  class="w-12 h-8 flex items-center justify-center bg-[#FCD34D] rounded-md hover:opacity-90 transition cursor-pointer"
+                  title="แก้ไข"
+                  @click="$emit('edit', row[1])"
+                >
+                  <img src="/icon/edit-icon.svg" alt="edit" class="w-5 h-5" />
+                </div>
+
+                <!-- ลบ -->
+                <div
+                  class="w-12 h-8 flex items-center justify-center bg-[#F87171] rounded-md hover:opacity-90 transition cursor-pointer"
+                  title="ลบ"
+                  @click="$emit('delete', row[1])"
+                  >
+                  <img src="/icon/bin-icon.svg" alt="delete" class="w-5 h-5" />
+                </div>
+              </div>
+
+              <!-- ถ้าไม่ใช่ actions -->
+              <span v-else v-html="cell"></span>
             </td>
           </template>
         </tr>
@@ -134,9 +170,23 @@ function prevPage() {
   </div>
 </template>
 
+<style scoped>
+table {
+  table-layout: fixed;
+  width: 100%;
+}
 
+td,
+th {
+  text-align: center;
+  vertical-align: middle;
+  white-space: nowrap;
+}
 
-
+tbody tr:hover {
+  background-color: #f9fafb;
+}
+</style>
 
 <!-- วิธีใช้งาน -->
 <!-- <template>
