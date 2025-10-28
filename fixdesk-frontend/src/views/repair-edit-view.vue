@@ -3,12 +3,14 @@
    📦 Imports & Setup
    ============================== */
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
 
-defineOptions({ name: 'RepairRequestView' })
+defineOptions({ name: 'RepairEditView' })
 
+const route = useRoute()
 const router = useRouter()
+const repairCode = route.params.code
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
 
 /* ==============================
@@ -43,7 +45,7 @@ async function fetchTechnicianTypes() {
     if (!res.ok) throw new Error('โหลดข้อมูลประเภทไม่สำเร็จ')
     const data = await res.json()
     formData.value.repairTypeOptions = data.map((item) => ({
-      id: item.tt_id,
+      id: Number(item.tt_id),
       name: item.tt_name,
     }))
   } catch (err) {
@@ -57,7 +59,7 @@ async function fetchBuildings() {
     if (!res.ok) throw new Error('โหลดข้อมูลอาคารไม่สำเร็จ')
     const data = await res.json()
     formData.value.buildingOptions = data.map((b) => ({
-      id: b.building_id,
+      id: Number(b.building_id),
       name: b.building_name,
     }))
   } catch (err) {
@@ -72,7 +74,7 @@ async function fetchFloors(buildingId) {
     if (!res.ok) throw new Error('โหลดข้อมูลชั้นไม่สำเร็จ')
     const data = await res.json()
     formData.value.floorOptions = data.map((f) => ({
-      id: f.floor_id,
+      id: Number(f.floor_id),
       name: f.floor_name,
     }))
   } catch (err) {
@@ -87,7 +89,7 @@ async function fetchRooms(floorId) {
     if (!res.ok) throw new Error('โหลดข้อมูลห้องไม่สำเร็จ')
     const data = await res.json()
     formData.value.roomOptions = data.map((r) => ({
-      id: r.room_id,
+      id: Number(r.room_id),
       name: r.room_name,
     }))
   } catch (err) {
@@ -133,19 +135,52 @@ function parseJwt(token) {
 }
 
 /* ==============================
+   🧾 Fetch Repair Detail
+   ============================== */
+async function fetchRepairDetail() {
+  try {
+    const res = await fetch(`${API_BASE}/repair-requests/${repairCode}`)
+    if (!res.ok) throw new Error('โหลดข้อมูลไม่สำเร็จ')
+    const data = await res.json()
+
+    const typeId = data.repair_type_id ? Number(data.repair_type_id) : ''
+    const buildingId = data.building_id ? Number(data.building_id) : ''
+    const floorId = data.floor_id ? Number(data.floor_id) : ''
+    const roomId = data.room_id ? Number(data.room_id) : ''
+
+    await fetchFloors(buildingId)
+    await fetchRooms(floorId)
+
+    formData.value.repairType = typeId
+    formData.value.building = buildingId
+    formData.value.floor = floorId
+    formData.value.room = roomId
+    formData.value.assetCode = data.rf_prop_number || ''
+    formData.value.problemDetail = data.rf_problem || ''
+    formData.value.issueDescription = data.rf_detail || ''
+    formData.value.urgency = data.rf_urgency || 'medium'
+
+    console.log('✅ โหลดข้อมูลใบแจ้งซ่อมสำเร็จ:', formData.value)
+  } catch (err) {
+    console.error('❌ โหลดข้อมูลใบแจ้งซ่อมไม่สำเร็จ:', err)
+  }
+}
+
+/* ==============================
    🚀 Lifecycle
    ============================== */
-onMounted(() => {
+onMounted(async () => {
   const token = localStorage.getItem('token')
-  if (!token) return
+  if (token) {
+    const payload = parseJwt(token)
+    formData.value.reporterName =
+      `${payload.us_prefix_th || ''}${payload.us_first_name_th || ''} ${payload.us_last_name_th || ''}`.trim()
+    formData.value.phoneNumber = payload.us_tel || ''
+    formData.value.department = payload.us_department || ''
+  }
 
-  const payload = parseJwt(token)
-  formData.value.reporterName = `${payload.us_prefix_th || ''}${payload.us_first_name_th || ''} ${payload.us_last_name_th || ''}`.trim()
-  formData.value.phoneNumber = payload.us_tel || ''
-  formData.value.department = payload.us_department || ''
-
-  fetchTechnicianTypes()
-  fetchBuildings()
+  await Promise.all([fetchTechnicianTypes(), fetchBuildings()])
+  await fetchRepairDetail()
 })
 
 /* ==============================
@@ -153,8 +188,8 @@ onMounted(() => {
    ============================== */
 async function handleSubmit() {
   const confirm = await Swal.fire({
-    title: 'ยืนยันการส่งแบบฟอร์มแจ้งซ่อม?',
-    text: 'กรุณาตรวจสอบข้อมูลให้ถูกต้องก่อนยืนยัน',
+    title: 'ยืนยันการบันทึกข้อมูล?',
+    text: 'คุณต้องการบันทึกการแก้ไขใบแจ้งซ่อมนี้หรือไม่',
     icon: 'question',
     showCancelButton: true,
     confirmButtonText: 'ยืนยัน',
@@ -165,16 +200,19 @@ async function handleSubmit() {
 
   if (!confirm.isConfirmed) return
 
+  // 🌀 Loading state
   Swal.fire({
-    title: 'กำลังส่งแบบฟอร์ม...',
+    title: 'กำลังบันทึก...',
     text: 'กรุณารอสักครู่',
     allowOutsideClick: false,
-    didOpen: () => Swal.showLoading(),
+    didOpen: () => {
+      Swal.showLoading()
+    },
   })
 
   try {
     const token = localStorage.getItem('token')
-    if (!token) throw new Error('ไม่พบ token')
+    if (!token) throw new Error('Token not found')
 
     const payload = parseJwt(token)
     const body = {
@@ -190,8 +228,8 @@ async function handleSubmit() {
       urgency: formData.value.urgency || 'medium',
     }
 
-    const res = await fetch(`${API_BASE}/repair-requests`, {
-      method: 'POST',
+    const res = await fetch(`${API_BASE}/repair-requests/${repairCode}`, {
+      method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     })
@@ -199,39 +237,36 @@ async function handleSubmit() {
     const data = await res.json()
     if (!res.ok) throw new Error(data.message || 'บันทึกข้อมูลไม่สำเร็จ')
 
+    // ✅ Success
     Swal.close()
     await Swal.fire({
-      title: 'ส่งแบบฟอร์มสำเร็จ!',
-      text: 'ระบบได้บันทึกใบแจ้งซ่อมของคุณเรียบร้อยแล้ว',
+      title: 'บันทึกการแก้ไขสำเร็จ!',
+      text: `ระบบได้อัปเดตข้อมูลใบแจ้งซ่อม ${repairCode} เรียบร้อยแล้ว`,
       icon: 'success',
       confirmButtonText: 'กลับไปหน้ารายการของฉัน',
       confirmButtonColor: '#1E48D1',
     })
-
     router.push('/main/my-list')
   } catch (err) {
     console.error('❌ บันทึกไม่สำเร็จ:', err)
     Swal.close()
     Swal.fire({
       title: 'เกิดข้อผิดพลาด!',
-      text: 'ไม่สามารถส่งแบบฟอร์มได้ กรุณาลองใหม่อีกครั้ง',
+      text: 'ไม่สามารถบันทึกการแก้ไขได้ กรุณาลองใหม่อีกครั้ง',
       icon: 'error',
       confirmButtonText: 'ตกลง',
       confirmButtonColor: '#e53e3e',
     })
-  } finally {
-    isSubmitting.value = false
   }
 }
 </script>
-
 
 
 <template>
   <div class="bg-white rounded-xl shadow-md p-12 mx-auto max-w-7xl">
     <!-- หัวข้อ -->
     <div class="mb-6">
-      <h1 class="text-xl font-bold text-black">แบบฟอร์มแจ้งซ่อม</h1>
+      <h1 class="text-xl font-bold text-black">แก้ไขแบบฟอร์มแจ้งซ่อม</h1>
 
       <!-- แสดงชื่อหน่วยงาน (ถ้าอยากให้แสดงเฉย ๆ) -->
       <p class="text-gray-600 text-base mt-2">
@@ -440,18 +475,18 @@ async function handleSubmit() {
             class="bg-[#1E48D1] text-white px-6 py-3 rounded-lg hover:bg-sky-700 transition disabled:opacity-50"
             @click="handleSubmit"
           >
-            บันทึกฟอร์มแจ้งซ่อม
+            บันทึกการแก้ไข
           </button>
         </div>
       </form>
       <!-- Popup ยืนยันก่อนส่ง -->
-        <ConfirmDialog
-          :visible="showConfirm"
-          title="ยืนยันการส่งแบบฟอร์มแจ้งซ่อม"
-          message="คุณต้องการยืนยันการส่งแบบฟอร์มแจ้งซ่อมนี้หรือไม่"
-          @confirm="confirmSubmit"
-          @cancel="cancelSubmit"
-        />
+      <ConfirmDialog
+        :visible="showConfirm"
+        title="ยืนยันการส่งแบบฟอร์มแจ้งซ่อม"
+        message="คุณต้องการยืนยันการส่งแบบฟอร์มแจ้งซ่อมนี้หรือไม่"
+        @confirm="confirmSubmit"
+        @cancel="cancelSubmit"
+      />
     </div>
   </div>
 </template>

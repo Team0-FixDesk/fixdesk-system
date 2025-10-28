@@ -383,6 +383,214 @@ app.post('/repair-requests', express.json(), (req, res) => {
 })
 
 
+// ✅ ดึงข้อมูลรายการแจ้งซ่อมของผู้ใช้
+app.get('/my-repairs/:userId', (req, res) => {
+  const { userId } = req.params
+
+  const query = `
+    SELECT 
+      rf.rf_id,
+      rf.rf_code,
+      rf.rf_prop_number,
+      rf.rf_problem,
+      rf.rf_urgency,
+      rf.rf_user_status,
+      rf.rf_create_at,
+      b.bd_name AS building_name,
+      u.us_department AS department_name
+    FROM repair_form rf
+    LEFT JOIN room r ON rf.rf_room_id = r.room_id
+    LEFT JOIN floor f ON r.room_fl_id = f.fl_id
+    LEFT JOIN building b ON f.fl_bd_id = b.bd_id
+    LEFT JOIN user u ON rf.rf_us_id = u.us_id
+    WHERE rf.rf_us_id = ?
+    ORDER BY rf.rf_create_at DESC
+  `
+
+  db.query(query, [userId], (err, results) => {
+    if (err) {
+      console.error('❌ Error fetching user repairs:', err)
+      return res.status(500).json({ message: 'ไม่สามารถโหลดข้อมูลรายการแจ้งซ่อมได้' })
+    }
+    res.json(results)
+  })
+})
+
+// 🗑️ ลบใบแจ้งซ่อมตามรหัสใบแจ้ง (rf_code)
+app.delete('/my-repairs/:code', (req, res) => {
+  const { code } = req.params
+  console.log('🧭 ลบฟอร์ม code =', code)
+
+  db.query('DELETE FROM repair_form WHERE rf_code = ?', [code], (err, result) => {
+    if (err) {
+      console.error('❌ ลบข้อมูลไม่สำเร็จ:', err)
+      return res.status(500).json({ message: 'เกิดข้อผิดพลาดในระบบ' })
+    }
+
+    if (result.affectedRows === 0) {
+      console.warn('⚠️ ไม่พบใบแจ้งซ่อม:', code)
+      return res.status(404).json({ message: 'ไม่พบใบแจ้งซ่อมนี้' })
+    }
+
+    console.log(`🗑️ ลบสำเร็จ: ${code}`)
+    res.json({ message: 'ลบข้อมูลเรียบร้อยแล้ว' })
+  })
+})
+
+
+
+
+// =========================
+// 📄 GET: ดึงรายละเอียดใบแจ้งซ่อม (เวอร์ชันแก้ไข)
+// =========================
+app.get('/repair-requests/:code', (req, res) => {
+  const { code } = req.params
+
+  const sql = `
+    SELECT 
+      rf.rf_code,
+      rf.rf_problem,
+      rf.rf_detail,
+      rf.rf_urgency,
+      rf.rf_phone,
+      rf.rf_create_at,
+      rf.rf_user_status,
+      rf.rf_tech_status,
+      rf.rf_prop_number,
+      rf.rf_image,
+
+      -- ✅ เพิ่ม id ทั้งหมด
+      t.tt_id AS repair_type_id,
+      t.tt_name AS repair_type_name,
+      b.bd_id AS building_id,
+      b.bd_name AS building_name,
+      f.fl_id AS floor_id,
+      f.fl_name AS floor_name,
+      r.room_id AS room_id,
+      r.room_name AS room_name,
+
+      CONCAT(tn.ttn_title_th, u.us_first_name_th, ' ', u.us_last_name_th) AS reporter_name,
+      u.us_phone AS reporter_phone,
+      u.us_department AS reporter_department
+
+    FROM repair_form rf
+    LEFT JOIN room r ON rf.rf_room_id = r.room_id
+    LEFT JOIN floor f ON r.room_fl_id = f.fl_id
+    LEFT JOIN building b ON f.fl_bd_id = b.bd_id
+    LEFT JOIN technician_type t ON rf.rf_tt_id = t.tt_id
+    LEFT JOIN user u ON rf.rf_us_id = u.us_id
+    LEFT JOIN title_name tn ON u.us_ttn_id = tn.ttn_id
+    WHERE rf.rf_code = ?
+  `
+
+  db.query(sql, [code], (err, results) => {
+    if (err) {
+      console.error('❌ Database error:', err)
+      return res.status(500).json({ message: 'เกิดข้อผิดพลาดในเซิร์ฟเวอร์', error: err.message })
+    }
+
+    if (results.length === 0) {
+      return res.status(404).json({ message: 'ไม่พบใบแจ้งซ่อมนี้' })
+    }
+
+    const r = results[0]
+
+    res.json({
+      rf_code: r.rf_code,
+      rf_detail: r.rf_detail || '-',
+      rf_problem: r.rf_problem || '-',
+      rf_urgency: r.rf_urgency || 'medium',
+      rf_user_status: r.rf_user_status || '-',
+      rf_tech_status: r.rf_tech_status || '-',
+      rf_phone: r.rf_phone || '-',
+      rf_create_at: r.rf_create_at || '-',
+      rf_prop_number: r.rf_prop_number || '-',
+      rf_image: r.rf_image || null,
+
+      // ✅ เพิ่ม id และ name
+      repair_type_id: r.repair_type_id || null,
+      repair_type_name: r.repair_type_name || '-',
+      building_id: r.building_id || null,
+      building_name: r.building_name || '-',
+      floor_id: r.floor_id || null,
+      floor_name: r.floor_name || '-',
+      room_id: r.room_id || null,
+      room_name: r.room_name || '-',
+
+      reporter: {
+        name: r.reporter_name || '-',
+        phone: r.reporter_phone || '-',
+        department: r.reporter_department || '-'
+      }
+    })
+  })
+})
+
+// =========================
+// ✏️ PUT: อัปเดตข้อมูลใบแจ้งซ่อม
+// =========================
+app.put('/repair-requests/:code', (req, res) => {
+  const { code } = req.params
+  const {
+    us_id,
+    repair_type_id,
+    room_id,
+    asset_code,
+    problem_detail,
+    issue_description,
+    urgency,
+    phone_number
+  } = req.body
+
+  if (!repair_type_id || !room_id || !problem_detail) {
+    return res.status(400).json({ message: 'ข้อมูลไม่ครบ กรุณากรอกให้ครบทุกช่อง' })
+  }
+
+  const sql = `
+    UPDATE repair_form
+    SET 
+      rf_us_id = ?,
+      rf_tt_id = ?,
+      rf_room_id = ?,
+      rf_prop_number = ?,
+      rf_problem = ?,
+      rf_detail = ?,
+      rf_phone = ?,
+      rf_urgency = ?,
+      rf_update_at = NOW()
+    WHERE rf_code = ?
+  `
+
+  const params = [
+    us_id || null,
+    repair_type_id,
+    room_id,
+    asset_code || null,
+    problem_detail,
+    issue_description || '-',
+    phone_number || null,
+    urgency || 'medium',
+    code
+  ]
+
+  db.query(sql, params, (err, result) => {
+    if (err) {
+      console.error('❌ Database error (update repair):', err)
+      return res.status(500).json({ message: 'อัปเดตข้อมูลไม่สำเร็จ', error: err.message })
+    }
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'ไม่พบใบแจ้งซ่อมนี้' })
+    }
+
+    res.json({ message: '✅ อัปเดตข้อมูลใบแจ้งซ่อมสำเร็จ', updated: result.affectedRows })
+  })
+})
+
+
+
+
+
 
 
 /* =========================

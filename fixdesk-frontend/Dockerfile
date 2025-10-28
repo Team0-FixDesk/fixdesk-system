@@ -12,6 +12,8 @@ COPY package*.json ./
 # เคลียร์ cache และติดตั้ง dependency
 RUN npm cache clean --force
 RUN npm install --omit=dev
+RUN npm install sweetalert2
+
 
 # คัดลอกโค้ดทั้งหมด
 COPY . .
