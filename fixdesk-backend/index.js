@@ -305,27 +305,29 @@ app.get("/technicians", authMiddleware, (req, res) => {
     SELECT 
       u.us_id,
       u.us_user_name,
-      u.us_first_name_th,
-      u.us_last_name_th,
+      tn.ttn_title_th AS prefix_name,    -- ✅ เพิ่มคำนำหน้า
+      u.us_first_name_th AS us_first_name,
+      u.us_last_name_th AS us_last_name,
       u.us_phone,
+      u.us_department,
       u.us_tt_id,
-      tt.tt_name,
-      tn.ttn_title_th
+      tt.tt_name
     FROM user u
     LEFT JOIN technician_type tt ON u.us_tt_id = tt.tt_id
     LEFT JOIN title_name tn ON u.us_ttn_id = tn.ttn_id
     WHERE u.us_role_id = 2
     ORDER BY u.us_first_name_th ASC
-  `;
-  
+  `
+
   db.query(query, (err, results) => {
     if (err) {
-      console.error("❌ Error fetching technicians:", err);
-      return res.status(500).json({ message: "ดึงข้อมูลช่างไม่สำเร็จ", error: err.message });
+      console.error("❌ Error fetching technicians:", err)
+      return res.status(500).json({ message: "ดึงข้อมูลช่างไม่สำเร็จ", error: err.message })
     }
-    res.json(results);
-  });
-});
+    res.json(results)
+  })
+})
+
 
 /* ================
 TECHNICIAN TYPE CRUD
@@ -584,6 +586,7 @@ app.get("/admin/repairs", authMiddleware, (req, res) => {
       COALESCE(rf.rf_urgency, 'medium') AS rf_urgency,
       u.us_first_name_th AS us_first_name,
       u.us_last_name_th AS us_last_name,
+      u.us_department AS department_name,  -- ✅ เพิ่มตรงนี้
       tt.tt_name,
       tech.us_first_name_th AS tech_first_name,
       tech.us_last_name_th AS tech_last_name
@@ -593,15 +596,19 @@ app.get("/admin/repairs", authMiddleware, (req, res) => {
     LEFT JOIN user tech ON rf.rf_assigned_tech_id = tech.us_id
     ORDER BY rf.rf_create_at DESC
   `;
-  
+
   db.query(query, (err, results) => {
     if (err) {
       console.error("❌ Error fetching repairs:", err);
-      return res.status(500).json({ message: "ดึงข้อมูลรายการแจ้งซ่อมไม่สำเร็จ", error: err.message });
+      return res.status(500).json({
+        message: "ดึงข้อมูลรายการแจ้งซ่อมไม่สำเร็จ",
+        error: err.message,
+      });
     }
     res.json(results);
   });
 });
+
 
 /* ================
    POST /assign-repair (มอบหมายงานให้ช่าง)
