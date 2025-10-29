@@ -1,6 +1,9 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import SuccessAlert from '@/components/alert/success-alert.vue'
+import ErrorAlert from '@/components/alert/error-alert.vue'
+import ConfirmAlert from '@/components/alert/confirm-alert.vue'
 
 defineOptions({ name: 'AdminManageLocationView' })
 
@@ -31,6 +34,32 @@ const selectedFloor = ref('')
 const currentPage = ref(1)
 const perPage = 10
 const sortOrder = ref('ก-ฮ') // 'ก-ฮ', 'ฮ-ก'
+
+// Modal state
+const showModal = ref(false)
+const modalMode = ref('add') // 'add' or 'edit'
+const modalStep = ref(1) // 1: เลือกประเภท, 2: กรอกข้อมูล
+const modalType = ref('building') // 'building', 'floor', 'room'
+const bulkCreateMode = ref(false) // true = สร้างหลายระดับพร้อมกัน
+const modalData = ref({
+  id: null,
+  name: '',
+  building_id: '',
+  floor_id: ''
+})
+// Bulk create state
+const buildingMode = ref('existing') // 'existing' or 'new'
+const floorMode = ref('existing') // 'existing' or 'new'
+const newBuildingName = ref('')
+const newFloorName = ref('')
+const roomName = ref('')
+
+// Alert state
+const showSuccessAlert = ref(false)
+const showErrorAlert = ref(false)
+const showConfirmDeleteAlert = ref(false)
+const errorMessage = ref('')
+const itemToDelete = ref(null)
 
 /* ===============================
  * 📥 FETCH DATA
@@ -174,22 +203,303 @@ function handleClearFilters() {
 
 function handleEdit(item) {
   console.log('Edit:', item)
-  // TODO: Implement edit functionality
-  alert(`แก้ไข: ${item.name}`)
+  modalMode.value = 'edit'
+  modalStep.value = 2 // ข้าม step 1 เพราะรู้ type แล้ว
+  modalType.value = item.type
+  modalData.value = {
+    id: item.id,
+    name: item.name,
+    building_id: item.type === 'floor' ? selectedBuilding.value : (item.type === 'room' ? selectedBuilding.value : ''),
+    floor_id: item.type === 'room' ? selectedFloor.value : ''
+  }
+  
+  // โหลดข้อมูล floors ถ้าเป็น room
+  if (item.type === 'room' && selectedBuilding.value) {
+    fetchFloors(selectedBuilding.value)
+  }
+  
+  showModal.value = true
 }
 
 function handleDelete(item) {
   console.log('Delete:', item)
-  // TODO: Implement delete functionality
-  if (confirm(`ต้องการลบ "${item.name}" หรือไม่?`)) {
-    alert('ฟังก์ชันลบยังไม่ได้ทำ')
+  itemToDelete.value = item
+  showConfirmDeleteAlert.value = true
+}
+
+async function confirmDelete() {
+  showConfirmDeleteAlert.value = false
+  
+  try {
+    const endpoint = itemToDelete.value.type === 'building' 
+      ? `/buildings/${itemToDelete.value.id}`
+      : itemToDelete.value.type === 'floor'
+      ? `/floors/${itemToDelete.value.id}`
+      : `/rooms/${itemToDelete.value.id}`
+    
+    const res = await fetch(`${API_BASE}${endpoint}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    })
+    
+    const data = await res.json()
+    
+    if (!res.ok) {
+      throw new Error(data.message || 'ลบไม่สำเร็จ')
+    }
+    
+    showSuccessAlert.value = true
+    await refreshData()
+  } catch (err) {
+    errorMessage.value = err.message || 'เกิดข้อผิดพลาดในการลบข้อมูล'
+    showErrorAlert.value = true
   }
+  
+  itemToDelete.value = null
 }
 
 function handleAdd() {
   console.log('Add new location')
-  // TODO: Implement add functionality
-  alert('ฟังก์ชันเพิ่มสถานที่ยังไม่ได้ทำ')
+  
+  modalMode.value = 'add'
+  modalStep.value = 1 // เริ่มจาก step 1: เลือกประเภท
+  modalType.value = 'building' // default
+  bulkCreateMode.value = false
+  modalData.value = {
+    id: null,
+    name: '',
+    building_id: selectedBuilding.value || '',
+    floor_id: selectedFloor.value || ''
+  }
+  // Reset bulk create state
+  buildingMode.value = 'existing'
+  floorMode.value = 'existing'
+  newBuildingName.value = ''
+  newFloorName.value = ''
+  roomName.value = ''
+  
+  showModal.value = true
+}
+
+function closeModal() {
+  showModal.value = false
+  modalStep.value = 1
+  bulkCreateMode.value = false
+  modalData.value = {
+    id: null,
+    name: '',
+    building_id: '',
+    floor_id: ''
+  }
+  // Reset bulk create state
+  buildingMode.value = 'existing'
+  floorMode.value = 'existing'
+  newBuildingName.value = ''
+  newFloorName.value = ''
+  roomName.value = ''
+}
+
+async function saveLocation() {
+  if (!modalData.value.name.trim()) {
+    errorMessage.value = 'กรุณากรอกชื่อ'
+    showErrorAlert.value = true
+    return
+  }
+
+  // ตรวจสอบว่ามี building_id สำหรับ floor และ room
+  if (modalType.value === 'floor' && !modalData.value.building_id) {
+    errorMessage.value = 'กรุณาเลือกอาคาร'
+    showErrorAlert.value = true
+    return
+  }
+
+  if (modalType.value === 'room' && (!modalData.value.building_id || !modalData.value.floor_id)) {
+    errorMessage.value = 'กรุณาเลือกอาคารและชั้น'
+    showErrorAlert.value = true
+    return
+  }
+
+  try {
+    const endpoint = modalType.value === 'building' 
+      ? '/buildings'
+      : modalType.value === 'floor'
+      ? '/floors'
+      : '/rooms'
+    
+    const method = modalMode.value === 'add' ? 'POST' : 'PUT'
+    const url = modalMode.value === 'edit' 
+      ? `${API_BASE}${endpoint}/${modalData.value.id}`
+      : `${API_BASE}${endpoint}`
+    
+    const body = modalType.value === 'building'
+      ? { bd_name: modalData.value.name }
+      : modalType.value === 'floor'
+      ? { fl_name: modalData.value.name, fl_bd_id: modalData.value.building_id }
+      : { room_name: modalData.value.name, room_fl_id: modalData.value.floor_id }
+    
+    const res = await fetch(url, {
+      method,
+      headers: getAuthHeaders(),
+      body: JSON.stringify(body)
+    })
+    
+    const data = await res.json()
+    
+    if (!res.ok) {
+      throw new Error(data.message || 'บันทึกไม่สำเร็จ')
+    }
+    
+    closeModal()
+    showSuccessAlert.value = true
+    await refreshData()
+  } catch (err) {
+    errorMessage.value = err.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล'
+    showErrorAlert.value = true
+  }
+}
+
+function nextStep() {
+  if (modalStep.value === 1) {
+    modalStep.value = 2
+    // โหลดข้อมูล floors ถ้าเลือก room และมี building_id
+    if (modalType.value === 'room' && modalData.value.building_id) {
+      fetchFloors(modalData.value.building_id)
+    }
+  }
+}
+
+function prevStep() {
+  if (modalStep.value === 2 && modalMode.value === 'add') {
+    modalStep.value = 1
+  }
+}
+
+async function handleModalBuildingChange() {
+  if (modalData.value.building_id) {
+    await fetchFloors(modalData.value.building_id)
+  }
+  modalData.value.floor_id = ''
+}
+
+async function handleBulkBuildingChange() {
+  if (buildingMode.value === 'existing' && modalData.value.building_id) {
+    await fetchFloors(modalData.value.building_id)
+  }
+  modalData.value.floor_id = ''
+  floorMode.value = 'existing'
+}
+
+// ฟังก์ชันสำหรับ Bulk Create
+async function bulkCreateLocation() {
+  try {
+    let buildingId = modalData.value.building_id
+    let floorId = modalData.value.floor_id
+    
+    // 1. สร้างอาคารถ้าเป็นแบบใหม่
+    if (buildingMode.value === 'new') {
+      if (!newBuildingName.value.trim()) {
+        errorMessage.value = 'กรุณากรอกชื่ออาคารใหม่'
+        showErrorAlert.value = true
+        return
+      }
+      
+      const res = await fetch(`${API_BASE}/buildings`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ bd_name: newBuildingName.value.trim() })
+      })
+      
+      const data = await res.json()
+      
+      if (!res.ok) {
+        throw new Error(data.message || 'สร้างอาคารไม่สำเร็จ')
+      }
+      
+      buildingId = data.bd_id
+      console.log('✅ สร้างอาคารสำเร็จ:', data)
+    }
+    
+    // 2. สร้างชั้นถ้าเป็นแบบใหม่
+    if (floorMode.value === 'new') {
+      if (!newFloorName.value.trim()) {
+        errorMessage.value = 'กรุณากรอกชื่อชั้นใหม่'
+        showErrorAlert.value = true
+        return
+      }
+      
+      if (!buildingId) {
+        errorMessage.value = 'กรุณาเลือกหรือสร้างอาคารก่อน'
+        showErrorAlert.value = true
+        return
+      }
+      
+      const res = await fetch(`${API_BASE}/floors`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ 
+          fl_name: newFloorName.value.trim(), 
+          fl_bd_id: buildingId 
+        })
+      })
+      
+      const data = await res.json()
+      
+      if (!res.ok) {
+        throw new Error(data.message || 'สร้างชั้นไม่สำเร็จ')
+      }
+      
+      floorId = data.fl_id
+      console.log('✅ สร้างชั้นสำเร็จ:', data)
+    }
+    
+    // 3. สร้างห้อง (required)
+    if (!roomName.value.trim()) {
+      errorMessage.value = 'กรุณากรอกชื่อห้อง'
+      showErrorAlert.value = true
+      return
+    }
+    
+    if (!floorId) {
+      errorMessage.value = 'กรุณาเลือกหรือสร้างชั้นก่อน'
+      showErrorAlert.value = true
+      return
+    }
+    
+    const res = await fetch(`${API_BASE}/rooms`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ 
+        room_name: roomName.value.trim(), 
+        room_fl_id: floorId 
+      })
+    })
+    
+    const data = await res.json()
+    
+    if (!res.ok) {
+      throw new Error(data.message || 'สร้างห้องไม่สำเร็จ')
+    }
+    
+    console.log('✅ สร้างห้องสำเร็จ:', data)
+    
+    closeModal()
+    showSuccessAlert.value = true
+    await refreshData()
+    
+  } catch (err) {
+    errorMessage.value = err.message || 'เกิดข้อผิดพลาดในการสร้างสถานที่'
+    showErrorAlert.value = true
+  }
+}
+
+async function refreshData() {
+  await fetchBuildings()
+  if (selectedBuilding.value) {
+    await fetchFloors(selectedBuilding.value)
+  }
+  if (selectedFloor.value) {
+    await fetchRooms(selectedFloor.value)
+  }
 }
 
 function nextPage() {
@@ -407,6 +717,432 @@ onMounted(async () => {
         </button>
       </div>
     </div>
+
+    <!-- 🔹 Modal เพิ่ม/แก้ไขสถานที่ -->
+    <div
+      v-if="showModal"
+      class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50"
+      @click="closeModal"
+    >
+      <div
+        class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 relative"
+        @click.stop
+      >
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="text-xl font-bold text-blue-700">
+            {{ modalMode === 'add' ? 'เพิ่มสถานที่' : 'แก้ไขสถานที่' }}
+          </h2>
+          <button
+            @click="closeModal"
+            class="text-gray-400 hover:text-gray-600 text-2xl leading-none"
+          >
+            ×
+          </button>
+        </div>
+
+        <!-- Progress Steps (เฉพาะโหมด add) -->
+        <div v-if="modalMode === 'add'" class="flex items-center justify-center mb-6 gap-2">
+          <div class="flex items-center">
+            <div 
+              :class="[
+                'w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm transition-colors',
+                modalStep === 1 ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-600'
+              ]"
+            >
+              1
+            </div>
+            <span class="ml-2 text-sm font-medium text-gray-700">เลือกประเภท</span>
+          </div>
+          
+          <div class="w-12 h-0.5 bg-gray-300 mx-2"></div>
+          
+          <div class="flex items-center">
+            <div 
+              :class="[
+                'w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm transition-colors',
+                modalStep === 2 ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-600'
+              ]"
+            >
+              2
+            </div>
+            <span class="ml-2 text-sm font-medium text-gray-700">กรอกข้อมูล</span>
+          </div>
+        </div>
+
+        <!-- Step 1: เลือกประเภท (เฉพาะโหมด add) -->
+        <div v-if="modalMode === 'add' && modalStep === 1" class="space-y-4">
+          <p class="text-sm text-gray-600 mb-4">คุณต้องการเพิ่มสถานที่แบบไหน?</p>
+          
+          <!-- Mode Selection -->
+          <div class="space-y-3 mb-6">
+            <!-- Single Level Mode -->
+            <label class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400"
+              :class="!bulkCreateMode ? 'border-blue-600 bg-blue-50' : 'border-gray-200'"
+            >
+              <input 
+                type="radio" 
+                :checked="!bulkCreateMode"
+                @change="bulkCreateMode = false"
+                class="w-5 h-5 text-blue-600 mt-1"
+              />
+              <div class="ml-3">
+                <div class="flex items-center gap-2">
+                  <span class="font-semibold text-gray-800">เพิ่มทีละระดับ</span>
+                </div>
+                <p class="text-xs text-gray-500 mt-1">เลือกเพิ่ม อาคาร, ชั้น หรือ ห้อง ทีละอย่าง</p>
+              </div>
+            </label>
+
+            <!-- Bulk Create Mode -->
+            <label class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400"
+              :class="bulkCreateMode ? 'border-blue-600 bg-blue-50' : 'border-gray-200'"
+            >
+              <input 
+                type="radio" 
+                :checked="bulkCreateMode"
+                @change="bulkCreateMode = true"
+                class="w-5 h-5 text-blue-600 mt-1"
+              />
+              <div class="ml-3">
+                <div class="flex items-center gap-2">
+                  <span class="font-semibold text-gray-800">สร้างหลายระดับพร้อมกัน</span>
+                  <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">เร็วกว่า</span>
+                </div>
+                <p class="text-xs text-gray-500 mt-1">สร้างอาคาร + ชั้น + ห้อง ในครั้งเดียว</p>
+              </div>
+            </label>
+          </div>
+
+          <!-- Type Selection (แสดงเมื่อเลือก Single Level Mode) -->
+          <div v-if="!bulkCreateMode" class="space-y-3">
+            <p class="text-sm font-semibold text-gray-700 mb-2">เลือกประเภท:</p>
+            
+            <!-- Option: Building -->
+            <label class="flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400"
+              :class="modalType === 'building' ? 'border-blue-600 bg-blue-50' : 'border-gray-200'"
+            >
+              <input 
+                type="radio" 
+                v-model="modalType" 
+                value="building"
+                class="w-5 h-5 text-blue-600"
+              />
+              <div class="ml-3">
+                <div class="flex items-center gap-2">
+                  <span class="text-2xl">🏢</span>
+                  <span class="font-semibold text-gray-800">อาคาร</span>
+                </div>
+                <p class="text-xs text-gray-500 mt-1">เพิ่มอาคารใหม่</p>
+              </div>
+            </label>
+
+            <!-- Option: Floor -->
+            <label class="flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400"
+              :class="modalType === 'floor' ? 'border-blue-600 bg-blue-50' : 'border-gray-200'"
+            >
+              <input 
+                type="radio" 
+                v-model="modalType" 
+                value="floor"
+                class="w-5 h-5 text-blue-600"
+              />
+              <div class="ml-3">
+                <div class="flex items-center gap-2">
+                  <span class="text-2xl">🧱</span>
+                  <span class="font-semibold text-gray-800">ชั้น</span>
+                </div>
+                <p class="text-xs text-gray-500 mt-1">เพิ่มชั้นในอาคาร</p>
+              </div>
+            </label>
+
+            <!-- Option: Room -->
+            <label class="flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400"
+              :class="modalType === 'room' ? 'border-blue-600 bg-blue-50' : 'border-gray-200'"
+            >
+              <input 
+                type="radio" 
+                v-model="modalType" 
+                value="room"
+                class="w-5 h-5 text-blue-600"
+              />
+              <div class="ml-3">
+                <div class="flex items-center gap-2">
+                  <span class="text-2xl">🚪</span>
+                  <span class="font-semibold text-gray-800">ห้อง</span>
+                </div>
+                <p class="text-xs text-gray-500 mt-1">เพิ่มห้องในชั้น</p>
+              </div>
+            </label>
+          </div>
+
+          <!-- Actions for Step 1 -->
+          <div class="flex gap-3 mt-6">
+            <button
+              @click="closeModal"
+              class="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition"
+            >
+              ยกเลิก
+            </button>
+            <button
+              @click="nextStep"
+              class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition"
+            >
+              ถัดไป →
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 2: กรอกข้อมูล -->
+        <div v-if="modalStep === 2" class="space-y-4">
+          <!-- Bulk Create Mode -->
+          <div v-if="bulkCreateMode" class="space-y-4">
+            <div class="flex items-center gap-2 p-3 bg-blue-50 rounded-lg mb-4">
+              <span class="text-2xl">🏢→🧱→🚪</span>
+              <span class="font-semibold text-blue-800">สร้างหลายระดับพร้อมกัน</span>
+            </div>
+
+            <!-- Building Section -->
+            <div class="border-2 border-gray-200 rounded-lg p-4 space-y-3">
+              <h3 class="font-semibold text-gray-800 flex items-center gap-2">
+                <span class="text-xl">🏢</span>
+                <span>อาคาร</span>
+              </h3>
+              
+              <label class="flex items-center gap-2">
+                <input 
+                  type="radio" 
+                  v-model="buildingMode" 
+                  value="existing"
+                  class="w-4 h-4 text-blue-600"
+                />
+                <span class="text-sm font-medium">เลือกจากอาคารที่มีอยู่</span>
+              </label>
+              <select
+                v-if="buildingMode === 'existing'"
+                v-model="modalData.building_id"
+                @change="handleBulkBuildingChange"
+                class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none"
+              >
+                <option value="">-- เลือกอาคาร --</option>
+                <option v-for="building in buildings" :key="building.building_id" :value="building.building_id">
+                  {{ building.building_name }}
+                </option>
+              </select>
+              
+              <label class="flex items-center gap-2 mt-3">
+                <input 
+                  type="radio" 
+                  v-model="buildingMode" 
+                  value="new"
+                  class="w-4 h-4 text-blue-600"
+                />
+                <span class="text-sm font-medium">สร้างอาคารใหม่</span>
+              </label>
+              <input
+                v-if="buildingMode === 'new'"
+                v-model="newBuildingName"
+                type="text"
+                placeholder="ชื่ออาคารใหม่"
+                class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none"
+              />
+            </div>
+
+            <!-- Floor Section -->
+            <div class="border-2 border-gray-200 rounded-lg p-4 space-y-3">
+              <h3 class="font-semibold text-gray-800 flex items-center gap-2">
+                <span class="text-xl">🧱</span>
+                <span>ชั้น</span>
+              </h3>
+              
+              <label class="flex items-center gap-2">
+                <input 
+                  type="radio" 
+                  v-model="floorMode" 
+                  value="existing"
+                  :disabled="buildingMode === 'new' || !modalData.building_id"
+                  class="w-4 h-4 text-blue-600 disabled:opacity-50"
+                />
+                <span class="text-sm font-medium" :class="{'text-gray-400': buildingMode === 'new' || !modalData.building_id}">
+                  เลือกจากชั้นที่มีอยู่
+                </span>
+              </label>
+              <select
+                v-if="floorMode === 'existing'"
+                v-model="modalData.floor_id"
+                :disabled="buildingMode === 'new' || !modalData.building_id"
+                class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none disabled:bg-gray-100"
+              >
+                <option value="">-- เลือกชั้น --</option>
+                <option v-for="floor in floors" :key="floor.floor_id" :value="floor.floor_id">
+                  {{ floor.floor_name }}
+                </option>
+              </select>
+              
+              <label class="flex items-center gap-2 mt-3">
+                <input 
+                  type="radio" 
+                  v-model="floorMode" 
+                  value="new"
+                  class="w-4 h-4 text-blue-600"
+                />
+                <span class="text-sm font-medium">สร้างชั้นใหม่</span>
+              </label>
+              <input
+                v-if="floorMode === 'new'"
+                v-model="newFloorName"
+                type="text"
+                placeholder="ชื่อชั้นใหม่"
+                class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none"
+              />
+            </div>
+
+            <!-- Room Section -->
+            <div class="border-2 border-blue-200 rounded-lg p-4 space-y-3 bg-blue-50">
+              <h3 class="font-semibold text-gray-800 flex items-center gap-2">
+                <span class="text-xl">🚪</span>
+                <span>ห้อง <span class="text-red-500">*</span></span>
+              </h3>
+              
+              <input
+                v-model="roomName"
+                type="text"
+                placeholder="ชื่อห้อง (ต้องระบุ)"
+                class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none"
+              />
+              <p class="text-xs text-gray-600">
+                💡 ห้องจะถูกสร้างในชั้นที่เลือกหรือสร้างขึ้นมาใหม่
+              </p>
+            </div>
+
+            <!-- Actions for Bulk Create -->
+            <div class="flex gap-3 mt-6">
+              <button
+                @click="prevStep"
+                class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition"
+              >
+                ← ย้อนกลับ
+              </button>
+              <button
+                @click="bulkCreateLocation"
+                class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition"
+              >
+                สร้างทั้งหมด
+              </button>
+            </div>
+          </div>
+
+          <!-- Single Level Mode (แบบเดิม) -->
+          <div v-else>
+            <!-- แสดงประเภทที่เลือก -->
+            <div class="flex items-center gap-2 p-3 bg-blue-50 rounded-lg mb-4">
+              <span class="text-2xl">
+                {{ modalType === 'building' ? '🏢' : modalType === 'floor' ? '🧱' : '🚪' }}
+              </span>
+              <span class="font-semibold text-blue-800">
+                {{ modalMode === 'add' ? 'เพิ่ม' : 'แก้ไข' }}{{ modalType === 'building' ? 'อาคาร' : modalType === 'floor' ? 'ชั้น' : 'ห้อง' }}
+              </span>
+            </div>
+
+            <!-- เลือกอาคาร (สำหรับ floor และ room) -->
+            <div v-if="modalType === 'floor' || modalType === 'room'">
+              <label class="block text-sm font-semibold text-gray-700 mb-2">
+                อาคาร <span class="text-red-500">*</span>
+              </label>
+              <select
+                v-model="modalData.building_id"
+                :disabled="modalMode === 'edit'"
+                @change="handleModalBuildingChange"
+                class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none disabled:bg-gray-100"
+              >
+                <option value="">เลือกอาคาร</option>
+                <option v-for="building in buildings" :key="building.building_id" :value="building.building_id">
+                  {{ building.building_name }}
+                </option>
+              </select>
+            </div>
+
+            <!-- เลือกชั้น (สำหรับ room) -->
+            <div v-if="modalType === 'room'">
+              <label class="block text-sm font-semibold text-gray-700 mb-2">
+                ชั้น <span class="text-red-500">*</span>
+              </label>
+              <select
+                v-model="modalData.floor_id"
+                :disabled="modalMode === 'edit' || !modalData.building_id"
+                class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none disabled:bg-gray-100"
+              >
+                <option value="">เลือกชั้น</option>
+                <option v-for="floor in floors" :key="floor.floor_id" :value="floor.floor_id">
+                  {{ floor.floor_name }}
+                </option>
+              </select>
+            </div>
+
+            <!-- ชื่อ -->
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">
+                ชื่อ{{ modalType === 'building' ? 'อาคาร' : modalType === 'floor' ? 'ชั้น' : 'ห้อง' }} 
+                <span class="text-red-500">*</span>
+              </label>
+              <input
+                v-model="modalData.name"
+                type="text"
+                :placeholder="`ระบุชื่อ${modalType === 'building' ? 'อาคาร' : modalType === 'floor' ? 'ชั้น' : 'ห้อง'}`"
+                class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none"
+                @keyup.enter="saveLocation"
+              />
+            </div>
+
+            <!-- Actions for Single Level -->
+            <div class="flex gap-3 mt-6">
+              <button
+                v-if="modalMode === 'add'"
+                @click="prevStep"
+                class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition"
+              >
+                ← ย้อนกลับ
+              </button>
+              <button
+                v-else
+                @click="closeModal"
+                class="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition"
+              >
+                ยกเลิก
+              </button>
+              <button
+                @click="saveLocation"
+                class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition"
+              >
+                {{ modalMode === 'add' ? 'เพิ่ม' : 'บันทึก' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Alert ยืนยันการลบ -->
+    <ConfirmAlert
+      :visible="showConfirmDeleteAlert"
+      title="ยืนยันการลบ"
+      :message="`คุณต้องการลบ &quot;${itemToDelete?.name}&quot; หรือไม่?`"
+      @confirm="confirmDelete"
+      @cancel="showConfirmDeleteAlert = false"
+    />
+
+    <!-- Alert แสดงข้อผิดพลาด -->
+    <ErrorAlert
+      :visible="showErrorAlert"
+      :message="errorMessage"
+      @close="showErrorAlert = false"
+    />
+
+    <!-- Alert สำเร็จ -->
+    <SuccessAlert 
+      :visible="showSuccessAlert" 
+      @close="showSuccessAlert = false" 
+    />
   </div>
 </template>
 
