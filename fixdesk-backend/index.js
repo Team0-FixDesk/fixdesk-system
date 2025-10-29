@@ -659,61 +659,6 @@ app.post("/assign-repair", authMiddleware, (req, res) => {
   });
 });
 
-/* ================
-   GET /repair-requests/:id (ดูรายละเอียดใบแจ้งซ่อม)
-=================== */
-app.get("/repair-requests/:id", (req, res) => {
-  const { id } = req.params;
-  
-  const query = `
-    SELECT 
-      rf.rf_id,
-      rf.rf_code,
-      rf.rf_create_at,
-      rf.rf_user_status,
-      COALESCE(rf.rf_urgency, 'medium') AS rf_urgency,
-      rf.rf_problem,
-      rf.rf_detail,
-      rf.rf_phone,
-      rf.rf_prop_number,
-      u.us_ttn_id,
-      u.us_first_name_th,
-      u.us_last_name_th,
-      u.us_phone,
-      tt.tt_name AS repair_type_name,
-      b.bd_name AS rf_building,
-      f.fl_name AS rf_floor,
-      r.room_name AS rf_room,
-      tech.us_first_name_th AS technician_first_name,
-      tech.us_last_name_th AS technician_last_name
-    FROM repair_form rf
-    LEFT JOIN user u ON rf.rf_us_id = u.us_id
-    LEFT JOIN technician_type tt ON rf.rf_tt_id = tt.tt_id
-    LEFT JOIN room r ON rf.rf_room_id = r.room_id
-    LEFT JOIN floor f ON r.room_fl_id = f.fl_id
-    LEFT JOIN building b ON f.fl_bd_id = b.bd_id
-    LEFT JOIN user tech ON rf.rf_assigned_tech_id = tech.us_id
-    WHERE rf.rf_id = ?
-  `;
-  
-  db.query(query, [id], (err, results) => {
-    if (err) {
-      console.error("❌ Error fetching repair detail:", err);
-      return res.status(500).json({ message: "ดึงข้อมูลรายละเอียดไม่สำเร็จ", error: err.message });
-    }
-    
-    if (results.length === 0) {
-      return res.status(404).json({ message: "ไม่พบรายการแจ้งซ่อมนี้" });
-    }
-    
-    // Format reporter name
-    const repair = results[0];
-    repair.reporter_name = `${repair.us_first_name_th || ''} ${repair.us_last_name_th || ''}`.trim();
-    
-    res.json(repair);
-  });
-});
-
 
 // ✅ ดึงข้อมูลรายการแจ้งซ่อมของผู้ใช้
 app.get('/my-repairs/:userId', (req, res) => {

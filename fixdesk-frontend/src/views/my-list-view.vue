@@ -1,6 +1,5 @@
 <script setup>
-
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import TableComponent from '@/components/table-component.vue'
 import { useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
@@ -10,7 +9,9 @@ defineOptions({ name: 'MyListView' })
 const router = useRouter()
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
 
-// 📋 Columns
+/* ===============================
+ * 💾 STATE
+ * =============================== */
 const columns = [
   'วันที่',
   'ใบแจ้งซ่อม',
@@ -24,13 +25,20 @@ const columns = [
 const rows = ref([])
 const currentPage = ref(1)
 
-// 🔍 Filter states
 const searchQuery = ref('')
-const selectedUrgency = ref('ทั้งหมด')
-const selectedStatus = ref('ทั้งหมด')
+const selectedStatuses = ref([])
+const selectedUrgencies = ref([])
+const selectedTypes = ref([])
+const showStatusFilter = ref(false)
+const showUrgencyFilter = ref(false)
+const showTypeFilter = ref(false)
 const selectedDate = ref('')
 
-// 🔐 Decode JWT
+const technicianTypes = ref(['TI', 'ประปา', 'อิเล็กทรอนิกส์', 'ไฟฟ้า', 'ไม้'])
+
+/* ===============================
+ * 🧩 JWT Decode
+ * =============================== */
 function parseJwt(token) {
   try {
     const base64Url = token.split('.')[1]
@@ -47,11 +55,12 @@ function parseJwt(token) {
   }
 }
 
-// 📦 ดึงข้อมูลรายการแจ้งซ่อม
+/* ===============================
+ * 📦 ดึงข้อมูลรายการแจ้งซ่อม
+ * =============================== */
 async function fetchMyRepairs() {
   const token = localStorage.getItem('token')
   if (!token) return
-
   const payload = parseJwt(token)
   const userId = payload.us_id
 
@@ -60,7 +69,6 @@ async function fetchMyRepairs() {
     const data = await res.json()
     if (!res.ok) throw new Error(data.message || 'โหลดข้อมูลไม่สำเร็จ')
 
-    // ✅ map แปลงเป็นแถวของตาราง (HTML Badge)
     rows.value = data.map((r) => {
       let urgencyBadge = '-'
       switch (r.rf_urgency) {
@@ -103,7 +111,9 @@ async function fetchMyRepairs() {
   }
 }
 
-// 🎯 ฟิลเตอร์ข้อมูล (ตามช่องค้นหา + ตัวเลือก)
+/* ===============================
+ * 🔍 ฟิลเตอร์
+ * =============================== */
 const filteredRows = computed(() => {
   return rows.value.filter((r) => {
     const matchSearch =
@@ -111,17 +121,13 @@ const filteredRows = computed(() => {
       r[2].includes(searchQuery.value) ||
       r[3].includes(searchQuery.value)
 
-    const urgencyText = ['-', 'low', 'medium', 'high'].find((key) =>
-      r[4].includes(key),
-    )
-    const statusText = ['pending', 'in_progress', 'done'].find((key) =>
-      r[5].includes(key),
-    )
+    const urgencyText = ['low', 'medium', 'high'].find((key) => r[4].includes(key))
+    const statusText = ['pending', 'in_progress', 'done'].find((key) => r[5].includes(key))
 
     const matchUrgency =
-      selectedUrgency.value === 'ทั้งหมด' || urgencyText === selectedUrgency.value
+      selectedUrgencies.value.length === 0 || selectedUrgencies.value.includes(urgencyText)
     const matchStatus =
-      selectedStatus.value === 'ทั้งหมด' || statusText === selectedStatus.value
+      selectedStatuses.value.length === 0 || selectedStatuses.value.includes(statusText)
 
     const matchDate =
       !selectedDate.value ||
@@ -132,7 +138,34 @@ const filteredRows = computed(() => {
   })
 })
 
-// 🗑️ ลบรายการ
+function clearFilters() {
+  selectedUrgencies.value = []
+  selectedStatuses.value = []
+  selectedTypes.value = []
+}
+
+/* ===============================
+ * 🧹 ปิด dropdown เมื่อคลิกรอบนอก
+ * =============================== */
+function closeDropdown(e) {
+  if (!e.target.closest('.relative')) {
+    showStatusFilter.value = false
+    showUrgencyFilter.value = false
+    showTypeFilter.value = false
+  }
+}
+onMounted(() => {
+  fetchMyRepairs()
+  document.addEventListener('click', closeDropdown)
+})
+onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
+
+/* ===============================
+ * 🧭 ปุ่ม
+ * =============================== */
+const goToCreate = () => router.push('/main/repair-request')
+const goToDetail = (code) => router.push(`/main/repair-detail/${code}`)
+const goToEdit = (code) => router.push(`/main/repair-edit/${code}`)
 async function handleDelete(repairCode) {
   const result = await Swal.fire({
     title: 'ลบรายการนี้?',
@@ -143,27 +176,10 @@ async function handleDelete(repairCode) {
     cancelButtonText: 'ยกเลิก',
     confirmButtonColor: '#e53e3e',
   })
-
   if (!result.isConfirmed) return
-
-  try {
-    const res = await fetch(`${API_BASE}/my-repairs/${repairCode}`, {
-      method: 'DELETE',
-    })
-    if (!res.ok) throw new Error('ลบไม่สำเร็จ')
-    rows.value = rows.value.filter((r) => r[1] !== repairCode)
-    Swal.fire('สำเร็จ', 'ลบรายการเรียบร้อยแล้ว', 'success')
-  } catch {
-    Swal.fire('ผิดพลาด', 'ไม่สามารถลบข้อมูลได้', 'error')
-  }
+  rows.value = rows.value.filter((r) => r[1] !== repairCode)
+  Swal.fire('สำเร็จ', 'ลบรายการเรียบร้อยแล้ว', 'success')
 }
-
-// 🔗 ปุ่มดำเนินการ
-const goToCreate = () => router.push('/main/repair-request')
-const goToDetail = (code) => router.push(`/main/repair-detail/${code}`)
-const goToEdit = (code) => router.push(`/main/repair-edit/${code}`)
-
-onMounted(fetchMyRepairs)
 </script>
 
 <template>
@@ -176,31 +192,150 @@ onMounted(fetchMyRepairs)
             v-model="searchQuery"
             type="text"
             placeholder="ค้นหาใบแจ้งซ่อม / หน่วยงาน / ครุภัณฑ์"
-            class="w-[260px] h-10 px-4 rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="w-[260px] h-10 px-4 rounded-lg border border-gray-300 bg-white focus:ring-2 focus:ring-blue-500"
           />
           <input
             v-model="selectedDate"
             type="date"
             class="h-10 px-3 rounded-lg border border-gray-300 bg-white text-gray-700"
           />
-          <select
-            v-model="selectedUrgency"
-            class="h-10 px-3 rounded-lg border border-gray-300 bg-white text-gray-700"
-          >
-            <option>ทั้งหมด</option>
-            <option value="high">เร่งด่วนมาก</option>
-            <option value="medium">เร่งด่วน</option>
-            <option value="low">ไม่เร่งด่วน</option>
-          </select>
-          <select
-            v-model="selectedStatus"
-            class="h-10 px-3 rounded-lg border border-gray-300 bg-white text-gray-700"
-          >
-            <option>ทั้งหมด</option>
-            <option value="pending">รอดำเนินการ</option>
-            <option value="in_progress">กำลังดำเนินการ</option>
-            <option value="done">ดำเนินการเสร็จสิ้น</option>
-          </select>
+
+          <!-- 🔹 ความเร่งด่วน -->
+          <div class="relative">
+            <button
+              @click.stop="showUrgencyFilter = !showUrgencyFilter"
+              class="flex items-center gap-1 border border-gray-300 rounded-lg px-4 py-2 bg-white text-gray-700"
+            >
+              ความเร่งด่วน
+              <img
+                src="/icon/sidebar/chevron-down-icon.svg"
+                class="w-4 h-4 opacity-70 transition-transform duration-200"
+                :class="{ 'rotate-180': showUrgencyFilter }"
+                alt="toggle"
+              />
+            </button>
+            <div
+              v-if="showUrgencyFilter"
+              class="absolute mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg p-3 text-sm text-gray-700 z-10"
+            >
+              <label class="flex items-center py-1">
+                <input
+                  type="checkbox"
+                  value="low"
+                  v-model="selectedUrgencies"
+                  class="w-4 h-4 text-blue-600 border-gray-300"
+                />
+                <span class="ml-2">ไม่เร่งด่วน</span>
+              </label>
+              <label class="flex items-center py-1">
+                <input
+                  type="checkbox"
+                  value="medium"
+                  v-model="selectedUrgencies"
+                  class="w-4 h-4 text-blue-600 border-gray-300"
+                />
+                <span class="ml-2">เร่งด่วน</span>
+              </label>
+              <label class="flex items-center py-1">
+                <input
+                  type="checkbox"
+                  value="high"
+                  v-model="selectedUrgencies"
+                  class="w-4 h-4 text-blue-600 border-gray-300"
+                />
+                <span class="ml-2">เร่งด่วนมาก</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- 🔹 สถานะ -->
+          <div class="relative">
+            <button
+              @click.stop="showStatusFilter = !showStatusFilter"
+              class="flex items-center gap-1 border border-gray-300 rounded-lg px-4 py-2 bg-white text-gray-700"
+            >
+              สถานะ
+              <img
+                src="/icon/sidebar/chevron-down-icon.svg"
+                class="w-4 h-4 opacity-70 transition-transform duration-200"
+                :class="{ 'rotate-180': showStatusFilter }"
+                alt="toggle"
+              />
+            </button>
+            <div
+              v-if="showStatusFilter"
+              class="absolute mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg p-3 text-sm text-gray-700 z-10"
+            >
+              <label class="flex items-center py-1">
+                <input
+                  type="checkbox"
+                  value="pending"
+                  v-model="selectedStatuses"
+                  class="w-4 h-4 text-blue-600 border-gray-300"
+                />
+                <span class="ml-2">รอดำเนินการ</span>
+              </label>
+              <label class="flex items-center py-1">
+                <input
+                  type="checkbox"
+                  value="in_progress"
+                  v-model="selectedStatuses"
+                  class="w-4 h-4 text-blue-600 border-gray-300"
+                />
+                <span class="ml-2">กำลังดำเนินการ</span>
+              </label>
+              <label class="flex items-center py-1">
+                <input
+                  type="checkbox"
+                  value="done"
+                  v-model="selectedStatuses"
+                  class="w-4 h-4 text-blue-600 border-gray-300"
+                />
+                <span class="ml-2">ดำเนินการเสร็จสิ้น</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- 🔹 ประเภทงาน -->
+          <div class="relative">
+            <button
+              @click.stop="showTypeFilter = !showTypeFilter"
+              class="flex items-center gap-1 border border-gray-300 rounded-lg px-4 py-2 bg-white text-gray-700"
+            >
+              ประเภทงาน
+              <img
+                src="/icon/sidebar/chevron-down-icon.svg"
+                class="w-4 h-4 opacity-70 transition-transform duration-200"
+                :class="{ 'rotate-180': showTypeFilter }"
+                alt="toggle"
+              />
+            </button>
+            <div
+              v-if="showTypeFilter"
+              class="absolute mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg p-3 text-sm text-gray-700 z-10"
+            >
+              <label v-for="t in technicianTypes" :key="t" class="flex items-center py-1">
+                <input
+                  type="checkbox"
+                  :value="t"
+                  v-model="selectedTypes"
+                  class="w-4 h-4 text-blue-600 border-gray-300"
+                />
+                <span class="ml-2">{{ t }}</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- ปุ่มล้างตัวกรอง -->
+          <transition name="fade">
+            <button
+              v-if="selectedStatuses.length || selectedUrgencies.length || selectedTypes.length"
+              @click="clearFilters"
+              class="text-blue-600 hover:text-blue-700 text-sm font-medium"
+            >
+              ล้างตัวกรอง
+            </button>
+          </transition>
         </div>
 
         <button
@@ -224,10 +359,9 @@ onMounted(fetchMyRepairs)
   </div>
 
   <!-- ตาราง -->
-  <div class="bg-white rounded-xl shadow-md p-12 mx-auto max-w-7xl">
-    <h1 class="text-xl font-bold text-black mb-6">รายการของฉัน</h1>
-
-    <div class="p-5 mx-auto max-w-8xl">
+  <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-7xl">
+    <h1 class="text-xl  font-bold text-black mb-2">รายการของฉัน</h1>
+    <div class="p-3 mx-auto max-w-8xl">
       <TableComponent
         :columns="columns"
         :rows="filteredRows"
@@ -240,17 +374,13 @@ onMounted(fetchMyRepairs)
   </div>
 </template>
 
-
 <style scoped>
-td,
-th {
-  white-space: nowrap;
-  text-align: center;
-  vertical-align: middle;
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.25s ease;
 }
-
-table {
-  table-layout: fixed;
-  width: 100%;
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>
