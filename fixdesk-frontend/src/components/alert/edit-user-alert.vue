@@ -8,19 +8,19 @@
     <div
       class="w-[480px] bg-white rounded-2xl shadow-lg p-8 flex flex-col items-center text-center relative animate-fade-in"
     >
-      <!-- 🟢 ไอคอนด้านบน -->
-      <div class="w-20 h-20 flex items-center justify-center bg-[#D9FFE0] rounded-full mb-5">
-        <img src="/icon/alert/add-user-icon.svg" alt="icon" class="w-12 h-12" />
+      <!-- 🟡 ไอคอนด้านบน -->
+      <div class="w-20 h-20 flex items-center justify-center bg-yellow-100 rounded-full mb-5">
+        <img src="/icon/alert/edit-user-icon.svg" alt="icon" class="w-12 h-12" />
       </div>
 
       <!-- 🔹 หัวข้อ -->
       <h2 class="text-2xl font-bold text-gray-900 mb-2">
-        {{ title || 'ยืนยันการเพิ่มผู้ใช้' }}
+        {{ title || 'ยืนยันการแก้ไขผู้ใช้' }}
       </h2>
 
       <!-- 🔸 รายละเอียด -->
       <p class="text-gray-600 text-base mb-8 leading-relaxed">
-        {{ message || 'คุณต้องการเพิ่มผู้ใช้นี้เข้าสู่ระบบหรือไม่?' }}
+        {{ message || 'คุณต้องการบันทึกการเปลี่ยนแปลงข้อมูลผู้ใช้นี้หรือไม่?' }}
       </p>
 
       <!-- 🔘 ปุ่ม -->
@@ -34,7 +34,7 @@
 
         <button
           @click="onConfirm"
-          class="px-8 py-2 rounded-md bg-[#00B840] text-white font-medium hover:bg-[#009637] transition-all duration-150"
+          class="px-8 py-2 rounded-md bg-yellow-500 text-white font-medium hover:bg-yellow-600 transition-all duration-150"
         >
           ยืนยัน
         </button>

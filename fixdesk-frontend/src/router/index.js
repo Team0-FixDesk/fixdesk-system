@@ -73,13 +73,10 @@ const router = createRouter({
         { path: 'stock-manage-inventory', component: StockManageInventoryView },
 
         { path: 'repair-request', component: RepairRequestView },
+        { path: 'repair-detail/:code', name: 'RepairDetail', component: () => import('@/views/repair-detail-view.vue') },
+        { path: 'repair-edit/:code', name: 'RepairEdit', component: () => import('@/views/repair-edit-view.vue') },
         { path: 'my-list', component: MyListView },
-        // 🧩 Repair Detail (dynamic route)
-        {
-          path: 'repair-detail/:id',
-          name: 'RepairDetailView',
-          component: () => import('@/views/repair-detail-view.vue'),
-        },
+
       ],
     },
   ],

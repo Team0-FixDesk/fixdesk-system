@@ -1,190 +1,274 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 
-/* ==============================
- * ⚙️ CONFIG
- * ============================== */
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
 const route = useRoute()
-const router = useRouter()
 
-/* ==============================
- * 💾 STATE
- * ============================== */
+// 🧩 ตัวแปรหลัก
 const repair = ref(null)
-const loading = ref(true)
-const reporterFromToken = ref('-')
+const isLoading = ref(true)
+const isError = ref(false)
+const repairCode = route.params.code
 
-/* ==============================
- * 🔐 JWT PARSER
- * ============================== */
-function parseJwt(token) {
-  try {
-    return JSON.parse(atob(token.split('.')[1]))
-  } catch {
-    return {}
-  }
-}
-
-/* ==============================
- * 📥 FETCH DETAIL
- * ============================== */
+/* ===============================
+   📦 ดึงข้อมูลรายละเอียดใบแจ้งซ่อม
+   =============================== */
 async function fetchRepairDetail() {
   try {
-    const id = route.params.id
-    const token = localStorage.getItem('token')
-
-    console.log('🔍 Fetching repair detail for ID:', id)
-
-    if (token) {
-      const payload = parseJwt(token)
-      reporterFromToken.value = `${payload.us_prefix_th || ''}${payload.us_first_name_th || payload.us_first_name || ''} ${payload.us_last_name_th || payload.us_last_name || ''}`.trim()
-    }
-
-    const res = await fetch(`${API_BASE}/repair-requests/${id}`)
-    console.log('📡 Response status:', res.status)
-
-    if (!res.ok) {
-      const errorData = await res.json()
-      console.error('❌ API Error:', errorData)
-      throw new Error('โหลดข้อมูลไม่สำเร็จ')
-    }
-
+    const res = await fetch(`${API_BASE}/repair-requests/${repairCode}?_=${Date.now()}`)
     const data = await res.json()
-    console.log('✅ Received data:', data)
 
-    repair.value = {
-      ...data,
-      reporter_name: data.reporter_name || reporterFromToken.value,
-      technician_name:
-        data.technician_first_name && data.technician_last_name
-          ? `${data.technician_first_name} ${data.technician_last_name}`
-          : '— ยังไม่ได้มอบหมาย —',
-    }
+    if (!res.ok) throw new Error(data.message || 'โหลดข้อมูลไม่สำเร็จ')
+
+    repair.value = data
+    console.log('✅ โหลดข้อมูลสำเร็จ:', data)
   } catch (err) {
-    console.error('❌ โหลดข้อมูลล้มเหลว:', err)
+    console.error('❌ โหลดข้อมูลไม่สำเร็จ:', err)
+    isError.value = true
   } finally {
-    loading.value = false
+    isLoading.value = false
   }
 }
 
-/* ==============================
- * 🎨 BADGE STATUS
- * ============================== */
-function statusBadge(status) {
-  const style =
-    'inline-flex justify-center items-center min-w-[130px] h-[34px] text-sm font-medium px-3 py-1 rounded-lg'
-  const map = {
-    pending: `<span class="${style} bg-amber-100 text-amber-700">รอดำเนินการ</span>`,
-    in_progress: `<span class="${style} bg-blue-100 text-blue-700">กำลังดำเนินการ</span>`,
-    done: `<span class="${style} bg-green-100 text-green-700">เสร็จสิ้น</span>`,
+// 🟢 แปลงสถานะงานให้เป็น badge สีสวย
+function getUserStatusBadge(status) {
+  switch (status) {
+    case 'pending':
+            return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-amber-50 text-amber-500 font-semibold">รอดำเนินการ</span>`
+          case 'in_progress':
+            return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-blue-100 text-blue-600 font-semibold">กำลังดำเนินการ</span>`
+          case 'done':
+            return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-green-100 text-green-600 font-semibold">ดำเนินการเสร็จสิ้น</span>`
+          default:
+            return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-gray-100 text-gray-500 font-semibold">ยกเลิก</span>`
   }
-  return map[status] || '-'
 }
 
-function urgencyBadge(urgency) {
-  const style =
-    'inline-flex justify-center items-center min-w-[100px] h-[34px] text-sm font-medium px-3 py-1 rounded-lg'
-  const map = {
-    low: `<span class="${style} bg-green-100 text-green-700">ไม่เร่งด่วน</span>`,
-    medium: `<span class="${style} bg-yellow-100 text-yellow-700">เร่งด่วน</span>`,
-    high: `<span class="${style} bg-red-100 text-red-700">เร่งด่วนมาก</span>`,
+// 🟠 แปลงความเร่งด่วนให้เป็น badge สี
+function getUrgencyBadge(urgency) {
+  switch (urgency) {
+    case 'high':
+      return `<span class='inline-flex justify-center items-center w-36 h-8 rounded-full bg-red-100 text-red-600 font-semibold'>เร่งด่วนมาก</span>`
+    case 'medium':
+      return `<span class='inline-flex justify-center items-center w-36 h-8 rounded-full bg-amber-50 text-amber-500 font-semibold'>เร่งด่วน</span>`
+    case 'low':
+      return `<span class='inline-flex justify-center items-center w-36 h-8 rounded-full bg-green-100 text-green-600 font-semibold'>ไม่เร่งด่วน</span>`
+    default:
+      return `<span class="inline-flex justify-center items-center px-4 py-1.5 rounded-full bg-gray-100 text-gray-500 font-medium">-</span>`
   }
-  return map[urgency] || `<span class="${style} bg-gray-100 text-gray-700">ไม่ระบุ</span>`
 }
 
-/* ==============================
- * 🚀 LIFECYCLE
- * ============================== */
+// ⚙️ เรียกใช้งานเมื่อโหลดหน้า
 onMounted(fetchRepairDetail)
 </script>
 
-
 <template>
-  <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-6xl">
-    <!-- 🧾 หัวข้อ -->
-    <h1 class="text-xl font-bold text-blue-700 mb-6">รายละเอียดใบแจ้งซ่อม</h1>
-
-    <!-- ⏳ กำลังโหลด -->
-    <div v-if="loading" class="text-center text-gray-500 py-10 animate-pulse">
-      กำลังโหลดข้อมูล...
+  <div class="bg-gray-50 min-h-screen py-10 space-y-8">
+    <!-- ⏳ Loading -->
+    <div v-if="isLoading" class="text-center text-gray-500 py-20 text-lg">
+      ⏳ กำลังโหลดข้อมูล...
     </div>
 
-    <!-- ✅ แสดงข้อมูล -->
-    <div v-else-if="repair" class="space-y-6 text-gray-700">
-      <!-- 🧩 ข้อมูลหลัก -->
-      <div class="grid grid-cols-2 gap-y-3">
-        <p><strong>เลขที่ใบแจ้งซ่อม:</strong> {{ repair.rf_code }}</p>
-        <p>
-          <strong>ความเร่งด่วน:  </strong>
-          <span v-html="urgencyBadge(repair.rf_urgency)"></span>
-        </p>
+    <!-- ❌ Error -->
+    <div v-else-if="isError" class="text-center text-red-500 py-20 text-lg font-medium">
+      ❌ ไม่พบข้อมูลใบแจ้งซ่อม {{ repairCode }}
+    </div>
 
-        <p>
-          <strong>สถานะ:  </strong>
-          <span v-html="statusBadge(repair.rf_user_status)"></span>
-        </p>
+    <!-- ✅ Content -->
+    <div v-else-if="repair" class="space-y-8">
+      <!-- 🔹 ส่วนหัวเรื่อง -->
+      <div class="bg-white rounded-xl shadow-sm p-8 mx-auto max-w-7xl border border-gray-100">
+        <div class="flex items-start justify-between">
+          <!-- ซ้าย -->
+          <div>
+            <h1 class="text-xl font-bold text-gray-900 mb-1">รายละเอียดงานซ่อม</h1>
+            <p class="text-gray-700 font-semibold">{{ repair?.rf_code }}</p>
+            <p class="text-gray-500 mt-2">รายละเอียด : {{ repair?.rf_detail || '-' }}</p>
+          </div>
 
-        <p><strong>ผู้แจ้ง:</strong> {{ repair.reporter_name || reporterFromToken }}</p>
+          <!-- 🔸 ขวา (Badge สถานะ / ความเร่งด่วน / ประเภท) -->
+          <div class="flex flex-wrap gap-3 justify-end text-sm">
+            <!-- สถานะงาน -->
+            <span v-html="getUserStatusBadge(repair?.rf_user_status)"></span>
 
-        <p><strong>เบอร์โทร:</strong> {{ repair.rf_phone || '-' }}</p>
+            <!-- ความเร่งด่วน -->
+            <span v-html="getUrgencyBadge(repair?.rf_urgency)"></span>
 
-        <p>
-          <strong>ช่างผู้รับผิดชอบ:</strong>
-          {{ repair.technician_name }}
-        </p>
+            <!-- ประเภทงาน -->
+            <span
+              class="inline-flex justify-center items-center px-4 py-1.5 rounded-full bg-gray-100 text-gray-600 font-medium"
+            >
+              ประเภท : {{ repair?.repair_type_name || '-' }}
+            </span>
+          </div>
+        </div>
 
-        <p><strong>ประเภทที่แจ้งซ่อม:</strong> {{ repair.repair_type_name || '-' }}</p>
+        <!-- 🧍‍♂️ กล่องข้อมูล 3 ช่อง -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+          <div class="border border-gray-200 rounded-lg p-4">
+            <p class="text-sm text-gray-500">ผู้แจ้ง</p>
+            <p class="font-medium text-gray-800">{{ repair?.reporter?.name || '-' }}</p>
+          </div>
 
-        <p><strong>หมายเลขครุภัณฑ์:</strong> {{ repair.rf_prop_number || '-' }}</p>
+          <div class="border border-gray-200 rounded-lg p-4">
+            <p class="text-sm text-gray-500">ผู้รับผิดชอบงานหลัก</p>
+            <p class="font-medium text-gray-800">{{ repair?.main_technician || '-' }}</p>
+            <p class="text-sm text-gray-500 mt-1">
+              ตำแหน่ง :
+              <span class="font-medium text-gray-800">{{ repair?.tech_position || '-' }}</span>
+            </p>
+          </div>
 
-        <!-- 🏢 สถานที่ -->
-        <p class="col-span-2">
-          <strong>สถานที่:</strong>
-          อาคาร {{ repair.rf_building || '-' }}, ชั้น {{ repair.rf_floor || '-' }}, ห้อง
-          {{ repair.rf_room || '-' }}
-        </p>
-
-        <p class="col-span-2">
-          <strong>วันที่แจ้ง:</strong>
-          {{ new Date(repair.rf_create_at).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) }}
-        </p>
+          <div class="border border-gray-200 rounded-lg p-4">
+            <p class="text-sm text-gray-500">แจ้งซ่อมเมื่อ</p>
+            <p class="font-medium text-gray-800">
+              {{
+                repair?.rf_create_at
+                  ? new Date(repair.rf_create_at).toLocaleDateString('th-TH')
+                  : '-'
+              }}
+            </p>
+          </div>
+        </div>
       </div>
 
-      <!-- 💬 ปัญหาที่พบ -->
-      <div>
-        <p class="font-semibold text-gray-800 mb-2">ปัญหาที่พบ:</p>
-        <p
-          class="p-3 bg-gray-50 rounded-md border border-gray-200 whitespace-pre-line min-h-[80px]"
-        >
-          {{ repair.rf_problem || '—' }}
-        </p>
-      </div>
+      <!-- 🔹 สองคอลัมน์หลัก -->
+      <div class="mx-auto max-w-7xl grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- ซ้าย 2 ช่อง -->
+        <div class="lg:col-span-2 space-y-6">
+          <!-- กล่องสถานที่และอุปกรณ์ -->
+          <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+            <h2 class="text-lg font-semibold text-gray-800 mb-4">สถานที่และอุปกรณ์</h2>
 
-      <!-- 🛠️ รายละเอียดเพิ่มเติม -->
-      <div>
-        <p class="font-semibold text-gray-800 mb-2">รายละเอียดเพิ่มเติม:</p>
-        <p
-          class="p-3 bg-gray-50 rounded-md border border-gray-200 whitespace-pre-line min-h-[80px]"
-        >
-          {{ repair.rf_detail || '—' }}
-        </p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+              <div class="space-y-4">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 flex items-center justify-center rounded-lg bg-blue-500">
+                    <img src="/icon/building-icon.svg" class="w-5 h-5" />
+                  </div>
+                  <p>
+                    <span class="text-gray-500">อาคาร/ชั้น/ห้อง:</span>
+                    {{ repair?.building_name || '-' }} / {{ repair?.floor_name || '-' }} /
+                    {{ repair?.room_name || '-' }}
+                  </p>
+                </div>
+
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 flex items-center justify-center rounded-lg bg-green-500">
+                    <img src="/icon/prop-icon.svg" class="w-5 h-5" />
+                  </div>
+                  <p>
+                    <span class="text-gray-500">หมายเลขครุภัณฑ์:</span>
+                    {{ repair?.rf_prop_number || '-' }}
+                  </p>
+                </div>
+
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 flex items-center justify-center rounded-lg bg-amber-400">
+                    <img src="/icon/item-icon.svg" class="w-5 h-5" />
+                  </div>
+                  <p>
+                    <span class="text-gray-500">อุปกรณ์ที่ชำรุด:</span>
+                    {{ repair?.rf_problem || '-' }}
+                  </p>
+                </div>
+              </div>
+
+              <div
+                class="border border-dashed border-gray-300 rounded-lg flex items-center justify-center text-gray-400 text-sm"
+              >
+                <template v-if="repair?.rf_image">
+                  <img
+                    :src="`${API_BASE}/uploads/${repair.rf_image}`"
+                    alt="รูปที่แนบ"
+                    class="max-h-48 rounded-lg object-contain"
+                  />
+                </template>
+                <template v-else>ไม่มีการแนบรูปภาพ</template>
+              </div>
+            </div>
+          </div>
+
+          <!-- กล่องรายการเบิก -->
+          <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+            <h2 class="text-lg font-semibold text-gray-800 mb-4">รายการเบิก</h2>
+            <div v-if="repair?.stock_items?.length" class="space-y-2">
+              <div
+                v-for="(item, i) in repair.stock_items"
+                :key="i"
+                class="flex justify-between border-b pb-1 text-gray-700"
+              >
+                <span>{{ item.name }}</span>
+                <span>{{ item.quantity }} ชิ้น</span>
+              </div>
+            </div>
+            <div v-else class="text-center text-gray-400 text-lg py-8">- ไม่มีรายการเบิก -</div>
+          </div>
+        </div>
+
+        <!-- ขวา -->
+        <div class="space-y-6">
+          <!-- ข้อมูลผู้แจ้ง -->
+          <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+            <div class="flex items-center gap-2 mb-3">
+              <img src="/icon/user-icon2.svg" class="w-10 h-10" />
+              <h2 class="text-lg font-semibold text-gray-800">ข้อมูลผู้แจ้ง</h2>
+            </div>
+            <div class="space-y-2 text-gray-700">
+              <p><span class="text-gray-500">ชื่อ:</span> {{ repair?.reporter?.name || '-' }}</p>
+              <p>
+                <span class="text-gray-500">เบอร์โทร:</span> {{ repair?.reporter?.phone || '-' }}
+              </p>
+              <p>
+                <span class="text-gray-500">หน่วยงาน:</span>
+                {{ repair?.reporter?.department || '-' }}
+              </p>
+            </div>
+          </div>
+
+          <!-- สถานะการดำเนินงาน -->
+          <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+            <div class="flex items-center gap-2 mb-3">
+              <img src="/icon/time-icon.svg" class="w-8 h-8" />
+              <h2 class="text-lg font-semibold text-gray-800">สถานะการดำเนินงาน</h2>
+            </div>
+
+            <!-- Timeline -->
+            <ol class="relative border-s border-gray-200">
+              <li v-for="(step, i) in repair?.timeline || []" :key="i" class="mb-5 ms-5">
+                <div
+                  class="absolute w-5 h-5 rounded-full mt-2.5 -start-2.5 border border-white"
+                  :class="{
+                    'bg-yellow-400': i === 0,
+                    'bg-amber-500': i === 1,
+                    'bg-gray-300': i > 1,
+                  }"
+                ></div>
+                <time class="mb-1 text-sm font-normal leading-none text-gray-400">{{
+                  step.date || '-'
+                }}</time>
+                <h3 class="text-base font-semibold text-gray-900">
+                  {{ step.title || '-' }}
+                </h3>
+                <p class="text-sm font-normal text-gray-500">
+                  {{ step.detail || '-' }}
+                </p>
+              </li>
+            </ol>
+
+            <div
+              v-if="!repair?.timeline || !repair.timeline.length"
+              class="text-gray-400 text-sm text-center"
+            >
+              - ยังไม่มีประวัติการดำเนินการ -
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- ❌ ไม่พบข้อมูล -->
-    <div v-else class="text-center text-gray-500 py-10">ไม่พบข้อมูลใบแจ้งซ่อมนี้</div>
-
-    <!-- 🔙 ปุ่มย้อนกลับ -->
-    <div class="mt-8 flex justify-end">
-      <button
-        @click="router.back()"
-        class="px-5 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-md font-medium transition"
-      >
-        ← กลับไปหน้าก่อนหน้า
-      </button>
-    </div>
+    <!-- ⚠️ เผื่อไว้กรณีไม่มีข้อมูลเลย -->
+    <div v-else class="text-center text-gray-400 py-20">ไม่มีข้อมูลที่จะแสดง</div>
   </div>
 </template>
-

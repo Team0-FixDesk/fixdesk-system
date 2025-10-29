@@ -16,7 +16,7 @@ const getAuthHeaders = () => {
   const token = localStorage.getItem('token')
   return {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`
+    Authorization: `Bearer ${token}`,
   }
 }
 
@@ -83,7 +83,7 @@ async function fetchTechnicians() {
   try {
     // Fetch technicians with auth
     const res = await fetch(`${API_BASE}/technicians`, {
-      headers: getAuthHeaders()
+      headers: getAuthHeaders(),
     })
 
     if (res.status === 401) {
@@ -117,7 +117,7 @@ const filteredTechnicians = computed(() =>
       !searchTech.value ||
       `${t.us_first_name} ${t.us_last_name}`.toLowerCase().includes(searchTech.value.toLowerCase())
     return matchType && matchSearch
-  })
+  }),
 )
 
 /* ===============================
@@ -165,7 +165,7 @@ async function confirmAssign() {
 async function fetchAllRepairs() {
   try {
     const res = await fetch(`${API_BASE}/admin/repairs`, {
-      headers: getAuthHeaders()
+      headers: getAuthHeaders(),
     })
 
     if (res.status === 401) {
@@ -198,14 +198,14 @@ const filteredRows = computed(() => {
       r.us_first_name.toLowerCase().includes(q) ||
       r.us_last_name.toLowerCase().includes(q)
 
-    const matchType = selectedTechTypes.value.length === 0 ||
-                     selectedTechTypes.value.includes(r.tt_name)
+    const matchType =
+      selectedTechTypes.value.length === 0 || selectedTechTypes.value.includes(r.tt_name)
 
-    const matchStatus = selectedStatuses.value.length === 0 ||
-                       selectedStatuses.value.includes(r.rf_user_status)
+    const matchStatus =
+      selectedStatuses.value.length === 0 || selectedStatuses.value.includes(r.rf_user_status)
 
-    const matchUrgency = selectedUrgencies.value.length === 0 ||
-                        selectedUrgencies.value.includes(r.rf_urgency)
+    const matchUrgency =
+      selectedUrgencies.value.length === 0 || selectedUrgencies.value.includes(r.rf_urgency)
 
     return matchSearch && matchType && matchStatus && matchUrgency
   })
@@ -279,9 +279,10 @@ function confirmSaveTechType() {
 
   // ตรวจสอบชื่อซ้ำ
   const trimmedName = currentTechType.value.tt_name.trim()
-  const isDuplicate = technicianTypes.value.some(type =>
-    type.tt_name.toLowerCase() === trimmedName.toLowerCase() &&
-    type.tt_id !== currentTechType.value.tt_id
+  const isDuplicate = technicianTypes.value.some(
+    (type) =>
+      type.tt_name.toLowerCase() === trimmedName.toLowerCase() &&
+      type.tt_id !== currentTechType.value.tt_id,
   )
 
   if (isDuplicate) {
@@ -318,7 +319,7 @@ async function addTechType() {
   const response = await fetch(`${API_BASE}/technician-types`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ tt_name: currentTechType.value.tt_name.trim() })
+    body: JSON.stringify({ tt_name: currentTechType.value.tt_name.trim() }),
   })
 
   if (!response.ok) {
@@ -331,7 +332,7 @@ async function updateTechType() {
   const response = await fetch(`${API_BASE}/technician-types/${currentTechType.value.tt_id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ tt_name: currentTechType.value.tt_name.trim() })
+    body: JSON.stringify({ tt_name: currentTechType.value.tt_name.trim() }),
   })
 
   if (!response.ok) {
@@ -350,7 +351,7 @@ async function handleConfirmDelete() {
 
   try {
     const response = await fetch(`${API_BASE}/technician-types/${techTypeToDelete.value.tt_id}`, {
-      method: 'DELETE'
+      method: 'DELETE',
     })
 
     if (!response.ok) {
@@ -363,7 +364,8 @@ async function handleConfirmDelete() {
     techTypeToDelete.value = null
   } catch (error) {
     console.error('Error deleting tech type:', error)
-    errorMessage.value = error.message || 'เกิดข้อผิดพลาดในการลบข้อมูล อาจมีช่างที่ใช้ประเภทงานนี้อยู่'
+    errorMessage.value =
+      error.message || 'เกิดข้อผิดพลาดในการลบข้อมูล อาจมีช่างที่ใช้ประเภทงานนี้อยู่'
     showErrorAlert.value = true
   }
 }
@@ -429,7 +431,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="bg-white rounded-xl shadow-md p-12 mx-auto max-w-6xl">
+  <div class="bg-gray-50 rounded-xl p-1 mx-auto max-w-7xl">
     <!-- 🔹 หัวข้อ -->
     <h1 class="text-xl font-bold text-blue-700 mb-6">รายการแจ้งซ่อมทั้งหมด</h1>
 
@@ -443,18 +445,11 @@ onBeforeUnmount(() => {
       />
 
       <!-- 🔹 ปุ่มเรียงวันที่ -->
-      <button
-        @click="toggleDateSort"
-        class="flex items-center gap-1 border border-gray-300 rounded-lg px-4 py-2 bg-white hover:bg-gray-50 text-sm text-gray-700 font-medium"
-      >
-        วันที่
-        <img
-          src="/icon/sidebar/chevron-down-icon.svg"
-          class="w-4 h-4 opacity-70 transition-transform duration-200"
-          :class="{ 'rotate-180': sortAsc }"
-          alt="sort"
-        />
-      </button>
+      <input
+        v-model="selectedDate"
+        type="date"
+        class="h-10 px-3 rounded-lg border border-gray-300 bg-white text-gray-700"
+      />
 
       <!-- 🎯 ฟิลเตอร์สถานะ -->
       <div class="relative">
@@ -463,7 +458,10 @@ onBeforeUnmount(() => {
           class="flex items-center gap-1 border border-gray-300 rounded-lg px-4 py-2 bg-white hover:bg-gray-50 text-sm text-gray-700 font-medium"
         >
           สถานะ
-          <span v-if="selectedStatuses.length > 0" class="bg-blue-500 text-white text-xs rounded-full px-2 py-0.5 ml-1">
+          <span
+            v-if="selectedStatuses.length > 0"
+            class="bg-blue-500 text-white text-xs rounded-full px-2 py-0.5 ml-1"
+          >
             {{ selectedStatuses.length }}
           </span>
           <img
@@ -480,15 +478,30 @@ onBeforeUnmount(() => {
           @click.stop
         >
           <label class="flex items-center py-2 hover:bg-gray-50 rounded cursor-pointer">
-            <input type="checkbox" value="pending" v-model="selectedStatuses" class="w-4 h-4 text-blue-500 border-gray-300 rounded" />
+            <input
+              type="checkbox"
+              value="pending"
+              v-model="selectedStatuses"
+              class="w-4 h-4 text-blue-500 border-gray-300 rounded"
+            />
             <span class="ml-2">รอดำเนินการ</span>
           </label>
           <label class="flex items-center py-2 hover:bg-gray-50 rounded cursor-pointer">
-            <input type="checkbox" value="in_progress" v-model="selectedStatuses" class="w-4 h-4 text-blue-500 border-gray-300 rounded" />
+            <input
+              type="checkbox"
+              value="in_progress"
+              v-model="selectedStatuses"
+              class="w-4 h-4 text-blue-500 border-gray-300 rounded"
+            />
             <span class="ml-2">กำลังดำเนินการ</span>
           </label>
           <label class="flex items-center py-2 hover:bg-gray-50 rounded cursor-pointer">
-            <input type="checkbox" value="done" v-model="selectedStatuses" class="w-4 h-4 text-blue-500 border-gray-300 rounded" />
+            <input
+              type="checkbox"
+              value="done"
+              v-model="selectedStatuses"
+              class="w-4 h-4 text-blue-500 border-gray-300 rounded"
+            />
             <span class="ml-2">เสร็จสิ้น</span>
           </label>
         </div>
@@ -501,7 +514,10 @@ onBeforeUnmount(() => {
           class="flex items-center gap-1 border border-gray-300 rounded-lg px-4 py-2 bg-white hover:bg-gray-50 text-sm text-gray-700 font-medium"
         >
           ประเภทงาน
-          <span v-if="selectedTechTypes.length > 0" class="bg-blue-500 text-white text-xs rounded-full px-2 py-0.5 ml-1">
+          <span
+            v-if="selectedTechTypes.length > 0"
+            class="bg-blue-500 text-white text-xs rounded-full px-2 py-0.5 ml-1"
+          >
             {{ selectedTechTypes.length }}
           </span>
           <img
@@ -551,7 +567,10 @@ onBeforeUnmount(() => {
           class="flex items-center gap-1 border border-gray-300 rounded-lg px-4 py-2 bg-white hover:bg-gray-50 text-sm text-gray-700 font-medium"
         >
           ความเร่งด่วน
-          <span v-if="selectedUrgencies.length > 0" class="bg-blue-500 text-white text-xs rounded-full px-2 py-0.5 ml-1">
+          <span
+            v-if="selectedUrgencies.length > 0"
+            class="bg-blue-500 text-white text-xs rounded-full px-2 py-0.5 ml-1"
+          >
             {{ selectedUrgencies.length }}
           </span>
           <img
@@ -568,15 +587,30 @@ onBeforeUnmount(() => {
           @click.stop
         >
           <label class="flex items-center py-2 hover:bg-gray-50 rounded cursor-pointer">
-            <input type="checkbox" value="low" v-model="selectedUrgencies" class="w-4 h-4 text-blue-500 border-gray-300 rounded" />
+            <input
+              type="checkbox"
+              value="low"
+              v-model="selectedUrgencies"
+              class="w-4 h-4 text-blue-500 border-gray-300 rounded"
+            />
             <span class="ml-2">ไม่เร่งด่วน</span>
           </label>
           <label class="flex items-center py-2 hover:bg-gray-50 rounded cursor-pointer">
-            <input type="checkbox" value="medium" v-model="selectedUrgencies" class="w-4 h-4 text-blue-500 border-gray-300 rounded" />
+            <input
+              type="checkbox"
+              value="medium"
+              v-model="selectedUrgencies"
+              class="w-4 h-4 text-blue-500 border-gray-300 rounded"
+            />
             <span class="ml-2">เร่งด่วน</span>
           </label>
           <label class="flex items-center py-2 hover:bg-gray-50 rounded cursor-pointer">
-            <input type="checkbox" value="high" v-model="selectedUrgencies" class="w-4 h-4 text-blue-500 border-gray-300 rounded" />
+            <input
+              type="checkbox"
+              value="high"
+              v-model="selectedUrgencies"
+              class="w-4 h-4 text-blue-500 border-gray-300 rounded"
+            />
             <span class="ml-2">เร่งด่วนมาก</span>
           </label>
         </div>
@@ -586,7 +620,12 @@ onBeforeUnmount(() => {
       <button
         @click="clearFilters"
         class="text-sm text-blue-600 hover:text-blue-700 font-medium transition-opacity duration-200"
-        :class="{ 'opacity-0 pointer-events-none': selectedStatuses.length === 0 && selectedTechTypes.length === 0 && selectedUrgencies.length === 0 }"
+        :class="{
+          'opacity-0 pointer-events-none':
+            selectedStatuses.length === 0 &&
+            selectedTechTypes.length === 0 &&
+            selectedUrgencies.length === 0,
+        }"
       >
         ล้างตัวกรอง
       </button>
@@ -617,9 +656,7 @@ onBeforeUnmount(() => {
               {{ new Date(row.rf_create_at).toLocaleDateString('th-TH') }}
             </td>
             <td class="text-center px-6 py-3">{{ row.rf_code }}</td>
-            <td class="text-center px-6 py-3">
-              {{ row.us_first_name }} {{ row.us_last_name }}
-            </td>
+            <td class="text-center px-6 py-3">{{ row.us_first_name }} {{ row.us_last_name }}</td>
             <td class="text-center px-6 py-3">{{ row.tt_name || '-' }}</td>
             <td class="text-center px-6 py-3" v-html="urgencyBadge(row.rf_urgency)"></td>
             <td class="text-center px-6 py-3" v-html="statusBadge(row.rf_user_status)"></td>
@@ -628,7 +665,7 @@ onBeforeUnmount(() => {
               <div class="flex justify-center gap-3">
                 <!-- 🔍 ดูรายละเอียด -->
                 <button
-                  @click="goToDetail(row.rf_id)"
+                  @click="goToDetail(row.rf_code)"
                   class="flex items-center justify-center w-9 h-8 bg-blue-500 hover:bg-blue-700 text-white rounded-lg transition"
                   title="ดูรายละเอียด"
                 >
@@ -640,7 +677,7 @@ onBeforeUnmount(() => {
                   v-if="row.rf_user_status === 'pending'"
                   @click="openAssignPopup(row.rf_id)"
                   class="flex items-center justify-center w-9 h-8 text-white rounded-lg transition"
-                  style="background-color: #29A744;"
+                  style="background-color: #29a744"
                   title="มอบหมายงาน"
                 >
                   <img src="/icon/arrow-right.svg" class="w-5 h-5" />
@@ -665,7 +702,7 @@ onBeforeUnmount(() => {
         แสดง {{ startEntry }}–{{ endEntry }} จากทั้งหมด {{ totalEntries }} รายการ
       </div>
 
-      <div 
+      <div
         class="flex items-center gap-2 transition-opacity duration-200"
         :class="{ 'opacity-0 pointer-events-none': totalPages <= 1 }"
       >
@@ -781,7 +818,9 @@ onBeforeUnmount(() => {
         @click.stop
       >
         <!-- Header -->
-        <div class="bg-blue-600 text-white px-6 py-4 flex justify-between items-center flex-shrink-0">
+        <div
+          class="bg-blue-600 text-white px-6 py-4 flex justify-between items-center flex-shrink-0"
+        >
           <h2 class="text-xl font-bold">จัดการประเภทงานช่าง</h2>
           <button
             @click="closeManageTechTypeModal"
@@ -794,7 +833,7 @@ onBeforeUnmount(() => {
         <!-- Content -->
         <div class="p-6 flex-shrink-0">
           <!-- Container ความสูงคงที่เพื่อป้องกัน layout shift -->
-          <div class="mb-4" style="min-height: 160px;">
+          <div class="mb-4" style="min-height: 160px">
             <!-- ปุ่มเพิ่มประเภทงาน -->
             <button
               v-if="!showAddForm && !isEditingTechType"
@@ -810,74 +849,96 @@ onBeforeUnmount(() => {
               v-if="showAddForm && !isEditingTechType"
               class="p-4 bg-green-50 rounded-lg border-2 border-green-200"
             >
-            <h3 class="text-lg font-semibold mb-3 text-green-700 flex items-center gap-2">
-              <span class="text-xl">+</span>
-              <span>เพิ่มประเภทงานใหม่</span>
-            </h3>
-            <input
-              v-model="currentTechType.tt_name"
-              type="text"
-              placeholder="ชื่อประเภทงานช่าง"
-              class="w-full px-4 py-2 border border-green-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:outline-none mb-3"
-              @keyup.enter="confirmSaveTechType"
-            />
-            <div class="flex gap-2">
-              <button
-                @click="resetTechTypeForm"
-                class="flex-1 px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded-lg font-medium transition"
-              >
-                ยกเลิก
-              </button>
-              <button
-                @click="confirmSaveTechType"
-                class="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition"
-              >
-                เพิ่มประเภทงาน
-              </button>
+              <h3 class="text-lg font-semibold mb-3 text-green-700 flex items-center gap-2">
+                <span class="text-xl">+</span>
+                <span>เพิ่มประเภทงานใหม่</span>
+              </h3>
+              <input
+                v-model="currentTechType.tt_name"
+                type="text"
+                placeholder="ชื่อประเภทงานช่าง"
+                class="w-full px-4 py-2 border border-green-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:outline-none mb-3"
+                @keyup.enter="confirmSaveTechType"
+              />
+              <div class="flex gap-2">
+                <button
+                  @click="resetTechTypeForm"
+                  class="flex-1 px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded-lg font-medium transition"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  @click="confirmSaveTechType"
+                  class="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition"
+                >
+                  เพิ่มประเภทงาน
+                </button>
+              </div>
             </div>
-          </div>
 
-          <!-- ฟอร์มแก้ไขประเภทงาน (สีเหลือง) -->
-          <div
-            v-if="isEditingTechType"
-            class="p-4 bg-yellow-50 rounded-lg border-2 border-yellow-400"
-          >
-            <h3 class="text-lg font-semibold mb-3 text-yellow-700 flex items-center gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-              <span>แก้ไขประเภทงาน</span>
-            </h3>
-            <input
-              v-model="currentTechType.tt_name"
-              type="text"
-              placeholder="ชื่อประเภทงานช่าง"
-              class="w-full px-4 py-2 border border-yellow-400 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:outline-none mb-3"
-              @keyup.enter="confirmSaveTechType"
-            />
-            <div class="flex gap-2">
-              <button
-                @click="resetTechTypeForm"
-                class="flex-1 px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded-lg font-medium transition"
-              >
-                ยกเลิก
-              </button>
-              <button
-                @click="confirmSaveTechType"
-                class="flex-1 px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg font-medium transition"
-              >
-                บันทึกการแก้ไข
-              </button>
+            <!-- ฟอร์มแก้ไขประเภทงาน (สีเหลือง) -->
+            <div
+              v-if="isEditingTechType"
+              class="p-4 bg-yellow-50 rounded-lg border-2 border-yellow-400"
+            >
+              <h3 class="text-lg font-semibold mb-3 text-yellow-700 flex items-center gap-2">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                  />
+                </svg>
+                <span>แก้ไขประเภทงาน</span>
+              </h3>
+              <input
+                v-model="currentTechType.tt_name"
+                type="text"
+                placeholder="ชื่อประเภทงานช่าง"
+                class="w-full px-4 py-2 border border-yellow-400 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:outline-none mb-3"
+                @keyup.enter="confirmSaveTechType"
+              />
+              <div class="flex gap-2">
+                <button
+                  @click="resetTechTypeForm"
+                  class="flex-1 px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded-lg font-medium transition"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  @click="confirmSaveTechType"
+                  class="flex-1 px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg font-medium transition"
+                >
+                  บันทึกการแก้ไข
+                </button>
+              </div>
             </div>
-          </div>
           </div>
           <!-- /End Container ความสูงคงที่ -->
 
           <!-- หัวข้อรายการ -->
           <div class="mb-3">
             <h4 class="text-md font-semibold text-gray-700 flex items-center gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-5 w-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                />
               </svg>
               <span>รายการประเภทงานทั้งหมด</span>
               <span class="text-sm text-gray-500">({{ technicianTypes.length }} รายการ)</span>
@@ -895,7 +956,7 @@ onBeforeUnmount(() => {
                 'flex items-center justify-between p-4 rounded-lg transition',
                 isEditingTechType && currentTechType.tt_id === type.tt_id
                   ? 'bg-yellow-100 border-2 border-yellow-400'
-                  : 'bg-white border border-gray-200 hover:bg-gray-50'
+                  : 'bg-white border border-gray-200 hover:bg-gray-50',
               ]"
             >
               <span class="text-gray-800 font-medium">{{ type.tt_name }}</span>
@@ -907,12 +968,23 @@ onBeforeUnmount(() => {
                     'p-2 rounded-lg transition',
                     isEditingTechType && currentTechType.tt_id === type.tt_id
                       ? 'text-yellow-700 bg-yellow-200'
-                      : 'text-yellow-600 hover:bg-yellow-100'
+                      : 'text-yellow-600 hover:bg-yellow-100',
                   ]"
                   title="แก้ไข"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-5 w-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                    />
                   </svg>
                 </button>
                 <!-- ปุ่มลบ -->
@@ -921,8 +993,19 @@ onBeforeUnmount(() => {
                   class="p-2 text-red-600 hover:bg-red-100 rounded-lg transition"
                   title="ลบ"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-5 w-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    />
                   </svg>
                 </button>
               </div>
@@ -930,8 +1013,19 @@ onBeforeUnmount(() => {
 
             <!-- แสดงเมื่อไม่มีข้อมูล -->
             <div v-if="technicianTypes.length === 0" class="text-center py-8 text-gray-500">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-12 w-12 mx-auto mb-2 text-gray-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
+                />
               </svg>
               <p>ยังไม่มีประเภทงานในระบบ</p>
               <p class="text-sm">เพิ่มประเภทงานใหม่ได้จากด้านบน</p>
@@ -945,7 +1039,11 @@ onBeforeUnmount(() => {
     <ConfirmAlert
       :visible="showConfirmAlert"
       title="ยืนยันการบันทึก"
-      :message="isEditingTechType ? 'คุณต้องการแก้ไขประเภทงานนี้หรือไม่?' : 'คุณต้องการเพิ่มประเภทงานใหม่หรือไม่?'"
+      :message="
+        isEditingTechType
+          ? 'คุณต้องการแก้ไขประเภทงานนี้หรือไม่?'
+          : 'คุณต้องการเพิ่มประเภทงานใหม่หรือไม่?'
+      "
       @confirm="handleConfirmSave"
       @cancel="showConfirmAlert = false"
     />
@@ -960,11 +1058,7 @@ onBeforeUnmount(() => {
     />
 
     <!-- Alert แสดงข้อผิดพลาด -->
-    <ErrorAlert
-      :visible="showErrorAlert"
-      :message="errorMessage"
-      @close="showErrorAlert = false"
-    />
+    <ErrorAlert :visible="showErrorAlert" :message="errorMessage" @close="showErrorAlert = false" />
 
     <!-- Alert สำเร็จ -->
     <SuccessAlert :visible="showSuccessAlert" @close="showSuccessAlert = false" />
@@ -1010,6 +1104,3 @@ html {
   background: #555;
 }
 </style>
-
-
-
