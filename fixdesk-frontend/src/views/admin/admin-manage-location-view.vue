@@ -1,9 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import SuccessAlert from '@/components/alert/success-alert.vue'
-import ErrorAlert from '@/components/alert/error-alert.vue'
-import ConfirmAlert from '@/components/alert/confirm-alert.vue'
+import Swal from 'sweetalert2'
 
 defineOptions({ name: 'AdminManageLocationView' })
 
@@ -53,13 +51,6 @@ const floorMode = ref('existing') // 'existing' or 'new'
 const newBuildingName = ref('')
 const newFloorName = ref('')
 const roomName = ref('')
-
-// Alert state
-const showSuccessAlert = ref(false)
-const showErrorAlert = ref(false)
-const showConfirmDeleteAlert = ref(false)
-const errorMessage = ref('')
-const itemToDelete = ref(null)
 
 /* ===============================
  * 📥 FETCH DATA
@@ -223,19 +214,30 @@ function handleEdit(item) {
 
 function handleDelete(item) {
   console.log('Delete:', item)
-  itemToDelete.value = item
-  showConfirmDeleteAlert.value = true
+  confirmDelete(item)
 }
 
-async function confirmDelete() {
-  showConfirmDeleteAlert.value = false
+async function confirmDelete(item) {
+  const result = await Swal.fire({
+    title: 'ยืนยันการลบ',
+    html: `คุณต้องการลบ <strong>"${item.name}"</strong> หรือไม่?`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'ลบเลย',
+    cancelButtonText: 'ยกเลิก',
+    confirmButtonColor: '#EF4444',
+    cancelButtonColor: '#6B7280',
+    reverseButtons: true
+  })
+  
+  if (!result.isConfirmed) return
   
   try {
-    const endpoint = itemToDelete.value.type === 'building' 
-      ? `/buildings/${itemToDelete.value.id}`
-      : itemToDelete.value.type === 'floor'
-      ? `/floors/${itemToDelete.value.id}`
-      : `/rooms/${itemToDelete.value.id}`
+    const endpoint = item.type === 'building' 
+      ? `/buildings/${item.id}`
+      : item.type === 'floor'
+      ? `/floors/${item.id}`
+      : `/rooms/${item.id}`
     
     const res = await fetch(`${API_BASE}${endpoint}`, {
       method: 'DELETE',
@@ -248,14 +250,24 @@ async function confirmDelete() {
       throw new Error(data.message || 'ลบไม่สำเร็จ')
     }
     
-    showSuccessAlert.value = true
+    await Swal.fire({
+      icon: 'success',
+      title: 'สำเร็จ!',
+      text: 'ลบข้อมูลเรียบร้อยแล้ว',
+      confirmButtonColor: '#1E48D1',
+      timer: 1500,
+      showConfirmButton: false
+    })
+    
     await refreshData()
   } catch (err) {
-    errorMessage.value = err.message || 'เกิดข้อผิดพลาดในการลบข้อมูล'
-    showErrorAlert.value = true
+    await Swal.fire({
+      icon: 'error',
+      title: 'เกิดข้อผิดพลาด',
+      text: err.message || 'เกิดข้อผิดพลาดในการลบข้อมูล',
+      confirmButtonColor: '#EF4444'
+    })
   }
-  
-  itemToDelete.value = null
 }
 
 function handleAdd() {
@@ -301,21 +313,33 @@ function closeModal() {
 
 async function saveLocation() {
   if (!modalData.value.name.trim()) {
-    errorMessage.value = 'กรุณากรอกชื่อ'
-    showErrorAlert.value = true
+    await Swal.fire({
+      icon: 'warning',
+      title: 'กรุณากรอกข้อมูล',
+      text: 'กรุณากรอกชื่อ',
+      confirmButtonColor: '#F59E0B'
+    })
     return
   }
 
   // ตรวจสอบว่ามี building_id สำหรับ floor และ room
   if (modalType.value === 'floor' && !modalData.value.building_id) {
-    errorMessage.value = 'กรุณาเลือกอาคาร'
-    showErrorAlert.value = true
+    await Swal.fire({
+      icon: 'warning',
+      title: 'กรุณากรอกข้อมูล',
+      text: 'กรุณาเลือกอาคาร',
+      confirmButtonColor: '#F59E0B'
+    })
     return
   }
 
   if (modalType.value === 'room' && (!modalData.value.building_id || !modalData.value.floor_id)) {
-    errorMessage.value = 'กรุณาเลือกอาคารและชั้น'
-    showErrorAlert.value = true
+    await Swal.fire({
+      icon: 'warning',
+      title: 'กรุณากรอกข้อมูล',
+      text: 'กรุณาเลือกอาคารและชั้น',
+      confirmButtonColor: '#F59E0B'
+    })
     return
   }
 
@@ -350,11 +374,24 @@ async function saveLocation() {
     }
     
     closeModal()
-    showSuccessAlert.value = true
+    
+    await Swal.fire({
+      icon: 'success',
+      title: 'สำเร็จ!',
+      text: modalMode.value === 'add' ? 'เพิ่มข้อมูลเรียบร้อยแล้ว' : 'แก้ไขข้อมูลเรียบร้อยแล้ว',
+      confirmButtonColor: '#1E48D1',
+      timer: 1500,
+      showConfirmButton: false
+    })
+    
     await refreshData()
   } catch (err) {
-    errorMessage.value = err.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล'
-    showErrorAlert.value = true
+    await Swal.fire({
+      icon: 'error',
+      title: 'เกิดข้อผิดพลาด',
+      text: err.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล',
+      confirmButtonColor: '#EF4444'
+    })
   }
 }
 
@@ -398,8 +435,12 @@ async function bulkCreateLocation() {
     // 1. สร้างอาคารถ้าเป็นแบบใหม่
     if (buildingMode.value === 'new') {
       if (!newBuildingName.value.trim()) {
-        errorMessage.value = 'กรุณากรอกชื่ออาคารใหม่'
-        showErrorAlert.value = true
+        await Swal.fire({
+          icon: 'warning',
+          title: 'กรุณากรอกข้อมูล',
+          text: 'กรุณากรอกชื่ออาคารใหม่',
+          confirmButtonColor: '#F59E0B'
+        })
         return
       }
       
@@ -422,14 +463,22 @@ async function bulkCreateLocation() {
     // 2. สร้างชั้นถ้าเป็นแบบใหม่
     if (floorMode.value === 'new') {
       if (!newFloorName.value.trim()) {
-        errorMessage.value = 'กรุณากรอกชื่อชั้นใหม่'
-        showErrorAlert.value = true
+        await Swal.fire({
+          icon: 'warning',
+          title: 'กรุณากรอกข้อมูล',
+          text: 'กรุณากรอกชื่อชั้นใหม่',
+          confirmButtonColor: '#F59E0B'
+        })
         return
       }
       
       if (!buildingId) {
-        errorMessage.value = 'กรุณาเลือกหรือสร้างอาคารก่อน'
-        showErrorAlert.value = true
+        await Swal.fire({
+          icon: 'warning',
+          title: 'กรุณากรอกข้อมูล',
+          text: 'กรุณาเลือกหรือสร้างอาคารก่อน',
+          confirmButtonColor: '#F59E0B'
+        })
         return
       }
       
@@ -454,14 +503,22 @@ async function bulkCreateLocation() {
     
     // 3. สร้างห้อง (required)
     if (!roomName.value.trim()) {
-      errorMessage.value = 'กรุณากรอกชื่อห้อง'
-      showErrorAlert.value = true
+      await Swal.fire({
+        icon: 'warning',
+        title: 'กรุณากรอกข้อมูล',
+        text: 'กรุณากรอกชื่อห้อง',
+        confirmButtonColor: '#F59E0B'
+      })
       return
     }
     
     if (!floorId) {
-      errorMessage.value = 'กรุณาเลือกหรือสร้างชั้นก่อน'
-      showErrorAlert.value = true
+      await Swal.fire({
+        icon: 'warning',
+        title: 'กรุณากรอกข้อมูล',
+        text: 'กรุณาเลือกหรือสร้างชั้นก่อน',
+        confirmButtonColor: '#F59E0B'
+      })
       return
     }
     
@@ -483,12 +540,25 @@ async function bulkCreateLocation() {
     console.log('✅ สร้างห้องสำเร็จ:', data)
     
     closeModal()
-    showSuccessAlert.value = true
+    
+    await Swal.fire({
+      icon: 'success',
+      title: 'สำเร็จ!',
+      text: 'สร้างสถานที่เรียบร้อยแล้ว',
+      confirmButtonColor: '#1E48D1',
+      timer: 1500,
+      showConfirmButton: false
+    })
+    
     await refreshData()
     
   } catch (err) {
-    errorMessage.value = err.message || 'เกิดข้อผิดพลาดในการสร้างสถานที่'
-    showErrorAlert.value = true
+    await Swal.fire({
+      icon: 'error',
+      title: 'เกิดข้อผิดพลาด',
+      text: err.message || 'เกิดข้อผิดพลาดในการสร้างสถานที่',
+      confirmButtonColor: '#EF4444'
+    })
   }
 }
 
@@ -1121,28 +1191,6 @@ onMounted(async () => {
         </div>
       </div>
     </div>
-
-    <!-- Alert ยืนยันการลบ -->
-    <ConfirmAlert
-      :visible="showConfirmDeleteAlert"
-      title="ยืนยันการลบ"
-      :message="`คุณต้องการลบ &quot;${itemToDelete?.name}&quot; หรือไม่?`"
-      @confirm="confirmDelete"
-      @cancel="showConfirmDeleteAlert = false"
-    />
-
-    <!-- Alert แสดงข้อผิดพลาด -->
-    <ErrorAlert
-      :visible="showErrorAlert"
-      :message="errorMessage"
-      @close="showErrorAlert = false"
-    />
-
-    <!-- Alert สำเร็จ -->
-    <SuccessAlert 
-      :visible="showSuccessAlert" 
-      @close="showSuccessAlert = false" 
-    />
   </div>
 </template>
 
