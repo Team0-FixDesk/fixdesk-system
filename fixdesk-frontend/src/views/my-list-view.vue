@@ -177,9 +177,32 @@ async function handleDelete(repairCode) {
     confirmButtonColor: '#e53e3e',
   })
   if (!result.isConfirmed) return
-  rows.value = rows.value.filter((r) => r[1] !== repairCode)
-  Swal.fire('สำเร็จ', 'ลบรายการเรียบร้อยแล้ว', 'success')
+
+  try {
+    const token = localStorage.getItem('token')
+    const res = await fetch(`${API_BASE}/my-repairs/${repairCode}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`, // ✅ สำคัญมาก
+      },
+    })
+
+    const data = await res.json()
+
+    if (!res.ok) {
+      throw new Error(data.message || 'ลบไม่สำเร็จ')
+    }
+
+    // ✅ ลบสำเร็จ
+    rows.value = rows.value.filter((r) => r[1] !== repairCode)
+    Swal.fire('สำเร็จ', 'ลบรายการเรียบร้อยแล้ว', 'success')
+  } catch (err) {
+    console.error('❌ ลบไม่สำเร็จ:', err)
+    Swal.fire('เกิดข้อผิดพลาด', err.message, 'error')
+  }
 }
+
 </script>
 
 <template>

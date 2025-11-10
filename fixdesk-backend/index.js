@@ -1011,14 +1011,18 @@ app.get("/admin/repairs", authMiddleware, (req, res) => {
 /* ================
    POST /assign-repair (มอบหมายงานให้ช่าง)
 =================== */
+// backend ส่วน assign-repair
+/* ================
+   POST /assign-repair (มอบหมายงานให้ช่าง)
+=================== */
 app.post("/assign-repair", authMiddleware, (req, res) => {
-  const { rf_id, technician_id } = req.body;
-  
-  if (!rf_id || !technician_id) {
+  const { rf_code, technician_id } = req.body;
+
+  if (!rf_code || !technician_id) {
     return res.status(400).json({ message: "ข้อมูลไม่ครบถ้วน" });
   }
 
-  // Verify technician exists and has correct role
+  // ตรวจสอบว่าช่างมีอยู่จริงและเป็น role 'Technician'
   const techQuery = `
     SELECT u.us_tt_id, r.role_name
     FROM user u
@@ -1028,41 +1032,44 @@ app.post("/assign-repair", authMiddleware, (req, res) => {
 
   db.query(techQuery, [technician_id], (err, results) => {
     if (err) {
-      console.error("❌ Error checking technician:", err);
-      return res.status(500).json({ message: "เกิดข้อผิดพลาดในการค้นหาช่าง", error: err.message });
+      console.error("❌ Error checking tech:", err);
+      return res.status(500).json({ message: "ตรวจสอบข้อมูลช่างล้มเหลว" });
     }
-
     if (!results.length) {
-      return res.status(404).json({ message: "ไม่พบข้อมูลช่าง" });
+      return res.status(404).json({ message: "ไม่พบช่างที่เลือก" });
     }
 
-    if (results[0].role_name !== 'Technician') {
+    const tech = results[0];
+    if (tech.role_name !== "Technician") {
       return res.status(400).json({ message: "ผู้ใช้นี้ไม่ใช่ช่าง" });
     }
 
-    const techTypeId = results[0].us_tt_id;
+    const techTypeId = tech.us_tt_id;
 
-    // Update repair_form with assigned technician
+    // อัปเดตรายการแจ้งซ่อมโดยใช้ rf_code
     const updateQuery = `
       UPDATE repair_form
-      SET rf_tt_id = ?, rf_assigned_tech_id = ?, rf_user_status = 'in_progress'
-      WHERE rf_id = ? AND rf_user_status = 'pending'
+      SET 
+        rf_tt_id = ?,
+        rf_assigned_tech_id = ?,
+        rf_user_status = 'in_progress'
+      WHERE rf_code = ? AND rf_user_status = 'pending'
     `;
 
-    db.query(updateQuery, [techTypeId, technician_id, rf_id], (err2, result) => {
+    db.query(updateQuery, [techTypeId, technician_id, rf_code], (err2, result) => {
       if (err2) {
-        console.error("❌ Error assigning repair:", err2);
-        return res.status(500).json({ message: "มอบหมายงานไม่สำเร็จ", error: err2.message });
+        console.error("❌ Error updating repair_form:", err2);
+        return res.status(500).json({ message: "มอบหมายงานไม่สำเร็จ" });
       }
-
       if (result.affectedRows === 0) {
-        return res.status(404).json({ message: "ไม่พบรายการแจ้งซ่อมหรือถูกมอบหมายแล้ว" });
+        return res.status(404).json({ message: "ไม่พบรายการหรือมอบหมายแล้ว" });
       }
-
-      res.json({ message: "มอบหมายงานสำเร็จ", updated: result.affectedRows });
+      console.log(`✅ มอบหมายใบแจ้งซ่อม ${rf_code} ให้ช่าง ID ${technician_id}`);
+      res.json({ message: "มอบหมายงานสำเร็จ" });
     });
   });
 });
+
 
 
 // ✅ ดึงข้อมูลรายการแจ้งซ่อมของผู้ใช้
@@ -1099,7 +1106,7 @@ app.get('/my-repairs/:userId', (req, res) => {
 })
 
 // 🗑️ ลบใบแจ้งซ่อมตามรหัสใบแจ้ง (rf_code)
-app.delete('/my-repairs/:code', (req, res) => {
+app.delete('/my-repairs/:code', authMiddleware, (req, res) => {
   const { code } = req.params
   console.log('🧭 ลบฟอร์ม code =', code)
 

@@ -217,7 +217,7 @@ async function confirmAssign() {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify({
-        rf_id: selectedRepairId.value,
+        rf_code: selectedRepairId.value,
         technician_id: selectedTechnician.value,
       }),
     })
