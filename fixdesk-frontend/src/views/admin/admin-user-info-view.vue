@@ -7,7 +7,9 @@ defineOptions({ name: 'AdminUserInfoView' })
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
 
-// 🧩 Auth header
+/* ===============================
+ * 🔐 Auth Header Helper
+ * =============================== */
 const getAuthHeaders = () => {
   const token = localStorage.getItem('token')
   return {
@@ -27,51 +29,33 @@ const selectedTechTypes = ref([])
 const showRoleFilter = ref(false)
 const showTechFilter = ref(false)
 
-// Modal states
-const showAddModal = ref(false)
-const showEditModal = ref(false)
-const deleteUserId = ref(null)
+// ===============================
+// 📦 ดึงข้อมูลผู้ใช้ (แก้ไข)
+// ===============================
+const userIdByUsername = ref({}) // <— เพิ่ม map เก็บ id จาก username
 
-// form data
-const addForm = ref({
-  us_user_name: '',
-  us_user_pass: '',
-  us_first_name_th: '',
-  us_last_name_th: '',
-  us_department: '',
-  us_role_id: '',
-  us_tt_id: null,
-})
-
-const editForm = ref({
-  us_id: '',
-  us_user_name: '',
-  us_first_name_th: '',
-  us_last_name_th: '',
-  us_department: '',
-  us_role_id: '',
-  us_tt_id: null,
-})
-
-/* ===============================
- * 📦 ดึงข้อมูลผู้ใช้
- * =============================== */
 async function fetchUsers() {
   try {
-    const res = await fetch(`${API_BASE}/users`, {
-      headers: getAuthHeaders(),
-    })
+    const res = await fetch(`${API_BASE}/users`, { headers: getAuthHeaders() })
     const data = await res.json()
     if (!res.ok) throw new Error(data.message || 'โหลดข้อมูลไม่สำเร็จ')
 
+    // สร้าง rows สำหรับตาราง
     rows.value = data.map((u) => [
       `${u.us_first_name_th || ''} ${u.us_last_name_th || ''}`,
       u.us_user_name || '-',
       u.role_name || '-',
       u.us_department || '-',
-      u.tt_name || '-', // ✅ แสดงตำแหน่ง
+      u.technician_type || '-',
       'actions',
     ])
+
+    // เก็บแผนที่ username -> id ไว้ใช้ตอนลบ/แก้ไข
+    const map = {}
+    for (const u of data) {
+      if (u.us_user_name && u.us_id != null) map[u.us_user_name] = u.us_id
+    }
+    userIdByUsername.value = map
   } catch (err) {
     console.error('❌ โหลดข้อมูลไม่สำเร็จ:', err)
     Swal.fire('ผิดพลาด', 'ไม่สามารถโหลดข้อมูลผู้ใช้ได้', 'error')
@@ -88,10 +72,8 @@ const filteredRows = computed(() => {
       r[1].toLowerCase().includes(searchQuery.value.toLowerCase()) ||
       r[3].toLowerCase().includes(searchQuery.value.toLowerCase())
 
-    const matchRole =
-      selectedRoles.value.length === 0 || selectedRoles.value.includes(r[2])
-    const matchTech =
-      selectedTechTypes.value.length === 0 || selectedTechTypes.value.includes(r[4])
+    const matchRole = selectedRoles.value.length === 0 || selectedRoles.value.includes(r[2])
+    const matchTech = selectedTechTypes.value.length === 0 || selectedTechTypes.value.includes(r[4])
 
     return matchSearch && matchRole && matchTech
   })
@@ -119,27 +101,53 @@ onMounted(() => {
 onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
 
 /* ===============================
- * 🧭 ฟังก์ชันเพิ่ม / แก้ไข / ลบ
+ * 🟢 เพิ่มผู้ใช้
  * =============================== */
+const showAddModal = ref(false)
+const addForm = ref({
+  us_ttn_id: '',
+  us_first_name_th: '',
+  us_last_name_th: '',
+  us_first_name_en: '',
+  us_last_name_en: '',
+  us_user_name: '',
+  us_user_pass: '',
+  us_phone: '',
+  us_department: '',
+  us_role_id: '',
+  us_tt_id: '',
+})
+
 function openAddModal() {
-  Object.assign(addForm.value, {
-    us_user_name: '',
-    us_user_pass: '',
-    us_first_name_th: '',
-    us_last_name_th: '',
-    us_department: '',
-    us_role_id: '',
-    us_tt_id: null,
-  })
+  Object.keys(addForm.value).forEach((key) => (addForm.value[key] = ''))
   showAddModal.value = true
 }
+function closeAddModal() {
+  showAddModal.value = false
+}
 
-async function confirmAdd() {
+async function confirmAddUser() {
+  const result = await Swal.fire({
+    title: 'ยืนยันการเพิ่มผู้ใช้งาน?',
+    text: 'คุณต้องการเพิ่มผู้ใช้งานใหม่ในระบบหรือไม่?',
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'บันทึก',
+    cancelButtonText: 'ยกเลิก',
+    confirmButtonColor: '#16a34a',
+  })
+  if (!result.isConfirmed) return
+
   try {
     const res = await fetch(`${API_BASE}/users`, {
       method: 'POST',
       headers: getAuthHeaders(),
-      body: JSON.stringify(addForm.value),
+      body: JSON.stringify({
+        ...addForm.value,
+        us_ttn_id: parseInt(addForm.value.us_ttn_id),
+        us_role_id: parseInt(addForm.value.us_role_id),
+        us_tt_id: addForm.value.us_tt_id ? parseInt(addForm.value.us_tt_id) : null,
+      }),
     })
     const data = await res.json()
     if (!res.ok) throw new Error(data.message || 'เพิ่มผู้ใช้ไม่สำเร็จ')
@@ -152,6 +160,24 @@ async function confirmAdd() {
   }
 }
 
+/* ===============================
+ * 🟠 แก้ไขผู้ใช้
+ * =============================== */
+const showEditModal = ref(false)
+const editForm = ref({
+  us_id: '',
+  us_ttn_id: '',
+  us_first_name_th: '',
+  us_last_name_th: '',
+  us_first_name_en: '',
+  us_last_name_en: '',
+  us_user_name: '',
+  us_phone: '',
+  us_department: '',
+  us_role_id: '',
+  us_tt_id: '',
+})
+
 async function openEditModal(username) {
   try {
     const res = await fetch(`${API_BASE}/users`, { headers: getAuthHeaders() })
@@ -159,27 +185,38 @@ async function openEditModal(username) {
     const user = data.find((u) => u.us_user_name === username)
     if (!user) throw new Error('ไม่พบผู้ใช้')
 
-    Object.assign(editForm.value, {
-      us_id: user.us_id,
-      us_user_name: user.us_user_name,
-      us_first_name_th: user.us_first_name_th,
-      us_last_name_th: user.us_last_name_th,
-      us_department: user.us_department,
-      us_role_id: user.us_role_id,
-      us_tt_id: user.us_tt_id,
-    })
+    Object.assign(editForm.value, user)
     showEditModal.value = true
   } catch (err) {
     Swal.fire('ผิดพลาด', err.message, 'error')
   }
 }
+function closeEditModal() {
+  showEditModal.value = false
+}
 
-async function confirmEdit() {
+async function confirmEditUser() {
+  const result = await Swal.fire({
+    title: 'ยืนยันการแก้ไขข้อมูล?',
+    text: 'คุณต้องการบันทึกการแก้ไขนี้หรือไม่?',
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'บันทึก',
+    cancelButtonText: 'ยกเลิก',
+    confirmButtonColor: '#f97316',
+  })
+  if (!result.isConfirmed) return
+
   try {
     const res = await fetch(`${API_BASE}/users/${editForm.value.us_id}`, {
       method: 'PUT',
       headers: getAuthHeaders(),
-      body: JSON.stringify(editForm.value),
+      body: JSON.stringify({
+        ...editForm.value,
+        us_ttn_id: parseInt(editForm.value.us_ttn_id),
+        us_role_id: parseInt(editForm.value.us_role_id),
+        us_tt_id: editForm.value.us_tt_id ? parseInt(editForm.value.us_tt_id) : null,
+      }),
     })
     const data = await res.json()
     if (!res.ok) throw new Error(data.message || 'อัปเดตไม่สำเร็จ')
@@ -192,30 +229,78 @@ async function confirmEdit() {
   }
 }
 
-async function handleDelete(username) {
+// ===============================
+// 🔴 ลบผู้ใช้ (แก้ไข)
+// ===============================
+async function confirmDelete(username) {
   const result = await Swal.fire({
-    title: 'ลบผู้ใช้นี้?',
-    text: `คุณแน่ใจหรือไม่ว่าต้องการลบ "${username}"`,
+    title: 'ยืนยันการลบ?',
+    text: `คุณแน่ใจหรือไม่ว่าต้องการลบ "${username}"?`,
     icon: 'warning',
     showCancelButton: true,
-    confirmButtonText: 'ลบเลย',
+    confirmButtonText: 'ลบ',
     cancelButtonText: 'ยกเลิก',
-    confirmButtonColor: '#e53e3e',
+    confirmButtonColor: '#dc2626',
   })
   if (!result.isConfirmed) return
 
   try {
-    const res = await fetch(`${API_BASE}/users/by-username/${username}`, {
+    // แปลง username -> id
+    let id = userIdByUsername.value[username]
+
+    // กันกรณี map ยังไม่มีข้อมูล (เช่นเพิ่งรีเฟรชหน้า/ข้อมูลไม่ sync)
+    if (!id) {
+      const resUsers = await fetch(`${API_BASE}/users`, { headers: getAuthHeaders() })
+      const dataUsers = await resUsers.json()
+      if (resUsers.ok) {
+        const found = dataUsers.find((u) => u.us_user_name === username)
+        if (found) {
+          id = found.us_id
+          userIdByUsername.value[username] = id
+        }
+      }
+    }
+
+    if (!id && id !== 0) {
+      throw new Error('ไม่พบผู้ใช้จากชื่อผู้ใช้ (username) นี้')
+    }
+
+    const res = await fetch(`${API_BASE}/users/${id}`, {
       method: 'DELETE',
       headers: getAuthHeaders(),
     })
-    const data = await res.json()
-    if (!res.ok) throw new Error(data.message || 'ลบผู้ใช้ไม่สำเร็จ')
+
+    // พยายามอ่านเป็น JSON ก่อน ถ้าไม่ได้ค่อยอ่านเป็น text
+    let payload
+    let message = ''
+    try {
+      payload = await res.json()
+      message = payload?.message || ''
+    } catch (_) {
+      const txt = await res.text()
+      message = txt && txt.trim().startsWith('<') ? 'ปลายทางส่งกลับเป็น HTML' : txt
+    }
+
+    if (!res.ok) {
+      throw new Error(message || `ลบไม่สำเร็จ (HTTP ${res.status})`)
+    }
 
     Swal.fire('สำเร็จ', 'ลบผู้ใช้เรียบร้อยแล้ว', 'success')
     await fetchUsers()
   } catch (err) {
-    Swal.fire('ผิดพลาด', err.message, 'error')
+    Swal.fire('ผิดพลาด', err.message || 'ไม่สามารถลบผู้ใช้ได้', 'error')
+  }
+}
+
+function handleAddRoleChange() {
+  if (addForm.value.us_role_id !== '2') {
+    addForm.value.us_tt_id = ''
+  }
+}
+
+function handleEditRoleChange() {
+  if (editForm.value.us_role_id !== '2' && editForm.value.us_role_id !== 2) {
+    editForm.value.us_tt_id = ''
   }
 }
 </script>
@@ -315,8 +400,14 @@ async function handleDelete(username) {
           @click="openAddModal"
           class="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-[#1E48D1] hover:bg-[#1539a9] text-white font-medium shadow-sm transition"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24"
-            stroke="currentColor" stroke-width="2">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="w-4 h-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="2"
+          >
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14m7-7H5" />
           </svg>
           เพิ่มผู้ใช้
@@ -333,50 +424,418 @@ async function handleDelete(username) {
         :perPage="10"
         mode="full"
         @edit="openEditModal"
-        @delete="handleDelete"
+        @delete="confirmDelete"
       />
     </div>
 
-    <!-- Modal เพิ่ม -->
+    <!-- 🟢 Modal เพิ่มผู้ใช้งาน -->
     <div
       v-if="showAddModal"
       class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-      @click.self="showAddModal = false"
+      @click.self="closeAddModal"
     >
-      <div class="bg-white rounded-lg p-8 w-full max-w-lg shadow-xl">
-        <h2 class="text-lg font-bold mb-4 text-gray-800">เพิ่มผู้ใช้ใหม่</h2>
-        <div class="space-y-3">
-          <input v-model="addForm.us_user_name" placeholder="ชื่อผู้ใช้" class="input" />
-          <input v-model="addForm.us_user_pass" placeholder="รหัสผ่าน" type="password" class="input" />
-          <input v-model="addForm.us_first_name_th" placeholder="ชื่อจริง" class="input" />
-          <input v-model="addForm.us_last_name_th" placeholder="นามสกุล" class="input" />
-          <input v-model="addForm.us_department" placeholder="หน่วยงาน" class="input" />
+      <div class="bg-white rounded-lg p-8 w-full max-w-2xl shadow-xl max-h-[90vh] overflow-y-auto">
+        <!-- Header with icon -->
+        <div class="flex items-center gap-3 mb-6">
+          <div class="bg-green-100 p-3 rounded-full">
+            <img src="/icon/alert/add-user-icon.svg" alt="Add User" class="w-8 h-8" />
+          </div>
+          <h2 class="text-xl font-bold text-gray-800">เพิ่มผู้ใช้งาน</h2>
         </div>
-        <div class="flex justify-end gap-3 mt-6">
-          <button @click="showAddModal = false" class="btn-cancel">ยกเลิก</button>
-          <button @click="confirmAdd" class="btn-primary">บันทึก</button>
-        </div>
+
+        <p class="text-gray-600 text-sm mb-6">กรอกข้อมูลเพื่อสร้างบัญชีผู้ใช้ใหม่ในระบบ</p>
+
+        <form @submit.prevent="confirmAddUser">
+          <!-- ชื่อผู้ใช้ และ รหัสผ่าน -->
+          <div class="grid grid-cols-2 gap-3 mb-3">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                ชื่อผู้ใช้ <span class="text-red-500">*</span>
+              </label>
+              <input
+                v-model="addForm.us_user_name"
+                type="text"
+                required
+                placeholder="กรอกชื่อผู้ใช้"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                รหัสผ่าน <span class="text-red-500">*</span>
+              </label>
+              <input
+                v-model="addForm.us_user_pass"
+                type="password"
+                required
+                placeholder="กรอกรหัสผ่าน"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+
+          <!-- คำนำหน้า -->
+          <div class="mb-3">
+            <label class="block text-sm font-medium text-gray-700 mb-1.5">
+              คำนำหน้าชื่อ <span class="text-red-500">*</span>
+            </label>
+            <select
+              v-model="addForm.us_ttn_id"
+              required
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white"
+            >
+              <option value="" disabled>เลือกคำนำหน้า</option>
+              <option value="1">นาย</option>
+              <option value="2">นาง</option>
+              <option value="3">นางสาว</option>
+              <option value="4">อื่นๆ</option>
+            </select>
+          </div>
+
+          <!-- ชื่อ - นามสกุล (ภาษาไทย) -->
+          <div class="grid grid-cols-2 gap-3 mb-3">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                ชื่อ (ไทย) <span class="text-red-500">*</span>
+              </label>
+              <input
+                v-model="addForm.us_first_name_th"
+                type="text"
+                required
+                placeholder="กรอกชื่อ"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                นามสกุล (ไทย) <span class="text-red-500">*</span>
+              </label>
+              <input
+                v-model="addForm.us_last_name_th"
+                type="text"
+                required
+                placeholder="กรอกนามสกุล"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+
+          <!-- ชื่อ - นามสกุล (ภาษาอังกฤษ) -->
+          <div class="grid grid-cols-2 gap-3 mb-3">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5"> ชื่อ (EN) </label>
+              <input
+                v-model="addForm.us_first_name_en"
+                type="text"
+                placeholder="First Name"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5"> นามสกุล (EN) </label>
+              <input
+                v-model="addForm.us_last_name_en"
+                type="text"
+                placeholder="Last Name"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+
+          <!-- เบอร์โทร และ หน่วยงาน -->
+          <div class="grid grid-cols-2 gap-3 mb-3">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5"> เบอร์โทร </label>
+              <input
+                v-model="addForm.us_phone"
+                type="tel"
+                placeholder="กรอกเบอร์โทร"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                หน่วยงาน <span class="text-red-500">*</span>
+              </label>
+              <input
+                v-model="addForm.us_department"
+                type="text"
+                required
+                placeholder="กรอกหน่วยงาน"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+
+          <!-- บทบาท - ตำแหน่งช่าง -->
+          <div class="grid grid-cols-2 gap-3 mb-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                บทบาท <span class="text-red-500">*</span>
+              </label>
+              <select
+                v-model="addForm.us_role_id"
+                @change="handleAddRoleChange"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white"
+              >
+                <option value="" disabled>เลือกบทบาท</option>
+                <option value="1">Admin</option>
+                <option value="2">Technician</option>
+                <option value="3">Stock</option>
+                <option value="4">Manager</option>
+                <option value="5">User</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                ตำแหน่งช่าง
+                <span v-if="addForm.us_role_id === '2'" class="text-red-500">*</span>
+              </label>
+              <select
+                v-model="addForm.us_tt_id"
+                :disabled="addForm.us_role_id !== '2'"
+                :required="addForm.us_role_id === '2'"
+                :class="[
+                  'w-full px-3 py-2 border rounded-md appearance-none',
+                  addForm.us_role_id === '2'
+                    ? 'border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                    : 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed',
+                ]"
+              >
+                <option value="">
+                  {{ addForm.us_role_id === '2' ? 'เลือกตำแหน่ง' : 'ไม่ระบุ' }}
+                </option>
+                <option value="1">ไฟฟ้า</option>
+                <option value="2">ประปา</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Buttons -->
+          <div class="flex gap-3">
+            <button
+              type="button"
+              @click="closeAddModal"
+              class="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors font-medium"
+            >
+              ยกเลิก
+            </button>
+            <button
+              type="submit"
+              class="flex-1 px-4 py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-md transition-colors font-medium"
+            >
+              เพิ่มผู้ใช้
+            </button>
+          </div>
+        </form>
       </div>
     </div>
 
-    <!-- Modal แก้ไข -->
+    <!-- Edit User Modal -->
     <div
       v-if="showEditModal"
       class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-      @click.self="showEditModal = false"
+      @click.self="closeEditModal"
     >
-      <div class="bg-white rounded-lg p-8 w-full max-w-lg shadow-xl">
-        <h2 class="text-lg font-bold mb-4 text-gray-800">แก้ไขข้อมูลผู้ใช้</h2>
-        <div class="space-y-3">
-          <input v-model="editForm.us_user_name" placeholder="ชื่อผู้ใช้" class="input" />
-          <input v-model="editForm.us_first_name_th" placeholder="ชื่อจริง" class="input" />
-          <input v-model="editForm.us_last_name_th" placeholder="นามสกุล" class="input" />
-          <input v-model="editForm.us_department" placeholder="หน่วยงาน" class="input" />
+      <div class="bg-white rounded-lg p-8 w-full max-w-2xl shadow-xl max-h-[90vh] overflow-y-auto">
+        <!-- Header with icon -->
+        <div class="flex items-center gap-3 mb-6">
+          <div class="bg-orange-100 p-3 rounded-full">
+            <img src="/icon/alert/edit-user-icon.svg" alt="Edit User" class="w-8 h-8" />
+          </div>
+          <h2 class="text-xl font-bold text-gray-800">แก้ไขข้อมูลผู้ใช้</h2>
         </div>
-        <div class="flex justify-end gap-3 mt-6">
-          <button @click="showEditModal = false" class="btn-cancel">ยกเลิก</button>
-          <button @click="confirmEdit" class="btn-primary">บันทึก</button>
-        </div>
+
+        <p class="text-gray-600 text-sm mb-6">คุณต้องการบันทึกการแก้ไขข้อมูลผู้ใช้หรือไม่</p>
+
+        <form @submit.prevent="confirmEditUser">
+          <!-- ชื่อผู้ใช้ -->
+          <div class="mb-3">
+            <label class="block text-sm font-medium text-gray-700 mb-1.5">
+              ชื่อผู้ใช้ <span class="text-red-500">*</span>
+            </label>
+            <input
+              v-model="editForm.us_user_name"
+              type="text"
+              required
+              placeholder="กรอกชื่อผู้ใช้"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+            />
+          </div>
+
+          <!-- คำนำหน้า -->
+          <div class="mb-3">
+            <label class="block text-sm font-medium text-gray-700 mb-1.5">
+              คำนำหน้าชื่อ <span class="text-red-500">*</span>
+            </label>
+            <select
+              v-model="editForm.us_ttn_id"
+              required
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent appearance-none bg-white"
+            >
+              <option value="" disabled>เลือกคำนำหน้า</option>
+              <option value="1">นาย</option>
+              <option value="2">นาง</option>
+              <option value="3">นางสาว</option>
+              <option value="4">อื่นๆ</option>
+            </select>
+          </div>
+
+          <!-- ชื่อ - นามสกุล (ภาษาไทย) -->
+          <div class="grid grid-cols-2 gap-3 mb-3">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                ชื่อ (ไทย) <span class="text-red-500">*</span>
+              </label>
+              <input
+                v-model="editForm.us_first_name_th"
+                type="text"
+                required
+                placeholder="กรอกชื่อ"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                นามสกุล (ไทย) <span class="text-red-500">*</span>
+              </label>
+              <input
+                v-model="editForm.us_last_name_th"
+                type="text"
+                required
+                placeholder="กรอกนามสกุล"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+
+          <!-- ชื่อ - นามสกุล (ภาษาอังกฤษ) -->
+          <div class="grid grid-cols-2 gap-3 mb-3">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5"> ชื่อ (EN) </label>
+              <input
+                v-model="editForm.us_first_name_en"
+                type="text"
+                placeholder="First Name"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5"> นามสกุล (EN) </label>
+              <input
+                v-model="editForm.us_last_name_en"
+                type="text"
+                placeholder="Last Name"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+
+          <!-- เบอร์โทร และ หน่วยงาน -->
+          <div class="grid grid-cols-2 gap-3 mb-3">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5"> เบอร์โทร </label>
+              <input
+                v-model="editForm.us_phone"
+                type="tel"
+                placeholder="กรอกเบอร์โทร"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                หน่วยงาน <span class="text-red-500">*</span>
+              </label>
+              <input
+                v-model="editForm.us_department"
+                type="text"
+                required
+                placeholder="กรอกหน่วยงาน"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+
+          <!-- บทบาท - ตำแหน่งช่าง (แถวเดียวกัน) -->
+          <div class="grid grid-cols-2 gap-3 mb-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                บทบาท <span class="text-red-500">*</span>
+              </label>
+              <select
+                v-model="editForm.us_role_id"
+                @change="handleEditRoleChange"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent appearance-none bg-white"
+              >
+                <option value="" disabled>เลือกบทบาท</option>
+                <option value="1">ADMIN</option>
+                <option value="2">TECHNICIAN</option>
+                <option value="3">STOCK</option>
+                <option value="4">MANAGER</option>
+                <option value="5">USER</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">
+                ตำแหน่งช่าง
+                <span
+                  v-if="editForm.us_role_id === '2' || editForm.us_role_id === 2"
+                  class="text-red-500"
+                  >*</span
+                >
+              </label>
+              <select
+                v-model="editForm.us_tt_id"
+                :disabled="editForm.us_role_id !== '2' && editForm.us_role_id !== 2"
+                :required="editForm.us_role_id === '2' || editForm.us_role_id === 2"
+                :class="[
+                  'w-full px-3 py-2 border rounded-md appearance-none',
+                  editForm.us_role_id === '2' || editForm.us_role_id === 2
+                    ? 'border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent'
+                    : 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed',
+                ]"
+              >
+                <option value="">
+                  {{
+                    editForm.us_role_id === '2' || editForm.us_role_id === 2
+                      ? 'เลือกตำแหน่ง'
+                      : 'ไม่ระบุ'
+                  }}
+                </option>
+                <option value="1">ไฟฟ้า</option>
+                <option value="2">ประปา</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Buttons -->
+          <div class="flex gap-3">
+            <button
+              type="button"
+              @click="closeEditModal"
+              class="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors font-medium"
+            >
+              ยกเลิก
+            </button>
+            <button
+              type="submit"
+              class="flex-1 px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-md transition-colors font-medium"
+            >
+              บันทึกการแก้ไข
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   </div>
