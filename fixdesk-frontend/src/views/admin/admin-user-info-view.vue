@@ -167,6 +167,7 @@ function closeAddModal() {
 }
 
 async function confirmAddUser() {
+  if (!validateAddForm()) return
   const result = await Swal.fire({
     title: 'ยืนยันการเพิ่มผู้ใช้งาน?',
     text: 'คุณต้องการเพิ่มผู้ใช้งานใหม่ในระบบหรือไม่?',
@@ -235,6 +236,7 @@ function closeEditModal() {
 }
 
 async function confirmEditUser() {
+  if (!validateEditForm()) return
   const result = await Swal.fire({
     title: 'ยืนยันการแก้ไขข้อมูล?',
     text: 'คุณต้องการบันทึกการแก้ไขนี้หรือไม่?',
@@ -341,6 +343,221 @@ function handleEditRoleChange() {
   if (editForm.value.us_role_id !== '2' && editForm.value.us_role_id !== 2) {
     editForm.value.us_tt_id = ''
   }
+}
+const addErrors = ref({
+  username: '',
+  password: '',
+  ttn: '',
+  firstTh: '',
+  lastTh: '',
+  firstEn: '',
+  lastEn: '',
+  phone: '',
+  department: '',
+  role: '',
+  techType: '',
+})
+
+const editErrors = ref({
+  ttn: '',
+  firstTh: '',
+  lastTh: '',
+  firstEn: '',
+  lastEn: '',
+  phone: '',
+  department: '',
+  role: '',
+  techType: '',
+})
+function validateAddForm() {
+  let valid = true
+
+  addErrors.value = {
+    username: '',
+    password: '',
+    ttn: '',
+    firstTh: '',
+    lastTh: '',
+    firstEn: '',
+    lastEn: '',
+    phone: '',
+    department: '',
+    role: '',
+    techType: '',
+  }
+
+  // USERNAME
+  if (!addForm.value.us_user_name.trim()) {
+    addErrors.value.username = 'กรุณากรอกชื่อผู้ใช้'
+    valid = false
+  }
+
+  // PASSWORD
+  if (!addForm.value.us_user_pass.trim()) {
+    addErrors.value.password = 'กรุณากรอกรหัสผ่าน'
+    valid = false
+  }
+
+  // TITLE
+  if (!addForm.value.us_ttn_id) {
+    addErrors.value.ttn = 'กรุณาเลือกคำนำหน้า'
+    valid = false
+  }
+
+  // FIRST NAME TH
+  if (!addForm.value.us_first_name_th.trim()) {
+    addErrors.value.firstTh = 'กรุณากรอกชื่อภาษาไทย'
+    valid = false
+  } else if (!/^[ก-๙\s]+$/.test(addForm.value.us_first_name_th)) {
+    addErrors.value.firstTh = 'กรุณากรอกเป็นภาษาไทยเท่านั้น'
+    valid = false
+  }
+
+  // LAST NAME TH
+  if (!addForm.value.us_last_name_th.trim()) {
+    addErrors.value.lastTh = 'กรุณากรอกนามสกุลภาษาไทย'
+    valid = false
+  } else if (!/^[ก-๙\s]+$/.test(addForm.value.us_last_name_th)) {
+    addErrors.value.lastTh = 'กรุณากรอกเป็นภาษาไทยเท่านั้น'
+    valid = false
+  }
+
+  // FIRST NAME EN
+  if (!addForm.value.us_first_name_en.trim()) {
+    addErrors.value.firstEn = 'กรุณากรอกชื่อภาษาอังกฤษ'
+    valid = false
+  } else if (!/^[A-Za-z\s]+$/.test(addForm.value.us_first_name_en)) {
+    addErrors.value.firstEn = 'กรุณากรอกเป็นภาษาอังกฤษเท่านั้น'
+    valid = false
+  }
+
+  // LAST NAME EN
+  if (!addForm.value.us_last_name_en.trim()) {
+    addErrors.value.lastEn = 'กรุณากรอกนามสกุลภาษาอังกฤษ'
+    valid = false
+  } else if (!/^[A-Za-z\s]+$/.test(addForm.value.us_last_name_en)) {
+    addErrors.value.lastEn = 'กรุณากรอกเป็นภาษาอังกฤษเท่านั้น'
+    valid = false
+  }
+
+  // PHONE
+  if (!addForm.value.us_phone.trim()) {
+    addErrors.value.phone = 'กรุณากรอกเบอร์โทร'
+    valid = false
+  } else if (!/^[0-9]{9,10}$/.test(addForm.value.us_phone)) {
+    addErrors.value.phone = 'เบอร์โทรต้องเป็นตัวเลข 9–10 หลัก'
+    valid = false
+  }
+
+  // DEPARTMENT
+  if (!addForm.value.us_department.trim()) {
+    addErrors.value.department = 'กรุณากรอกหน่วยงาน'
+    valid = false
+  }
+
+  // ROLE
+  if (!addForm.value.us_role_id) {
+    addErrors.value.role = 'กรุณาเลือกบทบาท'
+    valid = false
+  }
+
+  // TECH TYPE (technician only)
+  if (addForm.value.us_role_id === '2' && !addForm.value.us_tt_id) {
+    addErrors.value.techType = 'กรุณาเลือกประเภทช่าง'
+    valid = false
+  }
+
+  return valid
+}
+
+function validateEditForm() {
+  let valid = true
+
+  editErrors.value = {
+    ttn: '',
+    firstTh: '',
+    lastTh: '',
+    firstEn: '',
+    lastEn: '',
+    phone: '',
+    department: '',
+    role: '',
+    techType: '',
+  }
+
+  // TITLE
+  if (!editForm.value.us_ttn_id) {
+    editErrors.value.ttn = 'กรุณาเลือกคำนำหน้า'
+    valid = false
+  }
+
+  // FIRST NAME TH
+  if (!editForm.value.us_first_name_th.trim()) {
+    editErrors.value.firstTh = 'กรุณากรอกชื่อภาษาไทย'
+    valid = false
+  } else if (!/^[ก-๙\s]+$/.test(editForm.value.us_first_name_th)) {
+    editErrors.value.firstTh = 'กรุณากรอกเป็นภาษาไทยเท่านั้น'
+    valid = false
+  }
+
+  // LAST NAME TH
+  if (!editForm.value.us_last_name_th.trim()) {
+    editErrors.value.lastTh = 'กรุณากรอกนามสกุลภาษาไทย'
+    valid = false
+  } else if (!/^[ก-๙\s]+$/.test(editForm.value.us_last_name_th)) {
+    editErrors.value.lastTh = 'กรุณากรอกเป็นภาษาไทยเท่านั้น'
+    valid = false
+  }
+
+  // FIRST NAME EN
+  if (!editForm.value.us_first_name_en.trim()) {
+    editErrors.value.firstEn = 'กรุณากรอกชื่อภาษาอังกฤษ'
+    valid = false
+  } else if (!/^[A-Za-z\s]+$/.test(editForm.value.us_first_name_en)) {
+    editErrors.value.firstEn = 'กรุณากรอกเป็นภาษาอังกฤษเท่านั้น'
+    valid = false
+  }
+
+  // LAST NAME EN
+  if (!editForm.value.us_last_name_en.trim()) {
+    editErrors.value.lastEn = 'กรุณากรอกนามสกุลภาษาอังกฤษ'
+    valid = false
+  } else if (!/^[A-Za-z\s]+$/.test(editForm.value.us_last_name_en)) {
+    editErrors.value.lastEn = 'กรุณากรอกเป็นภาษาอังกฤษเท่านั้น'
+    valid = false
+  }
+
+  // PHONE
+  if (!editForm.value.us_phone.trim()) {
+    editErrors.value.phone = 'กรุณากรอกเบอร์โทร'
+    valid = false
+  } else if (!/^[0-9]{9,10}$/.test(editForm.value.us_phone)) {
+    editErrors.value.phone = 'เบอร์โทรต้องเป็นตัวเลข 9–10 หลัก'
+    valid = false
+  }
+
+  // DEPARTMENT
+  if (!editForm.value.us_department.trim()) {
+    editErrors.value.department = 'กรุณากรอกหน่วยงาน'
+    valid = false
+  }
+
+  // ROLE
+  if (!editForm.value.us_role_id) {
+    editErrors.value.role = 'กรุณาเลือกบทบาท'
+    valid = false
+  }
+
+  // TECH TYPE
+  if (
+    (editForm.value.us_role_id === '2' || editForm.value.us_role_id === 2) &&
+    !editForm.value.us_tt_id
+  ) {
+    editErrors.value.techType = 'กรุณาเลือกประเภทช่าง'
+    valid = false
+  }
+
+  return valid
 }
 </script>
 
@@ -656,174 +873,244 @@ function handleEditRoleChange() {
         <form @submit.prevent="confirmAddUser">
           <!-- ชื่อผู้ใช้ และ รหัสผ่าน -->
           <div class="grid grid-cols-2 gap-3 mb-3">
+            <!-- Username -->
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1.5">
+              <label class="block text-sm font-medium mb-1.5">
                 ชื่อผู้ใช้ <span class="text-red-500">*</span>
               </label>
+
               <input
                 v-model="addForm.us_user_name"
                 type="text"
-                required
+                :class="[
+                  'w-full px-3 py-2 border rounded-md',
+                  addErrors.username ? 'border-red-500 bg-red-50' : 'border-gray-300',
+                ]"
                 placeholder="กรอกชื่อผู้ใช้"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
+
+              <p v-if="addErrors.username" class="text-red-500 text-sm mt-1">
+                {{ addErrors.username }}
+              </p>
             </div>
 
+            <!-- Password -->
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1.5">
+              <label class="block text-sm font-medium mb-1.5">
                 รหัสผ่าน <span class="text-red-500">*</span>
               </label>
+
               <input
                 v-model="addForm.us_user_pass"
                 type="password"
-                required
+                :class="[
+                  'w-full px-3 py-2 border rounded-md',
+                  addErrors.password ? 'border-red-500 bg-red-50' : 'border-gray-300',
+                ]"
                 placeholder="กรอกรหัสผ่าน"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
+
+              <p v-if="addErrors.password" class="text-red-500 text-sm mt-1">
+                {{ addErrors.password }}
+              </p>
             </div>
           </div>
 
           <!-- คำนำหน้า -->
-          <div class="mb-3">
-            <label class="block text-sm font-medium text-gray-700 mb-1.5">
+          <div>
+            <label class="block text-sm font-medium mb-1.5">
               คำนำหน้าชื่อ <span class="text-red-500">*</span>
             </label>
+
             <select
               v-model="addForm.us_ttn_id"
-              required
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white"
+              :class="[
+                'w-full px-3 py-2 border rounded-md bg-white',
+                addErrors.ttn ? 'border-red-500 bg-red-50' : 'border-gray-300',
+              ]"
             >
-              <option value="" disabled>เลือกคำนำหน้า</option>
+              <option value="">เลือกคำนำหน้า</option>
               <option value="1">นาย</option>
               <option value="2">นาง</option>
               <option value="3">นางสาว</option>
               <option value="4">อื่นๆ</option>
             </select>
+
+            <p v-if="addErrors.ttn" class="text-red-500 text-sm mt-1">
+              {{ addErrors.ttn }}
+            </p>
           </div>
 
           <!-- ชื่อ - นามสกุล (ภาษาไทย) -->
           <div class="grid grid-cols-2 gap-3 mb-3">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1.5">
+              <label class="block text-sm font-medium mb-1.5">
                 ชื่อ (ไทย) <span class="text-red-500">*</span>
               </label>
+
               <input
                 v-model="addForm.us_first_name_th"
                 type="text"
-                required
-                pattern="^[ก-๙\s]+$"
-                title="กรุณากรอกชื่อเป็นภาษาไทยเท่านั้น"
+                :class="[
+                  'w-full px-3 py-2 border rounded-md',
+                  addErrors.firstTh ? 'border-red-500 bg-red-50' : 'border-gray-300',
+                ]"
                 placeholder="กรอกชื่อ"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
+
+              <p v-if="addErrors.firstTh" class="text-red-500 text-sm mt-1">
+                {{ addErrors.firstTh }}
+              </p>
             </div>
 
+            <!-- Last Name TH -->
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1.5">
+              <label class="block text-sm font-medium mb-1.5">
                 นามสกุล (ไทย) <span class="text-red-500">*</span>
               </label>
+
               <input
                 v-model="addForm.us_last_name_th"
                 type="text"
-                required
-                pattern="^[ก-๙\s]+$"
-                title="กรุณากรอกนามสกุลเป็นภาษาไทยเท่านั้น"
+                :class="[
+                  'w-full px-3 py-2 border rounded-md',
+                  addErrors.lastTh ? 'border-red-500 bg-red-50' : 'border-gray-300',
+                ]"
                 placeholder="กรอกนามสกุล"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
+
+              <p v-if="addErrors.lastTh" class="text-red-500 text-sm mt-1">
+                {{ addErrors.lastTh }}
+              </p>
             </div>
           </div>
 
           <!-- ชื่อ - นามสกุล (ภาษาอังกฤษ) -->
           <div class="grid grid-cols-2 gap-3 mb-3">
+            <!-- First Name EN -->
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1.5"> ชื่อ (EN) </label>
+              <label class="block text-sm font-medium mb-1.5">ชื่อ (EN)</label>
+
               <input
                 v-model="addForm.us_first_name_en"
                 type="text"
-                pattern="^[A-Za-z\s]+$"
-                title="กรุณากรอกชื่อเป็นภาษาอังกฤษเท่านั้น"
+                :class="[
+                  'w-full px-3 py-2 border rounded-md',
+                  addErrors.firstEn ? 'border-red-500 bg-red-50' : 'border-gray-300',
+                ]"
                 placeholder="First Name"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
+
+              <p v-if="addErrors.firstEn" class="text-red-500 text-sm mt-1">
+                {{ addErrors.firstEn }}
+              </p>
             </div>
 
+            <!-- Last Name EN -->
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1.5"> นามสกุล (EN) </label>
+              <label class="block text-sm font-medium mb-1.5">นามสกุล (EN)</label>
+
               <input
                 v-model="addForm.us_last_name_en"
                 type="text"
-                pattern="^[A-Za-z\s]+$"
-                title="กรุณากรอกนามสกุลเป็นภาษาอังกฤษเท่านั้น"
+                :class="[
+                  'w-full px-3 py-2 border rounded-md',
+                  addErrors.lastEn ? 'border-red-500 bg-red-50' : 'border-gray-300',
+                ]"
                 placeholder="Last Name"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
+
+              <p v-if="addErrors.lastEn" class="text-red-500 text-sm mt-1">
+                {{ addErrors.lastEn }}
+              </p>
             </div>
           </div>
 
           <!-- เบอร์โทร และ หน่วยงาน -->
           <div class="grid grid-cols-2 gap-3 mb-3">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1.5"> เบอร์โทร </label>
+              <label class="block text-sm font-medium mb-1.5">เบอร์โทร</label>
+
               <input
                 v-model="addForm.us_phone"
                 type="tel"
-                pattern="[0-9]{9,10}"
-                title="กรุณากรอกเบอร์โทร 9-10 หลักเป็นตัวเลขเท่านั้น"
+                :class="[
+                  'w-full px-3 py-2 border rounded-md',
+                  addErrors.phone ? 'border-red-500 bg-red-50' : 'border-gray-300',
+                ]"
                 placeholder="กรอกเบอร์โทร"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
+
+              <p v-if="addErrors.phone" class="text-red-500 text-sm mt-1">
+                {{ addErrors.phone }}
+              </p>
             </div>
 
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1.5">
+              <label class="block text-sm font-medium mb-1.5">
                 หน่วยงาน <span class="text-red-500">*</span>
               </label>
+
               <input
                 v-model="addForm.us_department"
                 type="text"
-                required
+                :class="[
+                  'w-full px-3 py-2 border rounded-md',
+                  addErrors.department ? 'border-red-500 bg-red-50' : 'border-gray-300',
+                ]"
                 placeholder="กรอกหน่วยงาน"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
+
+              <p v-if="addErrors.department" class="text-red-500 text-sm mt-1">
+                {{ addErrors.department }}
+              </p>
             </div>
           </div>
 
           <!-- บทบาท - ตำแหน่งช่าง -->
           <div class="grid grid-cols-2 gap-3 mb-4">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1.5">
+              <label class="block text-sm font-medium mb-1.5">
                 บทบาท <span class="text-red-500">*</span>
               </label>
+
               <select
                 v-model="addForm.us_role_id"
                 @change="handleAddRoleChange"
-                required
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white"
+                :class="[
+                  'w-full px-3 py-2 border rounded-md bg-white',
+                  addErrors.role ? 'border-red-500 bg-red-50' : 'border-gray-300',
+                ]"
               >
-                <option value="" disabled>เลือกบทบาท</option>
+                <option value="">เลือกบทบาท</option>
                 <option value="1">Admin</option>
                 <option value="2">Technician</option>
                 <option value="3">Stock</option>
                 <option value="4">Manager</option>
                 <option value="5">User</option>
               </select>
+
+              <p v-if="addErrors.role" class="text-red-500 text-sm mt-1">
+                {{ addErrors.role }}
+              </p>
             </div>
 
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1.5">
+              <label class="block text-sm font-medium mb-1.5">
                 ตำแหน่งช่าง
                 <span v-if="addForm.us_role_id === '2'" class="text-red-500">*</span>
               </label>
+
               <select
                 v-model="addForm.us_tt_id"
                 :disabled="addForm.us_role_id !== '2'"
-                :required="addForm.us_role_id === '2'"
                 :class="[
-                  'w-full px-3 py-2 border rounded-md appearance-none',
+                  'w-full px-3 py-2 border rounded-md',
                   addForm.us_role_id === '2'
-                    ? 'border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-                    : 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed',
+                    ? addErrors.techType
+                      ? 'border-red-500 bg-red-50'
+                      : 'border-gray-300'
+                    : 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200',
                 ]"
               >
                 <option value="">
@@ -832,6 +1119,10 @@ function handleEditRoleChange() {
                 <option value="1">ไฟฟ้า</option>
                 <option value="2">ประปา</option>
               </select>
+
+              <p v-if="addErrors.techType" class="text-red-500 text-sm mt-1">
+                {{ addErrors.techType }}
+              </p>
             </div>
           </div>
 
@@ -887,165 +1178,213 @@ function handleEditRoleChange() {
           </div>
 
           <!-- คำนำหน้า -->
-          <div class="mb-3">
-            <label class="block text-sm font-medium text-gray-700 mb-1.5">
+          <div>
+            <label class="block text-sm font-medium mb-1.5">
               คำนำหน้าชื่อ <span class="text-red-500">*</span>
             </label>
+
             <select
               v-model="editForm.us_ttn_id"
-              required
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent appearance-none bg-white"
+              :class="[
+                'w-full px-3 py-2 border rounded-md bg-white',
+                editErrors.ttn ? 'border-red-500 bg-red-50' : 'border-gray-300',
+              ]"
             >
-              <option value="" disabled>เลือกคำนำหน้า</option>
+              <option value="">เลือกคำนำหน้า</option>
               <option value="1">นาย</option>
               <option value="2">นาง</option>
               <option value="3">นางสาว</option>
               <option value="4">อื่นๆ</option>
             </select>
+
+            <p v-if="editErrors.ttn" class="text-red-500 text-sm mt-1">
+              {{ editErrors.ttn }}
+            </p>
           </div>
 
           <!-- ชื่อ - นามสกุล (ภาษาไทย) -->
           <div class="grid grid-cols-2 gap-3 mb-3">
-            <div class="mb-6">
-              <label
-                class="block mb-2.5 text-sm font-medium"
-                :class="thaiNameError ? 'text-red-600' : 'text-gray-700'"
-              >
-                ชื่อ (ไทย)
+            <!-- First Name TH -->
+            <div>
+              <label class="block text-sm font-medium mb-1.5">
+                ชื่อ (ไทย) <span class="text-red-500">*</span>
               </label>
 
               <input
+                v-model="editForm.us_first_name_th"
                 type="text"
-                v-model="addForm.us_first_name_th"
-                @input="validateThaiName"
                 :class="[
-                  'text-sm rounded-lg block w-full px-3 py-2.5 shadow-xs border',
-                  thaiNameError
-                    ? 'bg-red-50 border-red-500 text-red-600 placeholder-red-400 focus:ring-red-500 focus:border-red-500'
-                    : 'bg-white border-gray-300 text-gray-700 focus:ring-blue-500 focus:border-blue-500',
+                  'w-full px-3 py-2 border rounded-md',
+                  editErrors.firstTh ? 'border-red-500 bg-red-50' : 'border-gray-300',
                 ]"
                 placeholder="กรอกชื่อ"
               />
 
-              <p v-if="thaiNameError" class="mt-2.5 text-sm text-red-600">
-                <span class="font-medium">รูปแบบไม่ถูกต้อง!</span> กรุณากรอกเฉพาะภาษาไทย
+              <p v-if="editErrors.firstTh" class="text-red-500 text-sm mt-1">
+                {{ editErrors.firstTh }}
               </p>
             </div>
 
+            <!-- Last Name TH -->
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1.5">
+              <label class="block text-sm font-medium mb-1.5">
                 นามสกุล (ไทย) <span class="text-red-500">*</span>
               </label>
+
               <input
                 v-model="editForm.us_last_name_th"
                 type="text"
-                required
+                :class="[
+                  'w-full px-3 py-2 border rounded-md',
+                  editErrors.lastTh ? 'border-red-500 bg-red-50' : 'border-gray-300',
+                ]"
                 placeholder="กรอกนามสกุล"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               />
+
+              <p v-if="editErrors.lastTh" class="text-red-500 text-sm mt-1">
+                {{ editErrors.lastTh }}
+              </p>
             </div>
           </div>
 
           <!-- ชื่อ - นามสกุล (ภาษาอังกฤษ) -->
           <div class="grid grid-cols-2 gap-3 mb-3">
+            <!-- First Name EN -->
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1.5"> ชื่อ (EN) </label>
+              <label class="block text-sm font-medium mb-1.5">ชื่อ (EN)</label>
+
               <input
                 v-model="editForm.us_first_name_en"
                 type="text"
+                :class="[
+                  'w-full px-3 py-2 border rounded-md',
+                  editErrors.firstEn ? 'border-red-500 bg-red-50' : 'border-gray-300',
+                ]"
                 placeholder="First Name"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               />
+
+              <p v-if="editErrors.firstEn" class="text-red-500 text-sm mt-1">
+                {{ editErrors.firstEn }}
+              </p>
             </div>
 
+            <!-- Last Name EN -->
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1.5"> นามสกุล (EN) </label>
+              <label class="block text-sm font-medium mb-1.5">นามสกุล (EN)</label>
+
               <input
                 v-model="editForm.us_last_name_en"
                 type="text"
+                :class="[
+                  'w-full px-3 py-2 border rounded-md',
+                  editErrors.lastEn ? 'border-red-500 bg-red-50' : 'border-gray-300',
+                ]"
                 placeholder="Last Name"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               />
+
+              <p v-if="editErrors.lastEn" class="text-red-500 text-sm mt-1">
+                {{ editErrors.lastEn }}
+              </p>
             </div>
           </div>
 
           <!-- เบอร์โทร และ หน่วยงาน -->
           <div class="grid grid-cols-2 gap-3 mb-3">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1.5"> เบอร์โทร </label>
+              <label class="block text-sm font-medium mb-1.5">เบอร์โทร</label>
+
               <input
                 v-model="editForm.us_phone"
                 type="tel"
+                :class="[
+                  'w-full px-3 py-2 border rounded-md',
+                  editErrors.phone ? 'border-red-500 bg-red-50' : 'border-gray-300',
+                ]"
                 placeholder="กรอกเบอร์โทร"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               />
+
+              <p v-if="editErrors.phone" class="text-red-500 text-sm mt-1">
+                {{ editErrors.phone }}
+              </p>
             </div>
 
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1.5">
+              <label class="block text-sm font-medium mb-1.5">
                 หน่วยงาน <span class="text-red-500">*</span>
               </label>
+
               <input
                 v-model="editForm.us_department"
                 type="text"
-                required
+                :class="[
+                  'w-full px-3 py-2 border rounded-md',
+                  editErrors.department ? 'border-red-500 bg-red-50' : 'border-gray-300',
+                ]"
                 placeholder="กรอกหน่วยงาน"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               />
+
+              <p v-if="editErrors.department" class="text-red-500 text-sm mt-1">
+                {{ editErrors.department }}
+              </p>
             </div>
           </div>
 
           <!-- บทบาท - ตำแหน่งช่าง (แถวเดียวกัน) -->
           <div class="grid grid-cols-2 gap-3 mb-4">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1.5">
+              <label class="block text-sm font-medium mb-1.5">
                 บทบาท <span class="text-red-500">*</span>
               </label>
+
               <select
                 v-model="editForm.us_role_id"
-                @change="handleEditRoleChange"
-                required
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent appearance-none bg-white"
+                @change="handleAddRoleChange"
+                :class="[
+                  'w-full px-3 py-2 border rounded-md bg-white',
+                  editErrors.role ? 'border-red-500 bg-red-50' : 'border-gray-300',
+                ]"
               >
-                <option value="" disabled>เลือกบทบาท</option>
-                <option value="1">ADMIN</option>
-                <option value="2">TECHNICIAN</option>
-                <option value="3">STOCK</option>
-                <option value="4">MANAGER</option>
-                <option value="5">USER</option>
+                <option value="">เลือกบทบาท</option>
+                <option value="1">Admin</option>
+                <option value="2">Technician</option>
+                <option value="3">Stock</option>
+                <option value="4">Manager</option>
+                <option value="5">User</option>
               </select>
+
+              <p v-if="editErrors.role" class="text-red-500 text-sm mt-1">
+                {{ editErrors.role }}
+              </p>
             </div>
 
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1.5">
+              <label class="block text-sm font-medium mb-1.5">
                 ตำแหน่งช่าง
-                <span
-                  v-if="editForm.us_role_id === '2' || editForm.us_role_id === 2"
-                  class="text-red-500"
-                  >*</span
-                >
+                <span v-if="editForm.us_role_id === '2'" class="text-red-500">*</span>
               </label>
+
               <select
                 v-model="editForm.us_tt_id"
-                :disabled="editForm.us_role_id !== '2' && editForm.us_role_id !== 2"
-                :required="editForm.us_role_id === '2' || editForm.us_role_id === 2"
+                :disabled="editForm.us_role_id !== '2'"
                 :class="[
-                  'w-full px-3 py-2 border rounded-md appearance-none',
-                  editForm.us_role_id === '2' || editForm.us_role_id === 2
-                    ? 'border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent'
-                    : 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed',
+                  'w-full px-3 py-2 border rounded-md',
+                  editForm.us_role_id === '2'
+                    ? editErrors.techType
+                      ? 'border-red-500 bg-red-50'
+                      : 'border-gray-300'
+                    : 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200',
                 ]"
               >
                 <option value="">
-                  {{
-                    editForm.us_role_id === '2' || editForm.us_role_id === 2
-                      ? 'เลือกตำแหน่ง'
-                      : 'ไม่ระบุ'
-                  }}
+                  {{ editForm.us_role_id === '2' ? 'เลือกตำแหน่ง' : 'ไม่ระบุ' }}
                 </option>
                 <option value="1">ไฟฟ้า</option>
                 <option value="2">ประปา</option>
               </select>
+
+              <p v-if="editErrors.techType" class="text-red-500 text-sm mt-1">
+                {{ editErrors.techType }}
+              </p>
             </div>
           </div>
 
