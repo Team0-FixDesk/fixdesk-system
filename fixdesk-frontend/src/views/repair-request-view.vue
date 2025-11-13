@@ -140,7 +140,8 @@ onMounted(() => {
   if (!token) return
 
   const payload = parseJwt(token)
-  formData.value.reporterName = `${payload.us_prefix_th || ''}${payload.us_first_name_th || ''} ${payload.us_last_name_th || ''}`.trim()
+  formData.value.reporterName =
+    `${payload.us_prefix_th || ''}${payload.us_first_name_th || ''} ${payload.us_last_name_th || ''}`.trim()
   formData.value.phoneNumber = payload.us_tel || ''
   formData.value.department = payload.us_department || ''
 
@@ -152,6 +153,24 @@ onMounted(() => {
    💾 Submit Logic (SweetAlert Flow)
    ============================== */
 async function handleSubmit() {
+  // 🔥 เช็กความเร่งด่วนก่อนเลย
+  if (!formData.value.urgency) {
+    await Swal.fire({
+      title: 'ยังไม่ได้เลือกความเร่งด่วน',
+      text: 'กรุณาเลือกระดับความเร่งด่วนก่อนส่งแบบฟอร์ม',
+      icon: 'warning',
+      confirmButtonText: 'ตกลง',
+      confirmButtonColor: '#f59e0b',
+    })
+    return
+  }
+
+  // แล้วค่อยเช็กฟิลด์อื่น ๆ ตามปกติ
+  if (!validateForm()) {
+    Swal.fire('ข้อมูลไม่ครบถ้วน', 'กรุณาตรวจสอบช่องที่มีเครื่องหมาย *', 'error')
+    return
+  }
+
   const confirm = await Swal.fire({
     title: 'ยืนยันการส่งแบบฟอร์มแจ้งซ่อม?',
     text: 'กรุณาตรวจสอบข้อมูลให้ถูกต้องก่อนยืนยัน',
@@ -223,9 +242,65 @@ async function handleSubmit() {
     isSubmitting.value = false
   }
 }
+
+
+const errors = ref({
+  repairType: '',
+  building: '',
+  floor: '',
+  room: '',
+  problemDetail: '',
+  issueDescription: '',
+  urgency: '',
+})
+
+function validateForm() {
+  let valid = true
+  errors.value = {
+    repairType: '',
+    building: '',
+    floor: '',
+    room: '',
+    problemDetail: '',
+    issueDescription: '',
+    urgency: '',
+  }
+
+  if (!formData.value.repairType) {
+    errors.value.repairType = 'กรุณาเลือกประเภทงานซ่อม'
+    valid = false
+  }
+
+  if (!formData.value.building) {
+    errors.value.building = 'กรุณาเลือกอาคาร'
+    valid = false
+  }
+
+  if (!formData.value.floor) {
+    errors.value.floor = 'กรุณาเลือกชั้น'
+    valid = false
+  }
+
+  if (!formData.value.room) {
+    errors.value.room = 'กรุณาเลือกห้อง'
+    valid = false
+  }
+
+  if (!formData.value.problemDetail.trim()) {
+    errors.value.problemDetail = 'กรุณากรอกหัวข้อปัญหา'
+    valid = false
+  }
+
+  if (!formData.value.issueDescription.trim()) {
+    errors.value.issueDescription = 'กรุณากรอกสาเหตุ/อาการเสีย'
+    valid = false
+  }
+
+
+  return valid
+}
+
 </script>
-
-
 
 <template>
   <div class="bg-white rounded-xl shadow-md p-12 mx-auto max-w-7xl">
@@ -290,15 +365,23 @@ async function handleSubmit() {
               ประเภท <span class="text-red-600">*</span>
             </label>
             <p class="text-neutral-400 text-xs mb-2">โปรดเลือกประเภทงานหรือสิ่งของที่ต้องการซ่อม</p>
+
             <select
               v-model="formData.repairType"
-              class="w-full text-xm bg-white border border-neutral-400 rounded-md text-neutral-700 placeholder-[#A1A1A1]"
+              :class="[
+                'w-full text-xm bg-white border rounded-md text-neutral-700',
+                errors.repairType ? 'border-red-500' : 'border-neutral-400',
+              ]"
             >
               <option value="">กรุณาเลือกประเภท</option>
               <option v-for="type in formData.repairTypeOptions" :key="type.id" :value="type.id">
                 {{ type.name }}
               </option>
             </select>
+
+            <p v-if="errors.repairType" class="text-red-500 text-sm mt-1">
+              {{ errors.repairType }}
+            </p>
           </div>
 
           <div>
@@ -322,9 +405,15 @@ async function handleSubmit() {
           <input
             v-model="formData.problemDetail"
             type="text"
-            class="w-full text-xm bg-white border border-neutral-400 rounded-md placeholder-[#A1A1A1]"
+            :class="[
+              'w-full text-xm bg-white border rounded-md placeholder-[#A1A1A1]',
+              errors.problemDetail ? 'border-red-500' : 'border-neutral-400',
+            ]"
             placeholder="กรุณากรอกรายละเอียดปัญหา"
           />
+          <p v-if="errors.problemDetail" class="text-red-500 text-sm mt-1">
+            {{ errors.problemDetail }}
+          </p>
         </div>
 
         <!-- แถว 4 -->
@@ -337,13 +426,17 @@ async function handleSubmit() {
             <select
               v-model="formData.building"
               @change="fetchFloors(formData.building)"
-              class="w-full text-xm bg-white border border-neutral-400 rounded-md text-neutral-700 placeholder-[#A1A1A1]"
+              :class="[
+                'w-full text-xm bg-white border rounded-md text-neutral-700',
+                errors.building ? 'border-red-500' : 'border-neutral-400',
+              ]"
             >
               <option value="">กรุณาเลือกอาคาร</option>
               <option v-for="b in formData.buildingOptions" :key="b.id" :value="b.id">
                 {{ b.name }}
               </option>
             </select>
+            <p v-if="errors.building" class="text-red-500 text-sm mt-1">{{ errors.building }}</p>
           </div>
 
           <div>
@@ -354,13 +447,17 @@ async function handleSubmit() {
             <select
               v-model="formData.floor"
               @change="fetchRooms(formData.floor)"
-              class="w-full text-xm bg-white border border-neutral-400 rounded-md text-neutral-700 placeholder-[#A1A1A1]"
+              :class="[
+                'w-full text-xm bg-white border rounded-md text-neutral-700',
+                errors.floor ? 'border-red-500' : 'border-neutral-400',
+              ]"
             >
               <option value="">กรุณาเลือกชั้น</option>
               <option v-for="f in formData.floorOptions" :key="f.id" :value="f.id">
                 {{ f.name }}
               </option>
             </select>
+            <p v-if="errors.floor" class="text-red-500 text-sm mt-1">{{ errors.floor }}</p>
           </div>
 
           <div>
@@ -370,13 +467,17 @@ async function handleSubmit() {
             <p class="text-neutral-400 text-xs mb-2">โปรดเลือกห้องหรือพื้นที่ที่พบปัญหา</p>
             <select
               v-model="formData.room"
-              class="w-full text-xm bg-white border border-neutral-400 rounded-md text-neutral-700 placeholder-[#A1A1A1]"
+              :class="[
+                'w-full text-xm bg-white border rounded-md text-neutral-700',
+                errors.room ? 'border-red-500' : 'border-neutral-400',
+              ]"
             >
               <option value="">กรุณาเลือกห้อง</option>
               <option v-for="r in formData.roomOptions" :key="r.id" :value="r.id">
                 {{ r.name }}
               </option>
             </select>
+            <p v-if="errors.room" class="text-red-500 text-sm mt-1">{{ errors.room }}</p>
           </div>
         </div>
 
@@ -394,9 +495,16 @@ async function handleSubmit() {
           <div class="flex flex-col flex-1">
             <textarea
               v-model="formData.issueDescription"
-              class="flex-1 w-full min-h-[320px] text-xm bg-white border border-neutral-400 rounded-md resize-none placeholder-[#A1A1A1]"
+              :class="[
+                'flex-1 w-full min-h-[320px] text-xm bg-white border rounded-md resize-none',
+                errors.issueDescription ? 'border-red-500' : 'border-neutral-400',
+              ]"
               placeholder="กรุณากรอกสาเหตุ/อาการที่เสีย"
             ></textarea>
+
+            <p v-if="errors.issueDescription" class="text-red-500 text-sm mt-1">
+              {{ errors.issueDescription }}
+            </p>
           </div>
 
           <!-- ขวา: กล่องอัปโหลด + ปุ่มเร่งด่วน -->
@@ -445,13 +553,13 @@ async function handleSubmit() {
         </div>
       </form>
       <!-- Popup ยืนยันก่อนส่ง -->
-        <ConfirmDialog
-          :visible="showConfirm"
-          title="ยืนยันการส่งแบบฟอร์มแจ้งซ่อม"
-          message="คุณต้องการยืนยันการส่งแบบฟอร์มแจ้งซ่อมนี้หรือไม่"
-          @confirm="confirmSubmit"
-          @cancel="cancelSubmit"
-        />
+      <ConfirmDialog
+        :visible="showConfirm"
+        title="ยืนยันการส่งแบบฟอร์มแจ้งซ่อม"
+        message="คุณต้องการยืนยันการส่งแบบฟอร์มแจ้งซ่อมนี้หรือไม่"
+        @confirm="confirmSubmit"
+        @cancel="cancelSubmit"
+      />
     </div>
   </div>
 </template>

@@ -183,10 +183,43 @@ onMounted(async () => {
   await fetchRepairDetail()
 })
 
+function validateForm() {
+  let valid = true
+
+  // 🔥 เช็กช่องบังคับ (ยกเว้น ความเร่งด่วน)
+  if (!formData.value.repairType) valid = false
+  if (!formData.value.building) valid = false
+  if (!formData.value.floor) valid = false
+  if (!formData.value.room) valid = false
+  if (!formData.value.problemDetail.trim()) valid = false
+  if (!formData.value.issueDescription.trim()) valid = false
+
+  return valid
+}
+
 /* ==============================
    💾 Submit Logic (SweetAlert Flow)
    ============================== */
 async function handleSubmit() {
+  // 🚨 เช็กความเร่งด่วนก่อน validate อื่น ๆ
+  if (!formData.value.urgency) {
+    await Swal.fire({
+      title: 'ยังไม่ได้เลือกความเร่งด่วน',
+      text: 'กรุณาเลือกระดับความเร่งด่วนก่อนบันทึกข้อมูล',
+      icon: 'warning',
+      confirmButtonText: 'ตกลง',
+      confirmButtonColor: '#f59e0b',
+    })
+    return
+  }
+
+  // 🚨 เช็กช่องอื่น ๆ ที่มีเครื่องหมาย *
+  if (!validateForm()) {
+    Swal.fire('ข้อมูลไม่ครบถ้วน', 'กรุณาตรวจสอบช่องที่มีเครื่องหมาย *', 'error')
+    return
+  }
+
+  // 🔵 Popup ยืนยันการบันทึก
   const confirm = await Swal.fire({
     title: 'ยืนยันการบันทึกข้อมูล?',
     text: 'คุณต้องการบันทึกการแก้ไขใบแจ้งซ่อมนี้หรือไม่',
@@ -200,14 +233,11 @@ async function handleSubmit() {
 
   if (!confirm.isConfirmed) return
 
-  // 🌀 Loading state
   Swal.fire({
     title: 'กำลังบันทึก...',
     text: 'กรุณารอสักครู่',
     allowOutsideClick: false,
-    didOpen: () => {
-      Swal.showLoading()
-    },
+    didOpen: () => Swal.showLoading(),
   })
 
   try {
@@ -237,7 +267,6 @@ async function handleSubmit() {
     const data = await res.json()
     if (!res.ok) throw new Error(data.message || 'บันทึกข้อมูลไม่สำเร็จ')
 
-    // ✅ Success
     Swal.close()
     await Swal.fire({
       title: 'บันทึกการแก้ไขสำเร็จ!',
@@ -246,6 +275,7 @@ async function handleSubmit() {
       confirmButtonText: 'กลับไปหน้ารายการของฉัน',
       confirmButtonColor: '#1E48D1',
     })
+
     router.push('/main/my-list')
   } catch (err) {
     console.error('❌ บันทึกไม่สำเร็จ:', err)
@@ -259,6 +289,7 @@ async function handleSubmit() {
     })
   }
 }
+
 </script>
 
 
