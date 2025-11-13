@@ -189,23 +189,26 @@ app.get("/users", authMiddleware, (req, res) => {
     SELECT
       u.us_id,
       u.us_user_name,
-      CONCAT(tn.ttn_title_th, '', u.us_first_name_th, ' ', u.us_last_name_th) AS full_name,
+      u.us_ttn_id,
+      tn.ttn_title_th AS title_name,
+      u.us_first_name_th,
+      u.us_last_name_th,
+      u.us_first_name_en,
+      u.us_last_name_en,
       u.us_phone,
       u.us_department,
       u.us_role_id,
       r.role_name,
       u.us_tt_id,
       t.tt_name AS technician_type,
-      tn.ttn_title_th AS title_name,
-      tn.ttn_title_th AS us_prefix_th,
-      u.us_first_name_th,
-      u.us_last_name_th
+      CONCAT(tn.ttn_title_th, '', u.us_first_name_th, ' ', u.us_last_name_th) AS full_name
     FROM user u
     LEFT JOIN role r ON u.us_role_id = r.role_id
     LEFT JOIN technician_type t ON u.us_tt_id = t.tt_id
     LEFT JOIN title_name tn ON u.us_ttn_id = tn.ttn_id
     ORDER BY u.us_id ASC
   `;
+
   db.query(query, (err, results) => {
     if (err)
       return res
