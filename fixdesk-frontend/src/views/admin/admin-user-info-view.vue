@@ -29,8 +29,6 @@ const selectedTechTypes = ref([])
 const showRoleFilter = ref(false)
 const showTechFilter = ref(false)
 
-
-
 // ===============================
 // 📦 ดึงข้อมูลผู้ใช้ (แก้ไข)
 // ===============================
@@ -85,7 +83,6 @@ const filteredRows = computed(() => {
   })
 })
 
-
 function clearFilters() {
   selectedRoles.value = []
   selectedTechTypes.value = []
@@ -129,7 +126,7 @@ const viewForm = ref({
 
 function openViewModal(username) {
   try {
-    const row = rows.value.find(r => r.username === username)
+    const row = rows.value.find((r) => r.username === username)
     if (!row) throw new Error('ไม่พบผู้ใช้ในข้อมูลที่โหลดไว้')
 
     Object.assign(viewForm.value, row.raw)
@@ -138,7 +135,6 @@ function openViewModal(username) {
     Swal.fire('ผิดพลาด', err.message, 'error')
   }
 }
-
 
 function closeViewModal() {
   showViewModal.value = false
@@ -224,7 +220,7 @@ const editForm = ref({
 
 function openEditModal(username) {
   try {
-    const row = rows.value.find(r => r.username === username)
+    const row = rows.value.find((r) => r.username === username)
     if (!row) throw new Error('ไม่พบผู้ใช้ในข้อมูลที่โหลดไว้')
 
     Object.assign(editForm.value, row.raw)
@@ -715,6 +711,8 @@ function handleEditRoleChange() {
                 v-model="addForm.us_first_name_th"
                 type="text"
                 required
+                pattern="^[ก-๙\s]+$"
+                title="กรุณากรอกชื่อเป็นภาษาไทยเท่านั้น"
                 placeholder="กรอกชื่อ"
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
@@ -728,6 +726,8 @@ function handleEditRoleChange() {
                 v-model="addForm.us_last_name_th"
                 type="text"
                 required
+                pattern="^[ก-๙\s]+$"
+                title="กรุณากรอกนามสกุลเป็นภาษาไทยเท่านั้น"
                 placeholder="กรอกนามสกุล"
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
@@ -741,6 +741,8 @@ function handleEditRoleChange() {
               <input
                 v-model="addForm.us_first_name_en"
                 type="text"
+                pattern="^[A-Za-z\s]+$"
+                title="กรุณากรอกชื่อเป็นภาษาอังกฤษเท่านั้น"
                 placeholder="First Name"
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
@@ -751,6 +753,8 @@ function handleEditRoleChange() {
               <input
                 v-model="addForm.us_last_name_en"
                 type="text"
+                pattern="^[A-Za-z\s]+$"
+                title="กรุณากรอกนามสกุลเป็นภาษาอังกฤษเท่านั้น"
                 placeholder="Last Name"
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
@@ -764,6 +768,8 @@ function handleEditRoleChange() {
               <input
                 v-model="addForm.us_phone"
                 type="tel"
+                pattern="[0-9]{9,10}"
+                title="กรุณากรอกเบอร์โทร 9-10 หลักเป็นตัวเลขเท่านั้น"
                 placeholder="กรอกเบอร์โทร"
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
@@ -875,9 +881,8 @@ function handleEditRoleChange() {
             <input
               v-model="editForm.us_user_name"
               type="text"
-              required
-              placeholder="กรอกชื่อผู้ใช้"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              disabled
+              class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-500 cursor-not-allowed"
             />
           </div>
 
@@ -901,17 +906,30 @@ function handleEditRoleChange() {
 
           <!-- ชื่อ - นามสกุล (ภาษาไทย) -->
           <div class="grid grid-cols-2 gap-3 mb-3">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1.5">
-                ชื่อ (ไทย) <span class="text-red-500">*</span>
+            <div class="mb-6">
+              <label
+                class="block mb-2.5 text-sm font-medium"
+                :class="thaiNameError ? 'text-red-600' : 'text-gray-700'"
+              >
+                ชื่อ (ไทย)
               </label>
+
               <input
-                v-model="editForm.us_first_name_th"
                 type="text"
-                required
+                v-model="addForm.us_first_name_th"
+                @input="validateThaiName"
+                :class="[
+                  'text-sm rounded-lg block w-full px-3 py-2.5 shadow-xs border',
+                  thaiNameError
+                    ? 'bg-red-50 border-red-500 text-red-600 placeholder-red-400 focus:ring-red-500 focus:border-red-500'
+                    : 'bg-white border-gray-300 text-gray-700 focus:ring-blue-500 focus:border-blue-500',
+                ]"
                 placeholder="กรอกชื่อ"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               />
+
+              <p v-if="thaiNameError" class="mt-2.5 text-sm text-red-600">
+                <span class="font-medium">รูปแบบไม่ถูกต้อง!</span> กรุณากรอกเฉพาะภาษาไทย
+              </p>
             </div>
 
             <div>

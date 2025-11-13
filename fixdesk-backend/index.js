@@ -105,6 +105,36 @@ app.post("/users", async (req, res) => {
     !us_role_id
   )
     return res.status(400).json({ message: "กรุณากรอกข้อมูลให้ครบ" });
+  // ตรวจชื่อไทยต้องเป็นภาษาไทย
+  if (!/^[ก-๙\s]+$/.test(us_first_name_th)) {
+    return res
+      .status(400)
+      .json({ message: "ชื่อ (ไทย) ต้องเป็นภาษาไทยเท่านั้น" });
+  }
+  if (!/^[ก-๙\s]+$/.test(us_last_name_th)) {
+    return res
+      .status(400)
+      .json({ message: "นามสกุล (ไทย) ต้องเป็นภาษาไทยเท่านั้น" });
+  }
+
+  // ตรวจชื่ออังกฤษต้องเป็นภาษาอังกฤษ
+  if (us_first_name_en && !/^[A-Za-z\s]+$/.test(us_first_name_en)) {
+    return res
+      .status(400)
+      .json({ message: "ชื่อ (EN) ต้องเป็นภาษาอังกฤษเท่านั้น" });
+  }
+  if (us_last_name_en && !/^[A-Za-z\s]+$/.test(us_last_name_en)) {
+    return res
+      .status(400)
+      .json({ message: "นามสกุล (EN) ต้องเป็นภาษาอังกฤษเท่านั้น" });
+  }
+
+  // เบอร์โทร: ต้องเป็นตัวเลข 9-10 หลัก
+  if (us_phone && !/^[0-9]{9,10}$/.test(us_phone)) {
+    return res
+      .status(400)
+      .json({ message: "เบอร์โทรต้องเป็นตัวเลข 9-10 หลัก" });
+  }
 
   try {
     const hashedPassword = await bcrypt.hash(us_user_pass, 10);
@@ -144,12 +174,10 @@ app.post("/users", async (req, res) => {
       res.status(201).json({ created: 1, us_id: result.insertId });
     });
   } catch (err) {
-    res
-      .status(500)
-      .json({
-        message: "เกิดข้อผิดพลาดในการเข้ารหัสรหัสผ่าน",
-        error: err.message,
-      });
+    res.status(500).json({
+      message: "เกิดข้อผิดพลาดในการเข้ารหัสรหัสผ่าน",
+      error: err.message,
+    });
   }
 });
 
@@ -317,17 +345,18 @@ app.get("/technicians", authMiddleware, (req, res) => {
     LEFT JOIN title_name tn ON u.us_ttn_id = tn.ttn_id
     WHERE u.us_role_id = 2
     ORDER BY u.us_first_name_th ASC
-  `
+  `;
 
   db.query(query, (err, results) => {
     if (err) {
-      console.error("❌ Error fetching technicians:", err)
-      return res.status(500).json({ message: "ดึงข้อมูลช่างไม่สำเร็จ", error: err.message })
+      console.error("❌ Error fetching technicians:", err);
+      return res
+        .status(500)
+        .json({ message: "ดึงข้อมูลช่างไม่สำเร็จ", error: err.message });
     }
-    res.json(results)
-  })
-})
-
+    res.json(results);
+  });
+});
 
 /* ================
 TECHNICIAN TYPE CRUD
@@ -336,11 +365,13 @@ TECHNICIAN TYPE CRUD
 // GET all technician types
 app.get("/technician-types", (req, res) => {
   const query = "SELECT tt_id, tt_name FROM technician_type ORDER BY tt_name";
-  
+
   db.query(query, (err, results) => {
     if (err) {
       console.error("Error fetching technician types:", err);
-      return res.status(500).json({ message: "เกิดข้อผิดพลาดในการดึงข้อมูลประเภทงาน" });
+      return res
+        .status(500)
+        .json({ message: "เกิดข้อผิดพลาดในการดึงข้อมูลประเภทงาน" });
     }
     res.json(results);
   });
@@ -349,35 +380,42 @@ app.get("/technician-types", (req, res) => {
 // POST create new technician type
 app.post("/technician-types", (req, res) => {
   const { tt_name } = req.body;
-  
+
   if (!tt_name || !tt_name.trim()) {
     return res.status(400).json({ message: "กรุณากรอกชื่อประเภทงาน" });
   }
 
   // ตรวจสอบชื่อซ้ำ
-  const checkQuery = "SELECT COUNT(*) as count FROM technician_type WHERE LOWER(tt_name) = LOWER(?)";
-  
+  const checkQuery =
+    "SELECT COUNT(*) as count FROM technician_type WHERE LOWER(tt_name) = LOWER(?)";
+
   db.query(checkQuery, [tt_name.trim()], (err, results) => {
     if (err) {
       console.error("Error checking duplicate technician type:", err);
-      return res.status(500).json({ message: "เกิดข้อผิดพลาดในการตรวจสอบข้อมูล" });
+      return res
+        .status(500)
+        .json({ message: "เกิดข้อผิดพลาดในการตรวจสอบข้อมูล" });
     }
-    
+
     if (results[0].count > 0) {
-      return res.status(400).json({ message: "ชื่อประเภทงานนี้มีอยู่ในระบบแล้ว" });
+      return res
+        .status(400)
+        .json({ message: "ชื่อประเภทงานนี้มีอยู่ในระบบแล้ว" });
     }
 
     const insertQuery = "INSERT INTO technician_type (tt_name) VALUES (?)";
-    
+
     db.query(insertQuery, [tt_name.trim()], (err, result) => {
       if (err) {
         console.error("Error creating technician type:", err);
-        return res.status(500).json({ message: "เกิดข้อผิดพลาดในการเพิ่มประเภทงาน" });
+        return res
+          .status(500)
+          .json({ message: "เกิดข้อผิดพลาดในการเพิ่มประเภทงาน" });
       }
-      res.status(201).json({ 
+      res.status(201).json({
         message: "เพิ่มประเภทงานสำเร็จ",
         tt_id: result.insertId,
-        tt_name: tt_name.trim()
+        tt_name: tt_name.trim(),
       });
     });
   });
@@ -387,33 +425,43 @@ app.post("/technician-types", (req, res) => {
 app.put("/technician-types/:id", (req, res) => {
   const { id } = req.params;
   const { tt_name } = req.body;
-  
+
   if (!tt_name || !tt_name.trim()) {
     return res.status(400).json({ message: "กรุณากรอกชื่อประเภทงาน" });
   }
 
   // ตรวจสอบชื่อซ้ำ (ยกเว้น record ปัจจุบัน)
-  const checkQuery = "SELECT COUNT(*) as count FROM technician_type WHERE LOWER(tt_name) = LOWER(?) AND tt_id != ?";
-  
+  const checkQuery =
+    "SELECT COUNT(*) as count FROM technician_type WHERE LOWER(tt_name) = LOWER(?) AND tt_id != ?";
+
   db.query(checkQuery, [tt_name.trim(), id], (err, results) => {
     if (err) {
       console.error("Error checking duplicate technician type:", err);
-      return res.status(500).json({ message: "เกิดข้อผิดพลาดในการตรวจสอบข้อมูล" });
-    }
-    
-    if (results[0].count > 0) {
-      return res.status(400).json({ message: "ชื่อประเภทงานนี้มีอยู่ในระบบแล้ว" });
+      return res
+        .status(500)
+        .json({ message: "เกิดข้อผิดพลาดในการตรวจสอบข้อมูล" });
     }
 
-    const updateQuery = "UPDATE technician_type SET tt_name = ? WHERE tt_id = ?";
-    
+    if (results[0].count > 0) {
+      return res
+        .status(400)
+        .json({ message: "ชื่อประเภทงานนี้มีอยู่ในระบบแล้ว" });
+    }
+
+    const updateQuery =
+      "UPDATE technician_type SET tt_name = ? WHERE tt_id = ?";
+
     db.query(updateQuery, [tt_name.trim(), id], (err, result) => {
       if (err) {
         console.error("Error updating technician type:", err);
-        return res.status(500).json({ message: "เกิดข้อผิดพลาดในการแก้ไขประเภทงาน" });
+        return res
+          .status(500)
+          .json({ message: "เกิดข้อผิดพลาดในการแก้ไขประเภทงาน" });
       }
       if (result.affectedRows === 0) {
-        return res.status(404).json({ message: "ไม่พบประเภทงานที่ต้องการแก้ไข" });
+        return res
+          .status(404)
+          .json({ message: "ไม่พบประเภทงานที่ต้องการแก้ไข" });
       }
       res.json({ message: "แก้ไขประเภทงานสำเร็จ" });
     });
@@ -423,28 +471,33 @@ app.put("/technician-types/:id", (req, res) => {
 // DELETE technician type
 app.delete("/technician-types/:id", (req, res) => {
   const { id } = req.params;
-  
+
   // ตรวจสอบว่ามีการใช้งานประเภทงานนี้อยู่หรือไม่
   const checkQuery = "SELECT COUNT(*) as count FROM user WHERE us_tt_id = ?";
-  
+
   db.query(checkQuery, [id], (err, results) => {
     if (err) {
       console.error("Error checking technician type usage:", err);
-      return res.status(500).json({ message: "เกิดข้อผิดพลาดในการตรวจสอบข้อมูล" });
+      return res
+        .status(500)
+        .json({ message: "เกิดข้อผิดพลาดในการตรวจสอบข้อมูล" });
     }
-    
+
     if (results[0].count > 0) {
-      return res.status(400).json({ 
-        message: "ไม่สามารถลบประเภทงานนี้ได้ เนื่องจากมีช่างที่ใช้ประเภทงานนี้อยู่" 
+      return res.status(400).json({
+        message:
+          "ไม่สามารถลบประเภทงานนี้ได้ เนื่องจากมีช่างที่ใช้ประเภทงานนี้อยู่",
       });
     }
-    
+
     const deleteQuery = "DELETE FROM technician_type WHERE tt_id = ?";
-    
+
     db.query(deleteQuery, [id], (err, result) => {
       if (err) {
         console.error("Error deleting technician type:", err);
-        return res.status(500).json({ message: "เกิดข้อผิดพลาดในการลบประเภทงาน" });
+        return res
+          .status(500)
+          .json({ message: "เกิดข้อผิดพลาดในการลบประเภทงาน" });
       }
       if (result.affectedRows === 0) {
         return res.status(404).json({ message: "ไม่พบประเภทงานที่ต้องการลบ" });
@@ -512,35 +565,40 @@ app.get("/rooms/:floorId", (req, res) => {
 // 📝 เพิ่มอาคารใหม่
 app.post("/buildings", authMiddleware, (req, res) => {
   const { bd_name } = req.body;
-  
+
   if (!bd_name || !bd_name.trim()) {
     return res.status(400).json({ message: "กรุณากรอกชื่ออาคาร" });
   }
 
   // ตรวจสอบชื่อซ้ำ
-  const checkQuery = "SELECT COUNT(*) as count FROM building WHERE LOWER(bd_name) = LOWER(?)";
-  
+  const checkQuery =
+    "SELECT COUNT(*) as count FROM building WHERE LOWER(bd_name) = LOWER(?)";
+
   db.query(checkQuery, [bd_name.trim()], (err, results) => {
     if (err) {
       console.error("❌ Error checking duplicate building:", err);
-      return res.status(500).json({ message: "เกิดข้อผิดพลาดในการตรวจสอบข้อมูล" });
+      return res
+        .status(500)
+        .json({ message: "เกิดข้อผิดพลาดในการตรวจสอบข้อมูล" });
     }
-    
+
     if (results[0].count > 0) {
       return res.status(400).json({ message: "ชื่ออาคารนี้มีอยู่ในระบบแล้ว" });
     }
 
     const insertQuery = "INSERT INTO building (bd_name) VALUES (?)";
-    
+
     db.query(insertQuery, [bd_name.trim()], (err, result) => {
       if (err) {
         console.error("❌ Error creating building:", err);
-        return res.status(500).json({ message: "เกิดข้อผิดพลาดในการเพิ่มอาคาร" });
+        return res
+          .status(500)
+          .json({ message: "เกิดข้อผิดพลาดในการเพิ่มอาคาร" });
       }
-      res.status(201).json({ 
+      res.status(201).json({
         message: "เพิ่มอาคารสำเร็จ",
         bd_id: result.insertId,
-        bd_name: bd_name.trim()
+        bd_name: bd_name.trim(),
       });
     });
   });
@@ -550,30 +608,35 @@ app.post("/buildings", authMiddleware, (req, res) => {
 app.put("/buildings/:id", authMiddleware, (req, res) => {
   const { id } = req.params;
   const { bd_name } = req.body;
-  
+
   if (!bd_name || !bd_name.trim()) {
     return res.status(400).json({ message: "กรุณากรอกชื่ออาคาร" });
   }
 
   // ตรวจสอบชื่อซ้ำ (ยกเว้น record ปัจจุบัน)
-  const checkQuery = "SELECT COUNT(*) as count FROM building WHERE LOWER(bd_name) = LOWER(?) AND bd_id != ?";
-  
+  const checkQuery =
+    "SELECT COUNT(*) as count FROM building WHERE LOWER(bd_name) = LOWER(?) AND bd_id != ?";
+
   db.query(checkQuery, [bd_name.trim(), id], (err, results) => {
     if (err) {
       console.error("❌ Error checking duplicate building:", err);
-      return res.status(500).json({ message: "เกิดข้อผิดพลาดในการตรวจสอบข้อมูล" });
+      return res
+        .status(500)
+        .json({ message: "เกิดข้อผิดพลาดในการตรวจสอบข้อมูล" });
     }
-    
+
     if (results[0].count > 0) {
       return res.status(400).json({ message: "ชื่ออาคารนี้มีอยู่ในระบบแล้ว" });
     }
 
     const updateQuery = "UPDATE building SET bd_name = ? WHERE bd_id = ?";
-    
+
     db.query(updateQuery, [bd_name.trim(), id], (err, result) => {
       if (err) {
         console.error("❌ Error updating building:", err);
-        return res.status(500).json({ message: "เกิดข้อผิดพลาดในการแก้ไขอาคาร" });
+        return res
+          .status(500)
+          .json({ message: "เกิดข้อผิดพลาดในการแก้ไขอาคาร" });
       }
       if (result.affectedRows === 0) {
         return res.status(404).json({ message: "ไม่พบอาคารที่ต้องการแก้ไข" });
@@ -586,24 +649,26 @@ app.put("/buildings/:id", authMiddleware, (req, res) => {
 // 🗑️ ลบอาคาร
 app.delete("/buildings/:id", authMiddleware, (req, res) => {
   const { id } = req.params;
-  
+
   // ตรวจสอบว่ามีชั้นในอาคารนี้อยู่หรือไม่
   const checkQuery = "SELECT COUNT(*) as count FROM floor WHERE fl_bd_id = ?";
-  
+
   db.query(checkQuery, [id], (err, results) => {
     if (err) {
       console.error("❌ Error checking building usage:", err);
-      return res.status(500).json({ message: "เกิดข้อผิดพลาดในการตรวจสอบข้อมูล" });
+      return res
+        .status(500)
+        .json({ message: "เกิดข้อผิดพลาดในการตรวจสอบข้อมูล" });
     }
-    
+
     if (results[0].count > 0) {
-      return res.status(400).json({ 
-        message: "ไม่สามารถลบอาคารนี้ได้ เนื่องจากมีชั้นที่เชื่อมโยงอยู่" 
+      return res.status(400).json({
+        message: "ไม่สามารถลบอาคารนี้ได้ เนื่องจากมีชั้นที่เชื่อมโยงอยู่",
       });
     }
-    
+
     const deleteQuery = "DELETE FROM building WHERE bd_id = ?";
-    
+
     db.query(deleteQuery, [id], (err, result) => {
       if (err) {
         console.error("❌ Error deleting building:", err);
@@ -624,49 +689,59 @@ app.delete("/buildings/:id", authMiddleware, (req, res) => {
 // 📝 เพิ่มชั้นใหม่
 app.post("/floors", authMiddleware, (req, res) => {
   const { fl_name, fl_bd_id } = req.body;
-  
+
   if (!fl_name || !fl_name.trim() || !fl_bd_id) {
     return res.status(400).json({ message: "กรุณากรอกข้อมูลให้ครบถ้วน" });
   }
 
   // ตรวจสอบว่าอาคารมีอยู่จริง
-  const checkBuildingQuery = "SELECT COUNT(*) as count FROM building WHERE bd_id = ?";
-  
+  const checkBuildingQuery =
+    "SELECT COUNT(*) as count FROM building WHERE bd_id = ?";
+
   db.query(checkBuildingQuery, [fl_bd_id], (err, results) => {
     if (err) {
       console.error("❌ Error checking building:", err);
-      return res.status(500).json({ message: "เกิดข้อผิดพลาดในการตรวจสอบข้อมูล" });
+      return res
+        .status(500)
+        .json({ message: "เกิดข้อผิดพลาดในการตรวจสอบข้อมูล" });
     }
-    
+
     if (results[0].count === 0) {
       return res.status(400).json({ message: "ไม่พบอาคารที่ระบุ" });
     }
 
     // ตรวจสอบชื่อชั้นซ้ำในอาคารเดียวกัน
-    const checkQuery = "SELECT COUNT(*) as count FROM floor WHERE LOWER(fl_name) = LOWER(?) AND fl_bd_id = ?";
-    
+    const checkQuery =
+      "SELECT COUNT(*) as count FROM floor WHERE LOWER(fl_name) = LOWER(?) AND fl_bd_id = ?";
+
     db.query(checkQuery, [fl_name.trim(), fl_bd_id], (err2, results2) => {
       if (err2) {
         console.error("❌ Error checking duplicate floor:", err2);
-        return res.status(500).json({ message: "เกิดข้อผิดพลาดในการตรวจสอบข้อมูล" });
+        return res
+          .status(500)
+          .json({ message: "เกิดข้อผิดพลาดในการตรวจสอบข้อมูล" });
       }
-      
+
       if (results2[0].count > 0) {
-        return res.status(400).json({ message: "ชื่อชั้นนี้มีอยู่ในอาคารนี้แล้ว" });
+        return res
+          .status(400)
+          .json({ message: "ชื่อชั้นนี้มีอยู่ในอาคารนี้แล้ว" });
       }
 
       const insertQuery = "INSERT INTO floor (fl_name, fl_bd_id) VALUES (?, ?)";
-      
+
       db.query(insertQuery, [fl_name.trim(), fl_bd_id], (err3, result) => {
         if (err3) {
           console.error("❌ Error creating floor:", err3);
-          return res.status(500).json({ message: "เกิดข้อผิดพลาดในการเพิ่มชั้น" });
+          return res
+            .status(500)
+            .json({ message: "เกิดข้อผิดพลาดในการเพิ่มชั้น" });
         }
-        res.status(201).json({ 
+        res.status(201).json({
           message: "เพิ่มชั้นสำเร็จ",
           fl_id: result.insertId,
           fl_name: fl_name.trim(),
-          fl_bd_id: fl_bd_id
+          fl_bd_id: fl_bd_id,
         });
       });
     });
@@ -677,43 +752,54 @@ app.post("/floors", authMiddleware, (req, res) => {
 app.put("/floors/:id", authMiddleware, (req, res) => {
   const { id } = req.params;
   const { fl_name, fl_bd_id } = req.body;
-  
+
   if (!fl_name || !fl_name.trim() || !fl_bd_id) {
     return res.status(400).json({ message: "กรุณากรอกข้อมูลให้ครบถ้วน" });
   }
 
   // ตรวจสอบว่าอาคารมีอยู่จริง
-  const checkBuildingQuery = "SELECT COUNT(*) as count FROM building WHERE bd_id = ?";
-  
+  const checkBuildingQuery =
+    "SELECT COUNT(*) as count FROM building WHERE bd_id = ?";
+
   db.query(checkBuildingQuery, [fl_bd_id], (err, results) => {
     if (err) {
       console.error("❌ Error checking building:", err);
-      return res.status(500).json({ message: "เกิดข้อผิดพลาดในการตรวจสอบข้อมูล" });
+      return res
+        .status(500)
+        .json({ message: "เกิดข้อผิดพลาดในการตรวจสอบข้อมูล" });
     }
-    
+
     if (results[0].count === 0) {
       return res.status(400).json({ message: "ไม่พบอาคารที่ระบุ" });
     }
 
     // ตรวจสอบชื่อซ้ำในอาคารเดียวกัน (ยกเว้น record ปัจจุบัน)
-    const checkQuery = "SELECT COUNT(*) as count FROM floor WHERE LOWER(fl_name) = LOWER(?) AND fl_bd_id = ? AND fl_id != ?";
-    
+    const checkQuery =
+      "SELECT COUNT(*) as count FROM floor WHERE LOWER(fl_name) = LOWER(?) AND fl_bd_id = ? AND fl_id != ?";
+
     db.query(checkQuery, [fl_name.trim(), fl_bd_id, id], (err2, results2) => {
       if (err2) {
         console.error("❌ Error checking duplicate floor:", err2);
-        return res.status(500).json({ message: "เกิดข้อผิดพลาดในการตรวจสอบข้อมูล" });
-      }
-      
-      if (results2[0].count > 0) {
-        return res.status(400).json({ message: "ชื่อชั้นนี้มีอยู่ในอาคารนี้แล้ว" });
+        return res
+          .status(500)
+          .json({ message: "เกิดข้อผิดพลาดในการตรวจสอบข้อมูล" });
       }
 
-      const updateQuery = "UPDATE floor SET fl_name = ?, fl_bd_id = ? WHERE fl_id = ?";
-      
+      if (results2[0].count > 0) {
+        return res
+          .status(400)
+          .json({ message: "ชื่อชั้นนี้มีอยู่ในอาคารนี้แล้ว" });
+      }
+
+      const updateQuery =
+        "UPDATE floor SET fl_name = ?, fl_bd_id = ? WHERE fl_id = ?";
+
       db.query(updateQuery, [fl_name.trim(), fl_bd_id, id], (err3, result) => {
         if (err3) {
           console.error("❌ Error updating floor:", err3);
-          return res.status(500).json({ message: "เกิดข้อผิดพลาดในการแก้ไขชั้น" });
+          return res
+            .status(500)
+            .json({ message: "เกิดข้อผิดพลาดในการแก้ไขชั้น" });
         }
         if (result.affectedRows === 0) {
           return res.status(404).json({ message: "ไม่พบชั้นที่ต้องการแก้ไข" });
@@ -727,24 +813,26 @@ app.put("/floors/:id", authMiddleware, (req, res) => {
 // 🗑️ ลบชั้น
 app.delete("/floors/:id", authMiddleware, (req, res) => {
   const { id } = req.params;
-  
+
   // ตรวจสอบว่ามีห้องในชั้นนี้อยู่หรือไม่
   const checkQuery = "SELECT COUNT(*) as count FROM room WHERE room_fl_id = ?";
-  
+
   db.query(checkQuery, [id], (err, results) => {
     if (err) {
       console.error("❌ Error checking floor usage:", err);
-      return res.status(500).json({ message: "เกิดข้อผิดพลาดในการตรวจสอบข้อมูล" });
+      return res
+        .status(500)
+        .json({ message: "เกิดข้อผิดพลาดในการตรวจสอบข้อมูล" });
     }
-    
+
     if (results[0].count > 0) {
-      return res.status(400).json({ 
-        message: "ไม่สามารถลบชั้นนี้ได้ เนื่องจากมีห้องที่เชื่อมโยงอยู่" 
+      return res.status(400).json({
+        message: "ไม่สามารถลบชั้นนี้ได้ เนื่องจากมีห้องที่เชื่อมโยงอยู่",
       });
     }
-    
+
     const deleteQuery = "DELETE FROM floor WHERE fl_id = ?";
-    
+
     db.query(deleteQuery, [id], (err2, result) => {
       if (err2) {
         console.error("❌ Error deleting floor:", err2);
@@ -765,49 +853,59 @@ app.delete("/floors/:id", authMiddleware, (req, res) => {
 // 📝 เพิ่มห้องใหม่
 app.post("/rooms", authMiddleware, (req, res) => {
   const { room_name, room_fl_id } = req.body;
-  
+
   if (!room_name || !room_name.trim() || !room_fl_id) {
     return res.status(400).json({ message: "กรุณากรอกข้อมูลให้ครบถ้วน" });
   }
 
   // ตรวจสอบว่าชั้นมีอยู่จริง
   const checkFloorQuery = "SELECT COUNT(*) as count FROM floor WHERE fl_id = ?";
-  
+
   db.query(checkFloorQuery, [room_fl_id], (err, results) => {
     if (err) {
       console.error("❌ Error checking floor:", err);
-      return res.status(500).json({ message: "เกิดข้อผิดพลาดในการตรวจสอบข้อมูล" });
+      return res
+        .status(500)
+        .json({ message: "เกิดข้อผิดพลาดในการตรวจสอบข้อมูล" });
     }
-    
+
     if (results[0].count === 0) {
       return res.status(400).json({ message: "ไม่พบชั้นที่ระบุ" });
     }
 
     // ตรวจสอบชื่อห้องซ้ำในชั้นเดียวกัน
-    const checkQuery = "SELECT COUNT(*) as count FROM room WHERE LOWER(room_name) = LOWER(?) AND room_fl_id = ?";
-    
+    const checkQuery =
+      "SELECT COUNT(*) as count FROM room WHERE LOWER(room_name) = LOWER(?) AND room_fl_id = ?";
+
     db.query(checkQuery, [room_name.trim(), room_fl_id], (err2, results2) => {
       if (err2) {
         console.error("❌ Error checking duplicate room:", err2);
-        return res.status(500).json({ message: "เกิดข้อผิดพลาดในการตรวจสอบข้อมูล" });
-      }
-      
-      if (results2[0].count > 0) {
-        return res.status(400).json({ message: "ชื่อห้องนี้มีอยู่ในชั้นนี้แล้ว" });
+        return res
+          .status(500)
+          .json({ message: "เกิดข้อผิดพลาดในการตรวจสอบข้อมูล" });
       }
 
-      const insertQuery = "INSERT INTO room (room_name, room_fl_id) VALUES (?, ?)";
-      
+      if (results2[0].count > 0) {
+        return res
+          .status(400)
+          .json({ message: "ชื่อห้องนี้มีอยู่ในชั้นนี้แล้ว" });
+      }
+
+      const insertQuery =
+        "INSERT INTO room (room_name, room_fl_id) VALUES (?, ?)";
+
       db.query(insertQuery, [room_name.trim(), room_fl_id], (err3, result) => {
         if (err3) {
           console.error("❌ Error creating room:", err3);
-          return res.status(500).json({ message: "เกิดข้อผิดพลาดในการเพิ่มห้อง" });
+          return res
+            .status(500)
+            .json({ message: "เกิดข้อผิดพลาดในการเพิ่มห้อง" });
         }
-        res.status(201).json({ 
+        res.status(201).json({
           message: "เพิ่มห้องสำเร็จ",
           room_id: result.insertId,
           room_name: room_name.trim(),
-          room_fl_id: room_fl_id
+          room_fl_id: room_fl_id,
         });
       });
     });
@@ -818,74 +916,97 @@ app.post("/rooms", authMiddleware, (req, res) => {
 app.put("/rooms/:id", authMiddleware, (req, res) => {
   const { id } = req.params;
   const { room_name, room_fl_id } = req.body;
-  
+
   if (!room_name || !room_name.trim() || !room_fl_id) {
     return res.status(400).json({ message: "กรุณากรอกข้อมูลให้ครบถ้วน" });
   }
 
   // ตรวจสอบว่าชั้นมีอยู่จริง
   const checkFloorQuery = "SELECT COUNT(*) as count FROM floor WHERE fl_id = ?";
-  
+
   db.query(checkFloorQuery, [room_fl_id], (err, results) => {
     if (err) {
       console.error("❌ Error checking floor:", err);
-      return res.status(500).json({ message: "เกิดข้อผิดพลาดในการตรวจสอบข้อมูล" });
+      return res
+        .status(500)
+        .json({ message: "เกิดข้อผิดพลาดในการตรวจสอบข้อมูล" });
     }
-    
+
     if (results[0].count === 0) {
       return res.status(400).json({ message: "ไม่พบชั้นที่ระบุ" });
     }
 
     // ตรวจสอบชื่อซ้ำในชั้นเดียวกัน (ยกเว้น record ปัจจุบัน)
-    const checkQuery = "SELECT COUNT(*) as count FROM room WHERE LOWER(room_name) = LOWER(?) AND room_fl_id = ? AND room_id != ?";
-    
-    db.query(checkQuery, [room_name.trim(), room_fl_id, id], (err2, results2) => {
-      if (err2) {
-        console.error("❌ Error checking duplicate room:", err2);
-        return res.status(500).json({ message: "เกิดข้อผิดพลาดในการตรวจสอบข้อมูล" });
-      }
-      
-      if (results2[0].count > 0) {
-        return res.status(400).json({ message: "ชื่อห้องนี้มีอยู่ในชั้นนี้แล้ว" });
-      }
+    const checkQuery =
+      "SELECT COUNT(*) as count FROM room WHERE LOWER(room_name) = LOWER(?) AND room_fl_id = ? AND room_id != ?";
 
-      const updateQuery = "UPDATE room SET room_name = ?, room_fl_id = ? WHERE room_id = ?";
-      
-      db.query(updateQuery, [room_name.trim(), room_fl_id, id], (err3, result) => {
-        if (err3) {
-          console.error("❌ Error updating room:", err3);
-          return res.status(500).json({ message: "เกิดข้อผิดพลาดในการแก้ไขห้อง" });
+    db.query(
+      checkQuery,
+      [room_name.trim(), room_fl_id, id],
+      (err2, results2) => {
+        if (err2) {
+          console.error("❌ Error checking duplicate room:", err2);
+          return res
+            .status(500)
+            .json({ message: "เกิดข้อผิดพลาดในการตรวจสอบข้อมูล" });
         }
-        if (result.affectedRows === 0) {
-          return res.status(404).json({ message: "ไม่พบห้องที่ต้องการแก้ไข" });
+
+        if (results2[0].count > 0) {
+          return res
+            .status(400)
+            .json({ message: "ชื่อห้องนี้มีอยู่ในชั้นนี้แล้ว" });
         }
-        res.json({ message: "แก้ไขห้องสำเร็จ" });
-      });
-    });
+
+        const updateQuery =
+          "UPDATE room SET room_name = ?, room_fl_id = ? WHERE room_id = ?";
+
+        db.query(
+          updateQuery,
+          [room_name.trim(), room_fl_id, id],
+          (err3, result) => {
+            if (err3) {
+              console.error("❌ Error updating room:", err3);
+              return res
+                .status(500)
+                .json({ message: "เกิดข้อผิดพลาดในการแก้ไขห้อง" });
+            }
+            if (result.affectedRows === 0) {
+              return res
+                .status(404)
+                .json({ message: "ไม่พบห้องที่ต้องการแก้ไข" });
+            }
+            res.json({ message: "แก้ไขห้องสำเร็จ" });
+          }
+        );
+      }
+    );
   });
 });
 
 // 🗑️ ลบห้อง
 app.delete("/rooms/:id", authMiddleware, (req, res) => {
   const { id } = req.params;
-  
+
   // ตรวจสอบว่ามีใบแจ้งซ่อมที่เชื่อมโยงกับห้องนี้หรือไม่
-  const checkQuery = "SELECT COUNT(*) as count FROM repair_form WHERE rf_room_id = ?";
-  
+  const checkQuery =
+    "SELECT COUNT(*) as count FROM repair_form WHERE rf_room_id = ?";
+
   db.query(checkQuery, [id], (err, results) => {
     if (err) {
       console.error("❌ Error checking room usage:", err);
-      return res.status(500).json({ message: "เกิดข้อผิดพลาดในการตรวจสอบข้อมูล" });
+      return res
+        .status(500)
+        .json({ message: "เกิดข้อผิดพลาดในการตรวจสอบข้อมูล" });
     }
-    
+
     if (results[0].count > 0) {
-      return res.status(400).json({ 
-        message: "ไม่สามารถลบห้องนี้ได้ เนื่องจากมีใบแจ้งซ่อมที่เชื่อมโยงอยู่" 
+      return res.status(400).json({
+        message: "ไม่สามารถลบห้องนี้ได้ เนื่องจากมีใบแจ้งซ่อมที่เชื่อมโยงอยู่",
       });
     }
-    
+
     const deleteQuery = "DELETE FROM room WHERE room_id = ?";
-    
+
     db.query(deleteQuery, [id], (err2, result) => {
       if (err2) {
         console.error("❌ Error deleting room:", err2);
@@ -899,7 +1020,7 @@ app.delete("/rooms/:id", authMiddleware, (req, res) => {
   });
 });
 
-app.post('/repair-requests', express.json(), (req, res) => {
+app.post("/repair-requests", express.json(), (req, res) => {
   const {
     us_id,
     repair_type_id,
@@ -909,30 +1030,32 @@ app.post('/repair-requests', express.json(), (req, res) => {
     issue_description,
     urgency,
     phone_number, // ✅ เพิ่มเบอร์โทรมาจากฟอร์ม
-  } = req.body
+  } = req.body;
 
   if (!us_id || !repair_type_id || !room_id || !problem_detail) {
-    return res.status(400).json({ message: 'ข้อมูลไม่ครบ กรุณากรอกให้ครบทุกช่อง' })
+    return res
+      .status(400)
+      .json({ message: "ข้อมูลไม่ครบ กรุณากรอกให้ครบทุกช่อง" });
   }
 
   // ✅ สร้างรหัสตามวันที่ เช่น RF20251024-001
-  const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+  const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, "");
 
   const countQuery = `
     SELECT COUNT(*) AS count
     FROM repair_form
     WHERE DATE(rf_create_at) = CURDATE()
-  `
+  `;
 
   db.query(countQuery, (err, results) => {
     if (err) {
-      console.error('❌ Error counting repairs:', err)
-      return res.status(500).json({ message: 'ไม่สามารถสร้างรหัสฟอร์มได้' })
+      console.error("❌ Error counting repairs:", err);
+      return res.status(500).json({ message: "ไม่สามารถสร้างรหัสฟอร์มได้" });
     }
 
-    const todayCount = results[0].count + 1
-    const runningNumber = String(todayCount).padStart(3, '0') // เช่น 001
-    const rfCode = `RF${datePart}${runningNumber}`
+    const todayCount = results[0].count + 1;
+    const runningNumber = String(todayCount).padStart(3, "0"); // เช่น 001
+    const rfCode = `RF${datePart}${runningNumber}`;
 
     const insertQuery = `
       INSERT INTO repair_form
@@ -940,7 +1063,7 @@ app.post('/repair-requests', express.json(), (req, res) => {
        rf_problem, rf_detail, rf_phone, rf_urgency,
        rf_user_status, rf_tech_status, rf_create_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'working', NOW())
-    `
+    `;
 
     db.query(
       insertQuery,
@@ -957,19 +1080,19 @@ app.post('/repair-requests', express.json(), (req, res) => {
       ],
       (err2, results2) => {
         if (err2) {
-          console.error('❌ Error saving repair form:', err2)
-          return res.status(500).json({ message: 'บันทึกข้อมูลไม่สำเร็จ' })
+          console.error("❌ Error saving repair form:", err2);
+          return res.status(500).json({ message: "บันทึกข้อมูลไม่สำเร็จ" });
         }
 
         res.json({
-          message: '✅ บันทึกฟอร์มแจ้งซ่อมสำเร็จ',
+          message: "✅ บันทึกฟอร์มแจ้งซ่อมสำเร็จ",
           id: results2.insertId,
           rf_code: rfCode,
-        })
+        });
       }
-    )
-  })
-})
+    );
+  });
+});
 
 /* ================
    GET /admin/repairs (ดึงรายการแจ้งซ่อมทั้งหมด)
@@ -1006,7 +1129,6 @@ app.get("/admin/repairs", authMiddleware, (req, res) => {
     res.json(results);
   });
 });
-
 
 /* ================
    POST /assign-repair (มอบหมายงานให้ช่าง)
@@ -1056,25 +1178,31 @@ app.post("/assign-repair", authMiddleware, (req, res) => {
       WHERE rf_code = ? AND rf_user_status = 'pending'
     `;
 
-    db.query(updateQuery, [techTypeId, technician_id, rf_code], (err2, result) => {
-      if (err2) {
-        console.error("❌ Error updating repair_form:", err2);
-        return res.status(500).json({ message: "มอบหมายงานไม่สำเร็จ" });
+    db.query(
+      updateQuery,
+      [techTypeId, technician_id, rf_code],
+      (err2, result) => {
+        if (err2) {
+          console.error("❌ Error updating repair_form:", err2);
+          return res.status(500).json({ message: "มอบหมายงานไม่สำเร็จ" });
+        }
+        if (result.affectedRows === 0) {
+          return res
+            .status(404)
+            .json({ message: "ไม่พบรายการหรือมอบหมายแล้ว" });
+        }
+        console.log(
+          `✅ มอบหมายใบแจ้งซ่อม ${rf_code} ให้ช่าง ID ${technician_id}`
+        );
+        res.json({ message: "มอบหมายงานสำเร็จ" });
       }
-      if (result.affectedRows === 0) {
-        return res.status(404).json({ message: "ไม่พบรายการหรือมอบหมายแล้ว" });
-      }
-      console.log(`✅ มอบหมายใบแจ้งซ่อม ${rf_code} ให้ช่าง ID ${technician_id}`);
-      res.json({ message: "มอบหมายงานสำเร็จ" });
-    });
+    );
   });
 });
 
-
-
 // ✅ ดึงข้อมูลรายการแจ้งซ่อมของผู้ใช้
-app.get('/my-repairs/:userId', (req, res) => {
-  const { userId } = req.params
+app.get("/my-repairs/:userId", (req, res) => {
+  const { userId } = req.params;
 
   const query = `
     SELECT 
@@ -1094,46 +1222,49 @@ app.get('/my-repairs/:userId', (req, res) => {
     LEFT JOIN user u ON rf.rf_us_id = u.us_id
     WHERE rf.rf_us_id = ?
     ORDER BY rf.rf_create_at DESC
-  `
+  `;
 
   db.query(query, [userId], (err, results) => {
     if (err) {
-      console.error('❌ Error fetching user repairs:', err)
-      return res.status(500).json({ message: 'ไม่สามารถโหลดข้อมูลรายการแจ้งซ่อมได้' })
+      console.error("❌ Error fetching user repairs:", err);
+      return res
+        .status(500)
+        .json({ message: "ไม่สามารถโหลดข้อมูลรายการแจ้งซ่อมได้" });
     }
-    res.json(results)
-  })
-})
+    res.json(results);
+  });
+});
 
 // 🗑️ ลบใบแจ้งซ่อมตามรหัสใบแจ้ง (rf_code)
-app.delete('/my-repairs/:code', authMiddleware, (req, res) => {
-  const { code } = req.params
-  console.log('🧭 ลบฟอร์ม code =', code)
+app.delete("/my-repairs/:code", authMiddleware, (req, res) => {
+  const { code } = req.params;
+  console.log("🧭 ลบฟอร์ม code =", code);
 
-  db.query('DELETE FROM repair_form WHERE rf_code = ?', [code], (err, result) => {
-    if (err) {
-      console.error('❌ ลบข้อมูลไม่สำเร็จ:', err)
-      return res.status(500).json({ message: 'เกิดข้อผิดพลาดในระบบ' })
+  db.query(
+    "DELETE FROM repair_form WHERE rf_code = ?",
+    [code],
+    (err, result) => {
+      if (err) {
+        console.error("❌ ลบข้อมูลไม่สำเร็จ:", err);
+        return res.status(500).json({ message: "เกิดข้อผิดพลาดในระบบ" });
+      }
+
+      if (result.affectedRows === 0) {
+        console.warn("⚠️ ไม่พบใบแจ้งซ่อม:", code);
+        return res.status(404).json({ message: "ไม่พบใบแจ้งซ่อมนี้" });
+      }
+
+      console.log(`🗑️ ลบสำเร็จ: ${code}`);
+      res.json({ message: "ลบข้อมูลเรียบร้อยแล้ว" });
     }
-
-    if (result.affectedRows === 0) {
-      console.warn('⚠️ ไม่พบใบแจ้งซ่อม:', code)
-      return res.status(404).json({ message: 'ไม่พบใบแจ้งซ่อมนี้' })
-    }
-
-    console.log(`🗑️ ลบสำเร็จ: ${code}`)
-    res.json({ message: 'ลบข้อมูลเรียบร้อยแล้ว' })
-  })
-})
-
-
-
+  );
+});
 
 // =========================
 // 📄 GET: ดึงรายละเอียดใบแจ้งซ่อม (เวอร์ชันแก้ไข)
 // =========================
-app.get('/repair-requests/:code', (req, res) => {
-  const { code } = req.params
+app.get("/repair-requests/:code", (req, res) => {
+  const { code } = req.params;
 
   const sql = `
     SELECT 
@@ -1170,56 +1301,58 @@ app.get('/repair-requests/:code', (req, res) => {
     LEFT JOIN user u ON rf.rf_us_id = u.us_id
     LEFT JOIN title_name tn ON u.us_ttn_id = tn.ttn_id
     WHERE rf.rf_code = ?
-  `
+  `;
 
   db.query(sql, [code], (err, results) => {
     if (err) {
-      console.error('❌ Database error:', err)
-      return res.status(500).json({ message: 'เกิดข้อผิดพลาดในเซิร์ฟเวอร์', error: err.message })
+      console.error("❌ Database error:", err);
+      return res
+        .status(500)
+        .json({ message: "เกิดข้อผิดพลาดในเซิร์ฟเวอร์", error: err.message });
     }
 
     if (results.length === 0) {
-      return res.status(404).json({ message: 'ไม่พบใบแจ้งซ่อมนี้' })
+      return res.status(404).json({ message: "ไม่พบใบแจ้งซ่อมนี้" });
     }
 
-    const r = results[0]
+    const r = results[0];
 
     res.json({
       rf_code: r.rf_code,
-      rf_detail: r.rf_detail || '-',
-      rf_problem: r.rf_problem || '-',
-      rf_urgency: r.rf_urgency || 'medium',
-      rf_user_status: r.rf_user_status || '-',
-      rf_tech_status: r.rf_tech_status || '-',
-      rf_phone: r.rf_phone || '-',
-      rf_create_at: r.rf_create_at || '-',
-      rf_prop_number: r.rf_prop_number || '-',
+      rf_detail: r.rf_detail || "-",
+      rf_problem: r.rf_problem || "-",
+      rf_urgency: r.rf_urgency || "medium",
+      rf_user_status: r.rf_user_status || "-",
+      rf_tech_status: r.rf_tech_status || "-",
+      rf_phone: r.rf_phone || "-",
+      rf_create_at: r.rf_create_at || "-",
+      rf_prop_number: r.rf_prop_number || "-",
       rf_image: r.rf_image || null,
 
       // ✅ เพิ่ม id และ name
       repair_type_id: r.repair_type_id || null,
-      repair_type_name: r.repair_type_name || '-',
+      repair_type_name: r.repair_type_name || "-",
       building_id: r.building_id || null,
-      building_name: r.building_name || '-',
+      building_name: r.building_name || "-",
       floor_id: r.floor_id || null,
-      floor_name: r.floor_name || '-',
+      floor_name: r.floor_name || "-",
       room_id: r.room_id || null,
-      room_name: r.room_name || '-',
+      room_name: r.room_name || "-",
 
       reporter: {
-        name: r.reporter_name || '-',
-        phone: r.reporter_phone || '-',
-        department: r.reporter_department || '-'
-      }
-    })
-  })
-})
+        name: r.reporter_name || "-",
+        phone: r.reporter_phone || "-",
+        department: r.reporter_department || "-",
+      },
+    });
+  });
+});
 
 // =========================
 // ✏️ PUT: อัปเดตข้อมูลใบแจ้งซ่อม
 // =========================
-app.put('/repair-requests/:code', (req, res) => {
-  const { code } = req.params
+app.put("/repair-requests/:code", (req, res) => {
+  const { code } = req.params;
   const {
     us_id,
     repair_type_id,
@@ -1228,11 +1361,13 @@ app.put('/repair-requests/:code', (req, res) => {
     problem_detail,
     issue_description,
     urgency,
-    phone_number
-  } = req.body
+    phone_number,
+  } = req.body;
 
   if (!repair_type_id || !room_id || !problem_detail) {
-    return res.status(400).json({ message: 'ข้อมูลไม่ครบ กรุณากรอกให้ครบทุกช่อง' })
+    return res
+      .status(400)
+      .json({ message: "ข้อมูลไม่ครบ กรุณากรอกให้ครบทุกช่อง" });
   }
 
   const sql = `
@@ -1248,7 +1383,7 @@ app.put('/repair-requests/:code', (req, res) => {
       rf_urgency = ?,
       rf_update_at = NOW()
     WHERE rf_code = ?
-  `
+  `;
 
   const params = [
     us_id || null,
@@ -1256,31 +1391,30 @@ app.put('/repair-requests/:code', (req, res) => {
     room_id,
     asset_code || null,
     problem_detail,
-    issue_description || '-',
+    issue_description || "-",
     phone_number || null,
-    urgency || 'medium',
-    code
-  ]
+    urgency || "medium",
+    code,
+  ];
 
   db.query(sql, params, (err, result) => {
     if (err) {
-      console.error('❌ Database error (update repair):', err)
-      return res.status(500).json({ message: 'อัปเดตข้อมูลไม่สำเร็จ', error: err.message })
+      console.error("❌ Database error (update repair):", err);
+      return res
+        .status(500)
+        .json({ message: "อัปเดตข้อมูลไม่สำเร็จ", error: err.message });
     }
 
     if (result.affectedRows === 0) {
-      return res.status(404).json({ message: 'ไม่พบใบแจ้งซ่อมนี้' })
+      return res.status(404).json({ message: "ไม่พบใบแจ้งซ่อมนี้" });
     }
 
-    res.json({ message: '✅ อัปเดตข้อมูลใบแจ้งซ่อมสำเร็จ', updated: result.affectedRows })
-  })
-})
-
-
-
-
-
-
+    res.json({
+      message: "✅ อัปเดตข้อมูลใบแจ้งซ่อมสำเร็จ",
+      updated: result.affectedRows,
+    });
+  });
+});
 
 /* =========================
    SERVER START
