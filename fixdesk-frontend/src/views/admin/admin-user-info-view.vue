@@ -29,6 +29,8 @@ const selectedTechTypes = ref([])
 const showRoleFilter = ref(false)
 const showTechFilter = ref(false)
 
+
+
 // ===============================
 // 📦 ดึงข้อมูลผู้ใช้ (แก้ไข)
 // ===============================
@@ -40,17 +42,18 @@ async function fetchUsers() {
     const data = await res.json()
     if (!res.ok) throw new Error(data.message || 'โหลดข้อมูลไม่สำเร็จ')
 
-    // สร้าง rows สำหรับตาราง
-    rows.value = data.map((u) => [
-      `${u.us_first_name_th || ''} ${u.us_last_name_th || ''}`,
-      u.us_user_name || '-',
-      u.role_name || '-',
-      u.us_department || '-',
-      u.technician_type || '-',
-      'actions',
-    ])
+    // ✅ เก็บข้อมูลเต็ม พร้อมชื่อ EN
+    rows.value = data.map((u) => ({
+      fullNameTh: `${u.us_first_name_th || ''} ${u.us_last_name_th || ''}`,
+      fullNameEn: `${u.us_first_name_en || ''} ${u.us_last_name_en || ''}`,
+      username: u.us_user_name || '-',
+      role: u.role_name || '-',
+      department: u.us_department || '-',
+      technicianType: u.technician_type || '-',
+      raw: u, // 👉 เก็บข้อมูล user ทั้ง object เอาไว้ใช้ใน modal
+    }))
 
-    // เก็บแผนที่ username -> id ไว้ใช้ตอนลบ/แก้ไข
+    // ✅ map username -> id (สำหรับลบ/แก้ไข)
     const map = {}
     for (const u of data) {
       if (u.us_user_name && u.us_id != null) map[u.us_user_name] = u.us_id
@@ -67,17 +70,21 @@ async function fetchUsers() {
  * =============================== */
 const filteredRows = computed(() => {
   return rows.value.filter((r) => {
+    const q = searchQuery.value.toLowerCase()
     const matchSearch =
-      r[0].toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      r[1].toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      r[3].toLowerCase().includes(searchQuery.value.toLowerCase())
+      r.fullNameTh.toLowerCase().includes(q) ||
+      r.fullNameEn.toLowerCase().includes(q) ||
+      r.username.toLowerCase().includes(q) ||
+      r.department.toLowerCase().includes(q)
 
-    const matchRole = selectedRoles.value.length === 0 || selectedRoles.value.includes(r[2])
-    const matchTech = selectedTechTypes.value.length === 0 || selectedTechTypes.value.includes(r[4])
+    const matchRole = selectedRoles.value.length === 0 || selectedRoles.value.includes(r.role)
+    const matchTech =
+      selectedTechTypes.value.length === 0 || selectedTechTypes.value.includes(r.technicianType)
 
     return matchSearch && matchRole && matchTech
   })
 })
+
 
 function clearFilters() {
   selectedRoles.value = []
@@ -99,6 +106,43 @@ onMounted(() => {
   document.addEventListener('click', closeDropdown)
 })
 onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
+
+/* ===============================
+ * 🔵 ดูรายละเอียดผู้ใช้ (View)
+ * =============================== */
+const showViewModal = ref(false)
+const viewForm = ref({
+  us_id: '',
+  us_ttn_id: '',
+  us_first_name_th: '',
+  us_last_name_th: '',
+  us_first_name_en: '',
+  us_last_name_en: '',
+  us_user_name: '',
+  us_phone: '',
+  us_department: '',
+  us_role_id: '',
+  us_tt_id: '',
+  role_name: '',
+  technician_type: '',
+})
+
+function openViewModal(username) {
+  try {
+    const row = rows.value.find(r => r.username === username)
+    if (!row) throw new Error('ไม่พบผู้ใช้ในข้อมูลที่โหลดไว้')
+
+    Object.assign(viewForm.value, row.raw)
+    showViewModal.value = true
+  } catch (err) {
+    Swal.fire('ผิดพลาด', err.message, 'error')
+  }
+}
+
+
+function closeViewModal() {
+  showViewModal.value = false
+}
 
 /* ===============================
  * 🟢 เพิ่มผู้ใช้
@@ -178,19 +222,18 @@ const editForm = ref({
   us_tt_id: '',
 })
 
-async function openEditModal(username) {
+function openEditModal(username) {
   try {
-    const res = await fetch(`${API_BASE}/users`, { headers: getAuthHeaders() })
-    const data = await res.json()
-    const user = data.find((u) => u.us_user_name === username)
-    if (!user) throw new Error('ไม่พบผู้ใช้')
+    const row = rows.value.find(r => r.username === username)
+    if (!row) throw new Error('ไม่พบผู้ใช้ในข้อมูลที่โหลดไว้')
 
-    Object.assign(editForm.value, user)
+    Object.assign(editForm.value, row.raw)
     showEditModal.value = true
   } catch (err) {
     Swal.fire('ผิดพลาด', err.message, 'error')
   }
 }
+
 function closeEditModal() {
   showEditModal.value = false
 }
@@ -420,12 +463,181 @@ function handleEditRoleChange() {
       <h1 class="text-xl font-bold text-black mb-2">จัดการผู้ใช้งานระบบ</h1>
       <TableComponent
         :columns="columns"
-        :rows="filteredRows"
+        :rows="
+          filteredRows.map((u) => [
+            u.fullNameTh,
+            u.username,
+            u.role,
+            u.department,
+            u.technicianType,
+            'actions',
+          ])
+        "
         :perPage="10"
         mode="full"
-        @edit="openEditModal"
+        @detail="(username) => openViewModal(username)"
+        @edit="(username) => openEditModal(username)"
         @delete="confirmDelete"
       />
+    </div>
+    <!-- 🔵 View User Modal (เหมือน Edit เป๊ะ แต่ disabled ทั้งหมด) -->
+    <div
+      v-if="showViewModal"
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+      @click.self="closeViewModal"
+    >
+      <div class="bg-white rounded-lg p-8 w-full max-w-2xl shadow-xl max-h-[90vh] overflow-y-auto">
+        <!-- Header with icon -->
+        <div class="flex items-center gap-3 mb-6">
+          <div class="bg-blue-100 p-3 rounded-full">
+            <img src="/icon/user-info.svg" alt="View User" class="w-8 h-8" />
+          </div>
+          <h2 class="text-xl font-bold text-gray-800">รายละเอียดผู้ใช้งาน</h2>
+        </div>
+
+        <p class="text-gray-600 text-sm mb-6">แสดงข้อมูลผู้ใช้ในระบบ (ไม่สามารถแก้ไขได้)</p>
+
+        <form>
+          <!-- ชื่อผู้ใช้ -->
+          <div class="mb-3">
+            <label class="block text-sm font-medium text-gray-700 mb-1.5"> ชื่อผู้ใช้ </label>
+            <input
+              v-model="viewForm.us_user_name"
+              type="text"
+              disabled
+              class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed"
+            />
+          </div>
+
+          <!-- คำนำหน้า -->
+          <div class="mb-3">
+            <label class="block text-sm font-medium text-gray-700 mb-1.5"> คำนำหน้าชื่อ </label>
+            <select
+              v-model="viewForm.us_ttn_id"
+              disabled
+              class="w-full px-3 py-2 border rounded-md appearance-none bg-gray-100 text-gray-500 cursor-not-allowed border-gray-300"
+            >
+              <option value="" disabled>เลือกคำนำหน้า</option>
+              <option value="1">นาย</option>
+              <option value="2">นาง</option>
+              <option value="3">นางสาว</option>
+              <option value="4">อื่นๆ</option>
+            </select>
+          </div>
+
+          <!-- ชื่อ - นามสกุล (ภาษาไทย) -->
+          <div class="grid grid-cols-2 gap-3 mb-3">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5"> ชื่อ (ไทย) </label>
+              <input
+                v-model="viewForm.us_first_name_th"
+                type="text"
+                disabled
+                class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed"
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5"> นามสกุล (ไทย) </label>
+              <input
+                v-model="viewForm.us_last_name_th"
+                type="text"
+                disabled
+                class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed"
+              />
+            </div>
+          </div>
+
+          <!-- ชื่อ - นามสกุล (ภาษาอังกฤษ) -->
+          <div class="grid grid-cols-2 gap-3 mb-3">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">ชื่อ (EN)</label>
+              <input
+                v-model="viewForm.us_first_name_en"
+                type="text"
+                disabled
+                class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed"
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">นามสกุล (EN)</label>
+              <input
+                v-model="viewForm.us_last_name_en"
+                type="text"
+                disabled
+                class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed"
+              />
+            </div>
+          </div>
+
+          <!-- เบอร์โทร และ หน่วยงาน -->
+          <div class="grid grid-cols-2 gap-3 mb-3">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">เบอร์โทร</label>
+              <input
+                v-model="viewForm.us_phone"
+                type="tel"
+                disabled
+                class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed"
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">หน่วยงาน</label>
+              <input
+                v-model="viewForm.us_department"
+                type="text"
+                disabled
+                class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed"
+              />
+            </div>
+          </div>
+
+          <!-- บทบาท - ตำแหน่งช่าง (เหมือน Edit แต่ disabled) -->
+          <div class="grid grid-cols-2 gap-3 mb-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">บทบาท</label>
+              <select
+                v-model="viewForm.us_role_id"
+                disabled
+                class="w-full px-3 py-2 border rounded-md appearance-none bg-gray-100 text-gray-500 cursor-not-allowed border-gray-300"
+              >
+                <option value="" disabled>เลือกบทบาท</option>
+                <option value="1">ADMIN</option>
+                <option value="2">TECHNICIAN</option>
+                <option value="3">STOCK</option>
+                <option value="4">MANAGER</option>
+                <option value="5">USER</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5">ตำแหน่งช่าง</label>
+              <select
+                v-model="viewForm.us_tt_id"
+                disabled
+                class="w-full px-3 py-2 border rounded-md appearance-none bg-gray-100 text-gray-500 cursor-not-allowed border-gray-300"
+              >
+                <option value="">ไม่ระบุ</option>
+                <option value="1">ไฟฟ้า</option>
+                <option value="2">ประปา</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- ปุ่มปิด -->
+          <div class="flex justify-end mt-6">
+            <button
+              type="button"
+              @click="closeViewModal"
+              class="px-5 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-md font-medium transition"
+            >
+              ปิด
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
 
     <!-- 🟢 Modal เพิ่มผู้ใช้งาน -->
