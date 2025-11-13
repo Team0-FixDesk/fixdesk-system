@@ -1,0 +1,31 @@
+version: "3.9"
+
+services:
+
+  backend:
+    build:
+      context: ./fixdesk-backend
+      dockerfile: Dockerfile
+    container_name: fixdesk-backend-prod
+    ports:
+      - "8059:3000"
+    environment:
+      NODE_ENV: production
+    volumes:
+      - fixdesk_uploads:/app/uploads
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./fixdesk-frontend
+      dockerfile: Dockerfile
+    container_name: fixdesk-frontend-prod
+    ports:
+      - "8057:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  fixdesk_uploads:
+    driver: local
