@@ -10,6 +10,6 @@ COPY . .
 RUN mkdir -p /app/uploads/repair && \
     chmod -R 755 /app/uploads
 
-EXPOSE 3000
+EXPOSE 8059
 
 CMD ["node", "index.js"]
