@@ -8,7 +8,7 @@ services:
       dockerfile: Dockerfile
     container_name: fixdesk-backend-prod
     ports:
-      - "8059:3000"
+      - "8059:8059"
     environment:
       NODE_ENV: production
     volumes:
