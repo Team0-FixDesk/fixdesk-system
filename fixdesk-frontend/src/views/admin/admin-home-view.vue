@@ -1,5 +1,5 @@
 <template>
-  <div class="container mx-auto px-4 py-6">
+  <div class="bg-white rounded-xl shadow-md p-12 mx-auto max-w-8xl container mx-auto px-5 py-6">
     <!-- Header section -->
     <div class="flex justify-between items-center mb-6">
       <div>
@@ -291,10 +291,10 @@ const fetchRepairRequests = async () => {
 const mapUrgency = (urgency) => {
   const urgencyMap = {
     'high': 'เร่งด่วนมาก',
-    'medium': 'ปกติ',
+    'medium': 'เร่งด่วน',
     'low': 'ไม่เร่งด่วน'
   }
-  return urgencyMap[urgency] || 'ปกติ'
+  return urgencyMap[urgency] || 'เร่งด่วน'
 }
 
 // ฟังก์ชันสำหรับแปลงสถานะ
@@ -348,7 +348,7 @@ const cancelledTasksCount = computed(() => {
 const getStatusClass = (status) => {
   switch (status) {
     case 'รอดำเนินการ':
-      return 'bg-[#FFF3D4] text-[#D97706]'
+      return 'bg-[#FEF6E2] text-[#FF6600]'
     case 'กำลังดำเนินการ':
       return 'bg-[#CFEBFF] text-[#005D9F]'
     case 'เสร็จสิ้น':
@@ -364,11 +364,11 @@ const getStatusClass = (status) => {
 const getUrgencyClass = (urgency) => {
   switch (urgency) {
     case 'เร่งด่วนมาก':
-      return 'bg-red-100 text-red-800'
+      return 'bg-[#FEE2E2] text-[#FF0000]'
     case 'เร่งด่วน':
-      return 'bg-orange-100 text-orange-800'
-    case 'ปกติ':
-      return 'bg-yellow-100 text-yellow-800'
+      return 'bg-[#FEF6E2] text-[#FF6600]'
+    case 'ไม่เร่งด่วน':
+      return 'bg-[#D1FAE5] text-[#059669]'
     default:
       return 'bg-gray-100 text-gray-800'
   }
