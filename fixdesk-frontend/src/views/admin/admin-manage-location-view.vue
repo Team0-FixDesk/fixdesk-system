@@ -795,391 +795,403 @@ onMounted(async () => {
       @click="closeModal"
     >
       <div
-        class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 relative"
+        class="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-hidden relative"
         @click.stop
       >
-        <!-- Header -->
-        <div class="flex justify-between items-center mb-6">
-          <h2 class="text-xl font-bold text-blue-700">
-            {{ modalMode === 'add' ? 'เพิ่มสถานที่' : 'แก้ไขสถานที่' }}
-          </h2>
-          <button
-            @click="closeModal"
-            class="text-gray-400 hover:text-gray-600 text-2xl leading-none"
-          >
-            ×
-          </button>
-        </div>
-
-        <!-- Progress Steps (เฉพาะโหมด add) -->
-        <div v-if="modalMode === 'add'" class="flex items-center justify-center mb-6 gap-2">
-          <div class="flex items-center">
-            <div
-              :class="[
-                'w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm transition-colors',
-                modalStep === 1 ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-600'
-              ]"
-            >
-              1
-            </div>
-            <span class="ml-2 text-sm font-medium text-gray-700">เลือกประเภท</span>
-          </div>
-
-          <div class="w-12 h-0.5 bg-gray-300 mx-2"></div>
-
-          <div class="flex items-center">
-            <div
-              :class="[
-                'w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm transition-colors',
-                modalStep === 2 ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-600'
-              ]"
-            >
-              2
-            </div>
-            <span class="ml-2 text-sm font-medium text-gray-700">กรอกข้อมูล</span>
-          </div>
-        </div>
-
-        <!-- Step 1: เลือกประเภท (เฉพาะโหมด add) -->
-        <div v-if="modalMode === 'add' && modalStep === 1" class="space-y-4">
-          <p class="text-sm text-gray-600 mb-4">คุณต้องการเพิ่มสถานที่แบบไหน?</p>
-
-          <!-- Mode Selection -->
-          <div class="space-y-3 mb-6">
-            <!-- Single Level Mode -->
-            <label class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400"
-              :class="!bulkCreateMode ? 'border-blue-600 bg-blue-50' : 'border-gray-200'"
-            >
-              <input
-                type="radio"
-                :checked="!bulkCreateMode"
-                @change="bulkCreateMode = false"
-                class="w-5 h-5 text-blue-600 mt-1"
-              />
-              <div class="ml-3">
-                <div class="flex items-center gap-2">
-                  <span class="font-semibold text-gray-800">เพิ่มทีละระดับ</span>
-                </div>
-                <p class="text-xs text-gray-500 mt-1">เลือกเพิ่ม อาคาร, ชั้น หรือ ห้อง ทีละอย่าง</p>
-              </div>
-            </label>
-
-            <!-- Bulk Create Mode -->
-            <label class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400"
-              :class="bulkCreateMode ? 'border-blue-600 bg-blue-50' : 'border-gray-200'"
-            >
-              <input
-                type="radio"
-                :checked="bulkCreateMode"
-                @change="bulkCreateMode = true"
-                class="w-5 h-5 text-blue-600 mt-1"
-              />
-              <div class="ml-3">
-                <div class="flex items-center gap-2">
-                  <span class="font-semibold text-gray-800">สร้างหลายระดับพร้อมกัน</span>
-                  <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">เร็วกว่า</span>
-                </div>
-                <p class="text-xs text-gray-500 mt-1">สร้างอาคาร + ชั้น + ห้อง ในครั้งเดียว</p>
-              </div>
-            </label>
-          </div>
-
-          <!-- Type Selection (แสดงเมื่อเลือก Single Level Mode) -->
-          <div v-if="!bulkCreateMode" class="space-y-3">
-            <p class="text-sm font-semibold text-gray-700 mb-2">เลือกประเภท:</p>
-
-            <!-- Option: Building -->
-            <label class="flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400"
-              :class="modalType === 'building' ? 'border-blue-600 bg-blue-50' : 'border-gray-200'"
-            >
-              <input
-                type="radio"
-                v-model="modalType"
-                value="building"
-                class="w-5 h-5 text-blue-600"
-              />
-              <div class="ml-3">
-                <div class="flex items-center gap-2">
-                  <span class="font-semibold text-gray-800">อาคาร</span>
-                </div>
-                <p class="text-xs text-gray-500 mt-1">เพิ่มอาคารใหม่</p>
-              </div>
-            </label>
-
-            <!-- Option: Floor -->
-            <label class="flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400"
-              :class="modalType === 'floor' ? 'border-blue-600 bg-blue-50' : 'border-gray-200'"
-            >
-              <input
-                type="radio"
-                v-model="modalType"
-                value="floor"
-                class="w-5 h-5 text-blue-600"
-              />
-              <div class="ml-3">
-                <div class="flex items-center gap-2">
-                  <span class="font-semibold text-gray-800">ชั้น</span>
-                </div>
-                <p class="text-xs text-gray-500 mt-1">เพิ่มชั้นในอาคาร</p>
-              </div>
-            </label>
-
-            <!-- Option: Room -->
-            <label class="flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400"
-              :class="modalType === 'room' ? 'border-blue-600 bg-blue-50' : 'border-gray-200'"
-            >
-              <input
-                type="radio"
-                v-model="modalType"
-                value="room"
-                class="w-5 h-5 text-blue-600"
-              />
-              <div class="ml-3">
-                <div class="flex items-center gap-2">
-                  <span class="font-semibold text-gray-800">ห้อง</span>
-                </div>
-                <p class="text-xs text-gray-500 mt-1">เพิ่มห้องในชั้น</p>
-              </div>
-            </label>
-          </div>
-
-          <!-- Actions for Step 1 -->
-          <div class="flex gap-3 mt-6">
+        <!-- Header (ติดด้านบน) -->
+        <div class="sticky top-0 bg-white z-10 px-4 sm:px-6 pt-4 sm:pt-6 pb-4 border-b border-gray-100">
+          <div class="flex justify-between items-center">
+            <h2 class="text-xl font-bold text-blue-700">
+              {{ modalMode === 'add' ? 'เพิ่มสถานที่' : 'แก้ไขสถานที่' }}
+            </h2>
             <button
               @click="closeModal"
-              class="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition"
+              class="text-gray-400 hover:text-gray-600 text-2xl leading-none"
             >
-              ยกเลิก
-            </button>
-            <button
-              @click="nextStep"
-              class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition"
-            >
-              ถัดไป →
+              ×
             </button>
           </div>
         </div>
 
-        <!-- Step 2: กรอกข้อมูล -->
-        <div v-if="modalStep === 2" class="space-y-4">
-          <!-- Bulk Create Mode -->
-          <div v-if="bulkCreateMode" class="space-y-4">
-            <div class="flex items-center gap-2 p-3 bg-blue-50 rounded-lg mb-4">
-              <span class="font-semibold text-blue-800">สร้างหลายระดับพร้อมกัน</span>
+        <!-- Content (scrollable) -->
+        <div class="overflow-y-auto px-4 sm:px-6 pb-4 sm:pb-6" style="max-height: calc(80vh - 140px);">
+          <!-- Progress Steps (เฉพาะโหมด add) -->
+          <div v-if="modalMode === 'add'" class="flex items-center justify-center mb-6 gap-2 pt-4">
+            <div class="flex items-center">
+              <div
+                :class="[
+                  'w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm transition-colors',
+                  modalStep === 1 ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-600'
+                ]"
+              >
+                1
+              </div>
+              <span class="ml-2 text-sm font-medium text-gray-700">เลือกประเภท</span>
             </div>
 
-            <!-- Building Section -->
-            <div class="border-2 border-gray-200 rounded-lg p-4 space-y-3">
-              <h3 class="font-semibold text-gray-800 flex items-center gap-2">
-                <span>อาคาร</span>
-              </h3>
+            <div class="w-12 h-0.5 bg-gray-300 mx-2"></div>
 
-              <label class="flex items-center gap-2">
-                <input
-                  type="radio"
-                  v-model="buildingMode"
-                  value="existing"
-                  class="w-4 h-4 text-blue-600"
-                />
-                <span class="text-sm font-medium">เลือกจากอาคารที่มีอยู่</span>
-              </label>
-              <select
-                v-if="buildingMode === 'existing'"
-                v-model="modalData.building_id"
-                @change="handleBulkBuildingChange"
-                class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none"
+            <div class="flex items-center">
+              <div
+                :class="[
+                  'w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm transition-colors',
+                  modalStep === 2 ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-600'
+                ]"
               >
-                <option value="">-- เลือกอาคาร --</option>
-                <option v-for="building in buildings" :key="building.building_id" :value="building.building_id">
-                  {{ building.building_name }}
-                </option>
-              </select>
-
-              <label class="flex items-center gap-2 mt-3">
-                <input
-                  type="radio"
-                  v-model="buildingMode"
-                  value="new"
-                  class="w-4 h-4 text-blue-600"
-                />
-                <span class="text-sm font-medium">สร้างอาคารใหม่</span>
-              </label>
-              <input
-                v-if="buildingMode === 'new'"
-                v-model="newBuildingName"
-                type="text"
-                placeholder="ชื่ออาคารใหม่"
-                class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none"
-              />
-            </div>
-
-            <!-- Floor Section -->
-            <div class="border-2 border-gray-200 rounded-lg p-4 space-y-3">
-              <h3 class="font-semibold text-gray-800 flex items-center gap-2">
-                <span>ชั้น</span>
-              </h3>
-
-              <label class="flex items-center gap-2">
-                <input
-                  type="radio"
-                  v-model="floorMode"
-                  value="existing"
-                  :disabled="buildingMode === 'new' || !modalData.building_id"
-                  class="w-4 h-4 text-blue-600 disabled:opacity-50"
-                />
-                <span class="text-sm font-medium" :class="{'text-gray-400': buildingMode === 'new' || !modalData.building_id}">
-                  เลือกจากชั้นที่มีอยู่
-                </span>
-              </label>
-              <select
-                v-if="floorMode === 'existing'"
-                v-model="modalData.floor_id"
-                :disabled="buildingMode === 'new' || !modalData.building_id"
-                class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none disabled:bg-gray-100"
-              >
-                <option value="">-- เลือกชั้น --</option>
-                <option v-for="floor in floors" :key="floor.floor_id" :value="floor.floor_id">
-                  {{ floor.floor_name }}
-                </option>
-              </select>
-
-              <label class="flex items-center gap-2 mt-3">
-                <input
-                  type="radio"
-                  v-model="floorMode"
-                  value="new"
-                  class="w-4 h-4 text-blue-600"
-                />
-                <span class="text-sm font-medium">สร้างชั้นใหม่</span>
-              </label>
-              <input
-                v-if="floorMode === 'new'"
-                v-model="newFloorName"
-                type="text"
-                placeholder="ชื่อชั้นใหม่"
-                class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none"
-              />
-            </div>
-
-            <!-- Room Section -->
-            <div class="border-2 border-blue-200 rounded-lg p-4 space-y-3 bg-blue-50">
-              <h3 class="font-semibold text-gray-800 flex items-center gap-2">
-                <span>ห้อง <span class="text-red-500">*</span></span>
-              </h3>
-
-              <input
-                v-model="roomName"
-                type="text"
-                placeholder="ชื่อห้อง (ต้องระบุ)"
-                class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none"
-              />
-              <p class="text-xs text-gray-600">
-                 ห้องจะถูกสร้างในชั้นที่เลือกหรือสร้างขึ้นมาใหม่
-              </p>
-            </div>
-
-            <!-- Actions for Bulk Create -->
-            <div class="flex gap-3 mt-6">
-              <button
-                @click="prevStep"
-                class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition"
-              >
-                ← ย้อนกลับ
-              </button>
-              <button
-                @click="bulkCreateLocation"
-                class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition"
-              >
-                สร้างทั้งหมด
-              </button>
+                2
+              </div>
+              <span class="ml-2 text-sm font-medium text-gray-700">กรอกข้อมูล</span>
             </div>
           </div>
 
-          <!-- Single Level Mode (แบบเดิม) -->
-          <div v-else>
-            <!-- แสดงประเภทที่เลือก -->
-            <div class="flex items-center gap-2 p-3 bg-blue-50 rounded-lg mb-4">
-              <span class="text-2xl">
-                {{ modalType === 'building' ? '🏢' : modalType === 'floor' ? '🧱' : '🚪' }}
-              </span>
-              <span class="font-semibold text-blue-800">
-                {{ modalMode === 'add' ? 'เพิ่ม' : 'แก้ไข' }}{{ modalType === 'building' ? 'อาคาร' : modalType === 'floor' ? 'ชั้น' : 'ห้อง' }}
-              </span>
-            </div>
+          <!-- Step 1: เลือกประเภท (เฉพาะโหมด add) -->
+          <div v-if="modalMode === 'add' && modalStep === 1" class="space-y-4">
+            <p class="text-sm text-gray-600 mb-4">คุณต้องการเพิ่มสถานที่แบบไหน?</p>
 
-            <!-- เลือกอาคาร (สำหรับ floor และ room) -->
-            <div v-if="modalType === 'floor' || modalType === 'room'">
-              <label class="block text-sm font-semibold text-gray-700 mb-2">
-                อาคาร <span class="text-red-500">*</span>
-              </label>
-              <select
-                v-model="modalData.building_id"
-                :disabled="modalMode === 'edit'"
-                @change="handleModalBuildingChange"
-                class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none disabled:bg-gray-100"
+            <!-- Mode Selection -->
+            <div class="space-y-3 mb-6">
+              <!-- Single Level Mode -->
+              <label class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400"
+                :class="!bulkCreateMode ? 'border-blue-600 bg-blue-50' : 'border-gray-200'"
               >
-                <option value="">เลือกอาคาร</option>
-                <option v-for="building in buildings" :key="building.building_id" :value="building.building_id">
-                  {{ building.building_name }}
-                </option>
-              </select>
-            </div>
-
-            <!-- เลือกชั้น (สำหรับ room) -->
-            <div v-if="modalType === 'room'">
-              <label class="block text-sm font-semibold text-gray-700 mb-2">
-                ชั้น <span class="text-red-500">*</span>
+                <input
+                  type="radio"
+                  :checked="!bulkCreateMode"
+                  @change="bulkCreateMode = false"
+                  class="w-5 h-5 text-blue-600 mt-1"
+                />
+                <div class="ml-3">
+                  <div class="flex items-center gap-2">
+                    <span class="font-semibold text-gray-800">เพิ่มทีละระดับ</span>
+                  </div>
+                  <p class="text-xs text-gray-500 mt-1">เลือกเพิ่ม อาคาร, ชั้น หรือ ห้อง ทีละอย่าง</p>
+                </div>
               </label>
-              <select
-                v-model="modalData.floor_id"
-                :disabled="modalMode === 'edit' || !modalData.building_id"
-                class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none disabled:bg-gray-100"
+
+              <!-- Bulk Create Mode -->
+              <label class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400"
+                :class="bulkCreateMode ? 'border-blue-600 bg-blue-50' : 'border-gray-200'"
               >
-                <option value="">เลือกชั้น</option>
-                <option v-for="floor in floors" :key="floor.floor_id" :value="floor.floor_id">
-                  {{ floor.floor_name }}
-                </option>
-              </select>
-            </div>
-
-            <!-- ชื่อ -->
-            <div>
-              <label class="block text-sm font-semibold text-gray-700 mb-2">
-                ชื่อ{{ modalType === 'building' ? 'อาคาร' : modalType === 'floor' ? 'ชั้น' : 'ห้อง' }}
-                <span class="text-red-500">*</span>
+                <input
+                  type="radio"
+                  :checked="bulkCreateMode"
+                  @change="bulkCreateMode = true"
+                  class="w-5 h-5 text-blue-600 mt-1"
+                />
+                <div class="ml-3">
+                  <div class="flex items-center gap-2">
+                    <span class="font-semibold text-gray-800">สร้างหลายระดับพร้อมกัน</span>
+                    <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">เร็วกว่า</span>
+                  </div>
+                  <p class="text-xs text-gray-500 mt-1">สร้างอาคาร + ชั้น + ห้อง ในครั้งเดียว</p>
+                </div>
               </label>
-              <input
-                v-model="modalData.name"
-                type="text"
-                :placeholder="`ระบุชื่อ${modalType === 'building' ? 'อาคาร' : modalType === 'floor' ? 'ชั้น' : 'ห้อง'}`"
-                class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none"
-                @keyup.enter="saveLocation"
-              />
             </div>
 
-            <!-- Actions for Single Level -->
+            <!-- Type Selection (แสดงเมื่อเลือก Single Level Mode) -->
+            <div v-if="!bulkCreateMode" class="space-y-3">
+              <p class="text-sm font-semibold text-gray-700 mb-2">เลือกประเภท:</p>
+
+              <!-- Option: Building -->
+              <label class="flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400"
+                :class="modalType === 'building' ? 'border-blue-600 bg-blue-50' : 'border-gray-200'"
+              >
+                <input
+                  type="radio"
+                  v-model="modalType"
+                  value="building"
+                  class="w-5 h-5 text-blue-600"
+                />
+                <div class="ml-3">
+                  <div class="flex items-center gap-2">
+                    <span class="font-semibold text-gray-800">อาคาร</span>
+                  </div>
+                  <p class="text-xs text-gray-500 mt-1">เพิ่มอาคารใหม่</p>
+                </div>
+              </label>
+
+              <!-- Option: Floor -->
+              <label class="flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400"
+                :class="modalType === 'floor' ? 'border-blue-600 bg-blue-50' : 'border-gray-200'"
+              >
+                <input
+                  type="radio"
+                  v-model="modalType"
+                  value="floor"
+                  class="w-5 h-5 text-blue-600"
+                />
+                <div class="ml-3">
+                  <div class="flex items-center gap-2">
+                    <span class="font-semibold text-gray-800">ชั้น</span>
+                  </div>
+                  <p class="text-xs text-gray-500 mt-1">เพิ่มชั้นในอาคาร</p>
+                </div>
+              </label>
+
+              <!-- Option: Room -->
+              <label class="flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400"
+                :class="modalType === 'room' ? 'border-blue-600 bg-blue-50' : 'border-gray-200'"
+              >
+                <input
+                  type="radio"
+                  v-model="modalType"
+                  value="room"
+                  class="w-5 h-5 text-blue-600"
+                />
+                <div class="ml-3">
+                  <div class="flex items-center gap-2">
+                    <span class="font-semibold text-gray-800">ห้อง</span>
+                  </div>
+                  <p class="text-xs text-gray-500 mt-1">เพิ่มห้องในชั้น</p>
+                </div>
+              </label>
+            </div>
+
+            <!-- Actions for Step 1 -->
             <div class="flex gap-3 mt-6">
               <button
-                v-if="modalMode === 'add'"
-                @click="prevStep"
-                class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition"
-              >
-                ← ย้อนกลับ
-              </button>
-              <button
-                v-else
                 @click="closeModal"
                 class="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition"
               >
                 ยกเลิก
               </button>
               <button
-                @click="saveLocation"
+                @click="nextStep"
                 class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition"
               >
-                {{ modalMode === 'add' ? 'เพิ่ม' : 'บันทึก' }}
+                ถัดไป →
               </button>
             </div>
+          </div>
+
+          <!-- Step 2: กรอกข้อมูล -->
+          <div v-if="modalStep === 2" class="space-y-4">
+            <!-- Bulk Create Mode -->
+            <div v-if="bulkCreateMode" class="space-y-4">
+              <div class="flex items-center gap-2 p-3 bg-blue-50 rounded-lg mb-4">
+                <span class="font-semibold text-blue-800">สร้างหลายระดับพร้อมกัน</span>
+              </div>
+
+              <!-- Building Section -->
+              <div class="border-2 border-gray-200 rounded-lg p-4 space-y-3">
+                <h3 class="font-semibold text-gray-800 flex items-center gap-2">
+                  <span>อาคาร</span>
+                </h3>
+
+                <label class="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    v-model="buildingMode"
+                    value="existing"
+                    class="w-4 h-4 text-blue-600"
+                  />
+                  <span class="text-sm font-medium">เลือกจากอาคารที่มีอยู่</span>
+                </label>
+                <select
+                  v-if="buildingMode === 'existing'"
+                  v-model="modalData.building_id"
+                  @change="handleBulkBuildingChange"
+                  class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none"
+                >
+                  <option value="">-- เลือกอาคาร --</option>
+                  <option v-for="building in buildings" :key="building.building_id" :value="building.building_id">
+                    {{ building.building_name }}
+                  </option>
+                </select>
+
+                <label class="flex items-center gap-2 mt-3">
+                  <input
+                    type="radio"
+                    v-model="buildingMode"
+                    value="new"
+                    class="w-4 h-4 text-blue-600"
+                  />
+                  <span class="text-sm font-medium">สร้างอาคารใหม่</span>
+                </label>
+                <input
+                  v-if="buildingMode === 'new'"
+                  v-model="newBuildingName"
+                  type="text"
+                  placeholder="ชื่ออาคารใหม่"
+                  class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none"
+                />
+              </div>
+
+              <!-- Floor Section -->
+              <div class="border-2 border-gray-200 rounded-lg p-4 space-y-3">
+                <h3 class="font-semibold text-gray-800 flex items-center gap-2">
+                  <span>ชั้น</span>
+                </h3>
+
+                <label class="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    v-model="floorMode"
+                    value="existing"
+                    :disabled="buildingMode === 'new' || !modalData.building_id"
+                    class="w-4 h-4 text-blue-600 disabled:opacity-50"
+                  />
+                  <span class="text-sm font-medium" :class="{'text-gray-400': buildingMode === 'new' || !modalData.building_id}">
+                    เลือกจากชั้นที่มีอยู่
+                  </span>
+                </label>
+                <select
+                  v-if="floorMode === 'existing'"
+                  v-model="modalData.floor_id"
+                  :disabled="buildingMode === 'new' || !modalData.building_id"
+                  class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none disabled:bg-gray-100"
+                >
+                  <option value="">-- เลือกชั้น --</option>
+                  <option v-for="floor in floors" :key="floor.floor_id" :value="floor.floor_id">
+                    {{ floor.floor_name }}
+                  </option>
+                </select>
+
+                <label class="flex items-center gap-2 mt-3">
+                  <input
+                    type="radio"
+                    v-model="floorMode"
+                    value="new"
+                    class="w-4 h-4 text-blue-600"
+                  />
+                  <span class="text-sm font-medium">สร้างชั้นใหม่</span>
+                </label>
+                <input
+                  v-if="floorMode === 'new'"
+                  v-model="newFloorName"
+                  type="text"
+                  placeholder="ชื่อชั้นใหม่"
+                  class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none"
+                />
+              </div>
+
+              <!-- Room Section -->
+              <div class="border-2 border-blue-200 rounded-lg p-4 space-y-3 bg-blue-50">
+                <h3 class="font-semibold text-gray-800 flex items-center gap-2">
+                  <span>ห้อง <span class="text-red-500">*</span></span>
+                </h3>
+
+                <input
+                  v-model="roomName"
+                  type="text"
+                  placeholder="ชื่อห้อง (ต้องระบุ)"
+                  class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none"
+                />
+                <p class="text-xs text-gray-600">
+                   ห้องจะถูกสร้างในชั้นที่เลือกหรือสร้างขึ้นมาใหม่
+                </p>
+              </div>
+
+              <!-- Actions for Bulk Create -->
+              <div class="flex gap-3 mt-6">
+                <button
+                  @click="prevStep"
+                  class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition"
+                >
+                  ← ย้อนกลับ
+                </button>
+                <button
+                  @click="bulkCreateLocation"
+                  class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition"
+                >
+                  สร้างทั้งหมด
+                </button>
+              </div>
+            </div>
+
+            <!-- Single Level Mode (แบบเดิม) -->
+            <div v-else>
+              <!-- แสดงประเภทที่เลือก -->
+              <div class="flex items-center gap-2 p-3 bg-blue-50 rounded-lg mb-4">
+                <span class="text-2xl">
+                  {{ modalType === 'building' ? '🏢' : modalType === 'floor' ? '🧱' : '🚪' }}
+                </span>
+                <span class="font-semibold text-blue-800">
+                  {{ modalMode === 'add' ? 'เพิ่ม' : 'แก้ไข' }}{{ modalType === 'building' ? 'อาคาร' : modalType === 'floor' ? 'ชั้น' : 'ห้อง' }}
+                </span>
+              </div>
+
+              <!-- เลือกอาคาร (สำหรับ floor และ room) -->
+              <div v-if="modalType === 'floor' || modalType === 'room'">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                  อาคาร <span class="text-red-500">*</span>
+                </label>
+                <select
+                  v-model="modalData.building_id"
+                  :disabled="modalMode === 'edit'"
+                  @change="handleModalBuildingChange"
+                  class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none disabled:bg-gray-100"
+                >
+                  <option value="">เลือกอาคาร</option>
+                  <option v-for="building in buildings" :key="building.building_id" :value="building.building_id">
+                    {{ building.building_name }}
+                  </option>
+                </select>
+              </div>
+
+              <!-- เลือกชั้น (สำหรับ room) -->
+              <div v-if="modalType === 'room'">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                  ชั้น <span class="text-red-500">*</span>
+                </label>
+                <select
+                  v-model="modalData.floor_id"
+                  :disabled="modalMode === 'edit' || !modalData.building_id"
+                  class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none disabled:bg-gray-100"
+                >
+                  <option value="">เลือกชั้น</option>
+                  <option v-for="floor in floors" :key="floor.floor_id" :value="floor.floor_id">
+                    {{ floor.floor_name }}
+                  </option>
+                </select>
+              </div>
+
+              <!-- ชื่อ -->
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                  ชื่อ{{ modalType === 'building' ? 'อาคาร' : modalType === 'floor' ? 'ชั้น' : 'ห้อง' }}
+                  <span class="text-red-500">*</span>
+                </label>
+                <input
+                  v-model="modalData.name"
+                  type="text"
+                  :placeholder="`ระบุชื่อ${modalType === 'building' ? 'อาคาร' : modalType === 'floor' ? 'ชั้น' : 'ห้อง'}`"
+                  class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none"
+                  @keyup.enter="saveLocation"
+                />
+              </div>
+
+              <!-- Actions for Single Level -->
+              <div class="flex gap-3 mt-6">
+                <button
+                  v-if="modalMode === 'add'"
+                  @click="prevStep"
+                  class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition"
+                >
+                  ← ย้อนกลับ
+                </button>
+                <button
+                  v-else
+                  @click="closeModal"
+                  class="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  @click="saveLocation"
+                  class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition"
+                >
+                  {{ modalMode === 'add' ? 'เพิ่ม' : 'บันทึก' }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer Actions (ติดด้านล่าง) -->
+        <div class="sticky bottom-0 bg-white z-10 px-4 sm:px-6 py-4 border-t border-gray-100">
+          <!-- ย้าย action buttons -->
+          <div class="flex gap-3">
           </div>
         </div>
       </div>
