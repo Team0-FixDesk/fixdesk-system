@@ -5,26 +5,22 @@ ARG NODE_ENV=production
 ENV NODE_ENV=$NODE_ENV
 
 WORKDIR /app
+
+# Install yarn for better dependency management
+RUN npm install -g yarn
+
 COPY package*.json ./
 
-# Clear npm cache and install with verbose logging
-RUN npm cache clean --force
-RUN npm install --verbose --no-optional
+# Use yarn for more reliable dependency resolution
+RUN yarn install --frozen-lockfile || yarn install
 COPY . .
 
-# Debug: Check installation
-RUN ls -la node_modules/.bin/ | grep -i vite || echo "vite not found in .bin"
-RUN npm list --depth=0 | grep vite || echo "vite not in package list"
-RUN find /app -name "vite" -type f || echo "vite executable not found"
+# Verify vite installation
+RUN yarn list vite
+RUN which vite || echo "vite not in PATH"
 
-# Try multiple approaches to run vite
-RUN chmod -R 755 node_modules/.bin
-ENV PATH="/app/node_modules/.bin:$PATH"
-
-# Build with different methods
-RUN npx --yes vite@latest build || \
-    ./node_modules/.bin/vite build || \
-    node ./node_modules/vite/bin/vite.js build
+# Build with yarn
+RUN yarn build
 
 # Serve with nginx
 FROM nginx:alpine AS production-stage
