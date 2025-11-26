@@ -8,11 +8,19 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 COPY . .
-RUN chmod -R 755 node_modules/.bin
 
-# Verify vite installation and build
-RUN npx vite --version
-RUN npm run build
+# Debug: Check node_modules and vite installation
+RUN ls -la node_modules/.bin/ | head -10
+RUN which node
+RUN which npm  
+RUN npm list vite
+
+# Fix permissions and PATH
+RUN chmod -R 755 node_modules/.bin
+ENV PATH="/app/node_modules/.bin:$PATH"
+
+# Build with explicit path
+RUN ./node_modules/.bin/vite build
 
 # Serve with nginx
 FROM nginx:alpine AS production-stage
