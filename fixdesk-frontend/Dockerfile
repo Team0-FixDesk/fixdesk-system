@@ -5,22 +5,15 @@ ARG NODE_ENV=production
 ENV NODE_ENV=$NODE_ENV
 
 WORKDIR /app
-
-# Install yarn for better dependency management
-RUN npm install -g yarn
-
 COPY package*.json ./
 
-# Use yarn for more reliable dependency resolution
-RUN yarn install --frozen-lockfile || yarn install
+# Clean install with proper NODE_ENV
+ENV NODE_ENV=production
+RUN npm ci --include=dev
 COPY . .
 
-# Verify vite installation
-RUN yarn list vite
-RUN which vite || echo "vite not in PATH"
-
-# Build with yarn
-RUN yarn build
+# Verify and build
+RUN npx vite build
 
 # Serve with nginx
 FROM nginx:alpine AS production-stage
