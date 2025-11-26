@@ -10,11 +10,12 @@ RUN npm install
 COPY . .
 RUN chmod -R 755 node_modules/.bin
 
-# Build for production with environment variables
+# Verify vite installation and build
+RUN npx vite --version
 RUN npm run build
 
 # Serve with nginx
-FROM nginx:stable-alpine AS production-stage
+FROM nginx:alpine AS production-stage
 
 # Install wget for health checks
 RUN apk add --no-cache wget
