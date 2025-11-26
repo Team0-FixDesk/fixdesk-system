@@ -243,7 +243,6 @@ async function handleSubmit() {
   }
 }
 
-
 const errors = ref({
   repairType: '',
   building: '',
@@ -296,72 +295,70 @@ function validateForm() {
     valid = false
   }
 
-
   return valid
 }
-
 </script>
 
 <template>
-  <div class="bg-white rounded-xl shadow-md p-12 mx-auto max-w-7xl">
+  <div class="bg-white rounded-xl shadow-md mx-auto max-w-7xl p-4 sm:p-8 lg:p-12">
     <!-- หัวข้อ -->
     <div class="mb-6">
-      <h1 class="text-xl font-bold text-black">แบบฟอร์มแจ้งซ่อม</h1>
+      <h1 class="text-lg sm:text-xl font-bold text-black">แบบฟอร์มแจ้งซ่อม</h1>
 
       <!-- แสดงชื่อหน่วยงาน (ถ้าอยากให้แสดงเฉย ๆ) -->
-      <p class="text-gray-600 text-base mt-2">
+      <p class="text-gray-600 text-sm sm:text-base mt-2">
         {{ formData.department || 'ชื่อหน่วยงาน' }}
       </p>
     </div>
-    <div class="p-12 mx-auto max-w-8xl">
+    <div class="mx-auto max-w-6xl">
       <!-- ฟอร์มหลัก -->
       <form class="space-y-6">
         <!-- แถว 1 -->
-        <div class="grid grid-cols-2 gap-10">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10">
           <div>
-            <label class="text-base font-medium text-black">
+            <label class="text-sm sm:text-base font-medium text-black">
               ลงชื่อผู้แจ้ง <span class="text-red-600">*</span>
             </label>
             <p class="text-neutral-400 text-xs mb-2">กรอกชื่อ–นามสกุลของผู้ที่ทำการแจ้งปัญหา</p>
             <input
               v-model="formData.reporterName"
               type="text"
-              class="w-full text-xm bg-gray-100 border border-neutral-400 rounded-md cursor-not-allowed placeholder-[#A1A1A1]"
+              class="w-full text-xm bg-gray-100 border border-neutral-400 rounded-md cursor-not-allowed placeholder-[#A1A1A1] text-sm px-3 py-2"
               readonly
             />
           </div>
 
           <div>
-            <label class="text-base font-medium text-black">
+            <label class="text-sm sm:text-base font-medium text-black">
               เบอร์โทรศัพท์ <span class="text-red-600">*</span>
             </label>
             <p class="text-neutral-400 text-xs mb-2">กรอกเบอร์โทรศัพท์ที่สามารถติดต่อกลับได้</p>
             <input
               v-model="formData.phoneNumber"
               type="text"
-              class="w-full text-xm bg-gray-100 border border-neutral-400 rounded-md cursor-not-allowed placeholder-[#A1A1A1]"
+              class="w-full text-xm bg-gray-100 border border-neutral-400 rounded-md cursor-not-allowed placeholder-[#A1A1A1] text-sm px-3 py-2"
               readonly
             />
           </div>
         </div>
 
         <!-- แถว 2 -->
-        <div class="grid grid-cols-3 gap-10">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-10">
           <div>
-            <label class="text-base font-medium text-black">
+            <label class="text-sm sm:text-base font-medium text-black">
               หน่วยงาน <span class="text-red-600">*</span>
             </label>
             <p class="text-neutral-400 text-xs mb-2">กรอกชื่อหน่วยงานหรือแผนกที่สังกัด</p>
             <input
               v-model="formData.department"
               type="text"
-              class="w-full text-xm bg-gray-100 border border-neutral-400 rounded-md cursor-not-allowed placeholder-[#A1A1A1]"
+              class="w-full text-xm bg-gray-100 border border-neutral-400 rounded-md cursor-not-allowed placeholder-[#A1A1A1] text-sm px-3 py-2"
               readonly
             />
           </div>
 
           <div>
-            <label class="text-base font-medium text-black">
+            <label class="text-sm sm:text-base font-medium text-black">
               ประเภท <span class="text-red-600">*</span>
             </label>
             <p class="text-neutral-400 text-xs mb-2">โปรดเลือกประเภทงานหรือสิ่งของที่ต้องการซ่อม</p>
@@ -369,7 +366,7 @@ function validateForm() {
             <select
               v-model="formData.repairType"
               :class="[
-                'w-full text-xm bg-white border rounded-md text-neutral-700',
+                'w-full text-xm bg-white border rounded-md text-neutral-700 text-sm px-3 py-2',
                 errors.repairType ? 'border-red-500' : 'border-neutral-400',
               ]"
             >
@@ -379,7 +376,7 @@ function validateForm() {
               </option>
             </select>
 
-            <p v-if="errors.repairType" class="text-red-500 text-sm mt-1">
+            <p v-if="errors.repairType" class="text-red-500 text-xs sm:text-sm mt-1">
               {{ errors.repairType }}
             </p>
           </div>
@@ -398,7 +395,7 @@ function validateForm() {
 
         <!-- แถว 3 -->
         <div>
-          <label class="text-base font-medium text-black">
+          <label class="text-sm sm:text-base font-medium text-black">
             ขอความอนุเคราะห์ตรวจสอบ/ซ่อมแซม <span class="text-red-600">*</span>
           </label>
           <p class="text-neutral-400 text-xs mb-2">กรอกปัญหาที่ต้องการให้ตรวจสอบหรือซ่อมแซม</p>
@@ -406,20 +403,20 @@ function validateForm() {
             v-model="formData.problemDetail"
             type="text"
             :class="[
-              'w-full text-xm bg-white border rounded-md placeholder-[#A1A1A1]',
+              'w-full text-sm bg-white border rounded-md placeholder-[#A1A1A1] px-3 py-2',
               errors.problemDetail ? 'border-red-500' : 'border-neutral-400',
             ]"
             placeholder="กรุณากรอกรายละเอียดปัญหา"
           />
-          <p v-if="errors.problemDetail" class="text-red-500 text-sm mt-1">
+          <p v-if="errors.problemDetail" class="text-red-500 text-xs sm:text-sm mt-1">
             {{ errors.problemDetail }}
           </p>
         </div>
 
         <!-- แถว 4 -->
-        <div class="grid grid-cols-3 gap-10">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-10">
           <div>
-            <label class="text-base font-medium text-black">
+            <label class="text-sm sm:text-base font-medium text-black">
               อาคาร <span class="text-red-600">*</span>
             </label>
             <p class="text-neutral-400 text-xs mb-2">โปรดระบุชื่ออาคารที่พบปัญหา</p>
@@ -427,7 +424,7 @@ function validateForm() {
               v-model="formData.building"
               @change="fetchFloors(formData.building)"
               :class="[
-                'w-full text-xm bg-white border rounded-md text-neutral-700',
+                'w-full text-xm bg-white border rounded-md text-neutral-700 text-sm px-3 py-2',
                 errors.building ? 'border-red-500' : 'border-neutral-400',
               ]"
             >
@@ -436,11 +433,13 @@ function validateForm() {
                 {{ b.name }}
               </option>
             </select>
-            <p v-if="errors.building" class="text-red-500 text-sm mt-1">{{ errors.building }}</p>
+            <p v-if="errors.building" class="text-red-500 text-xs sm:text-sm mt-1">
+              {{ errors.building }}
+            </p>
           </div>
 
           <div>
-            <label class="text-base font-medium text-black">
+            <label class="text-sm sm:text-base font-medium text-black">
               ชั้น <span class="text-red-600">*</span>
             </label>
             <p class="text-neutral-400 text-xs mb-2">โปรดเลือกชั้นที่พบปัญหา</p>
@@ -448,7 +447,7 @@ function validateForm() {
               v-model="formData.floor"
               @change="fetchRooms(formData.floor)"
               :class="[
-                'w-full text-xm bg-white border rounded-md text-neutral-700',
+                'w-full text-xm bg-white border rounded-md text-neutral-700 text-sm px-3 py-2',
                 errors.floor ? 'border-red-500' : 'border-neutral-400',
               ]"
             >
@@ -457,18 +456,20 @@ function validateForm() {
                 {{ f.name }}
               </option>
             </select>
-            <p v-if="errors.floor" class="text-red-500 text-sm mt-1">{{ errors.floor }}</p>
+            <p v-if="errors.floor" class="text-red-500 text-xs sm:text-sm mt-1">
+              {{ errors.floor }}
+            </p>
           </div>
 
           <div>
-            <label class="text-base font-medium text-black">
+            <label class="text-sm sm:text-base font-medium text-black">
               ห้อง <span class="text-red-600">*</span>
             </label>
             <p class="text-neutral-400 text-xs mb-2">โปรดเลือกห้องหรือพื้นที่ที่พบปัญหา</p>
             <select
               v-model="formData.room"
               :class="[
-                'w-full text-xm bg-white border rounded-md text-neutral-700',
+                'w-full text-xm bg-white border rounded-md text-neutral-700 text-sm px-3 py-2',
                 errors.room ? 'border-red-500' : 'border-neutral-400',
               ]"
             >
@@ -477,26 +478,26 @@ function validateForm() {
                 {{ r.name }}
               </option>
             </select>
-            <p v-if="errors.room" class="text-red-500 text-sm mt-1">{{ errors.room }}</p>
+            <p v-if="errors.room" class="text-red-500 text-xs sm:text-sm mt-1">{{ errors.room }}</p>
           </div>
         </div>
 
         <!-- แถว 5 -->
         <div class="mb-1">
-          <label class="text-base font-medium text-black">
+          <label class="text-sm sm:text-base font-medium text-black">
             สาเหตุ/อาการเสีย <span class="text-red-600">*</span>
           </label>
           <p class="text-neutral-400 text-xs mb-2">อธิบายอาการเสียหรือสาเหตุที่พบอย่างชัดเจน</p>
         </div>
 
         <!--แถวหลัก (2 ช่องเท่ากัน) -->
-        <div class="grid grid-cols-2 gap-10 items-stretch">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-10 items-stretch">
           <!-- ซ้าย: กล่องข้อความ -->
           <div class="flex flex-col flex-1">
             <textarea
               v-model="formData.issueDescription"
               :class="[
-                'flex-1 w-full min-h-[320px] text-xm bg-white border rounded-md resize-none',
+                'flex-1 w-full min-h-[220px] sm:min-h-[280px] text-sm bg-white border rounded-md resize-none px-3 py-2',
                 errors.issueDescription ? 'border-red-500' : 'border-neutral-400',
               ]"
               placeholder="กรุณากรอกสาเหตุ/อาการที่เสีย"
@@ -511,7 +512,7 @@ function validateForm() {
           <div class="flex flex-col flex-1">
             <label
               for="dropzone-file"
-              class="flex flex-col flex-1 min-h-[320px] items-center justify-center w-full border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition"
+              class="flex flex-col flex-1 min-h-[220px] sm:min-h-[280px] items-center justify-center w-full border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition"
             >
               <div class="flex flex-col items-center justify-center pt-5 pb-6">
                 <img src="/icon/image-up-icon.svg" class="w-10 h-10 mb-2 opacity-70" />
@@ -523,7 +524,7 @@ function validateForm() {
             </label>
 
             <!-- ปุ่มเร่งด่วน -->
-            <div class="flex justify-center items-center gap-12 mt-4">
+            <div class="flex flex-col sm:flex-row justify-center items-center gap-4 sm:gap-6 mt-4">
               <div
                 v-for="(level, index) in urgencyLevels"
                 :key="index"
@@ -531,7 +532,7 @@ function validateForm() {
                 @click="formData.urgency = level.value"
               >
                 <div
-                  class="w-7 h-7 rounded-full border-2 shadow-md transition-all duration-200"
+                  class="w-6 h-6 sm:w-7 sm:h-7 rounded-full border-2 shadow-md transition-all duration-200"
                   :class="[level.border, formData.urgency === level.value ? level.bg : 'bg-white']"
                 ></div>
                 <span class="text-base text-black font-normal">{{ level.label }}</span>
@@ -541,11 +542,11 @@ function validateForm() {
         </div>
 
         <!-- ปุ่มบันทึก -->
-        <div class="flex justify-end mt-10">
+        <div class="flex justify-center sm:justify-end mt-8">
           <button
             type="button"
             :disabled="isSubmitting"
-            class="bg-[#1E48D1] text-white px-6 py-3 rounded-lg hover:bg-sky-700 transition disabled:opacity-50"
+            class="bg-[#1E48D1] text-white px-6 py-2.5 sm:py-3 rounded-lg hover:bg-sky-700 transition disabled:opacity-50"
             @click="handleSubmit"
           >
             บันทึกฟอร์มแจ้งซ่อม
