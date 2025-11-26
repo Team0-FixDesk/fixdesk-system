@@ -23,7 +23,7 @@ services:
     networks:
       - fixdesk-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://dekdee2.informatics.buu.ac.th:8059/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8059/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -48,7 +48,7 @@ services:
       backend:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://dekdee2.informatics.buu.ac.th:8057/"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/"]
       interval: 30s
       timeout: 10s
       retries: 3
