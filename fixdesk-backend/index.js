@@ -1420,9 +1420,21 @@ app.put("/repair-requests/:code", (req, res) => {
 });
 
 /* =========================
+   HEALTH CHECK ENDPOINT
+   ========================= */
+app.get("/health", (req, res) => {
+  res.status(200).json({
+    status: "OK",
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || "development"
+  });
+});
+
+/* =========================
    SERVER START
    ========================= */
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8059;
 if (!process.env.JWT_SECRET)
   console.warn("⚠️ WARNING: JWT_SECRET is not set in .env");
 
