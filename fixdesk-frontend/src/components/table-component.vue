@@ -39,10 +39,16 @@ function prevPage() {
 <template>
   <div class="relative overflow-x-auto">
     <!-- ตาราง -->
-    <table class="w-full text-sm text-left text-black border-collapse">
-      <thead class="text-l border-b border-[#E9E9E9] text-gray-700 uppercase bg-white text-[#444D5C]">
+    <table class="min-w-[640px] w-full text-xs sm:text-sm text-left text-black border-collapse">
+      <thead
+        class="text-l border-b border-[#E9E9E9] text-gray-700 uppercase bg-white text-[#444D5C]"
+      >
         <tr>
-          <th v-for="(col, i) in props.columns" :key="i" class="px-6 py-3">
+          <th
+            v-for="(col, i) in props.columns"
+            :key="i"
+            class="px-3 py-2 sm:px-6 sm:py-3 text-center"
+          >
             {{ col }}
           </th>
         </tr>
@@ -64,13 +70,12 @@ function prevPage() {
             </th>
 
             <!-- คอลัมน์อื่น -->
-            <td v-else class="px-6 py-4 text-center">
+            <td v-else class="px-3 py-2 sm:px-6 sm:py-4 text-center">
               <!-- 🔹 ถ้าเป็น actions -->
               <div v-if="cell === 'actions'" class="flex justify-center gap-2">
-
                 <!-- 🔍 ปุ่มดูรายละเอียด -->
                 <div
-                  class="w-9 h-8 flex items-center justify-center bg-blue-500 hover:bg-blue-700 text-white rounded-md transition cursor-pointer"
+                  class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center justify-center bg-blue-500 hover:bg-blue-700 text-white rounded-md transition cursor-pointer"
                   title="ดูรายละเอียด"
                   @click="$emit('detail', row[1])"
                 >
@@ -81,7 +86,7 @@ function prevPage() {
                 <template v-if="props.mode === 'full'">
                   <!-- ปุ่มแก้ไข -->
                   <div
-                    class="w-9 h-8 flex items-center justify-center bg-yellow-400 hover:bg-yellow-500 text-white rounded-md transition cursor-pointer"
+                    class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center justify-center bg-yellow-400 hover:bg-yellow-500 text-white rounded-md transition cursor-pointer"
                     title="แก้ไข"
                     @click="$emit('edit', row[1])"
                   >
@@ -90,7 +95,7 @@ function prevPage() {
 
                   <!-- ปุ่มลบ -->
                   <div
-                    class="w-9 h-8 flex items-center justify-center bg-red-500 hover:bg-red-600 text-white rounded-md transition cursor-pointer"
+                    class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center justify-center bg-red-500 hover:bg-red-600 text-white rounded-md transition cursor-pointer"
                     title="ลบ"
                     @click="$emit('delete', row[1])"
                   >
@@ -101,14 +106,13 @@ function prevPage() {
                 <!-- 🧑‍🔧 โหมด assign -->
                 <template v-else-if="props.mode === 'assign'">
                   <div
-                    class="w-9 h-8 flex items-center justify-center bg-green-600 hover:bg-green-700 text-white rounded-md transition cursor-pointer"
+                    class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center justify-center bg-green-600 hover:bg-green-700 text-white rounded-md transition cursor-pointer"
                     title="มอบหมายงาน"
                     @click="$emit('assign', row[1])"
                   >
                     <img src="/icon/arrow-right.svg" alt="assign" class="w-5 h-5" />
                   </div>
                 </template>
-
               </div>
 
               <!-- ถ้าไม่ใช่ actions -->
@@ -120,7 +124,7 @@ function prevPage() {
                 :rowIndex="ri"
                 :columnIndex="ci"
               >
-                <span v-html="cell"></span>
+                <span class="break-words" v-html="cell"></span>
               </slot>
             </td>
           </template>
@@ -129,7 +133,7 @@ function prevPage() {
     </table>
 
     <!-- Pagination -->
-    <div class="flex justify-end mt-4">
+    <div class="flex justify-center sm:justify-end mt-4">
       <div class="inline-flex rounded-md shadow-sm border border-gray-300">
         <button
           @click="goToPage(1)"
@@ -150,7 +154,8 @@ function prevPage() {
           v-for="page in totalPages"
           :key="page"
           @click="goToPage(page)"
-          :class="[ 'px-3 py-2 border-r border-gray-300 hover:bg-gray-100 transition-colors',
+          :class="[
+            'px-3 py-2 border-r border-gray-300 hover:bg-gray-100 transition-colors',
             currentPage === page
               ? 'bg-blue-100 text-blue-600 border-blue-300'
               : 'bg-white text-gray-700',
@@ -183,11 +188,12 @@ table {
   table-layout: fixed;
   width: 100%;
 }
-td, th {
+td,
+th {
   text-align: center;
   vertical-align: middle;
-  white-space: nowrap;
 }
+
 tbody tr:hover {
   background-color: #f9fafb;
 }

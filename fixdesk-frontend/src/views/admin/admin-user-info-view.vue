@@ -562,17 +562,17 @@ function validateEditForm() {
 </script>
 
 <template>
-  <div class="bg-gray-50 rounded-xl p-1 mx-auto max-w-7xl">
+  <div class="bg-gray-50 rounded-xl p-2 sm:p-4 lg:p-6 mx-auto max-w-7xl">
     <!-- ฟิลเตอร์ -->
     <div class="mb-6">
-      <div class="flex flex-wrap items-center justify-between gap-3">
+      <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div class="flex flex-wrap items-center gap-3">
           <!-- ค้นหา -->
           <input
             v-model="searchQuery"
             type="text"
             placeholder="ค้นหาชื่อผู้ใช้ / หน่วยงาน / บทบาท"
-            class="w-[260px] h-10 px-4 rounded-lg border border-gray-300 bg-white focus:ring-2 focus:ring-blue-500"
+            class="w-full sm:w-[260px] h-10 px-4 rounded-lg border border-gray-300 bg-white focus:ring-2 focus:ring-blue-500"
           />
 
           <!-- ฟิลเตอร์บทบาท -->
@@ -654,7 +654,7 @@ function validateEditForm() {
         <!-- ปุ่มเพิ่ม -->
         <button
           @click="openAddModal"
-          class="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-[#1E48D1] hover:bg-[#1539a9] text-white font-medium shadow-sm transition"
+          class="inline-flex items-center justify-center sm:justify-start w-full sm:w-auto h-10 px-4 rounded-lg bg-[#1E48D1] hover:bg-[#1539a9] text-white font-medium shadow-sm transition"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -672,34 +672,40 @@ function validateEditForm() {
     </div>
 
     <!-- ตาราง -->
-    <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-7xl">
-      <h1 class="text-xl font-bold text-black mb-2">จัดการผู้ใช้งานระบบ</h1>
-      <TableComponent
-        :columns="columns"
-        :rows="
-          filteredRows.map((u) => [
-            u.fullNameTh,
-            u.username,
-            u.role,
-            u.department,
-            u.technicianType,
-            'actions',
-          ])
-        "
-        :perPage="10"
-        mode="full"
-        @detail="(username) => openViewModal(username)"
-        @edit="(username) => openEditModal(username)"
-        @delete="confirmDelete"
-      />
+    <div class="bg-white rounded-xl shadow-md p-4 sm:p-6 lg:p-8 mx-auto max-w-7xl">
+      <h1 class="text-lg sm:text-xl font-bold text-black mb-3">จัดการผู้ใช้งานระบบ</h1>
+
+      <div class="-mx-2 sm:mx-0 overflow-x-auto">
+        <TableComponent
+          :columns="columns"
+          :rows="
+            filteredRows.map((u) => [
+              u.fullNameTh,
+              u.username,
+              u.role,
+              u.department,
+              u.technicianType,
+              'actions',
+            ])
+          "
+          :perPage="10"
+          mode="full"
+          @detail="(username) => openViewModal(username)"
+          @edit="(username) => openEditModal(username)"
+          @delete="confirmDelete"
+        />
+      </div>
     </div>
+
     <!-- 🔵 View User Modal (เหมือน Edit เป๊ะ แต่ disabled ทั้งหมด) -->
     <div
       v-if="showViewModal"
-      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-2 sm:px-0"
       @click.self="closeViewModal"
     >
-      <div class="bg-white rounded-lg p-8 w-full max-w-2xl shadow-xl max-h-[90vh] overflow-y-auto">
+      <div
+        class="bg-white rounded-lg p-4 sm:p-6 md:p-8 w-full max-w-2xl shadow-xl max-h-[90vh] overflow-y-auto"
+      >
         <!-- Header with icon -->
         <div class="flex items-center gap-3 mb-6">
           <div class="bg-blue-100 p-3 rounded-full">
@@ -739,7 +745,7 @@ function validateEditForm() {
           </div>
 
           <!-- ชื่อ - นามสกุล (ภาษาไทย) -->
-          <div class="grid grid-cols-2 gap-3 mb-3">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1.5"> ชื่อ (ไทย) </label>
               <input
@@ -762,7 +768,7 @@ function validateEditForm() {
           </div>
 
           <!-- ชื่อ - นามสกุล (ภาษาอังกฤษ) -->
-          <div class="grid grid-cols-2 gap-3 mb-3">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1.5">ชื่อ (EN)</label>
               <input
@@ -785,7 +791,7 @@ function validateEditForm() {
           </div>
 
           <!-- เบอร์โทร และ หน่วยงาน -->
-          <div class="grid grid-cols-2 gap-3 mb-3">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1.5">เบอร์โทร</label>
               <input
@@ -872,7 +878,7 @@ function validateEditForm() {
 
         <form @submit.prevent="confirmAddUser">
           <!-- ชื่อผู้ใช้ และ รหัสผ่าน -->
-          <div class="grid grid-cols-2 gap-3 mb-3">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
             <!-- Username -->
             <div>
               <label class="block text-sm font-medium mb-1.5">
@@ -942,7 +948,7 @@ function validateEditForm() {
           </div>
 
           <!-- ชื่อ - นามสกุล (ภาษาไทย) -->
-          <div class="grid grid-cols-2 gap-3 mb-3">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
             <div>
               <label class="block text-sm font-medium mb-1.5">
                 ชื่อ (ไทย) <span class="text-red-500">*</span>
@@ -986,7 +992,7 @@ function validateEditForm() {
           </div>
 
           <!-- ชื่อ - นามสกุล (ภาษาอังกฤษ) -->
-          <div class="grid grid-cols-2 gap-3 mb-3">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
             <!-- First Name EN -->
             <div>
               <label class="block text-sm font-medium mb-1.5">ชื่อ (EN)</label>
@@ -1027,7 +1033,7 @@ function validateEditForm() {
           </div>
 
           <!-- เบอร์โทร และ หน่วยงาน -->
-          <div class="grid grid-cols-2 gap-3 mb-3">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
             <div>
               <label class="block text-sm font-medium mb-1.5">เบอร์โทร</label>
 
@@ -1127,7 +1133,7 @@ function validateEditForm() {
           </div>
 
           <!-- Buttons -->
-          <div class="flex gap-3">
+          <div class="flex flex-col sm:flex-row gap-3">
             <button
               type="button"
               @click="closeAddModal"
@@ -1203,7 +1209,7 @@ function validateEditForm() {
           </div>
 
           <!-- ชื่อ - นามสกุล (ภาษาไทย) -->
-          <div class="grid grid-cols-2 gap-3 mb-3">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
             <!-- First Name TH -->
             <div>
               <label class="block text-sm font-medium mb-1.5">
@@ -1248,7 +1254,7 @@ function validateEditForm() {
           </div>
 
           <!-- ชื่อ - นามสกุล (ภาษาอังกฤษ) -->
-          <div class="grid grid-cols-2 gap-3 mb-3">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
             <!-- First Name EN -->
             <div>
               <label class="block text-sm font-medium mb-1.5">ชื่อ (EN)</label>
@@ -1289,7 +1295,7 @@ function validateEditForm() {
           </div>
 
           <!-- เบอร์โทร และ หน่วยงาน -->
-          <div class="grid grid-cols-2 gap-3 mb-3">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
             <div>
               <label class="block text-sm font-medium mb-1.5">เบอร์โทร</label>
 
