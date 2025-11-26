@@ -6,21 +6,25 @@ ENV NODE_ENV=$NODE_ENV
 
 WORKDIR /app
 COPY package*.json ./
-RUN npm install
+
+# Clear npm cache and install with verbose logging
+RUN npm cache clean --force
+RUN npm install --verbose --no-optional
 COPY . .
 
-# Debug: Check node_modules and vite installation
-RUN ls -la node_modules/.bin/ | head -10
-RUN which node
-RUN which npm  
-RUN npm list vite
+# Debug: Check installation
+RUN ls -la node_modules/.bin/ | grep -i vite || echo "vite not found in .bin"
+RUN npm list --depth=0 | grep vite || echo "vite not in package list"
+RUN find /app -name "vite" -type f || echo "vite executable not found"
 
-# Fix permissions and PATH
+# Try multiple approaches to run vite
 RUN chmod -R 755 node_modules/.bin
 ENV PATH="/app/node_modules/.bin:$PATH"
 
-# Build with explicit path
-RUN ./node_modules/.bin/vite build
+# Build with different methods
+RUN npx --yes vite@latest build || \
+    ./node_modules/.bin/vite build || \
+    node ./node_modules/vite/bin/vite.js build
 
 # Serve with nginx
 FROM nginx:alpine AS production-stage
