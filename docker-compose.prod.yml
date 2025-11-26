@@ -1,5 +1,9 @@
 version: "3.9"
 
+networks:
+  fixdesk-network:
+    driver: bridge
+
 services:
 
   backend:
@@ -11,19 +15,35 @@ services:
       - "8059:8059"
     environment:
       NODE_ENV: production
+      PORT: 8059
     volumes:
       - fixdesk_uploads:/app/uploads
+    networks:
+      - fixdesk-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8059/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
     restart: unless-stopped
 
   frontend:
     build:
       context: ./fixdesk-frontend
       dockerfile: Dockerfile
+      args:
+        - NODE_ENV=production
     container_name: fixdesk-frontend-prod
     ports:
       - "8057:80"
+    environment:
+      - NODE_ENV=production
+    networks:
+      - fixdesk-network
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     restart: unless-stopped
 
 volumes:
