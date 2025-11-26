@@ -593,7 +593,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="bg-white rounded-xl shadow-md p-12 mx-auto max-w-6xl">
+  <div class="bg-white rounded-xl shadow-md p-12 mx-auto max-w-7xl">
     <!-- 🔹 หัวข้อ -->
     <h1 class="text-xl font-bold text-blue-700 mb-2">สถานที่ทั้งหมด</h1>
     <p class="text-sm text-gray-600 mb-6">
