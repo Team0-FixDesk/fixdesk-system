@@ -37,7 +37,7 @@ services:
       - ./fixdesk-frontend/src:/app/src
       - ./fixdesk-frontend/index.html:/app/index.html
     working_dir: /app
-    command: npm run dev
+    command: npm run dev -- --host 0.0.0.0 --port 5173
     restart: unless-stopped
 
 

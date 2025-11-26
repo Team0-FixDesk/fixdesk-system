@@ -1,17 +1,30 @@
 <template>
-  <div class="container mx-auto px-4 py-6">
+  <div class="bg-white rounded-xl shadow-md p-12 mx-auto max-w-8xl container mx-auto px-5 py-6">
     <!-- Header section -->
     <div class="flex justify-between items-center mb-6">
       <div>
         <h1 class="text-2xl font-bold text-gray-800">หน้าแรก</h1>
         <p class="text-gray-600">ภาพรวมงานแจ้งเรียนแจ้งซ่อม</p>
       </div>
-      <button class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md flex items-center">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-        </svg>
-        แจ้งซ่อม
-      </button>
+      <div class="flex space-x-2">
+        <button
+          @click="fetchRepairRequests"
+          :disabled="loading"
+          class="bg-gray-500 hover:bg-gray-600 disabled:opacity-50 text-white px-4 py-2 rounded-md flex items-center"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          รีเฟรช
+        </button>
+
+        <button class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md flex items-center">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+          </svg>
+          แจ้งซ่อม
+        </button>
+      </div>
     </div>
 
     <!-- Stats cards -->
@@ -56,7 +69,30 @@
       </div>
 
       <div class="overflow-x-auto">
-        <div class="min-h-[372px]"> <!-- กำหนดความสูงขั้นต่ำคงที่ -->
+        <!-- Loading state -->
+        <div v-if="loading" class="min-h-[372px] flex items-center justify-center">
+          <div class="text-center">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+            <p class="text-gray-600">กำลังโหลดข้อมูล...</p>
+          </div>
+        </div>
+
+        <!-- Error state -->
+        <div v-else-if="error" class="min-h-[372px] flex items-center justify-center">
+          <div class="text-center">
+            <div class="text-red-500 text-6xl mb-4">⚠️</div>
+            <p class="text-red-600 mb-4">{{ error }}</p>
+            <button
+              @click="fetchRepairRequests"
+              class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md"
+            >
+              ลองใหม่
+            </button>
+          </div>
+        </div>
+
+        <!-- Data table -->
+        <div v-else class="min-h-[372px]"> <!-- กำหนดความสูงขั้นต่ำคงที่ -->
           <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
               <tr>
@@ -94,8 +130,12 @@
                   </span>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm">
-                  <button class="text-blue-600 border border-blue-600 hover:bg-blue-50 px-3 py-1 rounded-md text-sm">
-                    รายละเอียด
+                  <button
+                    @click="goToRepairDetail(request.ticketId)"
+                    class="w-9 h-8 flex items-center justify-center bg-blue-500 hover:bg-blue-700 text-white rounded-md transition cursor-pointer"
+                    title="ดูรายละเอียด"
+                  >
+                    <img src="/icon/info-icon.svg" alt="ดูรายละเอียด" class="h-5 w-5" />
                   </button>
                 </td>
               </tr>
@@ -190,70 +230,83 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 
-// Mock data สำหรับแสดงในตาราง และการทดสอบ stats
-const repairRequests = ref([
-  {
-    date: '10/23/2025', // วันนี้
-    ticketId: 'ABC-001',
-    requesterName: 'ABC',
-    type: 'ไฟฟ้า',
-    assetId: 'ABC-000',
-    department: 'ABC-000',
-    urgency: 'เร่งด่วนมาก',
-    status: 'รอดำเนินการ'
-  },
-  {
-    date: '10/23/2025', // วันนี้
-    ticketId: 'ABC-888',
-    requesterName: 'ABC',
-    type: 'ไฟฟ้า',
-    assetId: 'ABC-888',
-    department: 'ABC-888',
-    urgency: 'เร่งด่วนมาก',
-    status: 'รอดำเนินการ'
-  },
-  {
-    date: '10/23/2025', // วันนี้
-    ticketId: 'ABC-002',
-    requesterName: 'DEF',
-    type: 'ไฟฟ้า',
-    assetId: 'ABC-000',
-    department: 'ABC-000',
-    urgency: 'เร่งด่วนมาก',
-    status: 'กำลังดำเนินการ'
-  },
-  {
-    date: '10/20/2025', // ภายใน 7 วัน
-    ticketId: 'ABC-003',
-    requesterName: 'GHI',
-    type: 'ไฟฟ้า',
-    assetId: 'ABC-000',
-    department: 'ABC-000',
-    urgency: 'เร่งด่วนมาก',
-    status: 'เสร็จสิ้น'
-  },
-  {
-    date: '10/19/2025', // ภายใน 7 วัน
-    ticketId: 'ABC-004',
-    requesterName: 'JKL',
-    type: 'ไฟฟ้า',
-    assetId: 'ABC-000',
-    department: 'ABC-000',
-    urgency: 'ปกติ',
-    status: 'ยกเลิก'
-  },
-  {
-    date: '10/10/2025', // เกิน 7 วัน
-    ticketId: 'ABC-005',
-    requesterName: 'MNO',
-    type: 'ไฟฟ้า',
-    assetId: 'ABC-000',
-    department: 'ABC-000',
-    urgency: 'ปกติ',
-    status: 'เสร็จสิ้น'
+const router = useRouter()
+
+// ตัวแปรสำหรับเก็บข้อมูลจาก API
+const repairRequests = ref([])
+const loading = ref(false)
+const error = ref(null)
+
+// ฟังก์ชันสำหรับดึงข้อมูลจาก API
+const fetchRepairRequests = async () => {
+  loading.value = true
+  error.value = null
+
+  try {
+    const token = localStorage.getItem('token')
+    if (!token) {
+      throw new Error('ไม่พบ token การเข้าสู่ระบบ')
+    }
+
+    const response = await fetch(`${import.meta.env.VITE_API_BASE}/admin/repairs`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    })
+
+    if (!response.ok) {
+      throw new Error('เกิดข้อผิดพลาดในการดึงข้อมูล')
+    }
+
+    const data = await response.json()
+
+    // แปลงข้อมูลจาก API ให้ตรงกับรูปแบบที่ template ต้องการ
+    repairRequests.value = data.map(item => ({
+      date: new Date(item.rf_create_at).toLocaleDateString('th-TH'),
+      ticketId: item.rf_code,
+      requesterName: `${item.us_first_name || ''} ${item.us_last_name || ''}`.trim(),
+      type: item.tt_name || '-',
+      assetId: item.rf_prop_number || '-',
+      department: item.department_name || '-',
+      urgency: mapUrgency(item.rf_urgency),
+      status: mapStatus(item.rf_user_status),
+      technicianName: item.tech_first_name && item.tech_last_name
+        ? `${item.tech_first_name} ${item.tech_last_name}`
+        : 'ยังไม่มอบหมาย'
+    }))
+
+  } catch (err) {
+    console.error('Error fetching repair requests:', err)
+    error.value = err.message
+  } finally {
+    loading.value = false
   }
-])
+}
+
+// ฟังก์ชันสำหรับแปลงค่าความเร่งด่วน
+const mapUrgency = (urgency) => {
+  const urgencyMap = {
+    'high': 'เร่งด่วนมาก',
+    'medium': 'เร่งด่วน',
+    'low': 'ไม่เร่งด่วน'
+  }
+  return urgencyMap[urgency] || 'เร่งด่วน'
+}
+
+// ฟังก์ชันสำหรับแปลงสถานะ
+const mapStatus = (status) => {
+  const statusMap = {
+    'pending': 'รอดำเนินการ',
+    'in_progress': 'กำลังดำเนินการ',
+    'completed': 'เสร็จสิ้น',
+    'cancelled': 'ยกเลิก'
+  }
+  return statusMap[status] || 'รอดำเนินการ'
+}
 
 // ฟังก์ชันช่วยเหลือสำหรับการเปรียบเทียบวันที่
 const isToday = (dateString) => {
@@ -295,7 +348,7 @@ const cancelledTasksCount = computed(() => {
 const getStatusClass = (status) => {
   switch (status) {
     case 'รอดำเนินการ':
-      return 'bg-[#FFF3D4] text-[#D97706]'
+      return 'bg-[#FEF6E2] text-[#FF6600]'
     case 'กำลังดำเนินการ':
       return 'bg-[#CFEBFF] text-[#005D9F]'
     case 'เสร็จสิ้น':
@@ -311,11 +364,11 @@ const getStatusClass = (status) => {
 const getUrgencyClass = (urgency) => {
   switch (urgency) {
     case 'เร่งด่วนมาก':
-      return 'bg-red-100 text-red-800'
+      return 'bg-[#FEE2E2] text-[#FF0000]'
     case 'เร่งด่วน':
-      return 'bg-orange-100 text-orange-800'
-    case 'ปกติ':
-      return 'bg-yellow-100 text-yellow-800'
+      return 'bg-[#FEF6E2] text-[#FF6600]'
+    case 'ไม่เร่งด่วน':
+      return 'bg-[#D1FAE5] text-[#059669]'
     default:
       return 'bg-gray-100 text-gray-800'
   }
@@ -403,21 +456,15 @@ const nextPage = () => {
   }
 }
 
-// เตรียมสำหรับการเชื่อมต่อ API ในอนาคต
-// const fetchRepairRequests = async () => {
-//   try {
-//     const response = await fetch('your-api-endpoint');
-//     const data = await response.json();
-//     repairRequests.value = data;
-//   } catch (error) {
-//     console.error('Error fetching repair requests:', error);
-//   }
-// }
+// ฟังก์ชันไปหน้า repair detail
+const goToRepairDetail = (ticketId) => {
+  router.push(`/main/repair-detail/${ticketId}`)
+}
 
-// เมื่อต้องการเชื่อมต่อ API ให้เรียกใช้ฟังก์ชัน fetchRepairRequests ใน onMounted
-// onMounted(() => {
-//   fetchRepairRequests();
-// })
+// เรียกใช้ API เมื่อ component mount
+onMounted(() => {
+  fetchRepairRequests()
+})
 
 defineOptions({ name: 'AdminHomeView' })
 </script>

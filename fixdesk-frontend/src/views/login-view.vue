@@ -104,11 +104,11 @@ const handleLogin = async (e) => {
     style="background-image: url('/background-login.png')"
   >
     <div
-      class="relative bg-white/95 rounded-xl shadow-xl w-full max-w-2xl flex flex-col md:flex-row items-center gap-8 p-8"
+      class="relative bg-white/95 rounded-xl shadow-xl w-full max-w-md sm:max-w-xl lg:max-w-3xl flex flex-col lg:flex-row items-center gap-8 p-10"
     >
       <!-- โลโก้ -->
       <div class="flex flex-col items-center justify-center flex-1">
-        <img alt="92 Tech logo" class="absolute top-4 left-4 w-10" src="/icon/92Tech-logo.png" />
+        <img alt="92 Tech logo" class="hidden md:block absolute top-4 left-4 w-10" src="/icon/92Tech-logo.png" />
         <img alt="App logo" class="w-48 h-auto" src="/icon/Logo.png" />
       </div>
 
