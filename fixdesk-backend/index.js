@@ -41,7 +41,8 @@ app.post("/auth/login", (req, res) => {
 
   const query = `
     SELECT u.us_id, u.us_user_name, u.us_user_pass,
-           t.ttn_title_th, u.us_first_name_th, u.us_last_name_th,
+           t.ttn_title_th, u.us_first_name_th, u.us_last_name_th, 
+           u.us_first_name_en, u.us_last_name_en,
            u.us_phone, u.us_department,
            r.role_name
     FROM user u
@@ -69,6 +70,8 @@ app.post("/auth/login", (req, res) => {
       us_prefix_th: user.ttn_title_th || "",
       us_first_name_th: user.us_first_name_th || "",
       us_last_name_th: user.us_last_name_th || "",
+      us_first_name_en: user.us_first_name_en || '',
+      us_last_name_en: user.us_last_name_en || '',
       us_tel: user.us_phone || "",
       us_department: user.us_department || "",
       role_name: user.role_name || "",

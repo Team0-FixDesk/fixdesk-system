@@ -36,6 +36,9 @@ onMounted(() => {
       firstNameEN.value = decoded.us_first_name_en
       lastNameEN.value = decoded.us_last_name_en
       username.value = decoded.us_user_name
+      console.log("📌 us_first_name_en =", decoded.us_first_name_en)
+      console.log("📌 us_last_name_en =", decoded.us_last_name_en)
+      console.log("TOKEN:", decoded)
       
     } catch (err) {
       console.error('❌ Decode token error:', err)
@@ -54,11 +57,11 @@ function logout(e) {
   window.location.href = '/login'
 }
 
-// ✅ ฟังก์ชันนี้แก้ให้ตรงกับ Token ในรูปภาพ 100%
+
 function initForm() {
   const data = tokenData.value || {}
   
-  // ดึงคำนำหน้าภาษาไทย (เช่น "นาย", "อื่นๆ")
+  // ดึงคำนำหน้าภาษาไทย
   const prefixText = data.us_prefix_th || '' 
 
   if (prefixText === 'นาย') {
@@ -68,7 +71,7 @@ function initForm() {
   } else if (prefixText === 'นางสาว') {
     editForm.value.us_ttn_id = "3"
   } else if (prefixText === 'อื่นๆ') {
-    editForm.value.us_ttn_id = "4" // ✅ ถ้าเจอคำว่า "อื่นๆ" ให้เลือก ID 4
+    editForm.value.us_ttn_id = "4"
   } else {
     // กรณีที่ไม่ตรงกับอะไรเลย ก็ให้ลงที่ อื่นๆ (4) ไว้ก่อน
     editForm.value.us_ttn_id = "4" 

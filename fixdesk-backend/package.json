@@ -4,6 +4,7 @@
   "description": "หน้าที่:\r ส่วนนี้คือฝั่ง “Server” ทำงานกับฐานข้อมูล และรับ–ส่งข้อมูลกับ frontend ผ่าน API\r backend/\r ├── config/          # ตั้งค่าฐานข้อมูล และ environment\r ├── controllers/     # จัดการ logic ของ API\r ├── middleware/      # ส่วนตรวจสอบ เช่น auth, error handling\r ├── models/          # โครงสร้างข้อมูล (ตาราง DB)\r ├── routes/          # เส้นทาง API เช่น /api/users /api/tickets\r ├── utils/           # ฟังก์ชันช่วยเหลือ เช่น token, logger\r ├── index.js         # จุดเริ่มต้นรัน server\r ├── package.json     # รายชื่อ dependencies + script\r └── README.md        # คำอธิบายการใช้งาน backend",
   "main": "index.js",
   "scripts": {
+    "dev": "node index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
