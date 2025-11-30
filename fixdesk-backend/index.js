@@ -1429,3 +1429,133 @@ if (!process.env.JWT_SECRET)
 app.listen(PORT, () =>
   console.log(`🚀 FixDesk User API (v2.0.1) running on port ${PORT}`)
 );
+
+/* ===============================
+   GET /technician/repairs
+   ดึงรายการแจ้งซ่อมที่มอบหมายให้ช่างที่ล็อกอิน
+================================== */
+app.get("/technician/repairs", authMiddleware, (req, res) => {
+  const techId = req.user && req.user.us_id
+  console.debug('GET /technician/repairs - requested by user id=', techId)
+  if (!techId) return res.status(401).json({ message: 'ต้องแนบโทเคนที่ถูกต้อง' })
+
+  const query = `
+    SELECT
+      rf.rf_id,
+      rf.rf_code,
+      rf.rf_prop_number,
+      rf.rf_problem,
+      rf.rf_create_at,
+      rf.rf_user_status,
+      COALESCE(rf.rf_urgency, 'medium') AS rf_urgency,
+      u.us_first_name_th AS us_first_name,
+      u.us_last_name_th AS us_last_name,
+      u.us_department AS department_name,
+      tt.tt_name,
+      tech.us_first_name_th AS tech_first_name,
+      tech.us_last_name_th AS tech_last_name,
+      rf.rf_assigned_tech_id AS assigned_tech_id,
+      b.bd_name AS building_name,
+      f.fl_name AS floor_name,
+      r.room_name AS room_name
+    FROM repair_form rf
+    LEFT JOIN user u ON rf.rf_us_id = u.us_id
+    LEFT JOIN technician_type tt ON rf.rf_tt_id = tt.tt_id
+    LEFT JOIN user tech ON rf.rf_assigned_tech_id = tech.us_id
+    LEFT JOIN room r ON rf.rf_room_id = r.room_id
+    LEFT JOIN floor f ON r.room_fl_id = f.fl_id
+    LEFT JOIN building b ON f.fl_bd_id = b.bd_id
+    WHERE rf.rf_assigned_tech_id = ?
+    ORDER BY rf.rf_create_at DESC
+  `;
+
+  db.query(query, [techId], (err, results) => {
+    if (err) {
+      console.error("❌ Error fetching technician repairs:", err)
+      return res.status(500).json({
+        message: "ดึงข้อมูลรายการแจ้งซ่อมของช่างไม่สำเร็จ",
+        error: err.message,
+      })
+    }
+    res.json(results)
+  })
+})
+
+/* =========================
+   GET /stock-forms (ดึงรายการใบเบิกทั้งหมด)
+   ========================= */
+app.get('/stock-forms', authMiddleware, (req, res) => {
+  const query = `
+    SELECT
+      sf.sf_id,
+      sf.sf_code,
+      sf.sf_create_at,
+      sf.sf_update_at,
+      sf.sf_urgency,
+      sf.sf_status,
+      sf.sf_us_id,
+      sf.sf_rf_id,
+      u.us_first_name_th AS requester_first_name,
+      u.us_last_name_th AS requester_last_name,
+      u.us_department AS requester_department,
+      rf.rf_code AS related_rf_code,
+      b.bd_name AS building_name,
+      f.fl_name AS floor_name,
+      r.room_name AS room_name
+    FROM stock_form sf
+    LEFT JOIN user u ON sf.sf_us_id = u.us_id
+    LEFT JOIN repair_form rf ON sf.sf_rf_id = rf.rf_id
+    LEFT JOIN room r ON rf.rf_room_id = r.room_id
+    LEFT JOIN floor f ON r.room_fl_id = f.fl_id
+    LEFT JOIN building b ON f.fl_bd_id = b.bd_id
+    ORDER BY sf.sf_create_at DESC
+  `;
+
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error('❌ Error fetching stock forms:', err);
+      return res.status(500).json({ message: 'ดึงข้อมูลใบเบิกไม่สำเร็จ', error: err.message });
+    }
+    res.json(results);
+  });
+});
+
+/* =========================
+   GET /technician/my-stock-forms (ดึงรายการใบเบิกของผู้ใช้งานที่ล็อกอิน)
+   ========================= */
+app.get('/technician/my-stock-forms', authMiddleware, (req, res) => {
+  const techId = req.user && req.user.us_id
+  console.debug('GET /technician/my-stock-forms - requested by user id=', techId)
+  if (!techId) return res.status(401).json({ message: 'ต้องแนบโทเคนที่ถูกต้อง' })
+
+  const query = `
+    SELECT
+      sf.sf_id,
+      sf.sf_code,
+      sf.sf_create_at,
+      sf.sf_update_at,
+      sf.sf_urgency,
+      sf.sf_status,
+      sf.sf_us_id,
+      sf.sf_rf_id,
+      rf.rf_code AS related_rf_code,
+      b.bd_name AS building_name,
+      f.fl_name AS floor_name,
+      r.room_name AS room_name
+    FROM stock_form sf
+    LEFT JOIN repair_form rf ON sf.sf_rf_id = rf.rf_id
+    LEFT JOIN room r ON rf.rf_room_id = r.room_id
+    LEFT JOIN floor f ON r.room_fl_id = f.fl_id
+    LEFT JOIN building b ON f.fl_bd_id = b.bd_id
+    WHERE sf.sf_us_id = ?
+    ORDER BY sf.sf_create_at DESC
+  `;
+
+  db.query(query, [userId], (err, results) => {
+    if (err) {
+      console.error('❌ Error fetching my stock forms:', err);
+      return res.status(500).json({ message: 'ดึงข้อมูลใบเบิกของผู้ใช้ไม่สำเร็จ', error: err.message });
+    }
+    res.json(results);
+  });
+});
