@@ -1419,6 +1419,49 @@ app.put("/repair-requests/:code", (req, res) => {
   });
 });
 
+// ดึงคำนำหน้าชื่อทั้งหมด
+app.get("/titles", authMiddleware, (req, res) => {
+  const sql = `
+    SELECT 
+      ttn_id,
+      ttn_title_th AS ttn_name_th  -- alias ให้ตรงกับที่ frontend ใช้
+    FROM title_name
+    ORDER BY ttn_id ASC
+  `;
+
+  db.query(sql, (err, results) => {
+    if (err) {
+      console.error("❌ Error fetching titles:", err);
+      return res
+        .status(500)
+        .json({ message: "เกิดข้อผิดพลาดในการดึงข้อมูลคำนำหน้า" });
+    }
+    res.json(results);
+  });
+});
+
+// ดึงบทบาทผู้ใช้ทั้งหมด
+app.get("/roles", authMiddleware, (req, res) => {
+  const sql = `
+    SELECT 
+      role_id,
+      role_name,
+      role_name AS role_label_th   -- ถ้าไม่มีคอลัมน์ role_label_th จริง ก็ alias ให้เท่ากันไปก่อน
+    FROM role
+    ORDER BY role_id ASC
+  `;
+
+  db.query(sql, (err, results) => {
+    if (err) {
+      console.error("❌ Error fetching roles:", err);
+      return res
+        .status(500)
+        .json({ message: "เกิดข้อผิดพลาดในการดึงข้อมูลบทบาท" });
+    }
+    res.json(results);
+  });
+});
+
 /* =========================
    SERVER START
    ========================= */
