@@ -160,36 +160,39 @@ function validateForm() {
   let valid = true;
   for (const key in errors) errors[key] = "";
 
-  // ตรวจรหัสผ่านก่อน
-  if (editForm.password && editForm.confirmPassword && editForm.password !== editForm.confirmPassword) {
-    errors.confirmPassword = "รหัสผ่านใหม่ไม่ตรงกัน";
-    return "passwordMismatch"; // ส่งสัญญาณว่า รหัสผ่านไม่ตรงกัน
-  }
-
-  // ตรวจข้อมูลอื่น ๆ
+  // ตรวจข้อมูลจำเป็น
   if (!editForm.us_ttn_id) { errors.us_ttn_id = "เลือกคำนำหน้า"; valid = false; }
   if (!firstNameTH.value) { errors.firstNameTH = "กรุณากรอกชื่อ (ไทย)"; valid = false; }
   if (!lastNameTH.value) { errors.lastNameTH = "กรุณากรอกนามสกุล (ไทย)"; valid = false; }
   if (!editForm.us_phone) { errors.us_phone = "กรุณากรอกเบอร์โทรศัพท์"; valid = false; }
   if (!username.value) { errors.username = "กรุณากรอกชื่อบัญชีผู้ใช้"; valid = false; }
   if (!editForm.oldPassword) { errors.oldPassword = "กรุณากรอกรหัสผ่านเดิม"; valid = false; }
-  if (!editForm.password) { errors.password = "กรุณากรอกรหัสผ่านใหม่"; valid = false; }
-  if (!editForm.confirmPassword) { errors.confirmPassword = "กรุณายืนยันรหัสผ่านใหม่"; valid = false; }
 
-  return valid; // true = ผ่าน / false = ข้อมูลไม่ครบ
+  // ตรวจรหัสผ่านใหม่เฉพาะเมื่อมีการกรอก
+  if (editForm.password) {
+    if (!editForm.confirmPassword) {
+      errors.confirmPassword = "กรุณายืนยันรหัสผ่านใหม่";
+      valid = false;
+    } else if (editForm.password !== editForm.confirmPassword) {
+      errors.confirmPassword = "รหัสผ่านใหม่ไม่ตรงกัน";
+      return "passwordMismatch";
+    }
+  }
+
+  return valid;
 }
 
 
 
 async function saveProfile() {
-  const validateResult = validateForm()
+  const validateResult = validateForm();
 
   if (validateResult === "passwordMismatch") {
     return Swal.fire({
       icon: "error",
       title: "รหัสผ่านไม่ตรงกัน",
       text: "กรุณากรอกรหัสผ่านใหม่ให้ตรงกัน",
-    })
+    });
   }
 
   if (!validateResult) {
@@ -197,28 +200,28 @@ async function saveProfile() {
       icon: "warning",
       title: "กรุณากรอกข้อมูลให้ครบ",
       text: "กรุณาตรวจสอบข้อมูลอีกครั้ง",
-    })
+    });
   }
 
-  // ถ้าผ่านทั้งหมด → ถามก่อนบันทึก
+  // ยืนยันก่อนบันทึก
   const { isConfirmed } = await Swal.fire({
     title: "ยืนยันการบันทึก?",
     icon: "question",
     showCancelButton: true,
     confirmButtonText: "บันทึก",
     cancelButtonText: "ยกเลิก",
-  })
+  });
 
-  if (!isConfirmed) return
+  if (!isConfirmed) return;
 
-  // Frontend-only: แสดง success
+  // ส่งข้อมูลไป backend หรือ frontend-only success
   Swal.fire({
     icon: "success",
     title: "บันทึกสำเร็จ",
     text: "ข้อมูลของคุณได้รับการอัปเดตเรียบร้อยแล้ว",
   }).then(() => {
-    closePopup()
-  })
+    closePopup();
+  });
 }
 
 const getFullNameTH = () => {
@@ -384,7 +387,7 @@ const getFullNameEN = () => {
             
               <div>
                 <label class="block text-sm sm:text-base font-medium text-black mb-2">
-                  รหัสผ่านใหม่ <span class="text-red-500">*</span>
+                  รหัสผ่านใหม่
                 </label>
                 <input
                   v-model="editForm.password"
@@ -396,7 +399,7 @@ const getFullNameEN = () => {
             
               <div>
                 <label class="block text-sm sm:text-base font-medium text-black mb-2">
-                  ยืนยันรหัสผ่าน <span class="text-red-500">*</span>
+                  ยืนยันรหัสผ่าน
                 </label>
                 <input
                   v-model="editForm.confirmPassword"
