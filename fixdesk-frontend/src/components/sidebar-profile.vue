@@ -289,30 +289,30 @@ const getFullNameEN = () => {
     </div>
 
     <!-- Popup -->
-    <div v-if="showPopup" class="fixed inset-0 bg-black/50 flex justify-center items-center z-50 px-4 cursor-default" @click.stop>
-      <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[92vh] overflow-y-auto p-8">
+    <div v-if="showPopup" class="fixed inset-0 bg-black/50 flex justify-center items-center z-50 px-4 py-6 sm:py-8 cursor-default" @click.self="closePopup">
+      <div class="bg-white rounded-lg shadow-xl w-full max-w-lg sm:max-w-2xl max-h-[92vh] overflow-y-auto p-6 sm:p-8">
         <!-- Tabs -->
         <div class="mb-6">
           <div class="flex bg-gray-100 border border-gray-300 rounded-xl p-1">
-            <button @click="activeTab = 'personal'" class="flex-1 py-2.5 text-sm md:text-base font-semibold rounded-lg transition-all duration-300"
+            <button @click="activeTab = 'personal'" class="flex-1 py-2 text-sm sm:text-base font-semibold rounded-lg transition-all duration-300"
               :class="activeTab === 'personal' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-600 hover:bg-gray-200'">
               ข้อมูลส่วนตัว
             </button>
-            <button @click="activeTab = 'account'" class="flex-1 py-2.5 text-sm md:text-base font-semibold rounded-lg transition-all duration-300"
+            <button @click="activeTab = 'account'" class="flex-1 py-2 text-sm sm:text-base font-semibold rounded-lg transition-all duration-300"
               :class="activeTab === 'account' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-600 hover:bg-gray-200'">
               ข้อมูลบัญชี
             </button>
           </div>
         </div>
-
+      
         <div>
           <!-- PERSONAL TAB -->
           <div v-if="activeTab === 'personal'">
-            <h2 class="text-black text-2xl font-bold mb-6">ข้อมูลส่วนตัว</h2>
-
+            <h2 class="text-black text-xl sm:text-2xl font-bold mb-6">ข้อมูลส่วนตัว</h2>
+          
             <!-- ชื่อภาษาไทย -->
             <div class="mb-5">
-              <label class="block text-sm font-medium mb-1 text-black">
+              <label class="block text-sm sm:text-base font-medium mb-1 text-black">
                 ชื่อ - นามสกุล (ภาษาไทย)
               </label>
               <input 
@@ -322,10 +322,10 @@ const getFullNameEN = () => {
                 disabled
               >
             </div>
-
+          
             <!-- ชื่อภาษาอังกฤษ -->
             <div class="mb-5">
-              <label class="block text-sm font-medium mb-1 text-black">
+              <label class="block text-sm sm:text-base font-medium mb-1 text-black">
                 ชื่อ - นามสกุล (ภาษาอังกฤษ)
               </label>
               <input 
@@ -335,16 +335,16 @@ const getFullNameEN = () => {
                 disabled
               >
             </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
               <div>
-                <label class="block text-sm font-medium mb-1 text-black">
+                <label class="block text-sm sm:text-base font-medium mb-1 text-black">
                   หน่วยงาน
                 </label>
                 <input v-model="editForm.us_department" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-black bg-gray-100 cursor-not-allowed" disabled>
               </div>
               <div>
-                <label class="block text-sm font-medium mb-1 text-black">
+                <label class="block text-sm sm:text-base font-medium mb-1 text-black">
                   เบอร์โทรศัพท์ <span class="text-red-500">*</span>
                 </label>
                 <input v-model="editForm.us_phone" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-black">
@@ -352,71 +352,64 @@ const getFullNameEN = () => {
               </div>
             </div>
           </div>
-
+        
           <!-- ACCOUNT TAB -->
-          <div v-if="activeTab === 'account'" class="p-6">
-            <!-- หัวข้อ -->
-            <h2 class="text-black text-2xl font-bold mb-6">ข้อมูลบัญชี</h2>
-                    
-            <!-- Grid 2x2 -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              <!-- ชื่อบัญชี -->
+          <div v-if="activeTab === 'account'">
+            <h2 class="text-black text-xl sm:text-2xl font-bold mb-6">ข้อมูลบัญชี</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
               <div>
-                <label class="block text-sm font-medium text-black mb-2">
+                <label class="block text-sm sm:text-base font-medium text-black mb-2">
                   ชื่อบัญชีผู้ใช้ <span class="text-red-500">*</span>
                 </label>
                 <input
                   v-model="username"
                   type="text"
                   placeholder="กรอกชื่อบัญชีผู้ใช้"
-                  class="w-full border border-gray-300 rounded-lg px-4 py-2 text-black focus:ring-2 focus:ring-black focus:outline-none transition"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 sm:px-4 sm:py-2 text-black focus:ring-2 focus:ring-black focus:outline-none transition"
                 />
                 <p v-if="errors.username" class="text-red-500 text-sm mt-1">{{ errors.username }}</p>
               </div>
             
-              <!-- รหัสผ่านเดิม -->
               <div>
-                <label class="block text-sm font-medium text-black mb-2">
+                <label class="block text-sm sm:text-base font-medium text-black mb-2">
                   รหัสผ่านเดิม <span class="text-red-500">*</span>
                 </label>
                 <input
                   v-model="editForm.oldPassword"
                   type="password"
-                  class="w-full border border-gray-300 rounded-lg px-4 py-2 text-black focus:ring-2 focus:ring-black focus:outline-none transition"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 sm:px-4 sm:py-2 text-black focus:ring-2 focus:ring-black focus:outline-none transition"
                 />
                 <p v-if="errors.oldPassword" class="text-red-500 text-sm mt-1">{{ errors.oldPassword }}</p>
               </div>
             
-              <!-- รหัสผ่านใหม่ -->
               <div>
-                <label class="block text-sm font-medium text-black mb-2">
+                <label class="block text-sm sm:text-base font-medium text-black mb-2">
                   รหัสผ่านใหม่ <span class="text-red-500">*</span>
                 </label>
                 <input
                   v-model="editForm.password"
                   type="password"
-                  class="w-full border border-gray-300 rounded-lg px-4 py-2 text-black focus:ring-2 focus:ring-black focus:outline-none transition"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 sm:px-4 sm:py-2 text-black focus:ring-2 focus:ring-black focus:outline-none transition"
                 />
                 <p v-if="errors.password" class="text-red-500 text-sm mt-1">{{ errors.password }}</p>
               </div>
             
-              <!-- ยืนยันรหัสผ่าน -->
               <div>
-                <label class="block text-sm font-medium text-black mb-2">
+                <label class="block text-sm sm:text-base font-medium text-black mb-2">
                   ยืนยันรหัสผ่าน <span class="text-red-500">*</span>
                 </label>
                 <input
                   v-model="editForm.confirmPassword"
                   type="password"
-                  class="w-full border border-gray-300 rounded-lg px-4 py-2 text-black focus:ring-2 focus:ring-black focus:outline-none transition"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 sm:px-4 sm:py-2 text-black focus:ring-2 focus:ring-black focus:outline-none transition"
                 />
                 <p v-if="errors.confirmPassword" class="text-red-500 text-sm mt-1">{{ errors.confirmPassword }}</p>
               </div>
             </div>
           </div>
-
+        
           <!-- Footer -->
-          <div class="flex justify-end gap-3 mt-4 pt-4 border-t">
+          <div class="flex flex-col sm:flex-row justify-end gap-3 mt-4 pt-4 border-t">
             <button @click="closePopup" class="px-6 py-2 border border-gray-300 rounded-lg text-black hover:bg-gray-100 transition">
               ยกเลิก
             </button>
