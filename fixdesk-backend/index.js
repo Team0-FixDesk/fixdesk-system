@@ -1243,24 +1243,32 @@ app.delete("/my-repairs/:code", authMiddleware, (req, res) => {
   const { code } = req.params;
   console.log("🧭 ลบฟอร์ม code =", code);
 
-  db.query(
-    "DELETE FROM repair_form WHERE rf_code = ?",
-    [code],
-    (err, result) => {
-      if (err) {
-        console.error("❌ ลบข้อมูลไม่สำเร็จ:", err);
-        return res.status(500).json({ message: "เกิดข้อผิดพลาดในระบบ" });
-      }
+  const sql = `
+    DELETE FROM repair_form
+    WHERE rf_code = ?
+      AND rf_user_status = 'pending'
+  `;
 
-      if (result.affectedRows === 0) {
-        console.warn("⚠️ ไม่พบใบแจ้งซ่อม:", code);
-        return res.status(404).json({ message: "ไม่พบใบแจ้งซ่อมนี้" });
-      }
-
-      console.log(`🗑️ ลบสำเร็จ: ${code}`);
-      res.json({ message: "ลบข้อมูลเรียบร้อยแล้ว" });
+  db.query(sql, [code], (err, result) => {
+    if (err) {
+      console.error("❌ ลบข้อมูลไม่สำเร็จ:", err);
+      return res.status(500).json({ message: "เกิดข้อผิดพลาดในระบบ" });
     }
-  );
+
+    if (result.affectedRows === 0) {
+      console.warn(
+        "⚠️ ไม่สามารถลบใบแจ้งซ่อมนี้ได้ (ไม่อยู่ในสถานะรอดำเนินการ):",
+        code
+      );
+      return res.status(400).json({
+        message:
+          "ไม่สามารถลบใบแจ้งซ่อมนี้ได้ เนื่องจากรายการอยู่ระหว่างดำเนินการหรือเสร็จสิ้นแล้ว",
+      });
+    }
+
+    console.log(`🗑️ ลบสำเร็จ: ${code}`);
+    res.json({ message: "ลบข้อมูลเรียบร้อยแล้ว" });
+  });
 });
 
 // =========================
@@ -1374,19 +1382,20 @@ app.put("/repair-requests/:code", (req, res) => {
   }
 
   const sql = `
-    UPDATE repair_form
-    SET 
-      rf_us_id = ?,
-      rf_tt_id = ?,
-      rf_room_id = ?,
-      rf_prop_number = ?,
-      rf_problem = ?,
-      rf_detail = ?,
-      rf_phone = ?,
-      rf_urgency = ?,
-      rf_update_at = NOW()
-    WHERE rf_code = ?
-  `;
+  UPDATE repair_form
+  SET 
+    rf_us_id = ?,
+    rf_tt_id = ?,
+    rf_room_id = ?,
+    rf_prop_number = ?,
+    rf_problem = ?,
+    rf_detail = ?,
+    rf_phone = ?,
+    rf_urgency = ?,
+    rf_update_at = NOW()
+  WHERE rf_code = ?
+    AND rf_user_status = 'pending'
+`;
 
   const params = [
     us_id || null,
