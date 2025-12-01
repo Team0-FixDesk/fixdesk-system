@@ -1149,11 +1149,11 @@ app.post("/assign-repair", authMiddleware, (req, res) => {
 
   // ตรวจสอบว่าช่างมีอยู่จริงและเป็น role 'Technician'
   const techQuery = `
-    SELECT u.us_tt_id, r.role_name
-    FROM user u
-    LEFT JOIN role r ON u.us_role_id = r.role_id
-    WHERE u.us_id = ?
-  `;
+  SELECT u.us_tt_id, u.us_role_id, r.role_name
+  FROM user u
+  LEFT JOIN role r ON u.us_role_id = r.role_id
+  WHERE u.us_id = ?
+`;
 
   db.query(techQuery, [technician_id], (err, results) => {
     if (err) {
@@ -1165,7 +1165,7 @@ app.post("/assign-repair", authMiddleware, (req, res) => {
     }
 
     const tech = results[0];
-    if (tech.role_name !== "Technician") {
+    if (tech.us_role_id !== 2) {
       return res.status(400).json({ message: "ผู้ใช้นี้ไม่ใช่ช่าง" });
     }
 
@@ -1173,13 +1173,16 @@ app.post("/assign-repair", authMiddleware, (req, res) => {
 
     // อัปเดตรายการแจ้งซ่อมโดยใช้ rf_code
     const updateQuery = `
-      UPDATE repair_form
-      SET 
-        rf_tt_id = ?,
-        rf_assigned_tech_id = ?,
-        rf_user_status = 'in_progress'
-      WHERE rf_code = ? AND rf_user_status = 'pending'
-    `;
+  UPDATE repair_form
+  SET 
+    rf_tt_id = ?,
+    rf_assigned_tech_id = ?,
+    rf_user_status = 'in_progress',
+    rf_in_process_at = IF(rf_in_process_at IS NULL, NOW(), rf_in_process_at),
+    rf_update_at = NOW()
+  WHERE rf_code = ?
+    AND rf_user_status = 'pending'
+`;
 
     db.query(
       updateQuery,
@@ -1285,12 +1288,14 @@ app.get("/repair-requests/:code", (req, res) => {
       rf.rf_urgency,
       rf.rf_phone,
       rf.rf_create_at,
+      rf.rf_in_process_at,
+      rf.rf_done_at,
       rf.rf_user_status,
       rf.rf_tech_status,
       rf.rf_prop_number,
       rf.rf_image,
 
-      -- ✅ เพิ่ม id ทั้งหมด
+      -- ✅ ประเภทงาน / สถานที่
       t.tt_id AS repair_type_id,
       t.tt_name AS repair_type_name,
       b.bd_id AS building_id,
@@ -1300,17 +1305,31 @@ app.get("/repair-requests/:code", (req, res) => {
       r.room_id AS room_id,
       r.room_name AS room_name,
 
+      -- ✅ ผู้แจ้ง
       CONCAT(tn.ttn_title_th, u.us_first_name_th, ' ', u.us_last_name_th) AS reporter_name,
       u.us_phone AS reporter_phone,
-      u.us_department AS reporter_department
+      u.us_department AS reporter_department,
+
+      -- ✅ ผู้รับผิดชอบงานหลัก (ช่าง)
+      tech.us_id AS main_technician_id,
+      CONCAT(tn_tech.ttn_title_th, tech.us_first_name_th, ' ', tech.us_last_name_th) AS main_technician_name,
+      tt_tech.tt_name AS main_technician_position
 
     FROM repair_form rf
     LEFT JOIN room r ON rf.rf_room_id = r.room_id
     LEFT JOIN floor f ON r.room_fl_id = f.fl_id
     LEFT JOIN building b ON f.fl_bd_id = b.bd_id
     LEFT JOIN technician_type t ON rf.rf_tt_id = t.tt_id
+
+    -- ผู้แจ้ง
     LEFT JOIN user u ON rf.rf_us_id = u.us_id
     LEFT JOIN title_name tn ON u.us_ttn_id = tn.ttn_id
+
+    -- ผู้รับผิดชอบงานหลัก (ช่างที่ถูก assign)
+    LEFT JOIN user tech ON rf.rf_assigned_tech_id = tech.us_id
+    LEFT JOIN title_name tn_tech ON tech.us_ttn_id = tn_tech.ttn_id
+    LEFT JOIN technician_type tt_tech ON tech.us_tt_id = tt_tech.tt_id
+
     WHERE rf.rf_code = ?
   `;
 
@@ -1337,10 +1356,12 @@ app.get("/repair-requests/:code", (req, res) => {
       rf_tech_status: r.rf_tech_status || "-",
       rf_phone: r.rf_phone || "-",
       rf_create_at: r.rf_create_at || "-",
+      rf_in_process_at: r.rf_in_process_at || null,
+      rf_done_at: r.rf_done_at || null,
       rf_prop_number: r.rf_prop_number || "-",
       rf_image: r.rf_image || null,
 
-      // ✅ เพิ่ม id และ name
+      // ✅ id + name สถานที่/ประเภท
       repair_type_id: r.repair_type_id || null,
       repair_type_name: r.repair_type_name || "-",
       building_id: r.building_id || null,
@@ -1350,11 +1371,16 @@ app.get("/repair-requests/:code", (req, res) => {
       room_id: r.room_id || null,
       room_name: r.room_name || "-",
 
+      // ✅ ผู้แจ้ง
       reporter: {
         name: r.reporter_name || "-",
         phone: r.reporter_phone || "-",
         department: r.reporter_department || "-",
       },
+
+      // ✅ ผู้รับผิดชอบงานหลัก (สำหรับหน้า detail)
+      main_technician: r.main_technician_name || "-",
+      tech_position: r.main_technician_position || "-",
     });
   });
 });
