@@ -21,7 +21,7 @@ const lastNameEN = ref('')
 const username = ref('')
 const tokenData = ref({})
 
-const editForm = reactive({
+const editForm = ref({
   us_ttn_id: '',
   us_department: '',
   us_phone: '',
@@ -30,7 +30,7 @@ const editForm = reactive({
   confirmPassword: ''
 })
 
-const errors = reactive({
+const errors = ref({
   us_ttn_id: '',
   firstNameTH: '',
   lastNameTH: '',
@@ -76,37 +76,48 @@ function logout(e) {
 }
 
 
-
 // รีเซ็ตฟอร์มและ errors
 function resetForm() {
-  editForm.us_ttn_id = ''
-  editForm.us_department = ''
-  editForm.us_phone = ''
-  editForm.password = ''
-  editForm.confirmPassword = ''
+  editForm.value = {
+    us_ttn_id: '',
+    us_department: '',
+    us_phone: '',
+    oldPassword: '',
+    password: '',
+    confirmPassword: ''
+  }
 
   firstNameTH.value = ''
   lastNameTH.value = ''
   firstNameEN.value = ''
   lastNameEN.value = ''
   username.value = ''
-  editForm.oldPassword = ''
-  
 
-  for (const key in errors) errors[key] = ''
+  errors.value = {
+    us_ttn_id: '',
+    firstNameTH: '',
+    lastNameTH: '',
+    firstNameEN: '',
+    lastNameEN: '',
+    us_department: '',
+    us_phone: '',
+    username: '',
+    password: '',
+    confirmPassword: ''
+  }
 }
 
 // map ข้อมูลจาก token
 function initFormFromToken() {
   const data = tokenData.value || {}
   const prefixText = data.us_prefix_th || ''
-  if (prefixText === 'นาย') editForm.us_ttn_id = '1'
-  else if (prefixText === 'นาง') editForm.us_ttn_id = '2'
-  else if (prefixText === 'นางสาว') editForm.us_ttn_id = '3'
-  else editForm.us_ttn_id = '4'
+  if (prefixText === 'นาย') editForm.value.us_ttn_id = '1'
+  else if (prefixText === 'นาง') editForm.value.us_ttn_id = '2'
+  else if (prefixText === 'นางสาว') editForm.value.us_ttn_id = '3'
+  else editForm.value.us_ttn_id = '4'
 
-  editForm.us_department = data.us_department || ''
-  editForm.us_phone = data.us_tel || ''
+  editForm.value.us_department = data.us_department || ''
+  editForm.value.us_phone = data.us_tel || ''
 
   firstNameTH.value = data.us_first_name_th || ''
   lastNameTH.value = data.us_last_name_th || ''
@@ -124,14 +135,14 @@ async function fetchDataFromDB() {
         'Authorization': `Bearer ${localStorage.getItem('token')}`,
         'Content-Type': 'application/json'
       }
-    });
+    })
 
-    const data = await res.json();
+    const data = await res.json()
 
     if (data) {
-      editForm.us_ttn_id = data.us_ttn_id || editForm.us_ttn_id
-      editForm.us_department = data.us_department || editForm.us_department
-      editForm.us_phone = data.us_phone || editForm.us_phone
+      editForm.value.us_ttn_id = data.us_ttn_id || editForm.value.us_ttn_id
+      editForm.value.us_department = data.us_department || editForm.value.us_department
+      editForm.value.us_phone = data.us_phone || editForm.value.us_phone
       firstNameTH.value = data.us_first_name_th || firstNameTH.value
       lastNameTH.value = data.us_last_name_th || lastNameTH.value
       firstNameEN.value = data.us_first_name_en || firstNameEN.value
@@ -145,8 +156,8 @@ async function fetchDataFromDB() {
 
 async function openPopup() {
   resetForm()
-  initFormFromToken()
-  await fetchDataFromDB() // ดึงข้อมูลเดิมจาก DB
+  // ❌ initFormFromToken()   เอาออก
+  await loadUserData()       // ดึงจาก DB ตาม userId ที่อยู่ใน token
   activeTab.value = 'personal'
   showPopup.value = true
 }
@@ -157,32 +168,54 @@ function closePopup() {
 }
 
 function validateForm() {
-  let valid = true;
-  for (const key in errors) errors[key] = "";
+  let valid = true
+  errors.value = {
+    us_ttn_id: '',
+    firstNameTH: '',
+    lastNameTH: '',
+    firstNameEN: '',
+    lastNameEN: '',
+    us_department: '',
+    us_phone: '',
+    username: '',
+    password: '',
+    confirmPassword: ''
+  }
+  if (!/^\d{9,10}$/.test(editForm.value.us_phone)) {
+    errors.value.us_phone = "เบอร์โทรศัพท์ต้องมี 9 หรือ 10 หลัก";
+    valid = false;
+  }
+  if (!editForm.value.us_ttn_id) { 
+    errors.value.us_ttn_id = "เลือกคำนำหน้า"; valid = false; 
+  }
+  if (!firstNameTH.value) { 
+    errors.value.firstNameTH = "กรุณากรอกชื่อ (ไทย)"; valid = false; 
+  }
+  if (!lastNameTH.value) { 
+    errors.value.lastNameTH = "กรุณากรอกนามสกุล (ไทย)"; valid = false; 
+  }
+  if (!editForm.value.us_phone) { 
+    errors.value.us_phone = "กรุณากรอกเบอร์โทรศัพท์"; valid = false; 
+  }
+  if (!username.value) { 
+    errors.value.username = "กรุณากรอกชื่อบัญชีผู้ใช้"; valid = false; 
+  }
+  if (!editForm.value.oldPassword) { 
+    errors.value.oldPassword = "กรุณากรอกรหัสผ่านเดิม"; valid = false; 
+  }
 
-  // ตรวจข้อมูลจำเป็น
-  if (!editForm.us_ttn_id) { errors.us_ttn_id = "เลือกคำนำหน้า"; valid = false; }
-  if (!firstNameTH.value) { errors.firstNameTH = "กรุณากรอกชื่อ (ไทย)"; valid = false; }
-  if (!lastNameTH.value) { errors.lastNameTH = "กรุณากรอกนามสกุล (ไทย)"; valid = false; }
-  if (!editForm.us_phone) { errors.us_phone = "กรุณากรอกเบอร์โทรศัพท์"; valid = false; }
-  if (!username.value) { errors.username = "กรุณากรอกชื่อบัญชีผู้ใช้"; valid = false; }
-  if (!editForm.oldPassword) { errors.oldPassword = "กรุณากรอกรหัสผ่านเดิม"; valid = false; }
-
-  // ตรวจรหัสผ่านใหม่เฉพาะเมื่อมีการกรอก
-  if (editForm.password) {
-    if (!editForm.confirmPassword) {
-      errors.confirmPassword = "กรุณายืนยันรหัสผ่านใหม่";
-      valid = false;
-    } else if (editForm.password !== editForm.confirmPassword) {
-      errors.confirmPassword = "รหัสผ่านใหม่ไม่ตรงกัน";
-      return "passwordMismatch";
+  if (editForm.value.password) {
+    if (!editForm.value.confirmPassword) {
+      errors.value.confirmPassword = "กรุณายืนยันรหัสผ่านใหม่"
+      valid = false
+    } else if (editForm.value.password !== editForm.value.confirmPassword) {
+      errors.value.confirmPassword = "รหัสผ่านใหม่ไม่ตรงกัน"
+      return "passwordMismatch"
     }
   }
 
-  return valid;
+  return valid
 }
-
-
 
 async function saveProfile() {
   const validateResult = validateForm();
@@ -211,44 +244,127 @@ async function saveProfile() {
     confirmButtonText: "บันทึก",
     cancelButtonText: "ยกเลิก",
   });
-
   if (!isConfirmed) return;
 
-  // ส่งข้อมูลไป backend หรือ frontend-only success
-  Swal.fire({
-    icon: "success",
-    title: "บันทึกสำเร็จ",
-    text: "ข้อมูลของคุณได้รับการอัปเดตเรียบร้อยแล้ว",
-  }).then(() => {
+  try {
+    const userId = tokenData.value?.us_id;
+    if (!userId) {
+      return Swal.fire({
+        icon: "error",
+        title: "ผิดพลาด",
+        text: "ไม่พบข้อมูลผู้ใช้ กรุณาเข้าสู่ระบบใหม่",
+      });
+    }
+
+    // เตรียมข้อมูลส่งไป backend
+    const payload = {
+      us_ttn_id: editForm.value.us_ttn_id,
+      us_department: editForm.value.us_department,
+      us_phone: editForm.value.us_phone,
+      us_first_name_th: firstNameTH.value,
+      us_last_name_th: lastNameTH.value,
+      us_first_name_en: firstNameEN.value,
+      us_last_name_en: lastNameEN.value,
+      us_user_name: username.value,
+
+      // ต้องส่ง oldPassword ทุกครั้งถ้าผู้ใช้กรอกรหัสใหม่
+      oldPassword: editForm.value.oldPassword || "",
+
+      // optional ถ้าไม่แก้จะเป็น ""
+      password: editForm.value.password || ""
+    };
+
+    const res = await fetch(`${API_BASE}/edit-personal/${userId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${localStorage.getItem("token")}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json();
+
+    // ❗ ถ้ารหัสผ่านเดิมผิด → backend ต้องส่ง error กลับมา → ห้ามบันทึก
+    if (!res.ok) {
+      return Swal.fire({
+        icon: "error",
+        title: data.message || "อัปเดตไม่สำเร็จ",
+        text: data.error || "",
+      });
+    }
+
+    // ดึงข้อมูลล่าสุดจาก backend เพื่อ sync กับ popup
+    await loadUserData();  // ← ต้องมีฟังก์ชันนี้ (ผมให้ด้านล่าง)
+
+    Swal.fire({
+      icon: "success",
+      title: "บันทึกสำเร็จ",
+      text: data.message || "อัปเดตข้อมูลส่วนตัวเรียบร้อยแล้ว",
+    });
+
     closePopup();
-  });
+
+  } catch (err) {
+    console.error("saveProfile error:", err);
+    Swal.fire({
+      icon: "error",
+      title: "ข้อผิดพลาด",
+      text: "ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ โปรดตรวจสอบ backend",
+    });
+  }
 }
 
-const getFullNameTH = () => {
-  if (!editForm || !editForm.us_ttn_id) return "";
 
+async function loadUserData() {
+  try {
+    const userId = tokenData.value?.us_id;
+    if (!userId) return;
+
+    const res = await fetch(`${API_BASE}/user/${userId}`);
+    if (!res.ok) throw new Error("ไม่พบข้อมูลผู้ใช้");
+
+    const data = await res.json();
+
+    // อัปเดตข้อมูลใน popup
+    editForm.value.us_ttn_id = data.us_ttn_id;
+    editForm.value.us_department = data.us_department;
+    editForm.value.us_phone = data.us_phone;
+    firstNameTH.value = data.us_first_name_th;
+    lastNameTH.value = data.us_last_name_th;
+    firstNameEN.value = data.us_first_name_en;
+    lastNameEN.value = data.us_last_name_en;
+    username.value = data.us_user_name;
+
+  } catch (err) {
+    console.error("โหลดข้อมูลผู้ใช้ล้มเหลว:", err);
+  }
+}
+
+
+
+
+const getFullNameTH = () => {
   const title = {
     1: "นาย",
     2: "นาง",
     3: "นางสาว",
     4: "อื่นๆ"
-  }[editForm.us_ttn_id] || "";
+  }[editForm.value.us_ttn_id] || ""
 
-  return `${title}${firstNameTH.value || ""} ${lastNameTH.value || ""}`.trim();
-};
+  return `${title}${firstNameTH.value} ${lastNameTH.value}`.trim()
+}
 
 const getFullNameEN = () => {
-  if (!editForm || !editForm.us_ttn_id) return "";
-
   const title = {
     1: "Mr.",
     2: "Mrs.",
     3: "Ms.",
     4: "Other"
-  }[editForm.us_ttn_id] || "";
+  }[editForm.value.us_ttn_id] || ""
 
-  return `${title}${firstNameEN.value || ""} ${lastNameEN.value || ""}`.trim();
-};
+  return `${title}${firstNameEN.value} ${lastNameEN.value}`.trim()
+}
 
 </script>
 
@@ -350,7 +466,13 @@ const getFullNameEN = () => {
                 <label class="block text-sm sm:text-base font-medium mb-1 text-black">
                   เบอร์โทรศัพท์ <span class="text-red-500">*</span>
                 </label>
-                <input v-model="editForm.us_phone" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-black">
+                <input
+                  v-model="editForm.us_phone"
+                  type="text"
+                  maxlength="10"
+                  @input="editForm.us_phone = editForm.us_phone.replace(/[^0-9]/g, '').slice(0, 10)"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-black"
+                />
                 <p v-if="errors.us_phone" class="text-red-500 text-sm mt-1">{{ errors.us_phone }}</p>
               </div>
             </div>
