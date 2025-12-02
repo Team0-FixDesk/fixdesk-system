@@ -65,16 +65,16 @@ async function fetchAllRepairs() {
     rows.value = data.map((r) => {
       const urgencyBadge =
         {
-          low: `<span class="inline-flex justify-center items-center w-28 h-8 rounded-full bg-green-100 text-green-600 font-medium">ไม่เร่งด่วน</span>`,
-          medium: `<span class="inline-flex justify-center items-center w-28 h-8 rounded-full bg-yellow-100 text-yellow-600 font-medium">เร่งด่วน</span>`,
-          high: `<span class="inline-flex justify-center items-center w-28 h-8 rounded-full bg-red-100 text-red-600 font-medium">เร่งด่วนมาก</span>`,
+          low: `<span class="inline-flex items-center justify-center h-8 font-medium text-green-600 bg-green-100 rounded-full w-28">ไม่เร่งด่วน</span>`,
+          medium: `<span class="inline-flex items-center justify-center h-8 font-medium text-yellow-600 bg-yellow-100 rounded-full w-28">เร่งด่วน</span>`,
+          high: `<span class="inline-flex items-center justify-center h-8 font-medium text-red-600 bg-red-100 rounded-full w-28">เร่งด่วนมาก</span>`,
         }[r.rf_urgency] || '-'
 
       const statusBadge =
         {
-          pending: `<span class="inline-flex justify-center items-center w-28 h-8 rounded-full bg-amber-100 text-amber-700 font-medium">รอดำเนินการ</span>`,
-          in_progress: `<span class="inline-flex justify-center items-center w-28 h-8 rounded-full bg-blue-100 text-blue-700 font-medium">กำลังดำเนินการ</span>`,
-          done: `<span class="inline-flex justify-center items-center w-28 h-8 rounded-full bg-green-100 text-green-700 font-medium">เสร็จสิ้น</span>`,
+          pending: `<span class="inline-flex items-center justify-center h-8 font-medium rounded-full w-28 bg-amber-100 text-amber-700">รอดำเนินการ</span>`,
+          in_progress: `<span class="inline-flex items-center justify-center h-8 font-medium text-blue-700 bg-blue-100 rounded-full w-28">กำลังดำเนินการ</span>`,
+          done: `<span class="inline-flex items-center justify-center h-8 font-medium text-green-700 bg-green-100 rounded-full w-28">เสร็จสิ้น</span>`,
         }[r.rf_user_status] || '-'
 
       return [
@@ -248,7 +248,7 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
 </script>
 
 <template>
-  <div class="bg-gray-50 rounded-xl p-1 mx-auto max-w-7xl">
+  <div class="p-1 mx-auto bg-gray-50 rounded-xl max-w-7xl">
     <!-- 🔍 ฟิลเตอร์ -->
     <div class="flex flex-wrap items-center gap-3 mb-6">
       <input
@@ -260,14 +260,14 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
       <input
         v-model="selectedDate"
         type="date"
-        class="h-10 px-3 rounded-lg border border-gray-300 bg-white text-gray-700"
+        class="h-10 px-3 text-gray-700 bg-white border border-gray-300 rounded-lg"
       />
 
       <!-- 🔸 สถานะ -->
       <div class="relative">
         <button
           @click.stop="showStatusFilter = !showStatusFilter"
-          class="flex items-center gap-1 border border-gray-300 rounded-lg px-4 py-2 bg-white text-gray-700"
+          class="flex items-center gap-1 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg"
         >
           สถานะ
           <img
@@ -278,7 +278,7 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
         </button>
         <div
           v-if="showStatusFilter"
-          class="absolute mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg p-3 text-sm text-gray-700 z-10"
+          class="absolute z-10 w-48 p-3 mt-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-md shadow-lg"
         >
           <label class="flex items-center py-1">
             <input
@@ -314,7 +314,7 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
       <div class="relative">
         <button
           @click.stop="showUrgencyFilter = !showUrgencyFilter"
-          class="flex items-center gap-1 border border-gray-300 rounded-lg px-4 py-2 bg-white text-gray-700"
+          class="flex items-center gap-1 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg"
         >
           ความเร่งด่วน
           <img
@@ -325,7 +325,7 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
         </button>
         <div
           v-if="showUrgencyFilter"
-          class="absolute mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg p-3 text-sm text-gray-700 z-10"
+          class="absolute z-10 w-48 p-3 mt-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-md shadow-lg"
         >
           <label class="flex items-center py-1">
             <input
@@ -362,7 +362,7 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
         <button
           v-if="selectedStatuses.length || selectedUrgencies.length || searchQuery"
           @click="clearFilters"
-          class="text-blue-600 hover:text-blue-700 text-sm font-medium"
+          class="text-sm font-medium text-blue-600 hover:text-blue-700"
         >
           ล้างตัวกรอง
         </button>
@@ -371,8 +371,8 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
   </div>
 
   <!-- 🧾 ตาราง -->
-  <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-7xl">
-    <h1 class="text-xl font-bold text-back mb-6">ตรวจสอบคำร้องแจ้งซ่อมทั้งหมด</h1>
+  <div class="p-8 mx-auto bg-white shadow-md rounded-xl max-w-7xl">
+    <h1 class="mb-6 text-xl font-bold text-back">ตรวจสอบคำร้องแจ้งซ่อมทั้งหมด</h1>
 
     <TableComponent
       :columns="columns"
@@ -386,15 +386,15 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
   <!-- 🧑‍🔧 Popup มอบหมายงาน -->
   <div
     v-if="showAssignPopup"
-    class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40"
   >
-    <div class="bg-white rounded-xl shadow-lg w-full max-w-lg p-6 relative">
-      <h2 class="text-xl font-semibold mb-4 text-blue-700">มอบหมายงานให้ผู้รับผิดชอบหลัก</h2>
+    <div class="relative w-full max-w-lg p-6 bg-white shadow-lg rounded-xl">
+      <h2 class="mb-4 text-xl font-semibold text-blue-700">มอบหมายงานให้ผู้รับผิดชอบหลัก</h2>
 
       <!-- ปุ่มปิด -->
       <button
         @click="closeAssignPopup"
-        class="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-lg"
+        class="absolute text-lg text-gray-500 top-4 right-4 hover:text-gray-700"
       >
         ✕
       </button>
@@ -402,7 +402,7 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
       <!-- 🔧 ประเภทช่าง -->
       <select
         v-model="selectedType"
-        class="border border-gray-300 rounded-md px-3 py-2 w-full mb-3 focus:ring-2 focus:ring-blue-400 focus:outline-none"
+        class="w-full px-3 py-2 mb-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 focus:outline-none"
       >
         <option value="">ประเภทช่างทั้งหมด</option>
         <option v-for="type in technicianTypes" :key="type.tt_id" :value="type.tt_name">
@@ -415,15 +415,15 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
         v-model="searchTech"
         type="text"
         placeholder="ค้นหาช่าง..."
-        class="border border-gray-300 rounded-md px-3 py-2 w-full mb-4 focus:ring-2 focus:ring-blue-400 focus:outline-none"
+        class="w-full px-3 py-2 mb-4 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 focus:outline-none"
       />
 
       <!-- รายชื่อช่าง -->
-      <div class="max-h-60 overflow-y-auto space-y-2">
+      <div class="space-y-2 overflow-y-auto max-h-60">
         <div
           v-for="tech in filteredTechnicians"
           :key="tech.us_id"
-          class="flex justify-between items-start p-3 border rounded-lg hover:bg-gray-50 transition cursor-pointer"
+          class="flex items-start justify-between p-3 transition border rounded-lg cursor-pointer hover:bg-gray-50"
           @click="selectedTechnician = tech.us_id"
         >
           <div class="flex flex-col text-sm">
@@ -439,11 +439,11 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
             name="selectedTech"
             :value="tech.us_id"
             v-model.number="selectedTechnician"
-            class="w-5 h-5 accent-blue-600 cursor-pointer mt-2"
+            class="w-5 h-5 mt-2 cursor-pointer accent-blue-600"
           />
         </div>
 
-        <p v-if="filteredTechnicians.length === 0" class="text-center text-gray-500 py-4">
+        <p v-if="filteredTechnicians.length === 0" class="py-4 text-center text-gray-500">
           — ไม่พบช่าง —
         </p>
       </div>
@@ -452,14 +452,14 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
       <div class="flex justify-end gap-3 mt-6">
         <button
           @click="closeAssignPopup"
-          class="px-5 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-md font-medium transition"
+          class="px-5 py-2 font-medium text-gray-700 transition bg-gray-200 rounded-md hover:bg-gray-300"
         >
           ยกเลิก
         </button>
         <button
           @click="confirmAssign"
           :disabled="!selectedTechnician || loadingAssign"
-          class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium transition disabled:opacity-50"
+          class="px-5 py-2 font-medium text-white transition bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
         >
           {{ loadingAssign ? 'กำลังมอบหมาย...' : 'ยืนยัน' }}
         </button>
