@@ -5,33 +5,36 @@ import { useRoute } from 'vue-router'
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
 const route = useRoute()
 
-// 🧩 ตัวแปรหลัก
 const repair = ref(null)
 const isLoading = ref(true)
 const isError = ref(false)
 const repairCode = route.params.code
 
-/* ===============================
-   📦 ดึงข้อมูลรายละเอียดใบแจ้งซ่อม
-   =============================== */
+// ดึงข้อมูลรายละเอียดใบแจ้งซ่อม
 async function fetchRepairDetail() {
   try {
     const res = await fetch(`${API_BASE}/repair-requests/${repairCode}?_=${Date.now()}`)
     const data = await res.json()
-
     if (!res.ok) throw new Error(data.message || 'โหลดข้อมูลไม่สำเร็จ')
 
-    repair.value = data
-    console.log('✅ โหลดข้อมูลสำเร็จ:', data)
+    // สร้าง timeline จากเวลาใน DB
+    const timeline = buildTimelineFromRepair(data)
+    // รวมทั้งหมดเข้า object เดียว
+    repair.value = {
+      ...data,
+      timeline,
+    }
+
+    console.log('โหลดข้อมูลสำเร็จ:', repair.value)
   } catch (err) {
-    console.error('❌ โหลดข้อมูลไม่สำเร็จ:', err)
+    console.error('โหลดข้อมูลไม่สำเร็จ:', err)
     isError.value = true
   } finally {
     isLoading.value = false
   }
 }
 
-// 🟢 แปลงสถานะงานให้เป็น badge สีสวย
+// แปลงสถานะงานให้เป็น badge สีสวย
 function getUserStatusBadge(status) {
   switch (status) {
     case 'pending':
@@ -45,7 +48,7 @@ function getUserStatusBadge(status) {
   }
 }
 
-// 🟠 แปลงความเร่งด่วนให้เป็น badge สี
+// แปลงความเร่งด่วนให้เป็น badge สี
 function getUrgencyBadge(urgency) {
   switch (urgency) {
     case 'high':
@@ -59,28 +62,70 @@ function getUrgencyBadge(urgency) {
   }
 }
 
-// ⚙️ เรียกใช้งานเมื่อโหลดหน้า
+// แปลงวัน-เวลาเป็นรูปแบบไทย (วันที่ + เวลา)
+function formatDateTimeTH(value) {
+  if (!value) return null
+  return new Date(value).toLocaleString('th-TH', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  })
+}
+
+// สร้าง timeline จากข้อมูลเวลาในฟอร์ม
+function buildTimelineFromRepair(data) {
+  const timeline = []
+
+  // Step 1: รอดำเนินการ (ใช้เวลา create_at)
+  if (data.rf_create_at) {
+    timeline.push({
+      date: formatDateTimeTH(data.rf_create_at),
+      title: 'รอดำเนินการ',
+      detail: 'ระบบได้รับใบแจ้งซ่อมของคุณแล้ว',
+    })
+  }
+
+  // Step 2: กำลังดำเนินการ (ถ้ามี in_process_at)
+  if (data.rf_in_process_at) {
+    timeline.push({
+      date: formatDateTimeTH(data.rf_in_process_at),
+      title: 'กำลังดำเนินการ',
+      detail: 'เจ้าหน้าที่ช่างกำลังดำเนินการซ่อมแซม',
+    })
+  }
+
+  // Step 3: ดำเนินการเสร็จสิ้น (ถ้ามี done_at)
+  if (data.rf_done_at) {
+    timeline.push({
+      date: formatDateTimeTH(data.rf_done_at),
+      title: 'ดำเนินการเสร็จสิ้น',
+      detail: 'งานซ่อมเสร็จสิ้นแล้ว',
+    })
+  }
+
+  return timeline
+}
+
+// เรียกใช้งานเมื่อโหลดหน้า
 onMounted(fetchRepairDetail)
 </script>
 
 <template>
   <div class="bg-gray-50 min-h-screen py-6 sm:py-10 space-y-6 sm:space-y-8 px-3 sm:px-6 lg:px-8">
-    <!-- ⏳ Loading -->
+    <!-- Loading -->
     <div v-if="isLoading" class="text-center text-gray-500 py-16 text-base sm:text-lg">
-      ⏳ กำลังโหลดข้อมูล...
+      กำลังโหลดข้อมูล...
     </div>
 
-    <!-- ❌ Error -->
+    <!-- Error -->
     <div
       v-else-if="isError"
       class="text-center text-red-500 py-16 text-base sm:text-lg font-medium"
     >
-      ❌ ไม่พบข้อมูลใบแจ้งซ่อม {{ repairCode }}
+      ไม่พบข้อมูลใบแจ้งซ่อม {{ repairCode }}
     </div>
 
-    <!-- ✅ Content -->
     <div v-else-if="repair" class="space-y-8">
-      <!-- 🔹 ส่วนหัวเรื่อง -->
+      <!-- ส่วนหัวเรื่อง -->
       <div
         class="bg-white rounded-xl shadow-sm p-4 sm:p-6 lg:p-8 mx-auto max-w-7xl border border-gray-100"
       >
@@ -94,17 +139,12 @@ onMounted(fetchRepairDetail)
             </p>
           </div>
 
-          <!-- 🔸 ขวา (Badge สถานะ / ความเร่งด่วน / ประเภท) -->
+          <!-- ขวา (Badge สถานะ / ความเร่งด่วน / ประเภท) -->
           <div
             class="flex flex-wrap gap-2 sm:gap-3 justify-start md:justify-end text-xs sm:text-sm"
           >
-            <!-- สถานะงาน -->
             <span v-html="getUserStatusBadge(repair?.rf_user_status)"></span>
-
-            <!-- ความเร่งด่วน -->
             <span v-html="getUrgencyBadge(repair?.rf_urgency)"></span>
-
-            <!-- ประเภทงาน -->
             <span
               class="inline-flex justify-center items-center px-4 py-1.5 rounded-full bg-gray-100 text-gray-600 font-medium"
             >
@@ -113,7 +153,7 @@ onMounted(fetchRepairDetail)
           </div>
         </div>
 
-        <!-- 🧍‍♂️ กล่องข้อมูล 3 ช่อง -->
+        <!-- กล่องข้อมูล 3 ช่อง -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
           <div class="border border-gray-200 rounded-lg p-3 sm:p-4">
             <p class="text-xs sm:text-sm text-gray-500">ผู้แจ้ง</p>
@@ -129,9 +169,9 @@ onMounted(fetchRepairDetail)
             </p>
             <p class="text-sm text-gray-500 mt-1">
               ตำแหน่ง :
-              <span class="font-medium text-gray-800 text-sm sm:text-base">{{
-                repair?.tech_position || '-'
-              }}</span>
+              <span class="font-medium text-gray-800 text-sm sm:text-base">
+                {{ repair?.tech_position || '-' }}
+              </span>
             </p>
           </div>
 
@@ -148,14 +188,12 @@ onMounted(fetchRepairDetail)
         </div>
       </div>
 
-      <!-- 🔹 สองคอลัมน์หลัก -->
+      <!-- สองคอลัมน์หลัก -->
       <div class="mx-auto max-w-7xl grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-        <!-- ซ้าย 2 ช่อง -->
         <div class="lg:col-span-2 space-y-6">
           <!-- กล่องสถานที่และอุปกรณ์ -->
           <div class="bg-white border border-gray-200 rounded-xl p-4 sm:p-6 shadow-sm">
             <h2 class="text-lg font-semibold text-gray-800 mb-4">สถานที่และอุปกรณ์</h2>
-
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
               <div class="space-y-4">
                 <div class="flex items-center gap-3">
@@ -258,28 +296,46 @@ onMounted(fetchRepairDetail)
               <h2 class="text-base sm:text-lg font-semibold text-gray-800">สถานะการดำเนินงาน</h2>
             </div>
 
-            <!-- Timeline -->
-            <ol class="relative border-s border-gray-200">
-              <li v-for="(step, i) in repair?.timeline || []" :key="i" class="mb-4 sm:mb-5 ms-5">
-                <div
-                  class="absolute w-4 h-4 sm:w-5 sm:h-5 rounded-full mt-2.5 -start-2.5 border border-white"
-                  :class="{
-                    'bg-yellow-400': i === 0,
-                    'bg-amber-500': i === 1,
-                    'bg-gray-300': i > 1,
-                  }"
-                ></div>
-                <time class="mb-1 text-xs sm:text-sm font-normal leading-none text-gray-400">
-                  {{ step.date || '-' }}
-                </time>
-                <h3 class="text-sm sm:text-base font-semibold text-gray-900">
-                  {{ step.title || '-' }}
-                </h3>
-                <p class="text-xs sm:text-sm font-normal text-gray-500">
-                  {{ step.detail || '-' }}
-                </p>
-              </li>
-            </ol>
+            <!-- timeline -->
+            <div class="mt-2 flex flex-col w-full items-start">
+              <div v-for="(step, i) in repair?.timeline || []" :key="i" class="group flex w-full">
+                <!-- คอลัมน์แกน + วงกลม (กว้างเท่าไอคอนเวลา) -->
+                <div class="relative w-8 flex justify-center">
+                  <!-- เส้นแนวตั้ง -->
+                  <div
+                    v-if="i !== (repair?.timeline?.length || 0) - 1"
+                    class="absolute left-1/2 top-0 h-full w-0.5 -translate-x-1/2 bg-gray-200"
+                  ></div>
+
+                  <!-- วงกลม -->
+                  <span
+                    class="relative z-10 flex h-7 w-7 items-center justify-center rounded-full text-white shrink-0"
+                    :class="{
+                      'bg-yellow-400': i === 0,
+                      'bg-amber-500': i === 1,
+                      'bg-green-500': i > 1,
+                    }"
+                  >
+                    <img src="/icon/circle-check-icon.svg" class="w-4 h-4 object-contain" />
+                  </span>
+                </div>
+
+                <!-- เนื้อหา -->
+                <div class="flex-1 -translate-y-1 pl-3 pb-6 text-gray-600">
+                  <div class="flex flex-col space-y-0.5">
+                    <p class="text-sm text-gray-500  ">
+                      {{ step.date }}
+                    </p>
+                    <p class="font-bold text-gray-600 text-sm sm:text-base">
+                      {{ step.title }}
+                    </p>
+                    <p class="text-sm text-gray-500 ">
+                      {{ step.detail }}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
 
             <div
               v-if="!repair?.timeline || !repair.timeline.length"
@@ -292,7 +348,7 @@ onMounted(fetchRepairDetail)
       </div>
     </div>
 
-    <!-- ⚠️ เผื่อไว้กรณีไม่มีข้อมูลเลย -->
+    <!-- เผื่อไว้กรณีไม่มีข้อมูลเลย -->
     <div v-else class="text-center text-gray-400 py-16 text-sm sm:text-base">
       ไม่มีข้อมูลที่จะแสดง
     </div>
