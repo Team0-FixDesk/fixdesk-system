@@ -47,6 +47,8 @@ function signToken(user) {
     us_prefix_th: user.us_prefix_th || '',
     us_first_name_th: user.us_first_name_th || '',
     us_last_name_th: user.us_last_name_th || '',
+    us_first_name_en: user.us_first_name_en || '',
+    us_last_name_en: user.us_last_name_en || '',
     us_tel: user.us_tel || '',
     us_department: user.us_department || '',
     role_name: user.role_name || '',

@@ -58,10 +58,13 @@ const handleLogin = async (e) => {
       prefix: payload.us_prefix_th,
       firstName: payload.us_first_name_th,
       lastName: payload.us_last_name_th,
+      firstNameEN: payload.us_first_name_en,
+      lastNameEN: payload.us_last_name_en,
       fullName: `${payload.us_prefix_th || ''}${payload.us_first_name_th || ''} ${payload.us_last_name_th || ''}`,
       tel: payload.us_tel,
       department: payload.us_department,
       role: payload.role_name,
+      
     }
     localStorage.setItem('session_user', JSON.stringify(sessionUser))
 
