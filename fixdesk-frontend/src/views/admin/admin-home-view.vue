@@ -18,50 +18,15 @@
           รีเฟรช
         </button>
 
-        <button class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md flex items-center">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-          </svg>
-          แจ้งซ่อม
-        </button>
+        <!-- component ปุ่มแจ้งซ่อม-->
+        <RepairButton />
+
       </div>
     </div>
 
     <!-- Stats cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-      <!-- Card 1: งานทั้งหมดในวันนี้ -->
-      <div class="bg-white rounded-lg shadow p-6">
-        <div class="text-center">
-          <h2 class="text-2xl font-bold text-blue-600">{{ todayTasksCount }} งาน</h2>
-          <p class="text-gray-600 text-sm">งานทั้งหมดในวันนี้</p>
-        </div>
-      </div>
-
-      <!-- Card 2: กำลังดำเนินการ -->
-      <div class="bg-white rounded-lg shadow p-6">
-        <div class="text-center">
-          <h2 class="text-2xl font-bold text-orange-500">{{ inProgressTasksCount }} งาน</h2>
-          <p class="text-gray-600 text-sm">กำลังดำเนินการ</p>
-        </div>
-      </div>
-
-      <!-- Card 3: เสร็จสิ้น (7 วัน) -->
-      <div class="bg-white rounded-lg shadow p-6">
-        <div class="text-center">
-          <h2 class="text-2xl font-bold text-green-600">{{ completedTasksCount }} งาน</h2>
-          <p class="text-gray-600 text-sm">เสร็จสิ้น (7 วัน)</p>
-        </div>
-      </div>
-
-      <!-- Card 4: ยกเลิก (7 วัน) -->
-      <div class="bg-white rounded-lg shadow p-6">
-        <div class="text-center">
-          <h2 class="text-2xl font-bold text-red-600">{{ cancelledTasksCount }} งาน</h2>
-          <p class="text-gray-600 text-sm">ยกเลิก (7 วัน)</p>
-        </div>
-      </div>
-    </div>
-
+    <CardHomeComponent :items="statItems" />
+  
     <!-- Recent requests table -->
     <div class="bg-white rounded-lg shadow overflow-hidden">
       <div class="p-6 border-b">
@@ -229,8 +194,11 @@
 </template>
 
 <script setup>
+import CardHomeComponent from '@/components/card-home-component.vue';
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import RepairButton from '@/components/repair-button.vue' 
+
 
 const router = useRouter()
 
@@ -267,6 +235,7 @@ const fetchRepairRequests = async () => {
     // แปลงข้อมูลจาก API ให้ตรงกับรูปแบบที่ template ต้องการ
     repairRequests.value = data.map(item => ({
       date: new Date(item.rf_create_at).toLocaleDateString('th-TH'),
+      rawDate: new Date(item.rf_create_at), 
       ticketId: item.rf_code,
       requesterName: `${item.us_first_name || ''} ${item.us_last_name || ''}`.trim(),
       type: item.tt_name || '-',
@@ -309,15 +278,15 @@ const mapStatus = (status) => {
 }
 
 // ฟังก์ชันช่วยเหลือสำหรับการเปรียบเทียบวันที่
-const isToday = (dateString) => {
+const isToday = (request) => {
   const today = new Date()
-  const date = new Date(dateString)
+  const date = request.rawDate || new Date(request.date) 
   return date.toDateString() === today.toDateString()
 }
 
-const isWithinLastSevenDays = (dateString) => {
+const isWithinLastSevenDays = (request) => {
   const today = new Date()
-  const date = new Date(dateString)
+  const date = request.rawDate || new Date(request.date)
   const diffTime = Math.abs(today - date)
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
   return diffDays <= 7
@@ -325,7 +294,7 @@ const isWithinLastSevenDays = (dateString) => {
 
 // คำนวณจำนวนงานตามเงื่อนไขต่างๆ
 const todayTasksCount = computed(() => {
-  return repairRequests.value.filter(request => isToday(request.date)).length
+  return repairRequests.value.filter(request => isToday(request)).length
 })
 
 const inProgressTasksCount = computed(() => {
@@ -343,6 +312,30 @@ const cancelledTasksCount = computed(() => {
     request.status === 'ยกเลิก' && isWithinLastSevenDays(request.date)
   ).length
 })
+
+// *** รวมข้อมูลเพื่อส่งให้ Card ***
+const statItems = computed(() => [
+  {
+    value: todayTasksCount.value, // ค่าตัวเลข
+    label: 'งานทั้งหมดในวันนี้',    // ข้อความ
+    colorClass: 'text-blue-600'   // สี (กำหนดจากตรงนี้ได้เลย)
+  },
+  {
+    value: inProgressTasksCount.value,
+    label: 'กำลังดำเนินการ',
+    colorClass: 'text-orange-500'
+  },
+  {
+    value: completedTasksCount.value,
+    label: 'เสร็จสิ้น (7 วัน)',
+    colorClass: 'text-green-600'
+  },
+  {
+    value: cancelledTasksCount.value,
+    label: 'ยกเลิก (7 วัน)',
+    colorClass: 'text-red-600'
+  }
+])
 
 // ฟังก์ชันสำหรับการกำหนดคลาสของสถานะ
 const getStatusClass = (status) => {
