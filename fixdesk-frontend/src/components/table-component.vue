@@ -14,8 +14,10 @@ const props = defineProps({
   },
 })
 
-const currentPage = ref(1)
 
+const isPendingStatus = (row) => typeof row[5] === 'string' && row[5].includes('รอดำเนินการ')
+
+const currentPage = ref(1)
 const totalEntries = computed(() => props.rows.length)
 const totalPages = computed(() => Math.ceil(totalEntries.value / props.perPage))
 
@@ -38,7 +40,6 @@ function prevPage() {
 
 <template>
   <div class="relative overflow-x-auto">
-    <!-- ตาราง -->
     <table class="min-w-[640px] w-full text-xs sm:text-sm text-left text-black border-collapse">
       <thead
         class="text-l border-b border-[#E9E9E9] text-gray-700 uppercase bg-white text-[#444D5C]"
@@ -71,31 +72,61 @@ function prevPage() {
 
             <!-- คอลัมน์อื่น -->
             <td v-else class="px-3 py-2 sm:px-6 sm:py-4 text-center">
-              <!-- 🔹 ถ้าเป็น actions -->
               <div v-if="cell === 'actions'" class="flex justify-center gap-2">
-                <!-- 🔍 ปุ่มดูรายละเอียด -->
+                <!-- ปุ่มดูรายละเอียด (ใช้เหมือนกันทุกโหมด) -->
                 <div
-                  class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center justify-center bg-blue-500 hover:bg-blue-700 text-white rounded-md transition cursor-pointer"
+                  class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center bg-blue-500 hover:bg-blue-700 text-white rounded-md transition cursor-pointer"
                   title="ดูรายละเอียด"
                   @click="$emit('detail', row[1])"
                 >
                   <img src="/icon/info-icon.svg" alt="info" class="w-5 h-5" />
                 </div>
 
-                <!-- ✏️ โหมด full -->
-                <template v-if="props.mode === 'full'">
+                <!-- โหมด user (หน้า MyList: ล็อกจากสถานะ) -->
+                <template v-if="props.mode === 'user'">
                   <!-- ปุ่มแก้ไข -->
                   <div
-                    class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center justify-center bg-yellow-400 hover:bg-yellow-500 text-white rounded-md transition cursor-pointer"
+                    :class="[
+                      'w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center rounded-md transition',
+                      isPendingStatus(row)
+                        ? 'bg-yellow-400 hover:bg-yellow-500 text-white cursor-pointer'
+                        : 'bg-gray-300 text-gray-400 cursor-not-allowed',
+                    ]"
+                    :title="
+                      isPendingStatus(row) ? 'แก้ไข' : 'ไม่สามารถแก้ไขได้ (สถานะไม่ใช่รอดำเนินการ)'
+                    "
+                    @click="isPendingStatus(row) && $emit('edit', row[1])"
+                  >
+                    <img src="/icon/edit-icon.svg" alt="edit" class="w-5 h-5 opacity-90" />
+                  </div>
+
+                  <!-- ปุ่มลบ -->
+                  <div
+                    :class="[
+                      'w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center rounded-md transition',
+                      isPendingStatus(row)
+                        ? 'bg-red-500 hover:bg-red-600 text-white cursor-pointer'
+                        : 'bg-gray-300 text-gray-400 cursor-not-allowed',
+                    ]"
+                    :title="isPendingStatus(row) ? 'ลบ' : 'ไม่สามารถลบได้ (สถานะไม่ใช่รอดำเนินการ)'"
+                    @click="isPendingStatus(row) && $emit('delete', row[1])"
+                  >
+                    <img src="/icon/bin-icon.svg" alt="delete" class="w-5 h-5 opacity-90" />
+                  </div>
+                </template>
+
+                <!-- โหมด full (หน้าอื่น ๆ ใช้ — ไม่ล็อกสถานะ) -->
+                <template v-else-if="props.mode === 'full'">
+                  <div
+                    class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center bg-yellow-400 hover:bg-yellow-500 text-white rounded-md transition cursor-pointer"
                     title="แก้ไข"
                     @click="$emit('edit', row[1])"
                   >
                     <img src="/icon/edit-icon.svg" alt="edit" class="w-5 h-5" />
                   </div>
 
-                  <!-- ปุ่มลบ -->
                   <div
-                    class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center justify-center bg-red-500 hover:bg-red-600 text-white rounded-md transition cursor-pointer"
+                    class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center bg-red-500 hover:bg-red-600 text-white rounded-md transition cursor-pointer"
                     title="ลบ"
                     @click="$emit('delete', row[1])"
                   >
@@ -103,10 +134,10 @@ function prevPage() {
                   </div>
                 </template>
 
-                <!-- 🧑‍🔧 โหมด assign -->
+                <!-- โหมด assign -->
                 <template v-else-if="props.mode === 'assign'">
                   <div
-                    class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center justify-center bg-green-600 hover:bg-green-700 text-white rounded-md transition cursor-pointer"
+                    class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center bg-green-600 hover:bg-green-700 text-white rounded-md transition cursor-pointer"
                     title="มอบหมายงาน"
                     @click="$emit('assign', row[1])"
                   >
