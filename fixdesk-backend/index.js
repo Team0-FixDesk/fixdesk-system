@@ -3,12 +3,69 @@ const express = require("express");
 const cors = require("cors");
 const mysql = require("mysql2");
 const bcrypt = require("bcrypt");
+const multer = require("multer");
+const path = require("path");
+const fs = require("fs");
 const { authMiddleware, signToken } = require("./auth");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
+/* =========================
+   Multer File Upload Configuration
+   ========================= */
+// สร้างโฟลเดอร์ uploads ถ้ายังไม่มี
+const uploadDir = path.join(__dirname, 'uploads', 'repair');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+// กำหนด storage สำหรับ multer
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    // สร้างชื่อไฟล์: RF_YYYYMMDD_HHMMSS_random.ext
+    const timestamp = new Date().toISOString().replace(/[:.-]/g, '').slice(0, 15);
+    const randomNum = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    const ext = path.extname(file.originalname);
+    const filename = `RF_${timestamp}_${randomNum}${ext}`;
+    cb(null, filename);
+  }
+});
+
+// กำหนด file filter
+const fileFilter = (req, file, cb) => {
+  // อนุญาตเฉพาะ images และ video
+  const allowedTypes = /jpeg|jpg|png|gif|webp|mp4|avi|mov|wmv/;
+  const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+  const mimetype = allowedTypes.test(file.mimetype);
+
+  if (mimetype && extname) {
+    return cb(null, true);
+  } else {
+    cb(new Error('กรุณาอัพโหลดไฟล์รูปภาพหรือวิดีโอเท่านั้น (jpg, png, gif, webp, mp4, avi, mov, wmv)'));
+  }
+};
+
+// สร้าง multer instance
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB limit
+    files: 5 // ไม่เกิน 5 ไฟล์
+  },
+  fileFilter: fileFilter
+});
+
+// Serve static files
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+/* =========================
+   Database Connection
+   ========================= */
 // Database Connection
 const db = mysql.createConnection({
   host: process.env.DB_HOST || "localhost",
@@ -349,7 +406,7 @@ app.delete("/users/:id", authMiddleware, (req, res) => {
 // Modules Technician
 app.get("/technicians", authMiddleware, (req, res) => {
   const query = `
-    SELECT 
+    SELECT
       u.us_id,
       u.us_user_name,
       tn.ttn_title_th AS prefix_name,    
@@ -522,6 +579,9 @@ app.delete("/technician-types/:id", (req, res) => {
   });
 });
 
+/* =========================
+    Building, Floor, Room Endpoints
+    ========================= */
 
 // Modules Location
 app.get("/buildings", (req, res) => {
@@ -1022,7 +1082,8 @@ app.post("/repair-requests", express.json(), (req, res) => {
     problem_detail,
     issue_description,
     urgency,
-    phone_number,
+    phone_number, // ✅ เพิ่มเบอร์โทรมาจากฟอร์ม
+    file_paths, // ✅ เพิ่ม file paths สำหรับรูปภาพ/วิดีโอ
   } = req.body;
 
   if (!us_id || !repair_type_id || !room_id || !problem_detail) {
@@ -1050,12 +1111,15 @@ app.post("/repair-requests", express.json(), (req, res) => {
     const runningNumber = String(todayCount).padStart(3, "0"); // เช่น 001
     const rfCode = `RF${datePart}${runningNumber}`;
 
+    // ✅ แปลง file_paths เป็น JSON string สำหรับเก็บใน database
+    const imageData = file_paths ? JSON.stringify(file_paths) : null;
+
     const insertQuery = `
       INSERT INTO repair_form
       (rf_code, rf_us_id, rf_tt_id, rf_room_id, rf_prop_number,
-      rf_problem, rf_detail, rf_phone, rf_urgency,
-      rf_user_status, rf_tech_status, rf_create_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'working', NOW())
+       rf_problem, rf_detail, rf_phone, rf_urgency, rf_image,
+       rf_user_status, rf_tech_status, rf_create_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'working', NOW())
     `;
 
     db.query(
@@ -1070,6 +1134,7 @@ app.post("/repair-requests", express.json(), (req, res) => {
         issue_description,
         phone_number,
         urgency,
+        imageData, // ✅ เก็บ file paths เป็น JSON
       ],
       (err2, results2) => {
         if (err2) {
@@ -1090,7 +1155,7 @@ app.post("/repair-requests", express.json(), (req, res) => {
 // GET /admin/repairs (ดึงรายการแจ้งซ่อมทั้งหมด)
 app.get("/admin/repairs", authMiddleware, (req, res) => {
   const query = `
-    SELECT 
+    SELECT
       rf.rf_id,
       rf.rf_code,
       rf.rf_create_at,
@@ -1192,7 +1257,7 @@ app.get("/my-repairs/:userId", (req, res) => {
   const { userId } = req.params;
 
   const query = `
-    SELECT 
+    SELECT
       rf.rf_id,
       rf.rf_code,
       rf.rf_prop_number,
@@ -1259,7 +1324,7 @@ app.get("/repair-requests/:code", (req, res) => {
   const { code } = req.params;
 
   const sql = `
-    SELECT 
+    SELECT
       rf.rf_code,
       rf.rf_problem,
       rf.rf_detail,
@@ -1337,7 +1402,7 @@ app.get("/repair-requests/:code", (req, res) => {
       rf_in_process_at: r.rf_in_process_at || null,
       rf_done_at: r.rf_done_at || null,
       rf_prop_number: r.rf_prop_number || "-",
-      rf_image: r.rf_image || null,
+      rf_image: r.rf_image ? JSON.parse(r.rf_image) : null, // ✅ Parse JSON เป็น array
 
       // id + name สถานที่/ประเภท
       repair_type_id: r.repair_type_id || null,
@@ -1374,6 +1439,7 @@ app.put("/repair-requests/:code", (req, res) => {
     issue_description,
     urgency,
     phone_number,
+    file_paths, // ✅ เพิ่มรองรับการอัพเดตไฟล์
   } = req.body;
 
   if (!repair_type_id || !room_id || !problem_detail) {
@@ -1381,6 +1447,9 @@ app.put("/repair-requests/:code", (req, res) => {
       .status(400)
       .json({ message: "ข้อมูลไม่ครบ กรุณากรอกให้ครบทุกช่อง" });
   }
+
+  // ✅ จัดการไฟล์ที่อัพเดต
+  const imageData = file_paths ? JSON.stringify(file_paths) : null;
 
   const sql = `
   UPDATE repair_form
@@ -1393,6 +1462,7 @@ app.put("/repair-requests/:code", (req, res) => {
     rf_detail = ?,
     rf_phone = ?,
     rf_urgency = ?,
+    rf_image = ?,
     rf_update_at = NOW()
   WHERE rf_code = ?
     AND rf_user_status = 'pending'
@@ -1407,6 +1477,7 @@ app.put("/repair-requests/:code", (req, res) => {
     issue_description || "-",
     phone_number || null,
     urgency || "medium",
+    imageData, // ✅ เพิ่ม image data
     code,
   ];
 
@@ -1429,6 +1500,228 @@ app.put("/repair-requests/:code", (req, res) => {
   });
 });
 
+// ✅ สร้างใบแจ้งซ่อมพร้อมอัพโหลดไฟล์ในคำสั่งเดียว
+app.post("/repair-requests-with-files", upload.array('files', 5), (req, res) => {
+  const {
+    us_id,
+    repair_type_id,
+    room_id,
+    asset_code,
+    problem_detail,
+    issue_description,
+    urgency,
+    phone_number,
+  } = req.body;
+
+  if (!us_id || !repair_type_id || !room_id || !problem_detail) {
+    return res
+      .status(400)
+      .json({ message: "ข้อมูลไม่ครบ กรุณากรอกให้ครบทุกช่อง" });
+  }
+
+  // สร้างรหัสใบแจ้งซ่อม
+  const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+
+  const countQuery = `
+    SELECT COUNT(*) AS count
+    FROM repair_form
+    WHERE DATE(rf_create_at) = CURDATE()
+  `;
+
+  db.query(countQuery, (err, results) => {
+    if (err) {
+      console.error("❌ Error counting repairs:", err);
+      return res.status(500).json({ message: "ไม่สามารถสร้างรหัสฟอร์มได้" });
+    }
+
+    const todayCount = results[0].count + 1;
+    const runningNumber = String(todayCount).padStart(3, "0");
+    const rfCode = `RF${datePart}${runningNumber}`;
+
+    // จัดการไฟล์ที่อัพโหลด
+    const filePaths = req.files ? req.files.map(file => `/uploads/repair/${file.filename}`) : [];
+    const imageData = filePaths.length > 0 ? JSON.stringify(filePaths) : null;
+
+    const insertQuery = `
+      INSERT INTO repair_form
+      (rf_code, rf_us_id, rf_tt_id, rf_room_id, rf_prop_number,
+       rf_problem, rf_detail, rf_phone, rf_urgency, rf_image,
+       rf_user_status, rf_tech_status, rf_create_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'working', NOW())
+    `;
+
+    db.query(
+      insertQuery,
+      [
+        rfCode,
+        us_id,
+        repair_type_id,
+        room_id,
+        asset_code,
+        problem_detail,
+        issue_description,
+        phone_number,
+        urgency,
+        imageData,
+      ],
+      (err2, results2) => {
+        if (err2) {
+          console.error("❌ Error saving repair form:", err2);
+          return res.status(500).json({ message: "บันทึกข้อมูลไม่สำเร็จ" });
+        }
+
+        res.json({
+          message: "✅ บันทึกฟอร์มแจ้งซ่อมสำเร็จ",
+          id: results2.insertId,
+          rf_code: rfCode,
+          uploaded_files: req.files ? req.files.map(file => ({
+            filename: file.filename,
+            originalname: file.originalname,
+            path: `/uploads/repair/${file.filename}`,
+            size: file.size
+          })) : []
+        });
+      }
+    );
+  });
+});
+
+// ✅ อัพเดตใบแจ้งซ่อมพร้อมไฟล์ใหม่
+app.put("/repair-requests-with-files/:code", upload.array('files', 5), (req, res) => {
+  const { code } = req.params;
+  const {
+    us_id,
+    repair_type_id,
+    room_id,
+    asset_code,
+    problem_detail,
+    issue_description,
+    urgency,
+    phone_number,
+    existing_files, // ไฟล์เดิมที่ต้องการเก็บไว้
+  } = req.body;
+
+  if (!repair_type_id || !room_id || !problem_detail) {
+    return res
+      .status(400)
+      .json({ message: "ข้อมูลไม่ครบ กรุณากรอกให้ครบทุกช่อง" });
+  }
+
+  // รวมไฟล์เดิมกับไฟล์ใหม่
+  const existingFilePaths = existing_files ? JSON.parse(existing_files) : [];
+  const newFilePaths = req.files ? req.files.map(file => `/uploads/repair/${file.filename}`) : [];
+  const allFilePaths = [...existingFilePaths, ...newFilePaths];
+  const imageData = allFilePaths.length > 0 ? JSON.stringify(allFilePaths) : null;
+
+  const sql = `
+    UPDATE repair_form
+    SET
+      rf_us_id = ?,
+      rf_tt_id = ?,
+      rf_room_id = ?,
+      rf_prop_number = ?,
+      rf_problem = ?,
+      rf_detail = ?,
+      rf_phone = ?,
+      rf_urgency = ?,
+      rf_image = ?,
+      rf_update_at = NOW()
+    WHERE rf_code = ?
+  `;
+
+  const params = [
+    us_id || null,
+    repair_type_id,
+    room_id,
+    asset_code || null,
+    problem_detail,
+    issue_description || "-",
+    phone_number || null,
+    urgency || "medium",
+    imageData,
+    code,
+  ];
+
+  db.query(sql, params, (err, result) => {
+    if (err) {
+      console.error("❌ Database error (update repair with files):", err);
+      return res
+        .status(500)
+        .json({ message: "อัปเดตข้อมูลไม่สำเร็จ", error: err.message });
+    }
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "ไม่พบใบแจ้งซ่อมนี้" });
+    }
+
+    res.json({
+      message: "✅ อัปเดตข้อมูลใบแจ้งซ่อมสำเร็จ",
+      updated: result.affectedRows,
+      new_files: req.files ? req.files.map(file => ({
+        filename: file.filename,
+        originalname: file.originalname,
+        path: `/uploads/repair/${file.filename}`,
+        size: file.size
+      })) : []
+    });
+  });
+});
+
+/* =========================
+   FILE UPLOAD ENDPOINTS
+   ========================= */
+
+// อัพโหลดไฟล์สำหรับใบแจ้งซ่อม
+app.post("/upload-repair-files", upload.array('files', 5), (req, res) => {
+  try {
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ message: "กรุณาเลือกไฟล์สำหรับอัพโหลด" });
+    }
+
+    // สร้าง array ของ file paths
+    const filePaths = req.files.map(file => `/uploads/repair/${file.filename}`);
+
+    res.json({
+      message: "อัพโหลดไฟล์สำเร็จ",
+      files: req.files.map(file => ({
+        filename: file.filename,
+        originalname: file.originalname,
+        path: `/uploads/repair/${file.filename}`,
+        size: file.size,
+        mimetype: file.mimetype
+      })),
+      filePaths: filePaths // สำหรับเก็บใน database
+    });
+  } catch (error) {
+    console.error("❌ Error uploading files:", error);
+    res.status(500).json({ message: "อัพโหลดไฟล์ไม่สำเร็จ", error: error.message });
+  }
+});
+
+// ลบไฟล์
+app.delete("/delete-file/:filename", (req, res) => {
+  const { filename } = req.params;
+  const filePath = path.join(uploadDir, filename);
+
+  fs.unlink(filePath, (err) => {
+    if (err) {
+      console.error("❌ Error deleting file:", err);
+      return res.status(500).json({ message: "ลบไฟล์ไม่สำเร็จ" });
+    }
+    res.json({ message: "ลบไฟล์สำเร็จ" });
+  });
+});
+
+/* =========================
+   HEALTH CHECK ENDPOINT
+   ========================= */
+app.get("/health", (req, res) => {
+  res.status(200).json({
+    status: "OK",
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || "development"
+  });
 // =========================
 // PUT: แก้ไขข้อมูลผู้ใช้
 // =========================
@@ -1556,7 +1849,6 @@ app.get("/user/:id", async (req, res) => {
       error: err.message,
     });
   }
-});
 
 /* =========================
    SERVER START
@@ -1734,7 +2026,7 @@ app.get('/technician/my-stock-forms', authMiddleware, (req, res) => {
     ORDER BY sf.sf_create_at DESC
   `;
 
-  db.query(query, [userId], (err, results) => {
+  db.query(query, [techId], (err, results) => {
     if (err) {
       console.error('❌ Error fetching my stock forms:', err);
       return res.status(500).json({ message: 'ดึงข้อมูลใบเบิกของผู้ใช้ไม่สำเร็จ', error: err.message });
