@@ -816,118 +816,103 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="bg-white rounded-xl shadow-md p-4 sm:p-6 lg:p-8 mx-auto max-w-7xl">
+  <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-7xl">
     <!-- 🔹 หัวข้อ -->
-    <h1 class="text-xl font-bold text-black mb-2">สถานที่ทั้งหมด</h1>
+    <h1 class="text-xl font-bold text-black mb-6">สถานที่ทั้งหมด</h1>
     <p class="text-sm text-gray-600 mb-6">ค้นหาตรองและเรียงลำดับรายการอาคาร ชั้น ห้อง</p>
 
     <!-- แถบค้นหาและตัวกรอง -->
-    <div class="flex items-center gap-3 mb-6">
-      <!-- ช่องค้นหา -->
-      <div class="relative flex-1 max-w-xs">
-        <input
-          v-model="searchQuery"
-          type="text"
-          placeholder="ค้นหา"
-          class="w-full border border-gray-300 rounded-lg px-4 py-2 pr-12 focus:ring-2 focus:ring-blue-400 focus:outline-none"
-        />
-        <button
-          class="absolute right-2 top-1/2 -translate-y-1/2 text-white bg-blue-600 hover:bg-blue-700 rounded px-3 py-1.5"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="h-4 w-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
+    <div class="mb-6">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex flex-wrap items-center gap-3">
+          <!-- ช่องค้นหา -->
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="ค้นหาอาคาร / ชั้น / ห้อง"
+            class="w-[260px] h-10 px-4 rounded-lg border border-gray-300 bg-white focus:ring-2 focus:ring-blue-500"
+          />
+
+          <!-- Dropdown เรียงลำดับ -->
+          <select
+            v-model="sortOrder"
+            class="h-10 px-3 rounded-lg border border-gray-300 bg-white text-gray-700 focus:ring-2 focus:ring-blue-400 focus:outline-none text-sm"
           >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            />
-          </svg>
+            <option value="ก-ฮ">เรียงตามอักษร ก-ฮ</option>
+            <option value="ฮ-ก">เรียงตามอักษร ฮ-ก</option>
+          </select>
+
+          <!-- Dropdown เลือกอาคาร -->
+          <select
+            v-model="selectedBuilding"
+            @change="handleBuildingChange"
+            class="h-10 px-3 rounded-lg border border-gray-300 bg-white text-gray-700 focus:ring-2 focus:ring-blue-400 focus:outline-none text-sm min-w-[120px]"
+          >
+            <option value="">ทุกอาคาร</option>
+            <option
+              v-for="building in buildings"
+              :key="building.building_id"
+              :value="building.building_id"
+            >
+              {{ building.building_name }}
+            </option>
+          </select>
+
+          <!-- Dropdown เลือกชั้น (แสดงเมื่อเลือกอาคารแล้ว) -->
+          <select
+            v-if="selectedBuilding"
+            v-model="selectedFloor"
+            @change="handleFloorChange"
+            class="h-10 px-3 rounded-lg border border-gray-300 bg-white text-gray-700 focus:ring-2 focus:ring-blue-400 focus:outline-none text-sm min-w-[120px]"
+          >
+            <option value="">ทุกชั้น</option>
+            <option v-for="floor in floors" :key="floor.floor_id" :value="floor.floor_id">
+              {{ floor.floor_name }}
+            </option>
+          </select>
+
+          <!-- ปุ่มล้างตัวกรอง -->
+          <button
+            v-if="selectedBuilding || searchQuery"
+            @click="handleClearFilters"
+            class="text-blue-600 hover:text-blue-700 text-sm font-medium"
+          >
+            ล้างตัวกรอง
+          </button>
+        </div>
+        
+        <!-- ปุ่มเพิ่มสถานที่ -->
+        <button
+          @click="handleAdd"
+          class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition text-sm whitespace-nowrap"
+        >
+          <span class="text-xl leading-none">+</span>
+          <span>เพิ่มสถานที่</span>
         </button>
       </div>
-
-      <!-- Dropdown เรียงลำดับ -->
-      <select
-        v-model="sortOrder"
-        class="border border-gray-300 rounded-lg px-4 py-2 bg-white focus:ring-2 focus:ring-blue-400 focus:outline-none text-sm"
-      >
-        <option value="ก-ฮ">เรียงตามอักษร ก-ฮ</option>
-        <option value="ฮ-ก">เรียงตามอักษร ฮ-ก</option>
-      </select>
-
-      <!-- Dropdown เลือกอาคาร -->
-      <select
-        v-model="selectedBuilding"
-        @change="handleBuildingChange"
-        class="border border-gray-300 rounded-lg px-4 py-2 bg-white focus:ring-2 focus:ring-blue-400 focus:outline-none text-sm min-w-[150px]"
-      >
-        <option value="">ทุกอาคาร</option>
-        <option
-          v-for="building in buildings"
-          :key="building.building_id"
-          :value="building.building_id"
-        >
-          {{ building.building_name }}
-        </option>
-      </select>
-
-      <!-- Dropdown เลือกชั้น (แสดงเมื่อเลือกอาคารแล้ว) -->
-      <select
-        v-if="selectedBuilding"
-        v-model="selectedFloor"
-        @change="handleFloorChange"
-        class="border border-gray-300 rounded-lg px-4 py-2 bg-white focus:ring-2 focus:ring-blue-400 focus:outline-none text-sm min-w-[150px]"
-      >
-        <option value="">ทุกชั้น</option>
-        <option v-for="floor in floors" :key="floor.floor_id" :value="floor.floor_id">
-          {{ floor.floor_name }}
-        </option>
-      </select>
-
-      <!-- ปุ่มล้างตัวกรอง -->
-      <button
-        v-if="selectedBuilding || searchQuery"
-        @click="handleClearFilters"
-        class="text-sm text-blue-600 hover:text-blue-700 font-medium whitespace-nowrap"
-      >
-        ล้างตัวกรอง
-      </button>
-
-      <!-- ปุ่มเพิ่มสถานที่ -->
-      <button
-        @click="handleAdd"
-        class="ml-auto flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition text-sm whitespace-nowrap"
-      >
-        <span class="text-xl leading-none">+</span>
-        <span>เพิ่มสถานที่</span>
-      </button>
     </div>
 
     <!-- ตาราง -->
-    <!-- ✅ Table Component -->
-    <TableComponent
-      :columns="columns"
-      :rows="tableRows"
-      :perPage="perPage"
-      mode="full"
-      @detail="handleDetail"
-      @edit="handleEdit"
-      @delete="handleDelete"
-    />
+    <div class="-mx-2 sm:mx-0 overflow-x-auto">
+      <TableComponent
+        :columns="columns"
+        :rows="tableRows"
+        :perPage="perPage"
+        mode="full"
+        @detail="handleDetail"
+        @edit="handleEdit"
+        @delete="handleDelete"
+      />
+    </div>
 
     <!-- 🔹 Modal เพิ่ม/แก้ไขสถานที่ -->
     <div
       v-if="showModal"
-      class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50"
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-2 sm:px-0"
       @click="closeModal"
     >
       <div
-        class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden relative"
+        class="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden relative"
         @click.stop
       >
         <!-- Header (ติดด้านบน) -->
