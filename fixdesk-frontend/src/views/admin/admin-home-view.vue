@@ -26,41 +26,7 @@
         </button>
       </div>
     </div>
-
-    <!-- Stats cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-      <!-- Card 1: งานทั้งหมดในวันนี้ -->
-      <div class="bg-white rounded-lg shadow p-6">
-        <div class="text-center">
-          <h2 class="text-2xl font-bold text-blue-600">{{ todayTasksCount }} งาน</h2>
-          <p class="text-gray-600 text-sm">งานทั้งหมดในวันนี้</p>
-        </div>
-      </div>
-
-      <!-- Card 2: กำลังดำเนินการ -->
-      <div class="bg-white rounded-lg shadow p-6">
-        <div class="text-center">
-          <h2 class="text-2xl font-bold text-orange-500">{{ inProgressTasksCount }} งาน</h2>
-          <p class="text-gray-600 text-sm">กำลังดำเนินการ</p>
-        </div>
-      </div>
-
-      <!-- Card 3: เสร็จสิ้น (7 วัน) -->
-      <div class="bg-white rounded-lg shadow p-6">
-        <div class="text-center">
-          <h2 class="text-2xl font-bold text-green-600">{{ completedTasksCount }} งาน</h2>
-          <p class="text-gray-600 text-sm">เสร็จสิ้น (7 วัน)</p>
-        </div>
-      </div>
-
-      <!-- Card 4: ยกเลิก (7 วัน) -->
-      <div class="bg-white rounded-lg shadow p-6">
-        <div class="text-center">
-          <h2 class="text-2xl font-bold text-red-600">{{ cancelledTasksCount }} งาน</h2>
-          <p class="text-gray-600 text-sm">ยกเลิก (7 วัน)</p>
-        </div>
-      </div>
-    </div>
+    
     <!-- Stats cards -->
     <CardHomeComponent :items="statItems" />
     <!-- Recent requests table -->
