@@ -683,8 +683,10 @@ async function handleDeleteTechType(item) {
 </script>
 
 <template>
-  <div class="bg-gray-50 rounded-xl p-2 sm:p-4 lg:p-6 mx-auto max-w-7xl">
-    <!-- ฟิลเตอร์ -->
+    <!-- ตาราง -->
+    <div class="bg-white bg-white rounded-xl shadow-md p-8 mx-auto max-w-7xl">
+      <h1 class="text-lg sm:text-xl font-bold text-black mb-6">จัดการผู้ใช้งานระบบ</h1>
+      <!-- ฟิลเตอร์ -->
     <div class="mb-6">
       <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div class="flex flex-wrap items-center gap-3">
@@ -784,11 +786,6 @@ async function handleDeleteTechType(item) {
           เพิ่มผู้ใช้
         </button>
       </div>
-    </div>
-
-    <!-- ตาราง -->
-    <div class="bg-white rounded-xl shadow-md p-4 sm:p-6 lg:p-8 mx-auto max-w-7xl">
-      <h1 class="text-lg sm:text-xl font-bold text-black mb-3">จัดการผู้ใช้งานระบบ</h1>
       <div class="-mx-2 sm:mx-0 overflow-x-auto">
         <TableComponent
           :columns="columns"
