@@ -2,19 +2,17 @@ FROM node:lts-alpine
 
 WORKDIR /app
 
-# Copy package files และ install dependencies
-COPY package*.json ./
-RUN npm install
+# Install wget for health checks
+RUN apk add --no-cache wget
 
-# Copy source code
+COPY package*.json ./
+RUN npm install --production
+
 COPY . .
 
-# สร้างโฟลเดอร์ uploads และตั้งสิทธิ์
 RUN mkdir -p /app/uploads/repair && \
     chmod -R 755 /app/uploads
 
-# เปิด port 3000
-EXPOSE 3000
+EXPOSE 8059
 
-# เริ่มต้นแอป
 CMD ["node", "index.js"]

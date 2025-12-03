@@ -587,8 +587,8 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="bg-white rounded-xl shadow-md p-12 mx-auto max-w-6xl">
-    <!-- หัวข้อ -->
+  <div class="bg-white rounded-xl shadow-md p-12 mx-auto max-w-7xl">
+    <!-- 🔹 หัวข้อ -->
     <h1 class="text-xl font-bold text-blue-700 mb-2">สถานที่ทั้งหมด</h1>
     <p class="text-sm text-gray-600 mb-6">ค้นหาตรองและเรียงลำดับรายการอาคาร ชั้น ห้อง</p>
 
@@ -828,9 +828,7 @@ onMounted(async () => {
         @click.stop
       >
         <!-- Header (ติดด้านบน) -->
-        <div
-          class="sticky top-0 bg-white z-10 px-4 sm:px-6 pt-4 sm:pt-6 pb-4 border-b border-gray-100"
-        >
+        <div class="sticky top-0 bg-white z-10 px-4 sm:px-6 pt-4 sm:pt-6 pb-4 border-b border-gray-100">
           <div class="flex justify-between items-center">
             <h2 class="text-xl font-bold text-blue-700">
               {{ modalMode === 'add' ? 'เพิ่มสถานที่' : 'แก้ไขสถานที่' }}
@@ -845,17 +843,14 @@ onMounted(async () => {
         </div>
 
         <!-- Content (scrollable) -->
-        <div
-          class="overflow-y-auto px-4 sm:px-6 pb-4 sm:pb-6"
-          style="max-height: calc(80vh - 140px)"
-        >
+        <div class="overflow-y-auto px-4 sm:px-6 pb-4 sm:pb-6" style="max-height: calc(80vh - 140px);">
           <!-- Progress Steps (เฉพาะโหมด add) -->
           <div v-if="modalMode === 'add'" class="flex items-center justify-center mb-6 gap-2 pt-4">
             <div class="flex items-center">
               <div
                 :class="[
                   'w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm transition-colors',
-                  modalStep === 1 ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-600',
+                  modalStep === 1 ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-600'
                 ]"
               >
                 1
@@ -885,8 +880,7 @@ onMounted(async () => {
             <!-- Mode Selection -->
             <div class="space-y-3 mb-6">
               <!-- Single Level Mode -->
-              <label
-                class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400"
+              <label class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400"
                 :class="!bulkCreateMode ? 'border-blue-600 bg-blue-50' : 'border-gray-200'"
               >
                 <input
@@ -899,15 +893,12 @@ onMounted(async () => {
                   <div class="flex items-center gap-2">
                     <span class="font-semibold text-gray-800">เพิ่มทีละระดับ</span>
                   </div>
-                  <p class="text-xs text-gray-500 mt-1">
-                    เลือกเพิ่ม อาคาร, ชั้น หรือ ห้อง ทีละอย่าง
-                  </p>
+                  <p class="text-xs text-gray-500 mt-1">เลือกเพิ่ม อาคาร, ชั้น หรือ ห้อง ทีละอย่าง</p>
                 </div>
               </label>
 
               <!-- Bulk Create Mode -->
-              <label
-                class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400"
+              <label class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400"
                 :class="bulkCreateMode ? 'border-blue-600 bg-blue-50' : 'border-gray-200'"
               >
                 <input
@@ -919,9 +910,7 @@ onMounted(async () => {
                 <div class="ml-3">
                   <div class="flex items-center gap-2">
                     <span class="font-semibold text-gray-800">สร้างหลายระดับพร้อมกัน</span>
-                    <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full"
-                      >เร็วกว่า</span
-                    >
+                    <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">เร็วกว่า</span>
                   </div>
                   <p class="text-xs text-gray-500 mt-1">สร้างอาคาร + ชั้น + ห้อง ในครั้งเดียว</p>
                 </div>
@@ -933,8 +922,7 @@ onMounted(async () => {
               <p class="text-sm font-semibold text-gray-700 mb-2">เลือกประเภท:</p>
 
               <!-- Option: Building -->
-              <label
-                class="flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400"
+              <label class="flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400"
                 :class="modalType === 'building' ? 'border-blue-600 bg-blue-50' : 'border-gray-200'"
               >
                 <input
@@ -952,8 +940,7 @@ onMounted(async () => {
               </label>
 
               <!-- Option: Floor -->
-              <label
-                class="flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400"
+              <label class="flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400"
                 :class="modalType === 'floor' ? 'border-blue-600 bg-blue-50' : 'border-gray-200'"
               >
                 <input
@@ -971,8 +958,7 @@ onMounted(async () => {
               </label>
 
               <!-- Option: Room -->
-              <label
-                class="flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400"
+              <label class="flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400"
                 :class="modalType === 'room' ? 'border-blue-600 bg-blue-50' : 'border-gray-200'"
               >
                 <input
@@ -1037,11 +1023,7 @@ onMounted(async () => {
                   class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none"
                 >
                   <option value="">-- เลือกอาคาร --</option>
-                  <option
-                    v-for="building in buildings"
-                    :key="building.building_id"
-                    :value="building.building_id"
-                  >
+                  <option v-for="building in buildings" :key="building.building_id" :value="building.building_id">
                     {{ building.building_name }}
                   </option>
                 </select>
@@ -1078,10 +1060,7 @@ onMounted(async () => {
                     :disabled="buildingMode === 'new' || !modalData.building_id"
                     class="w-4 h-4 text-blue-600 disabled:opacity-50"
                   />
-                  <span
-                    class="text-sm font-medium"
-                    :class="{ 'text-gray-400': buildingMode === 'new' || !modalData.building_id }"
-                  >
+                  <span class="text-sm font-medium" :class="{'text-gray-400': buildingMode === 'new' || !modalData.building_id}">
                     เลือกจากชั้นที่มีอยู่
                   </span>
                 </label>
@@ -1127,7 +1106,9 @@ onMounted(async () => {
                   placeholder="ชื่อห้อง (ต้องระบุ)"
                   class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none"
                 />
-                <p class="text-xs text-gray-600">ห้องจะถูกสร้างในชั้นที่เลือกหรือสร้างขึ้นมาใหม่</p>
+                <p class="text-xs text-gray-600">
+                   ห้องจะถูกสร้างในชั้นที่เลือกหรือสร้างขึ้นมาใหม่
+                </p>
               </div>
 
               <!-- Actions for Bulk Create -->
@@ -1174,11 +1155,7 @@ onMounted(async () => {
                   class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none disabled:bg-gray-100"
                 >
                   <option value="">เลือกอาคาร</option>
-                  <option
-                    v-for="building in buildings"
-                    :key="building.building_id"
-                    :value="building.building_id"
-                  >
+                  <option v-for="building in buildings" :key="building.building_id" :value="building.building_id">
                     {{ building.building_name }}
                   </option>
                 </select>
@@ -1204,9 +1181,7 @@ onMounted(async () => {
               <!-- ชื่อ -->
               <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-2">
-                  ชื่อ{{
-                    modalType === 'building' ? 'อาคาร' : modalType === 'floor' ? 'ชั้น' : 'ห้อง'
-                  }}
+                  ชื่อ{{ modalType === 'building' ? 'อาคาร' : modalType === 'floor' ? 'ชั้น' : 'ห้อง' }}
                   <span class="text-red-500">*</span>
                 </label>
                 <input
@@ -1248,7 +1223,8 @@ onMounted(async () => {
         <!-- Footer Actions (ติดด้านล่าง) -->
         <div class="sticky bottom-0 bg-white z-10 px-4 sm:px-6 py-4 border-t border-gray-100">
           <!-- ย้าย action buttons -->
-          <div class="flex gap-3"></div>
+          <div class="flex gap-3">
+          </div>
         </div>
       </div>
     </div>
