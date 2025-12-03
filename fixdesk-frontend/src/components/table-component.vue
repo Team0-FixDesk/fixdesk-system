@@ -48,6 +48,7 @@ function prevPage() {
           <th
             v-for="(col, i) in props.columns"
             :key="i"
+            v-show="i !== 1"
             class="px-3 py-2 sm:px-6 sm:py-3 text-center"
           >
             {{ col }}
@@ -71,7 +72,7 @@ function prevPage() {
             </th>
 
             <!-- คอลัมน์อื่น -->
-            <td v-else class="px-3 py-2 sm:px-6 sm:py-4 text-center">
+            <td v-else-if="ci !== 1" class="px-3 py-2 sm:px-6 sm:py-4 text-center">
               <div v-if="cell === 'actions'" class="flex justify-center gap-2">
                 <!-- ปุ่มดูรายละเอียด (ใช้เหมือนกันทุกโหมด) -->
                 <div
