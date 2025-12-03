@@ -1,7 +1,4 @@
 <script setup>
-/* ==============================
-   📦 Imports & Setup
-   ============================== */
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
@@ -11,9 +8,6 @@ defineOptions({ name: 'RepairRequestView' })
 const router = useRouter()
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
 
-/* ==============================
-   📄 Reactive States
-   ============================== */
 const isSubmitting = ref(false)
 const formData = ref({
   reporterName: '',
@@ -31,19 +25,16 @@ const formData = ref({
   problemDetail: '',
   issueDescription: '',
   urgency: '',
-  uploadedFiles: [], // ✅ เปลี่ยนเป็น array สำหรับหลายไฟล์
+  uploadedFiles: [],
 })
 
 const filePreview = ref([])
 const maxFiles = 5
 
-// ✅ Modal Preview
+// Modal Preview
 const showPreviewModal = ref(false)
 const currentPreviewIndex = ref(0)
 
-/* ==============================
-   🧱 Dropdown Data Fetching
-   ============================== */
 async function fetchTechnicianTypes() {
   try {
     const res = await fetch(`${API_BASE}/technician-types`)
@@ -102,18 +93,12 @@ async function fetchRooms(floorId) {
   }
 }
 
-/* ==============================
-   🖼️ File Upload
-   ============================== */
+// File Upload
 function handleFileUpload(event) {
   const files = Array.from(event.target.files)
   processFiles(files)
 }
 
-// เพิ่มใน script section
-/* ==============================
-   🎯 Drag & Drop Functionality
-   ============================== */
 const isDragOver = ref(false)
 
 function handleDragOver(event) {
@@ -143,41 +128,50 @@ function processFiles(files) {
       title: 'ไฟล์เกินกำหนด',
       text: `สามารถอัพโหลดได้สูงสุด ${maxFiles} ไฟล์`,
       icon: 'warning',
-      confirmButtonText: 'ตกลง'
+      confirmButtonText: 'ตกลง',
     })
     return
   }
 
   // เช็คประเภทไฟล์
-  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/avi', 'video/mov', 'video/wmv']
-  const invalidFiles = files.filter(file => !allowedTypes.includes(file.type))
+  const allowedTypes = [
+    'image/jpeg',
+    'image/jpg',
+    'image/png',
+    'image/gif',
+    'image/webp',
+    'video/mp4',
+    'video/avi',
+    'video/mov',
+    'video/wmv',
+  ]
+  const invalidFiles = files.filter((file) => !allowedTypes.includes(file.type))
 
   if (invalidFiles.length > 0) {
     Swal.fire({
       title: 'ประเภทไฟล์ไม่ถูกต้อง',
       text: 'รองรับเฉพาะไฟล์รูปภาพ (jpg, png, gif, webp) และวิดีโอ (mp4, avi, mov, wmv)',
       icon: 'error',
-      confirmButtonText: 'ตกลง'
+      confirmButtonText: 'ตกลง',
     })
     return
   }
 
   // เช็คขนาดไฟล์ (50MB)
   const maxSize = 50 * 1024 * 1024
-  const oversizedFiles = files.filter(file => file.size > maxSize)
-
+  const oversizedFiles = files.filter((file) => file.size > maxSize)
   if (oversizedFiles.length > 0) {
     Swal.fire({
       title: 'ไฟล์ใหญ่เกินไป',
       text: 'ขนาดไฟล์ต้องไม่เกิน 50MB',
       icon: 'error',
-      confirmButtonText: 'ตกลง'
+      confirmButtonText: 'ตกลง',
     })
     return
   }
 
   // เพิ่มไฟล์และสร้าง preview
-  files.forEach(file => {
+  files.forEach((file) => {
     formData.value.uploadedFiles.push(file)
 
     const reader = new FileReader()
@@ -188,7 +182,7 @@ function processFiles(files) {
         type: file.type,
         url: e.target.result,
         isImage: file.type.startsWith('image/'),
-        isVideo: file.type.startsWith('video/')
+        isVideo: file.type.startsWith('video/'),
       })
     }
     reader.readAsDataURL(file)
@@ -201,7 +195,7 @@ function removeFile(index) {
   filePreview.value.splice(index, 1)
 }
 
-// ✅ Modal Preview Functions
+// Modal Preview Functions
 function openPreview(index) {
   currentPreviewIndex.value = index
   showPreviewModal.value = true
@@ -223,18 +217,14 @@ function prevPreview() {
   }
 }
 
-/* ==============================
-   ⚡ Urgency Options
-   ============================== */
+// Urgency Options
 const urgencyLevels = [
   { label: 'เร่งด่วนมาก', value: 'high', border: 'border-red-600', bg: 'bg-red-600' },
   { label: 'เร่งด่วน', value: 'medium', border: 'border-amber-400', bg: 'bg-amber-400' },
   { label: 'ไม่เร่งด่วน', value: 'low', border: 'border-green-600', bg: 'bg-green-600' },
 ]
 
-/* ==============================
-   🔐 JWT Decode
-   ============================== */
+// JWT Decode
 function parseJwt(token) {
   try {
     const base64Url = token.split('.')[1]
@@ -252,11 +242,8 @@ function parseJwt(token) {
   }
 }
 
-/* ==============================
-   🚀 Lifecycle
-   ============================== */
 onMounted(() => {
-  const token = localStorage.getItem('token')
+  const token = localStorage.getItem('token') || sessionStorage.getItem('token')
   if (!token) return
 
   const payload = parseJwt(token)
@@ -269,9 +256,6 @@ onMounted(() => {
   fetchBuildings()
 })
 
-/* ==============================
-   💾 Submit Logic (SweetAlert Flow)
-   ============================== */
 async function handleSubmit() {
   // 🔥 เช็กความเร่งด่วนก่อนเลย
   if (!formData.value.urgency) {
@@ -301,7 +285,6 @@ async function handleSubmit() {
     confirmButtonColor: '#1E48D1',
     cancelButtonColor: '#9CA3AF',
   })
-
   if (!confirm.isConfirmed) return
 
   Swal.fire({
@@ -310,19 +293,16 @@ async function handleSubmit() {
     allowOutsideClick: false,
     didOpen: () => Swal.showLoading(),
   })
-
   try {
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token')
     if (!token) throw new Error('ไม่พบ token')
 
     const payload = parseJwt(token)
-    let res // ✅ ประกาศตัวแปร res ก่อน
-
-    // ✅ ตรวจสอบว่ามีไฟล์หรือไม่ แล้วเลือก API endpoint ที่เหมาะสม
+    let res
+    // ตรวจสอบว่ามีไฟล์หรือไม่ แล้วเลือก API endpoint ที่เหมาะสม
     if (formData.value.uploadedFiles.length > 0) {
       // ถ้ามีไฟล์ ใช้ FormData และ API with files
       const formDataToSend = new FormData()
-
       // เพิ่มข้อมูลฟอร์ม
       formDataToSend.append('us_id', payload.us_id)
       formDataToSend.append('phone_number', formData.value.phoneNumber)
@@ -332,9 +312,8 @@ async function handleSubmit() {
       formDataToSend.append('problem_detail', formData.value.problemDetail)
       formDataToSend.append('issue_description', formData.value.issueDescription)
       formDataToSend.append('urgency', formData.value.urgency || 'medium')
-
       // เพิ่มไฟล์
-      formData.value.uploadedFiles.forEach(file => {
+      formData.value.uploadedFiles.forEach((file) => {
         formDataToSend.append('files', file)
       })
 
@@ -376,7 +355,7 @@ async function handleSubmit() {
 
     router.push('/main/my-list')
   } catch (err) {
-    console.error('❌ บันทึกไม่สำเร็จ:', err)
+    console.error('บันทึกไม่สำเร็จ:', err)
     Swal.close()
     Swal.fire({
       title: 'เกิดข้อผิดพลาด!',
@@ -416,32 +395,26 @@ function validateForm() {
     errors.value.repairType = 'กรุณาเลือกประเภทงานซ่อม'
     valid = false
   }
-
   if (!formData.value.building) {
     errors.value.building = 'กรุณาเลือกอาคาร'
     valid = false
   }
-
   if (!formData.value.floor) {
     errors.value.floor = 'กรุณาเลือกชั้น'
     valid = false
   }
-
   if (!formData.value.room) {
     errors.value.room = 'กรุณาเลือกห้อง'
     valid = false
   }
-
   if (!formData.value.problemDetail.trim()) {
     errors.value.problemDetail = 'กรุณากรอกหัวข้อปัญหา'
     valid = false
   }
-
   if (!formData.value.issueDescription.trim()) {
     errors.value.issueDescription = 'กรุณากรอกสาเหตุ/อาการเสีย'
     valid = false
   }
-
   return valid
 }
 </script>
@@ -663,7 +636,7 @@ function validateForm() {
                 'flex flex-col items-center justify-center w-full border-2 border-dashed rounded-lg cursor-pointer transition flex-1 min-h-[220px] sm:min-h-[280px] mb-4',
                 isDragOver
                   ? 'border-blue-400 bg-blue-50 scale-105'
-                  : 'border-gray-300 bg-gray-50 hover:bg-gray-100'
+                  : 'border-gray-300 bg-gray-50 hover:bg-gray-100',
               ]"
               @dragover="handleDragOver"
               @dragleave="handleDragLeave"
@@ -678,13 +651,20 @@ function validateForm() {
                   />
                 </div>
 
-                <p :class="['text-sm mb-1', isDragOver ? 'text-blue-600 font-semibold' : 'text-gray-500']">
+                <p
+                  :class="[
+                    'text-sm mb-1',
+                    isDragOver ? 'text-blue-600 font-semibold' : 'text-gray-500',
+                  ]"
+                >
                   <span class="font-semibold">
                     {{ isDragOver ? 'วางไฟล์ที่นี่' : 'ลากไฟล์ หรือ คลิกเพื่อเลือกไฟล์' }}
                   </span>
                 </p>
 
-                <p class="text-xs text-gray-400 mt-1">รองรับ: รูปภาพ, วิดีโอ (สูงสุด {{ maxFiles }} ไฟล์, 50MB/ไฟล์)</p>
+                <p class="text-xs text-gray-400 mt-1">
+                  รองรับ: รูปภาพ, วิดีโอ (สูงสุด {{ maxFiles }} ไฟล์, 50MB/ไฟล์)
+                </p>
                 <p class="text-xs text-gray-500 mt-1">สามารถแนบหลักฐานประกอบการแจ้งซ่อมได้</p>
 
                 <!-- แสดง file type badges -->
@@ -695,14 +675,28 @@ function validateForm() {
                   <span class="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded">+อื่นๆ</span>
                 </div>
               </div>
-              <input id="dropzone-file" type="file" multiple accept="image/*,video/*" class="hidden" @change="handleFileUpload" />
+              <input
+                id="dropzone-file"
+                type="file"
+                multiple
+                accept="image/*,video/*"
+                class="hidden"
+                @change="handleFileUpload"
+              />
             </label>
 
             <!-- แสดง preview ไฟล์ที่เลือก แบบแถวเล็กๆ (ด้านล่าง drop zone) -->
             <div v-if="filePreview.length > 0" class="space-y-2 mb-4">
-              <div v-for="(file, index) in filePreview" :key="index" class="flex items-center gap-3 p-2 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer" @click="openPreview(index)">
+              <div
+                v-for="(file, index) in filePreview"
+                :key="index"
+                class="flex items-center gap-3 p-2 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                @click="openPreview(index)"
+              >
                 <!-- รูปภาพขนาดเล็ก -->
-                <div class="flex-shrink-0 w-12 h-12 rounded-md overflow-hidden bg-gray-200 flex items-center justify-center">
+                <div
+                  class="flex-shrink-0 w-12 h-12 rounded-md overflow-hidden bg-gray-200 flex items-center justify-center"
+                >
                   <img
                     v-if="file.isImage"
                     :src="file.url"
@@ -710,8 +704,15 @@ function validateForm() {
                     class="w-full h-full object-cover"
                   />
                   <!-- ไอคอนวิดีโอ -->
-                  <svg v-else-if="file.isVideo" class="w-6 h-6 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M6.3 2.84A1 1 0 004 3.75v12.5a1 1 0 001.65.76L17.3 10.76a1 1 0 000-1.52L5.65 3.08z"/>
+                  <svg
+                    v-else-if="file.isVideo"
+                    class="w-6 h-6 text-gray-500"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      d="M6.3 2.84A1 1 0 004 3.75v12.5a1 1 0 001.65.76L17.3 10.76a1 1 0 000-1.52L5.65 3.08z"
+                    />
                   </svg>
                 </div>
 
@@ -719,7 +720,9 @@ function validateForm() {
                 <div class="flex-1 min-w-0">
                   <p class="text-sm font-medium text-gray-800 truncate">{{ file.name }}</p>
                   <div class="flex items-center justify-between">
-                    <p class="text-xs text-gray-500">{{ (file.size / 1024 / 1024).toFixed(1) }} MB</p>
+                    <p class="text-xs text-gray-500">
+                      {{ (file.size / 1024 / 1024).toFixed(1) }} MB
+                    </p>
                   </div>
                 </div>
 
@@ -735,8 +738,11 @@ function validateForm() {
             </div>
 
             <!-- แสดงข้อความเมื่อไม่มีไฟล์ -->
-            <div v-if="filePreview.length === 0" class="text-center text-gray-400 text-sm mb-4 py-2 border border-dashed border-gray-200 rounded-lg">
-            ไม่มีไฟล์แนบ (สามารถส่งฟอร์มได้โดยไม่แนบไฟล์)
+            <div
+              v-if="filePreview.length === 0"
+              class="text-center text-gray-400 text-sm mb-4 py-2 border border-dashed border-gray-200 rounded-lg"
+            >
+              ไม่มีไฟล์แนบ (สามารถส่งฟอร์มได้โดยไม่แนบไฟล์)
             </div>
 
             <!-- ปุ่มเร่งด่วน -->
@@ -779,11 +785,18 @@ function validateForm() {
       />
     </div>
 
-    <!-- ✅ Preview Modal -->
-    <div v-if="showPreviewModal" class="fixed inset-0 z-50 bg-black bg-opacity-90 flex items-center justify-center" @click="closePreview">
+    <!-- Preview Modal -->
+    <div
+      v-if="showPreviewModal"
+      class="fixed inset-0 z-50 bg-black bg-opacity-90 flex items-center justify-center"
+      @click="closePreview"
+    >
       <div class="relative max-w-4xl max-h-full p-4" @click.stop>
         <!-- ปุ่มปิด -->
-        <button @click="closePreview" class="absolute -top-4 -right-4 w-10 h-10 bg-black bg-opacity-50 rounded-full flex items-center justify-center text-white text-2xl hover:text-gray-300 hover:bg-opacity-70 z-10">
+        <button
+          @click="closePreview"
+          class="absolute -top-4 -right-4 w-10 h-10 bg-black bg-opacity-50 rounded-full flex items-center justify-center text-white text-2xl hover:text-gray-300 hover:bg-opacity-70 z-10"
+        >
           ×
         </button>
 
@@ -808,20 +821,33 @@ function validateForm() {
         </video>
 
         <!-- ปุ่มนำทาง -->
-        <button v-if="filePreview.length > 1 && currentPreviewIndex > 0" @click="prevPreview" class="absolute -left-6 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-black bg-opacity-50 rounded-full flex items-center justify-center text-white text-2xl hover:text-gray-300 hover:bg-opacity-70">
+        <button
+          v-if="filePreview.length > 1 && currentPreviewIndex > 0"
+          @click="prevPreview"
+          class="absolute -left-6 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-black bg-opacity-50 rounded-full flex items-center justify-center text-white text-2xl hover:text-gray-300 hover:bg-opacity-70"
+        >
           ‹
         </button>
-        <button v-if="filePreview.length > 1 && currentPreviewIndex < filePreview.length - 1" @click="nextPreview" class="absolute -right-6 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-black bg-opacity-50 rounded-full flex items-center justify-center text-white text-2xl hover:text-gray-300 hover:bg-opacity-70">
+        <button
+          v-if="filePreview.length > 1 && currentPreviewIndex < filePreview.length - 1"
+          @click="nextPreview"
+          class="absolute -right-6 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-black bg-opacity-50 rounded-full flex items-center justify-center text-white text-2xl hover:text-gray-300 hover:bg-opacity-70"
+        >
           ›
         </button>
 
         <!-- ตัวนับและข้อมูลไฟล์ -->
-        <div v-if="filePreview.length > 1" class="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-white text-sm bg-black bg-opacity-50 px-3 py-1 rounded">
+        <div
+          v-if="filePreview.length > 1"
+          class="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-white text-sm bg-black bg-opacity-50 px-3 py-1 rounded"
+        >
           {{ currentPreviewIndex + 1 }} / {{ filePreview.length }}
         </div>
 
         <!-- ชื่อไฟล์ -->
-        <div class="absolute top-4 left-4 text-white text-sm bg-black bg-opacity-50 px-3 py-1 rounded">
+        <div
+          class="absolute top-4 left-4 text-white text-sm bg-black bg-opacity-50 px-3 py-1 rounded"
+        >
           {{ filePreview[currentPreviewIndex]?.name }}
         </div>
       </div>
