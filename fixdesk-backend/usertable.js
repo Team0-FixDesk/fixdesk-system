@@ -151,14 +151,26 @@ CREATE TABLE repair_form (
   rf_room_id INT,                            -- ห้องที่แจ้งซ่อม
   rf_detail VARCHAR(255),                    -- รายละเอียดเพิ่มเติม
   rf_image VARCHAR(255),                     -- รูปภาพแนบ
+
+  -- สถานะฝั่งผู้ใช้ (ใช้ 3 สถานะหลัก + cancel เผื่อในอนาคต)
   rf_user_status ENUM('pending','in_progress','done','cancel')
-    DEFAULT 'pending',                       -- สถานะฝั่งผู้ใช้
+    DEFAULT 'pending',
+
+  -- สถานะฝั่งช่าง (ถ้ายังไม่ใช้มาก ปล่อยไว้ก่อนได้)
   rf_tech_status ENUM('working','waiting_stock','hire_outsource','closed','paused_or_canceled')
-    DEFAULT 'working',                       -- สถานะฝั่งช่าง
+    DEFAULT 'working',
+
   rf_urgency ENUM('low','medium','high') DEFAULT 'medium',
-  rf_create_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,    -- Mapping: DateFormat:basicDateTH
+
+  -- เวลาเกี่ยวกับใบแจ้งซ่อม
+  rf_create_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,           -- เวลาสร้างใบแจ้งซ่อม
   rf_update_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    ON UPDATE CURRENT_TIMESTAMP,
+    ON UPDATE CURRENT_TIMESTAMP,                              -- เวลาอัปเดตครั้งล่าสุด
+
+  -- เวลาอิงตามสถานะ
+  rf_in_process_at DATETIME NULL,                             -- เวลาเปลี่ยนเป็น "กำลังดำเนินการ"
+  rf_done_at DATETIME NULL,                                   -- เวลาเปลี่ยนเป็น "ดำเนินการเสร็จสิ้น"
+
   FOREIGN KEY (rf_us_id) REFERENCES user(us_id)
     ON UPDATE CASCADE
     ON DELETE SET NULL,
@@ -169,6 +181,7 @@ CREATE TABLE repair_form (
     ON UPDATE CASCADE
     ON DELETE SET NULL
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+
 
 -- 9️⃣ Stock Form (Transaction Data)
 CREATE TABLE stock_form (
