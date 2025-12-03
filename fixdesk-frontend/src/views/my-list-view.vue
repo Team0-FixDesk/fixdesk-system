@@ -49,7 +49,7 @@ function parseJwt(token) {
 
 // ดึงข้อมูลรายการแจ้งซ่อม
 async function fetchMyRepairs() {
-  const token = localStorage.getItem('token')
+  const token = localStorage.getItem('token') || sessionStorage.getItem('token')
   if (!token) return
   const payload = parseJwt(token)
   const userId = payload.us_id
@@ -163,7 +163,7 @@ async function handleDelete(repairCode) {
   if (!result.isConfirmed) return
 
   try {
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token')
     const res = await fetch(`${API_BASE}/my-repairs/${repairCode}`, {
       method: 'DELETE',
       headers: {
@@ -181,7 +181,6 @@ async function handleDelete(repairCode) {
     Sweetalert.fire('เกิดข้อผิดพลาด', err.message, 'error')
   }
 }
-
 </script>
 
 <template>
@@ -342,7 +341,6 @@ async function handleDelete(repairCode) {
 
         <!-- component ปุ่มแจ้งซ่อม-->
         <RepairButton />
-        
       </div>
     </div>
   </div>

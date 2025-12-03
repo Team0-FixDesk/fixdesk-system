@@ -51,10 +51,18 @@ const router = createRouter({
         { path: 'user-home', component: UserHomeView, meta: { role: ['User'] } },
 
         { path: 'admin-home', component: AdminHomeView, meta: { role: ['Admin'] } },
-        { path: 'admin-check-request', component: AdminCheckRequestView, meta: { role: ['Admin'] } },
+        {
+          path: 'admin-check-request',
+          component: AdminCheckRequestView,
+          meta: { role: ['Admin'] },
+        },
         { path: 'admin-user-info', component: AdminUserInfoView, meta: { role: ['Admin'] } },
         { path: 'admin-summary', component: AdminSummaryView, meta: { role: ['Admin'] } },
-        { path: 'admin-manage-location', component: AdminManageLocationView, meta: { role: ['Admin'] } },
+        {
+          path: 'admin-manage-location',
+          component: AdminManageLocationView,
+          meta: { role: ['Admin'] },
+        },
         { path: 'admin-report', component: AdminReportView, meta: { role: ['Admin'] } },
 
         { path: 'manager-home', component: ManagerHomeView, meta: { role: ['Manager'] } },
@@ -62,37 +70,65 @@ const router = createRouter({
         { path: 'manager-summary', component: ManagerSummaryView, meta: { role: ['Manager'] } },
 
         { path: 'technician-home', component: TechnicianHomeView, meta: { role: ['Technician'] } },
-        { path: 'technician-repair-list', component: TechnicianRepairListView, meta: { role: ['Technician'] } },
-        { path: 'technician-history', component: TechnicianHistoryView, meta: { role: ['Technician'] } },
-        { path: 'technician-stock-list', component: TechnicianStockListView, meta: { role: ['Technician'] } },
-        { path: 'technician-my-stock', component: TechnicianMyStockView, meta: { role: ['Technician'] } },
+        {
+          path: 'technician-repair-list',
+          component: TechnicianRepairListView,
+          meta: { role: ['Technician'] },
+        },
+        {
+          path: 'technician-history',
+          component: TechnicianHistoryView,
+          meta: { role: ['Technician'] },
+        },
+        {
+          path: 'technician-stock-list',
+          component: TechnicianStockListView,
+          meta: { role: ['Technician'] },
+        },
+        {
+          path: 'technician-my-stock',
+          component: TechnicianMyStockView,
+          meta: { role: ['Technician'] },
+        },
 
         { path: 'stock-home', component: StockHomeView, meta: { role: ['Stock'] } },
-        { path: 'stock-withdraw-list', component: StockWithdrawListView, meta: { role: ['Stock'] } },
-        { path: 'stock-withdraw-history', component: StockWithdrawHistoryView, meta: { role: ['Stock'] } },
-        { path: 'stock-manage-inventory', component: StockManageInventoryView, meta: { role: ['Stock'] } },
+        {
+          path: 'stock-withdraw-list',
+          component: StockWithdrawListView,
+          meta: { role: ['Stock'] },
+        },
+        {
+          path: 'stock-withdraw-history',
+          component: StockWithdrawHistoryView,
+          meta: { role: ['Stock'] },
+        },
+        {
+          path: 'stock-manage-inventory',
+          component: StockManageInventoryView,
+          meta: { role: ['Stock'] },
+        },
 
         {
           path: 'repair-request',
           component: RepairRequestView,
-          meta: { role: ['User','Admin','Technician','Manager','Stock'] }
+          meta: { role: ['User', 'Admin', 'Technician', 'Manager', 'Stock'] },
         },
         {
           path: 'my-list',
           component: MyListView,
-          meta: { role: ['User','Admin','Technician','Manager','Stock'] }
+          meta: { role: ['User', 'Admin', 'Technician', 'Manager', 'Stock'] },
         },
         {
           path: 'repair-detail/:code',
           name: 'RepairDetail',
           component: () => import('@/views/repair-detail-view.vue'),
-          meta: { role: ['User','Admin','Technician','Manager','Stock'] }
+          meta: { role: ['User', 'Admin', 'Technician', 'Manager', 'Stock'] },
         },
         {
           path: 'repair-edit/:code',
           name: 'RepairEdit',
           component: () => import('@/views/repair-edit-view.vue'),
-          meta: { role: ['User','Admin','Technician','Manager','Stock'] }
+          meta: { role: ['User', 'Admin', 'Technician', 'Manager', 'Stock'] },
         },
       ],
     },
@@ -101,7 +137,7 @@ const router = createRouter({
 
 // NAVIGATION GUARD
 router.beforeEach((to, from, next) => {
-  const token = localStorage.getItem('token')
+  const token = localStorage.getItem('token') || sessionStorage.getItem('token')
   // CASE: หน้า Login
   if (to.path === '/login') {
     if (token) {
@@ -118,6 +154,7 @@ router.beforeEach((to, from, next) => {
     decoded = jwtDecode(token)
   } catch {
     localStorage.removeItem('token')
+    sessionStorage.removeItem('token')
     return next('/login')
   }
 
@@ -133,12 +170,18 @@ router.beforeEach((to, from, next) => {
 //  ROLE → HOME PAGE MAPPING
 function getHomeByRole(role) {
   switch (role) {
-    case 'Admin': return '/main/admin-home'
-    case 'User': return '/main/user-home'
-    case 'Technician': return '/main/technician-home'
-    case 'Manager': return '/main/manager-home'
-    case 'Stock': return '/main/stock-home'
-    default: return '/login'
+    case 'Admin':
+      return '/main/admin-home'
+    case 'User':
+      return '/main/user-home'
+    case 'Technician':
+      return '/main/technician-home'
+    case 'Manager':
+      return '/main/manager-home'
+    case 'Stock':
+      return '/main/stock-home'
+    default:
+      return '/login'
   }
 }
 

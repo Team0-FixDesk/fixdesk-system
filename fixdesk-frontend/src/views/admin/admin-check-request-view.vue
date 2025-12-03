@@ -9,7 +9,7 @@ const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
 
 /* Helper สำหรับแนบ Token */
 const getAuthHeaders = () => {
-  const token = localStorage.getItem('token')
+  const token = localStorage.getItem('token') || sessionStorage.getItem('token')
   return {
     'Content-Type': 'application/json',
     Authorization: `Bearer ${token}`,
@@ -38,7 +38,7 @@ const selectedDate = ref('')
 // ดึงข้อมูลรายการแจ้งซ่อมทั้งหมด (Admin)
 async function fetchAllRepairs() {
   try {
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token')
     if (!token) {
       Swal.fire('หมดเวลาเข้าสู่ระบบ', 'กรุณาเข้าสู่ระบบใหม่', 'warning')
       router.push('/login')
@@ -48,6 +48,7 @@ async function fetchAllRepairs() {
     const res = await fetch(`${API_BASE}/admin/repairs`, { headers: getAuthHeaders() })
     if (res.status === 401) {
       Swal.fire('หมดเวลาเข้าสู่ระบบ', 'กรุณาเข้าสู่ระบบใหม่', 'warning')
+      sessionStorage.removeItem('token')
       localStorage.removeItem('token')
       router.push('/login')
       return

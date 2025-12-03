@@ -8,7 +8,7 @@ const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
 
 // Build authorization headers for API requests สร้าง Authorization Header สำหรับเรียก API
 const getAuthHeaders = () => {
-  const token = localStorage.getItem('token')
+  const token = localStorage.getItem('token') || sessionStorage.getItem('token')
   return { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
 }
 

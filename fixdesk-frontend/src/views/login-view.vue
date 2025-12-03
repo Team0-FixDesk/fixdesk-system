@@ -11,6 +11,7 @@ const username = ref('')
 const password = ref('')
 const errorMessage = ref('')
 const isLoading = ref(false)
+const rememberMe = ref(false)
 
 // LOGIN FUNCTION
 const handleLogin = async (e) => {
@@ -31,9 +32,10 @@ const handleLogin = async (e) => {
     const data = await res.json()
     console.log('📬 ผลลัพธ์จาก backend (login):', data)
     if (!res.ok) throw new Error(data.message || 'เข้าสู่ระบบไม่สำเร็จ')
+    const storage = rememberMe.value ? localStorage : sessionStorage
 
     // เก็บ token
-    localStorage.setItem('token', data.token)
+    storage.setItem('token', data.token)
 
     // decode token เพื่ออ่านข้อมูลผู้ใช้
     const payload = jwtDecode(data.token)
@@ -54,7 +56,7 @@ const handleLogin = async (e) => {
       role: payload.role_name,
 
     }
-    localStorage.setItem('session_user', JSON.stringify(sessionUser))
+    storage.setItem('session_user', JSON.stringify(sessionUser))
 
     // redirect ตาม role_name
     switch (payload.role_name) {
@@ -120,6 +122,14 @@ const handleLogin = async (e) => {
             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 text-base"
             required
           />
+          <label class="flex items-center gap-2 text-sm text-gray-700">
+            <input
+              type="checkbox"
+              v-model="rememberMe"
+              class="h-4 w-4 rounded border-gray-300 text-[#1E48D1] focus:ring-[#1E48D1]"
+            />
+            <span>จำฉันไว้ (Remember me)</span>
+          </label>
           <button
             type="submit"
             :disabled="isLoading"

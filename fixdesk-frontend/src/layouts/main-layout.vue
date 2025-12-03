@@ -1,7 +1,8 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { jwtDecode } from 'jwt-decode'
+import Swal from 'sweetalert2'
 
 // import sidebar ของแต่ละ role
 import AdminSidebar from './admin-sidebar.vue'
@@ -14,19 +15,57 @@ const router = useRouter()
 const role = ref(null)
 const isInitialized = ref(false)
 
-onMounted(() => {
-  const token = localStorage.getItem('token')
-  if (!token) {
+/* 🕒 Idle timeout: 2 ชั่วโมง */
+const IDLE_TIMEOUT = 2 * 60 * 60 * 1000
+let idleTimer = null
+
+function clearAuthAndGoLogin(showAlert = false) {
+  localStorage.removeItem('token')
+  localStorage.removeItem('session_user')
+  sessionStorage.removeItem('token')
+  sessionStorage.removeItem('session_user')
+
+  if (showAlert) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'หมดเวลาในการใช้งาน',
+      text: 'คุณไม่มีการใช้งานเป็นเวลานาน ระบบได้ออกจากระบบอัตโนมัติ',
+      confirmButtonText: 'ตกลง',
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+    }).then(() => {
+      router.push('/login')
+    })
+  } else {
     router.push('/login')
+  }
+}
+
+function resetIdleTimer() {
+  clearTimeout(idleTimer)
+  idleTimer = setTimeout(() => {
+    clearAuthAndGoLogin(true)
+  }, IDLE_TIMEOUT)
+}
+
+onMounted(() => {
+  const localToken = localStorage.getItem('token')
+  const sessionToken = sessionStorage.getItem('token')
+  const token = localToken || sessionToken
+
+  if (!token) {
+    clearAuthAndGoLogin(false)
     return
   }
+
+  const isRemembered = !!localToken // ✔ ถ้ามีใน local แปลว่าติ๊ก "จำฉันไว้"
+
   try {
     const decoded = jwtDecode(token)
     console.log('decoded token:', decoded)
     role.value = decoded.role_name
     isInitialized.value = true
 
-    // redirect ไปหน้า home ตาม role (ถ้าเพิ่งเข้าครั้งแรก)
     const current = router.currentRoute.value.path
     if (current === '/main' || current === '/main/') {
       switch (decoded.role_name) {
@@ -47,11 +86,29 @@ onMounted(() => {
           break
       }
     }
+
+    // 🕒 เริ่มจับเวลา idle เฉพาะกรณี "ไม่จำฉันไว้"
+    if (!isRemembered) {
+      resetIdleTimer()
+      window.addEventListener('mousemove', resetIdleTimer)
+      window.addEventListener('keydown', resetIdleTimer)
+      window.addEventListener('click', resetIdleTimer)
+      window.addEventListener('scroll', resetIdleTimer)
+      window.addEventListener('touchstart', resetIdleTimer)
+    }
   } catch (err) {
     console.error('invalid token', err)
-    localStorage.removeItem('token')
-    router.push('/login')
+    clearAuthAndGoLogin(false)
   }
+})
+
+onUnmounted(() => {
+  clearTimeout(idleTimer)
+  window.removeEventListener('mousemove', resetIdleTimer)
+  window.removeEventListener('keydown', resetIdleTimer)
+  window.removeEventListener('click', resetIdleTimer)
+  window.removeEventListener('scroll', resetIdleTimer)
+  window.removeEventListener('touchstart', resetIdleTimer)
 })
 
 // เลือก sidebar ตาม role
@@ -82,7 +139,7 @@ const SidebarComponent = computed(() => {
     <component :is="SidebarComponent" class="z-50" />
     <main
       class="p-6 bg-gray-50 min-h-screen transition-all duration-300"
-      style="padding-left: 120px;"
+      style="padding-left: 120px"
     >
       <RouterView />
     </main>

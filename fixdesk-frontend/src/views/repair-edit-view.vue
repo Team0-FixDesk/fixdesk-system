@@ -151,7 +151,7 @@ async function fetchRepairDetail() {
 }
 
 onMounted(async () => {
-  const token = localStorage.getItem('token')
+  const token = localStorage.getItem('token') || sessionStorage.getItem('token')
   if (token) {
     const payload = parseJwt(token)
     formData.value.reporterName =
@@ -217,7 +217,7 @@ async function handleSubmit() {
     didOpen: () => Swal.showLoading(),
   })
   try {
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token')
     if (!token) throw new Error('Token not found')
 
     const payload = parseJwt(token)
@@ -266,7 +266,6 @@ async function handleSubmit() {
   }
 }
 </script>
-
 
 <template>
   <div class="bg-white rounded-xl shadow-md p-12 mx-auto max-w-7xl">

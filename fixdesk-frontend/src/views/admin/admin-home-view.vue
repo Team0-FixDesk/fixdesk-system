@@ -12,8 +12,19 @@
           :disabled="loading"
           class="bg-gray-500 hover:bg-gray-600 disabled:opacity-50 text-white px-4 py-2 rounded-md flex items-center"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-5 w-5 mr-1"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+            />
           </svg>
           รีเฟรช
         </button>
@@ -32,7 +43,9 @@
         <!-- Loading state -->
         <div v-if="loading" class="min-h-[372px] flex items-center justify-center">
           <div class="text-center">
-            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+            <div
+              class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"
+            ></div>
             <p class="text-gray-600">กำลังโหลดข้อมูล...</p>
           </div>
         </div>
@@ -50,39 +63,98 @@
           </div>
         </div>
         <!-- Data table -->
-        <div v-else class="min-h-[372px]"> <!-- กำหนดความสูงขั้นต่ำคงที่ -->
+        <div v-else class="min-h-[372px]">
+          <!-- กำหนดความสูงขั้นต่ำคงที่ -->
           <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
               <tr>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">วันที่</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ใบแจ้งซ่อม</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ชื่อผู้แจ้ง</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ประเภท</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">หมายเลขครุภัณฑ์</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">หน่วยงาน</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ความเร่งด่วน</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">สถานะงาน</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">รายละเอียด</th>
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >
+                  วันที่
+                </th>
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >
+                  ใบแจ้งซ่อม
+                </th>
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >
+                  ชื่อผู้แจ้ง
+                </th>
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >
+                  ประเภท
+                </th>
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >
+                  หมายเลขครุภัณฑ์
+                </th>
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >
+                  หน่วยงาน
+                </th>
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >
+                  ความเร่งด่วน
+                </th>
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >
+                  สถานะงาน
+                </th>
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >
+                  รายละเอียด
+                </th>
               </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
               <!-- แสดงข้อมูลในหน้าปัจจุบัน -->
-              <tr v-for="(request, index) in paginatedRequests" :key="request.ticketId" class="hover:bg-gray-50">
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ request.date }}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ request.ticketId }}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ request.requesterName }}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ request.type }}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ request.assetId }}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ request.department }}</td>
+              <tr
+                v-for="(request, index) in paginatedRequests"
+                :key="request.ticketId"
+                class="hover:bg-gray-50"
+              >
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {{ request.date }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {{ request.ticketId }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {{ request.requesterName }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {{ request.type }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {{ request.assetId }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {{ request.department }}
+                </td>
                 <!-- ส่วนแสดงความเร่งด่วน -->
                 <td class="px-6 py-4 whitespace-nowrap">
-                  <span :class="getUrgencyClass(request.urgency)" class="inline-flex w-28 justify-center items-center px-3 py-1 text-xs font-medium rounded-full">
+                  <span
+                    :class="getUrgencyClass(request.urgency)"
+                    class="inline-flex w-28 justify-center items-center px-3 py-1 text-xs font-medium rounded-full"
+                  >
                     {{ request.urgency }}
                   </span>
                 </td>
                 <!-- ส่วนแสดงสถานะ -->
                 <td class="px-6 py-4 whitespace-nowrap">
-                  <span :class="getStatusClass(request.status)" class="inline-flex w-28 justify-center items-center px-3 py-1 text-xs font-medium rounded-full">
+                  <span
+                    :class="getStatusClass(request.status)"
+                    class="inline-flex w-28 justify-center items-center px-3 py-1 text-xs font-medium rounded-full"
+                  >
                     {{ request.status }}
                   </span>
                 </td>
@@ -97,19 +169,31 @@
                 </td>
               </tr>
               <!-- เพิ่มแถวว่างเพื่อให้ตารางมีความสูงคงที่เสมอ -->
-              <tr v-for="i in Math.max(0, itemsPerPage - paginatedRequests.length)" :key="`empty-${i}`" class="h-[53px] empty-row">
-                <td v-for="j in 9" :key="`empty-cell-${j}`" class="px-6 py-4 whitespace-nowrap"></td>
+              <tr
+                v-for="i in Math.max(0, itemsPerPage - paginatedRequests.length)"
+                :key="`empty-${i}`"
+                class="h-[53px] empty-row"
+              >
+                <td
+                  v-for="j in 9"
+                  :key="`empty-cell-${j}`"
+                  class="px-6 py-4 whitespace-nowrap"
+                ></td>
               </tr>
               <!-- แสดงข้อความเมื่อไม่มีข้อมูล -->
               <tr v-if="paginatedRequests.length === 0" key="no-data">
-                <td colspan="9" class="px-6 py-8 text-center text-gray-500">ไม่พบข้อมูลรายการแจ้งซ่อม</td>
+                <td colspan="9" class="px-6 py-8 text-center text-gray-500">
+                  ไม่พบข้อมูลรายการแจ้งซ่อม
+                </td>
               </tr>
             </tbody>
           </table>
         </div>
       </div>
       <!-- Pagination -->
-      <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+      <div
+        class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6"
+      >
         <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
           <div>
             <p class="text-sm text-gray-700">
@@ -132,12 +216,23 @@
                   'relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium',
                   currentPage === 1
                     ? 'text-gray-300 cursor-not-allowed'
-                    : 'text-gray-500 hover:bg-gray-50 cursor-pointer'
+                    : 'text-gray-500 hover:bg-gray-50 cursor-pointer',
                 ]"
               >
                 <span class="sr-only">Previous</span>
-                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                <svg
+                  class="h-5 w-5"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M15 19l-7-7 7-7"
+                  />
                 </svg>
               </button>
               <!-- หมายเลขหน้า -->
@@ -150,8 +245,8 @@
                   page === '...'
                     ? 'bg-white text-gray-700 cursor-default'
                     : page === currentPage
-                    ? 'bg-blue-50 text-blue-600 hover:bg-blue-100'
-                    : 'bg-white text-gray-700 hover:bg-gray-50 cursor-pointer'
+                      ? 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+                      : 'bg-white text-gray-700 hover:bg-gray-50 cursor-pointer',
                 ]"
               >
                 {{ page }}
@@ -164,12 +259,23 @@
                   'relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium',
                   currentPage === totalPages
                     ? 'text-gray-300 cursor-not-allowed'
-                    : 'text-gray-500 hover:bg-gray-50 cursor-pointer'
+                    : 'text-gray-500 hover:bg-gray-50 cursor-pointer',
                 ]"
               >
                 <span class="sr-only">Next</span>
-                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                <svg
+                  class="h-5 w-5"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 5l7 7-7 7"
+                  />
                 </svg>
               </button>
             </nav>
@@ -181,7 +287,7 @@
 </template>
 
 <script setup>
-import CardHomeComponent from '@/components/card-home-component.vue';
+import CardHomeComponent from '@/components/card-home-component.vue'
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import RepairButton from '@/components/repair-button.vue'
@@ -197,7 +303,7 @@ const fetchRepairRequests = async () => {
   loading.value = true
   error.value = null
   try {
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token')
     if (!token) {
       throw new Error('ไม่พบ token การเข้าสู่ระบบ')
     }
@@ -205,9 +311,9 @@ const fetchRepairRequests = async () => {
     const response = await fetch(`${import.meta.env.VITE_API_BASE}/admin/repairs`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
     })
     if (!response.ok) {
       throw new Error('เกิดข้อผิดพลาดในการดึงข้อมูล')
@@ -215,7 +321,7 @@ const fetchRepairRequests = async () => {
 
     const data = await response.json()
     // แปลงข้อมูลจาก API ให้ตรงกับรูปแบบที่ template ต้องการ
-    repairRequests.value = data.map(item => ({
+    repairRequests.value = data.map((item) => ({
       date: new Date(item.rf_create_at).toLocaleDateString('th-TH'),
       rawDate: new Date(item.rf_create_at),
       ticketId: item.rf_code,
@@ -225,9 +331,10 @@ const fetchRepairRequests = async () => {
       department: item.department_name || '-',
       urgency: mapUrgency(item.rf_urgency),
       status: mapStatus(item.rf_user_status),
-      technicianName: item.tech_first_name && item.tech_last_name
-        ? `${item.tech_first_name} ${item.tech_last_name}`
-        : 'ยังไม่มอบหมาย'
+      technicianName:
+        item.tech_first_name && item.tech_last_name
+          ? `${item.tech_first_name} ${item.tech_last_name}`
+          : 'ยังไม่มอบหมาย',
     }))
   } catch (err) {
     console.error('Error fetching repair requests:', err)
@@ -240,9 +347,9 @@ const fetchRepairRequests = async () => {
 // ฟังก์ชันสำหรับแปลงค่าความเร่งด่วน
 const mapUrgency = (urgency) => {
   const urgencyMap = {
-    'high': 'เร่งด่วนมาก',
-    'medium': 'เร่งด่วน',
-    'low': 'ไม่เร่งด่วน'
+    high: 'เร่งด่วนมาก',
+    medium: 'เร่งด่วน',
+    low: 'ไม่เร่งด่วน',
   }
   return urgencyMap[urgency] || 'เร่งด่วน'
 }
@@ -250,10 +357,10 @@ const mapUrgency = (urgency) => {
 // ฟังก์ชันสำหรับแปลงสถานะ
 const mapStatus = (status) => {
   const statusMap = {
-    'pending': 'รอดำเนินการ',
-    'in_progress': 'กำลังดำเนินการ',
-    'completed': 'เสร็จสิ้น',
-    'cancelled': 'ยกเลิก'
+    pending: 'รอดำเนินการ',
+    in_progress: 'กำลังดำเนินการ',
+    completed: 'เสร็จสิ้น',
+    cancelled: 'ยกเลิก',
   }
   return statusMap[status] || 'รอดำเนินการ'
 }
@@ -275,22 +382,22 @@ const isWithinLastSevenDays = (request) => {
 
 // คำนวณจำนวนงานตามเงื่อนไขต่างๆ
 const todayTasksCount = computed(() => {
-  return repairRequests.value.filter(request => isToday(request)).length
+  return repairRequests.value.filter((request) => isToday(request)).length
 })
 
 const inProgressTasksCount = computed(() => {
-  return repairRequests.value.filter(request => request.status === 'กำลังดำเนินการ').length
+  return repairRequests.value.filter((request) => request.status === 'กำลังดำเนินการ').length
 })
 
 const completedTasksCount = computed(() => {
-  return repairRequests.value.filter(request =>
-    request.status === 'เสร็จสิ้น' && isWithinLastSevenDays(request.date)
+  return repairRequests.value.filter(
+    (request) => request.status === 'เสร็จสิ้น' && isWithinLastSevenDays(request.date),
   ).length
 })
 
 const cancelledTasksCount = computed(() => {
-  return repairRequests.value.filter(request =>
-    request.status === 'ยกเลิก' && isWithinLastSevenDays(request.date)
+  return repairRequests.value.filter(
+    (request) => request.status === 'ยกเลิก' && isWithinLastSevenDays(request.date),
   ).length
 })
 
@@ -298,24 +405,24 @@ const cancelledTasksCount = computed(() => {
 const statItems = computed(() => [
   {
     value: todayTasksCount.value, // ค่าตัวเลข
-    label: 'งานทั้งหมดในวันนี้',    // ข้อความ
-    colorClass: 'text-blue-600'   // สี (กำหนดจากตรงนี้ได้เลย)
+    label: 'งานทั้งหมดในวันนี้', // ข้อความ
+    colorClass: 'text-blue-600', // สี (กำหนดจากตรงนี้ได้เลย)
   },
   {
     value: inProgressTasksCount.value,
     label: 'กำลังดำเนินการ',
-    colorClass: 'text-orange-500'
+    colorClass: 'text-orange-500',
   },
   {
     value: completedTasksCount.value,
     label: 'เสร็จสิ้น (7 วัน)',
-    colorClass: 'text-green-600'
+    colorClass: 'text-green-600',
   },
   {
     value: cancelledTasksCount.value,
     label: 'ยกเลิก (7 วัน)',
-    colorClass: 'text-red-600'
-  }
+    colorClass: 'text-red-600',
+  },
 ])
 
 // ฟังก์ชันสำหรับการกำหนดคลาสของสถานะ
@@ -399,9 +506,7 @@ const displayedPageNumbers = computed(() => {
 
 // คำนวณตำแหน่งรายการแรกและสุดท้ายในหน้าปัจจุบัน
 const startItem = computed(() => {
-  return repairRequests.value.length === 0
-    ? 0
-    : (currentPage.value - 1) * itemsPerPage + 1
+  return repairRequests.value.length === 0 ? 0 : (currentPage.value - 1) * itemsPerPage + 1
 })
 
 const endItem = computed(() => {
