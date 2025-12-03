@@ -1,7 +1,4 @@
 <script setup>
-/* ==============================
-   📦 Imports & Setup
-   ============================== */
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
@@ -11,9 +8,6 @@ defineOptions({ name: 'RepairRequestView' })
 const router = useRouter()
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
 
-/* ==============================
-   📄 Reactive States
-   ============================== */
 const isSubmitting = ref(false)
 const formData = ref({
   reporterName: '',
@@ -31,19 +25,16 @@ const formData = ref({
   problemDetail: '',
   issueDescription: '',
   urgency: '',
-  uploadedFiles: [], // ✅ เปลี่ยนเป็น array สำหรับหลายไฟล์
+  uploadedFiles: [],
 })
 
 const filePreview = ref([])
 const maxFiles = 5
 
-// ✅ Modal Preview
+// Modal Preview
 const showPreviewModal = ref(false)
 const currentPreviewIndex = ref(0)
 
-/* ==============================
-   🧱 Dropdown Data Fetching
-   ============================== */
 async function fetchTechnicianTypes() {
   try {
     const res = await fetch(`${API_BASE}/technician-types`)
@@ -102,18 +93,12 @@ async function fetchRooms(floorId) {
   }
 }
 
-/* ==============================
-   🖼️ File Upload
-   ============================== */
+// File Upload
 function handleFileUpload(event) {
   const files = Array.from(event.target.files)
   processFiles(files)
 }
 
-// เพิ่มใน script section
-/* ==============================
-   🎯 Drag & Drop Functionality
-   ============================== */
 const isDragOver = ref(false)
 
 function handleDragOver(event) {
@@ -165,7 +150,6 @@ function processFiles(files) {
   // เช็คขนาดไฟล์ (50MB)
   const maxSize = 50 * 1024 * 1024
   const oversizedFiles = files.filter(file => file.size > maxSize)
-
   if (oversizedFiles.length > 0) {
     Swal.fire({
       title: 'ไฟล์ใหญ่เกินไป',
@@ -201,7 +185,7 @@ function removeFile(index) {
   filePreview.value.splice(index, 1)
 }
 
-// ✅ Modal Preview Functions
+// Modal Preview Functions
 function openPreview(index) {
   currentPreviewIndex.value = index
   showPreviewModal.value = true
@@ -223,18 +207,14 @@ function prevPreview() {
   }
 }
 
-/* ==============================
-   ⚡ Urgency Options
-   ============================== */
+// Urgency Options
 const urgencyLevels = [
   { label: 'เร่งด่วนมาก', value: 'high', border: 'border-red-600', bg: 'bg-red-600' },
   { label: 'เร่งด่วน', value: 'medium', border: 'border-amber-400', bg: 'bg-amber-400' },
   { label: 'ไม่เร่งด่วน', value: 'low', border: 'border-green-600', bg: 'bg-green-600' },
 ]
 
-/* ==============================
-   🔐 JWT Decode
-   ============================== */
+// JWT Decode
 function parseJwt(token) {
   try {
     const base64Url = token.split('.')[1]
@@ -252,9 +232,6 @@ function parseJwt(token) {
   }
 }
 
-/* ==============================
-   🚀 Lifecycle
-   ============================== */
 onMounted(() => {
   const token = localStorage.getItem('token')
   if (!token) return
@@ -269,9 +246,6 @@ onMounted(() => {
   fetchBuildings()
 })
 
-/* ==============================
-   💾 Submit Logic (SweetAlert Flow)
-   ============================== */
 async function handleSubmit() {
   // 🔥 เช็กความเร่งด่วนก่อนเลย
   if (!formData.value.urgency) {
@@ -301,7 +275,6 @@ async function handleSubmit() {
     confirmButtonColor: '#1E48D1',
     cancelButtonColor: '#9CA3AF',
   })
-
   if (!confirm.isConfirmed) return
 
   Swal.fire({
@@ -310,19 +283,16 @@ async function handleSubmit() {
     allowOutsideClick: false,
     didOpen: () => Swal.showLoading(),
   })
-
   try {
     const token = localStorage.getItem('token')
     if (!token) throw new Error('ไม่พบ token')
 
     const payload = parseJwt(token)
-    let res // ✅ ประกาศตัวแปร res ก่อน
-
-    // ✅ ตรวจสอบว่ามีไฟล์หรือไม่ แล้วเลือก API endpoint ที่เหมาะสม
+    let res
+    // ตรวจสอบว่ามีไฟล์หรือไม่ แล้วเลือก API endpoint ที่เหมาะสม
     if (formData.value.uploadedFiles.length > 0) {
       // ถ้ามีไฟล์ ใช้ FormData และ API with files
       const formDataToSend = new FormData()
-
       // เพิ่มข้อมูลฟอร์ม
       formDataToSend.append('us_id', payload.us_id)
       formDataToSend.append('phone_number', formData.value.phoneNumber)
@@ -332,7 +302,6 @@ async function handleSubmit() {
       formDataToSend.append('problem_detail', formData.value.problemDetail)
       formDataToSend.append('issue_description', formData.value.issueDescription)
       formDataToSend.append('urgency', formData.value.urgency || 'medium')
-
       // เพิ่มไฟล์
       formData.value.uploadedFiles.forEach(file => {
         formDataToSend.append('files', file)
@@ -376,7 +345,7 @@ async function handleSubmit() {
 
     router.push('/main/my-list')
   } catch (err) {
-    console.error('❌ บันทึกไม่สำเร็จ:', err)
+    console.error('บันทึกไม่สำเร็จ:', err)
     Swal.close()
     Swal.fire({
       title: 'เกิดข้อผิดพลาด!',
@@ -416,32 +385,26 @@ function validateForm() {
     errors.value.repairType = 'กรุณาเลือกประเภทงานซ่อม'
     valid = false
   }
-
   if (!formData.value.building) {
     errors.value.building = 'กรุณาเลือกอาคาร'
     valid = false
   }
-
   if (!formData.value.floor) {
     errors.value.floor = 'กรุณาเลือกชั้น'
     valid = false
   }
-
   if (!formData.value.room) {
     errors.value.room = 'กรุณาเลือกห้อง'
     valid = false
   }
-
   if (!formData.value.problemDetail.trim()) {
     errors.value.problemDetail = 'กรุณากรอกหัวข้อปัญหา'
     valid = false
   }
-
   if (!formData.value.issueDescription.trim()) {
     errors.value.issueDescription = 'กรุณากรอกสาเหตุ/อาการเสีย'
     valid = false
   }
-
   return valid
 }
 </script>
@@ -779,7 +742,7 @@ function validateForm() {
       />
     </div>
 
-    <!-- ✅ Preview Modal -->
+    <!-- Preview Modal -->
     <div v-if="showPreviewModal" class="fixed inset-0 z-50 bg-black bg-opacity-90 flex items-center justify-center" @click="closePreview">
       <div class="relative max-w-4xl max-h-full p-4" @click.stop>
         <!-- ปุ่มปิด -->

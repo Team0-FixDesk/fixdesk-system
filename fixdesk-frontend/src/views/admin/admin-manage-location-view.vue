@@ -5,9 +5,6 @@ import Swal from 'sweetalert2'
 
 defineOptions({ name: 'AdminManageLocationView' })
 
-/* ===============================
- * ⚙️ CONFIG
- * =============================== */
 const router = useRouter()
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
 
@@ -20,9 +17,6 @@ const getAuthHeaders = () => {
   }
 }
 
-/* ===============================
- * 💾 STATE
- * =============================== */
 const buildings = ref([])
 const floors = ref([])
 const rooms = ref([])
@@ -52,16 +46,14 @@ const newBuildingName = ref('')
 const newFloorName = ref('')
 const roomName = ref('')
 
-/* ===============================
- * 📥 FETCH DATA
- * =============================== */
+// FETCH DATA
 async function fetchBuildings() {
   try {
     const res = await fetch(`${API_BASE}/buildings`)
     const data = await res.json()
     buildings.value = data
   } catch (err) {
-    console.error('❌ Error fetching buildings:', err)
+    console.error('Error fetching buildings:', err)
   }
 }
 
@@ -71,7 +63,7 @@ async function fetchFloors(buildingId) {
     const data = await res.json()
     floors.value = data
   } catch (err) {
-    console.error('❌ Error fetching floors:', err)
+    console.error('Error fetching floors:', err)
   }
 }
 
@@ -81,13 +73,11 @@ async function fetchRooms(floorId) {
     const data = await res.json()
     rooms.value = data
   } catch (err) {
-    console.error('❌ Error fetching rooms:', err)
+    console.error('Error fetching rooms:', err)
   }
 }
 
-/* ===============================
- * 🔍 COMPUTED DATA
- * =============================== */
+// COMPUTED DATA
 const displayData = computed(() => {
   let data = []
 
@@ -127,7 +117,6 @@ const displayData = computed(() => {
       type: 'room'
     }))
   }
-
   // Filter by search query
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase()
@@ -138,7 +127,6 @@ const displayData = computed(() => {
       item.room.toLowerCase().includes(query)
     )
   }
-
   // Sort
   if (sortOrder.value === 'ก-ฮ') {
     data.sort((a, b) => a.name.localeCompare(b.name, 'th'))
@@ -160,9 +148,7 @@ const paginatedData = computed(() => {
   return displayData.value.slice(start, start + perPage)
 })
 
-/* ===============================
- * 🎯 ACTIONS
- * =============================== */
+// ACIONS
 async function handleBuildingChange() {
   if (selectedBuilding.value) {
     await fetchFloors(selectedBuilding.value)
@@ -457,7 +443,7 @@ async function bulkCreateLocation() {
       }
 
       buildingId = data.bd_id
-      console.log('✅ สร้างอาคารสำเร็จ:', data)
+      console.log('สร้างอาคารสำเร็จ:', data)
     }
 
     // 2. สร้างชั้นถ้าเป็นแบบใหม่
@@ -498,7 +484,7 @@ async function bulkCreateLocation() {
       }
 
       floorId = data.fl_id
-      console.log('✅ สร้างชั้นสำเร็จ:', data)
+      console.log('สร้างชั้นสำเร็จ:', data)
     }
 
     // 3. สร้างห้อง (required)
@@ -537,7 +523,7 @@ async function bulkCreateLocation() {
       throw new Error(data.message || 'สร้างห้องไม่สำเร็จ')
     }
 
-    console.log('✅ สร้างห้องสำเร็จ:', data)
+    console.log('สร้างห้องสำเร็จ:', data)
 
     closeModal()
 
@@ -584,9 +570,6 @@ function goToPage(page) {
   if (page >= 1 && page <= totalPages.value) currentPage.value = page
 }
 
-/* ===============================
- * 🚀 LIFECYCLE
- * =============================== */
 onMounted(async () => {
   await fetchBuildings()
 })
@@ -594,13 +577,13 @@ onMounted(async () => {
 
 <template>
   <div class="bg-white rounded-xl shadow-md p-12 mx-auto max-w-6xl">
-    <!-- 🔹 หัวข้อ -->
+    <!-- หัวข้อ -->
     <h1 class="text-xl font-bold text-blue-700 mb-2">สถานที่ทั้งหมด</h1>
     <p class="text-sm text-gray-600 mb-6">
       ค้นหาตรองและเรียงลำดับรายการอาคาร ชั้น ห้อง
     </p>
 
-    <!-- 🔍 แถบค้นหาและตัวกรอง -->
+    <!-- แถบค้นหาและตัวกรอง -->
     <div class="flex items-center gap-3 mb-6">
       <!-- ช่องค้นหา -->
       <div class="relative flex-1 max-w-xs">
@@ -670,7 +653,7 @@ onMounted(async () => {
       </button>
     </div>
 
-    <!-- 🧾 ตาราง -->
+    <!-- ตาราง -->
     <div class="overflow-x-auto border border-gray-200 rounded-lg">
       <table class="w-full text-sm text-left text-gray-700 border-collapse">
         <thead class="bg-gray-50 border-b border-gray-200">
@@ -730,7 +713,7 @@ onMounted(async () => {
       </table>
     </div>
 
-    <!-- 📄 Pagination -->
+    <!-- Pagination -->
     <div class="flex items-center justify-between mt-4">
       <div class="text-sm text-gray-500">
         Showing {{ startEntry }} to {{ endEntry }} of {{ totalEntries }} entries
@@ -1104,7 +1087,7 @@ onMounted(async () => {
               <!-- แสดงประเภทที่เลือก -->
               <div class="flex items-center gap-2 p-3 bg-blue-50 rounded-lg mb-4">
                 <span class="text-2xl">
-                  {{ modalType === 'building' ? '🏢' : modalType === 'floor' ? '🧱' : '🚪' }}
+                  {{ modalType === 'building' ? ' ' : modalType === 'floor' ? ' ' : ' ' }}
                 </span>
                 <span class="font-semibold text-blue-800">
                   {{ modalMode === 'add' ? 'เพิ่ม' : 'แก้ไข' }}{{ modalType === 'building' ? 'อาคาร' : modalType === 'floor' ? 'ชั้น' : 'ห้อง' }}

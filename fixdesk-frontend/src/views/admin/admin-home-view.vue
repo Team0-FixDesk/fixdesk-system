@@ -17,22 +17,17 @@
           </svg>
           รีเฟรช
         </button>
-
         <!-- component ปุ่มแจ้งซ่อม-->
         <RepairButton />
-
       </div>
     </div>
-
     <!-- Stats cards -->
     <CardHomeComponent :items="statItems" />
-  
     <!-- Recent requests table -->
     <div class="bg-white rounded-lg shadow overflow-hidden">
       <div class="p-6 border-b">
         <h2 class="text-lg font-semibold text-gray-800">รายการแจ้งซ่อมล่าสุด</h2>
       </div>
-
       <div class="overflow-x-auto">
         <!-- Loading state -->
         <div v-if="loading" class="min-h-[372px] flex items-center justify-center">
@@ -41,7 +36,6 @@
             <p class="text-gray-600">กำลังโหลดข้อมูล...</p>
           </div>
         </div>
-
         <!-- Error state -->
         <div v-else-if="error" class="min-h-[372px] flex items-center justify-center">
           <div class="text-center">
@@ -55,7 +49,6 @@
             </button>
           </div>
         </div>
-
         <!-- Data table -->
         <div v-else class="min-h-[372px]"> <!-- กำหนดความสูงขั้นต่ำคงที่ -->
           <table class="min-w-full divide-y divide-gray-200">
@@ -87,7 +80,6 @@
                     {{ request.urgency }}
                   </span>
                 </td>
-
                 <!-- ส่วนแสดงสถานะ -->
                 <td class="px-6 py-4 whitespace-nowrap">
                   <span :class="getStatusClass(request.status)" class="inline-flex w-28 justify-center items-center px-3 py-1 text-xs font-medium rounded-full">
@@ -104,12 +96,10 @@
                   </button>
                 </td>
               </tr>
-
               <!-- เพิ่มแถวว่างเพื่อให้ตารางมีความสูงคงที่เสมอ -->
               <tr v-for="i in Math.max(0, itemsPerPage - paginatedRequests.length)" :key="`empty-${i}`" class="h-[53px] empty-row">
                 <td v-for="j in 9" :key="`empty-cell-${j}`" class="px-6 py-4 whitespace-nowrap"></td>
               </tr>
-
               <!-- แสดงข้อความเมื่อไม่มีข้อมูล -->
               <tr v-if="paginatedRequests.length === 0" key="no-data">
                 <td colspan="9" class="px-6 py-8 text-center text-gray-500">ไม่พบข้อมูลรายการแจ้งซ่อม</td>
@@ -118,7 +108,6 @@
           </table>
         </div>
       </div>
-
       <!-- Pagination -->
       <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
         <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
@@ -151,7 +140,6 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                 </svg>
               </button>
-
               <!-- หมายเลขหน้า -->
               <button
                 v-for="page in displayedPageNumbers"
@@ -168,7 +156,6 @@
               >
                 {{ page }}
               </button>
-
               <!-- ปุ่มถัดไป -->
               <button
                 @click="nextPage"
@@ -197,12 +184,10 @@
 import CardHomeComponent from '@/components/card-home-component.vue';
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import RepairButton from '@/components/repair-button.vue' 
-
+import RepairButton from '@/components/repair-button.vue'
 
 const router = useRouter()
 
-// ตัวแปรสำหรับเก็บข้อมูลจาก API
 const repairRequests = ref([])
 const loading = ref(false)
 const error = ref(null)
@@ -211,7 +196,6 @@ const error = ref(null)
 const fetchRepairRequests = async () => {
   loading.value = true
   error.value = null
-
   try {
     const token = localStorage.getItem('token')
     if (!token) {
@@ -225,17 +209,15 @@ const fetchRepairRequests = async () => {
         'Content-Type': 'application/json'
       }
     })
-
     if (!response.ok) {
       throw new Error('เกิดข้อผิดพลาดในการดึงข้อมูล')
     }
 
     const data = await response.json()
-
     // แปลงข้อมูลจาก API ให้ตรงกับรูปแบบที่ template ต้องการ
     repairRequests.value = data.map(item => ({
       date: new Date(item.rf_create_at).toLocaleDateString('th-TH'),
-      rawDate: new Date(item.rf_create_at), 
+      rawDate: new Date(item.rf_create_at),
       ticketId: item.rf_code,
       requesterName: `${item.us_first_name || ''} ${item.us_last_name || ''}`.trim(),
       type: item.tt_name || '-',
@@ -247,7 +229,6 @@ const fetchRepairRequests = async () => {
         ? `${item.tech_first_name} ${item.tech_last_name}`
         : 'ยังไม่มอบหมาย'
     }))
-
   } catch (err) {
     console.error('Error fetching repair requests:', err)
     error.value = err.message
@@ -280,7 +261,7 @@ const mapStatus = (status) => {
 // ฟังก์ชันช่วยเหลือสำหรับการเปรียบเทียบวันที่
 const isToday = (request) => {
   const today = new Date()
-  const date = request.rawDate || new Date(request.date) 
+  const date = request.rawDate || new Date(request.date)
   return date.toDateString() === today.toDateString()
 }
 
@@ -390,7 +371,6 @@ const displayedPageNumbers = computed(() => {
   const delta = 1 // จำนวนหน้าที่แสดงก่อนและหลังหน้าปัจจุบัน
 
   let pages = []
-
   // แสดงหน้าแรกเสมอ
   pages.push(1)
 
@@ -402,22 +382,18 @@ const displayedPageNumbers = computed(() => {
   if (rangeStart > 2) {
     pages.push('...')
   }
-
   // เพิ่มหน้าในช่วงกลาง
   for (let i = rangeStart; i <= rangeEnd; i++) {
     pages.push(i)
   }
-
   // เพิ่ม ... ก่อนหน้าสุดท้าย (ถ้าจำเป็น)
   if (rangeEnd < total - 1 && total > 1) {
     pages.push('...')
   }
-
   // แสดงหน้าสุดท้ายเสมอ (ถ้ามีมากกว่า 1 หน้า)
   if (total > 1) {
     pages.push(total)
   }
-
   return pages
 })
 

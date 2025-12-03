@@ -5,7 +5,6 @@ import SidebarProfile from '@/components/sidebar-profile.vue'
 // สถานะเปิด/ปิด sidebar
 const isOpen = ref(false)
 
-// ตัวแปรเก็บชื่อผู้ใช้จาก token
 // เมนูทั้งหมด
 const menus = [
   { icon: '/icon/sidebar/home-icon.svg', label: 'หน้าหลัก', path: '/main/admin-home' },
@@ -44,7 +43,6 @@ const menus = [
         FIXDESK
       </span>
     </div>
-
     <!-- เมนูหลัก -->
     <nav class="flex flex-col gap-2 mt-6 px-2 flex-1">
       <RouterLink

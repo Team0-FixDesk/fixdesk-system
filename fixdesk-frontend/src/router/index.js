@@ -1,26 +1,18 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { jwtDecode } from 'jwt-decode'
 
-/* ================
- *  AUTH
- * ================ */
+// AUTH
 import LoginView from '../views/login-view.vue'
 import MainLayout from '../layouts/main-layout.vue'
 
-/* ================
- *  SHARED
- * ================ */
+// SHARED
 import RepairRequestView from '../views/repair-request-view.vue'
 import MyListView from '../views/my-list-view.vue'
 
-/* ================
- *  USER
- * ================ */
+// USER
 import UserHomeView from '../views/user/user-home-view.vue'
 
-/* ================
- *  ADMIN
- * ================ */
+// ADMIN
 import AdminHomeView from '../views/admin/admin-home-view.vue'
 import AdminCheckRequestView from '../views/admin/admin-check-request-view.vue'
 import AdminUserInfoView from '../views/admin/admin-user-info-view.vue'
@@ -28,33 +20,25 @@ import AdminSummaryView from '../views/admin/admin-summary-view.vue'
 import AdminManageLocationView from '../views/admin/admin-manage-location-view.vue'
 import AdminReportView from '../views/admin/admin-report-view.vue'
 
-/* ================
- *  MANAGER
- * ================ */
+// MANAGER
 import ManagerHomeView from '../views/manager/manager-home-view.vue'
 import ManagerReportView from '../views/manager/manager-report-view.vue'
 import ManagerSummaryView from '../views/manager/manager-summary-view.vue'
 
-/* ================
- *  TECHNICIAN
- * ================ */
+//TECHNICIAN
 import TechnicianHomeView from '../views/technician/technician-home-view.vue'
 import TechnicianRepairListView from '../views/technician/technician-repair-list-view.vue'
 import TechnicianHistoryView from '../views/technician/technician-history-view.vue'
 import TechnicianStockListView from '../views/technician/technician-stock-list-view.vue'
 import TechnicianMyStockView from '../views/technician/technician-my-stock-view.vue'
 
-/* ================
- *  STOCK
- * ================ */
+// STOCK
 import StockHomeView from '../views/stock/stock-home-view.vue'
 import StockWithdrawListView from '../views/stock/stock-withdraw-list-view.vue'
 import StockWithdrawHistoryView from '../views/stock/stock-withdraw-history-view.vue'
 import StockManageInventoryView from '../views/stock/stock-manage-inventory-view.vue'
 
-/* -----------------------------------------------------
- * ROUTER CONFIG
- * ----------------------------------------------------- */
+// ROUTER CONFIG
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -64,14 +48,8 @@ const router = createRouter({
       path: '/main',
       component: MainLayout,
       children: [
-        /* ------------------------------
-         * USER
-         * ------------------------------ */
         { path: 'user-home', component: UserHomeView, meta: { role: ['User'] } },
 
-        /* ------------------------------
-         * ADMIN
-         * ------------------------------ */
         { path: 'admin-home', component: AdminHomeView, meta: { role: ['Admin'] } },
         { path: 'admin-check-request', component: AdminCheckRequestView, meta: { role: ['Admin'] } },
         { path: 'admin-user-info', component: AdminUserInfoView, meta: { role: ['Admin'] } },
@@ -79,33 +57,21 @@ const router = createRouter({
         { path: 'admin-manage-location', component: AdminManageLocationView, meta: { role: ['Admin'] } },
         { path: 'admin-report', component: AdminReportView, meta: { role: ['Admin'] } },
 
-        /* ------------------------------
-         * MANAGER
-         * ------------------------------ */
         { path: 'manager-home', component: ManagerHomeView, meta: { role: ['Manager'] } },
         { path: 'manager-report', component: ManagerReportView, meta: { role: ['Manager'] } },
         { path: 'manager-summary', component: ManagerSummaryView, meta: { role: ['Manager'] } },
 
-        /* ------------------------------
-         * TECHNICIAN
-         * ------------------------------ */
         { path: 'technician-home', component: TechnicianHomeView, meta: { role: ['Technician'] } },
         { path: 'technician-repair-list', component: TechnicianRepairListView, meta: { role: ['Technician'] } },
         { path: 'technician-history', component: TechnicianHistoryView, meta: { role: ['Technician'] } },
         { path: 'technician-stock-list', component: TechnicianStockListView, meta: { role: ['Technician'] } },
         { path: 'technician-my-stock', component: TechnicianMyStockView, meta: { role: ['Technician'] } },
 
-        /* ------------------------------
-         * STOCK
-         * ------------------------------ */
         { path: 'stock-home', component: StockHomeView, meta: { role: ['Stock'] } },
         { path: 'stock-withdraw-list', component: StockWithdrawListView, meta: { role: ['Stock'] } },
         { path: 'stock-withdraw-history', component: StockWithdrawHistoryView, meta: { role: ['Stock'] } },
         { path: 'stock-manage-inventory', component: StockManageInventoryView, meta: { role: ['Stock'] } },
 
-        /* ------------------------------
-         * SHARED (ทุก role ใช้ได้)
-         * ------------------------------ */
         {
           path: 'repair-request',
           component: RepairRequestView,
@@ -133,12 +99,9 @@ const router = createRouter({
   ],
 })
 
-/* -----------------------------------------------------
- *  NAVIGATION GUARD
- * ----------------------------------------------------- */
+// NAVIGATION GUARD
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('token')
-
   // CASE: หน้า Login
   if (to.path === '/login') {
     if (token) {
@@ -147,7 +110,6 @@ router.beforeEach((to, from, next) => {
     }
     return next()
   }
-
   // CASE: ต้อง login เสมอ
   if (!token) return next('/login')
 
@@ -160,7 +122,6 @@ router.beforeEach((to, from, next) => {
   }
 
   const role = decoded.role_name
-
   // CASE: เช็ค role
   if (to.meta.role && !to.meta.role.includes(role)) {
     return next(getHomeByRole(role))

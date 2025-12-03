@@ -1,7 +1,4 @@
 <script setup>
-/* ==============================
-   📦 Imports & Setup
-   ============================== */
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
@@ -13,9 +10,6 @@ const router = useRouter()
 const repairCode = route.params.code
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
 
-/* ==============================
-   📄 Reactive States
-   ============================== */
 const isSubmitting = ref(false)
 const formData = ref({
   reporterName: '',
@@ -36,9 +30,7 @@ const formData = ref({
   uploadedFile: null,
 })
 
-/* ==============================
-   🧱 Dropdown Data Fetching
-   ============================== */
+// Dropdown Data Fetching
 async function fetchTechnicianTypes() {
   try {
     const res = await fetch(`${API_BASE}/technician-types`)
@@ -97,26 +89,20 @@ async function fetchRooms(floorId) {
   }
 }
 
-/* ==============================
-   🖼️ File Upload
-   ============================== */
+// File Upload
 function handleFileUpload(event) {
   const file = event.target.files[0]
   formData.value.uploadedFile = file || null
 }
 
-/* ==============================
-   ⚡ Urgency Options
-   ============================== */
+// Urgency Options
 const urgencyLevels = [
   { label: 'เร่งด่วนมาก', value: 'high', border: 'border-red-600', bg: 'bg-red-600' },
   { label: 'เร่งด่วน', value: 'medium', border: 'border-amber-400', bg: 'bg-amber-400' },
   { label: 'ไม่เร่งด่วน', value: 'low', border: 'border-green-600', bg: 'bg-green-600' },
 ]
 
-/* ==============================
-   🔐 JWT Decode
-   ============================== */
+// JWT Decode
 function parseJwt(token) {
   try {
     const base64Url = token.split('.')[1]
@@ -134,9 +120,7 @@ function parseJwt(token) {
   }
 }
 
-/* ==============================
-   🧾 Fetch Repair Detail
-   ============================== */
+// Fetch Repair Detail
 async function fetchRepairDetail() {
   try {
     const res = await fetch(`${API_BASE}/repair-requests/${repairCode}`)
@@ -160,15 +144,12 @@ async function fetchRepairDetail() {
     formData.value.issueDescription = data.rf_detail || ''
     formData.value.urgency = data.rf_urgency || 'medium'
 
-    console.log('✅ โหลดข้อมูลใบแจ้งซ่อมสำเร็จ:', formData.value)
+    console.log('โหลดข้อมูลใบแจ้งซ่อมสำเร็จ:', formData.value)
   } catch (err) {
-    console.error('❌ โหลดข้อมูลใบแจ้งซ่อมไม่สำเร็จ:', err)
+    console.error('โหลดข้อมูลใบแจ้งซ่อมไม่สำเร็จ:', err)
   }
 }
 
-/* ==============================
-   🚀 Lifecycle
-   ============================== */
 onMounted(async () => {
   const token = localStorage.getItem('token')
   if (token) {
@@ -185,23 +166,19 @@ onMounted(async () => {
 
 function validateForm() {
   let valid = true
-
-  // 🔥 เช็กช่องบังคับ (ยกเว้น ความเร่งด่วน)
+  // เช็กช่องบังคับ (ยกเว้น ความเร่งด่วน)
   if (!formData.value.repairType) valid = false
   if (!formData.value.building) valid = false
   if (!formData.value.floor) valid = false
   if (!formData.value.room) valid = false
   if (!formData.value.problemDetail.trim()) valid = false
   if (!formData.value.issueDescription.trim()) valid = false
-
   return valid
 }
 
-/* ==============================
-   💾 Submit Logic (SweetAlert Flow)
-   ============================== */
+// Submit Logic (SweetAlert Flow)
 async function handleSubmit() {
-  // 🚨 เช็กความเร่งด่วนก่อน validate อื่น ๆ
+  // เช็กความเร่งด่วนก่อน validate อื่น ๆ
   if (!formData.value.urgency) {
     await Swal.fire({
       title: 'ยังไม่ได้เลือกความเร่งด่วน',
@@ -213,13 +190,13 @@ async function handleSubmit() {
     return
   }
 
-  // 🚨 เช็กช่องอื่น ๆ ที่มีเครื่องหมาย *
+  // เช็กช่องอื่น ๆ ที่มีเครื่องหมาย *
   if (!validateForm()) {
     Swal.fire('ข้อมูลไม่ครบถ้วน', 'กรุณาตรวจสอบช่องที่มีเครื่องหมาย *', 'error')
     return
   }
 
-  // 🔵 Popup ยืนยันการบันทึก
+  // Popup ยืนยันการบันทึก
   const confirm = await Swal.fire({
     title: 'ยืนยันการบันทึกข้อมูล?',
     text: 'คุณต้องการบันทึกการแก้ไขใบแจ้งซ่อมนี้หรือไม่',
@@ -239,7 +216,6 @@ async function handleSubmit() {
     allowOutsideClick: false,
     didOpen: () => Swal.showLoading(),
   })
-
   try {
     const token = localStorage.getItem('token')
     if (!token) throw new Error('Token not found')
@@ -278,7 +254,7 @@ async function handleSubmit() {
 
     router.push('/main/my-list')
   } catch (err) {
-    console.error('❌ บันทึกไม่สำเร็จ:', err)
+    console.error('บันทึกไม่สำเร็จ:', err)
     Swal.close()
     Swal.fire({
       title: 'เกิดข้อผิดพลาด!',
@@ -289,7 +265,6 @@ async function handleSubmit() {
     })
   }
 }
-
 </script>
 
 

@@ -10,7 +10,7 @@ const isLoading = ref(true)
 const isError = ref(false)
 const repairCode = route.params.code
 
-// ✅ จัดการไฟล์มีเดีย
+// จัดการไฟล์มีเดีย
 const mediaFiles = ref([])
 
 // ฟังก์ชันจัดการไฟล์มีเดีย
@@ -42,13 +42,13 @@ function processMediaFiles(rfImage) {
     }
   })
 }
+
 // ดึงข้อมูลรายละเอียดใบแจ้งซ่อม
 async function fetchRepairDetail() {
   try {
     const res = await fetch(`${API_BASE}/repair-requests/${repairCode}?_=${Date.now()}`)
     const data = await res.json()
     if (!res.ok) throw new Error(data.message || 'โหลดข้อมูลไม่สำเร็จ')
-
     // สร้าง timeline จากเวลาใน DB
     const timeline = buildTimelineFromRepair(data)
     // รวมทั้งหมดเข้า object เดียว
@@ -94,7 +94,7 @@ function getUrgencyBadge(urgency) {
   }
 }
 
-// ✅ Media Modal (รองรับทั้งรูปภาพและวิดีโอ)
+// Media Modal (รองรับทั้งรูปภาพและวิดีโอ)
 const showLightbox = ref(false)
 const currentMediaIndex = ref(0)
 
@@ -298,7 +298,7 @@ onMounted(fetchRepairDetail)
                 </div>
               </div>
 
-              <!-- ✅ แสดงไฟล์มีเดีย -->
+              <!-- แสดงไฟล์มีเดีย -->
               <div class="border border-dashed border-gray-300 rounded-lg p-2 sm:p-3">
                 <template v-if="mediaFiles.length > 0">
                   <!-- หากมีไฟล์เดียว แสดงไฟล์แรก -->
@@ -472,7 +472,7 @@ onMounted(fetchRepairDetail)
     </div>
   </div>
 
-  <!-- ✅ Media Modal สำหรับทั้งรูปภาพและวิดีโอ -->
+  <!-- Media Modal สำหรับทั้งรูปภาพและวิดีโอ -->
   <div v-if="showLightbox" class="fixed inset-0 z-50 bg-black bg-opacity-90 flex items-center justify-center" @click="closeMedia">
     <div class="relative max-w-4xl max-h-full p-4" @click.stop>
       <!-- ปุ่มปิด -->
@@ -510,7 +510,7 @@ onMounted(fetchRepairDetail)
 
       <!-- ตัวนับและประเภทไฟล์ -->
       <div v-if="mediaFiles.length > 1" class="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-white text-sm bg-black bg-opacity-50 px-3 py-1 rounded">
-        {{ currentMediaIndex + 1 }} / {{ mediaFiles.length }} 
+        {{ currentMediaIndex + 1 }} / {{ mediaFiles.length }}
       </div>
     </div>
   </div>

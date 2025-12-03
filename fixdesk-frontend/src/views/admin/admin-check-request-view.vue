@@ -16,9 +16,6 @@ const getAuthHeaders = () => {
   }
 }
 
-/* ===============================
- * 💾 STATE
- * =============================== */
 const columns = [
   'วันที่',
   'ใบแจ้งซ่อม',
@@ -38,9 +35,7 @@ const showStatusFilter = ref(false)
 const showUrgencyFilter = ref(false)
 const selectedDate = ref('')
 
-/* ===============================
- * 📦 ดึงข้อมูลรายการแจ้งซ่อมทั้งหมด (Admin)
- * =============================== */
+// ดึงข้อมูลรายการแจ้งซ่อมทั้งหมด (Admin)
 async function fetchAllRepairs() {
   try {
     const token = localStorage.getItem('token')
@@ -61,7 +56,7 @@ async function fetchAllRepairs() {
     const data = await res.json()
     if (!res.ok) throw new Error(data.message || 'โหลดข้อมูลไม่สำเร็จ')
 
-    // ✅ แปลง object → array (ไม่ใส่หมายเลขครุภัณฑ์)
+    // แปลง object → array (ไม่ใส่หมายเลขครุภัณฑ์)
     rows.value = data.map((r) => {
       const urgencyBadge =
         {
@@ -89,14 +84,12 @@ async function fetchAllRepairs() {
       ]
     })
   } catch (err) {
-    console.error('❌ โหลดข้อมูลไม่สำเร็จ:', err)
+    console.error('โหลดข้อมูลไม่สำเร็จ:', err)
     Swal.fire('เกิดข้อผิดพลาด', err.message, 'error')
   }
 }
 
-/* ===============================
- * 🔍 FILTER
- * =============================== */
+// FILTER
 const filteredRows = computed(() => {
   const q = searchQuery.value.toLowerCase()
   return rows.value.filter((r) => {
@@ -135,9 +128,7 @@ function closeDropdown(e) {
   }
 }
 
-/* ===============================
- * 🧭 ACTION BUTTONS
- * =============================== */
+// ACTION BUTTONS
 const goToDetail = (code) => router.push(`/main/repair-detail/${code}`)
 
 async function handleAssign(code) {
@@ -154,9 +145,7 @@ async function handleAssign(code) {
   }
 }
 
-/* ===============================
- * 🧩 Popup มอบหมายงาน
- * =============================== */
+//🧩 Popup มอบหมายงาน
 const showAssignPopup = ref(false)
 const technicians = ref([])
 const technicianTypes = ref([])
@@ -237,9 +226,6 @@ async function confirmAssign() {
   }
 }
 
-/* ===============================
- * 🚀 LIFECYCLE
- * =============================== */
 onMounted(() => {
   fetchAllRepairs()
   document.addEventListener('click', closeDropdown)
@@ -249,7 +235,7 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
 
 <template>
   <div class="bg-gray-50 rounded-xl p-1 mx-auto max-w-7xl">
-    <!-- 🔍 ฟิลเตอร์ -->
+    <!-- ฟิลเตอร์ -->
     <div class="flex flex-wrap items-center gap-3 mb-6">
       <input
         v-model="searchQuery"
@@ -262,8 +248,7 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
         type="date"
         class="h-10 px-3 rounded-lg border border-gray-300 bg-white text-gray-700"
       />
-
-      <!-- 🔸 สถานะ -->
+      <!-- สถานะ -->
       <div class="relative">
         <button
           @click.stop="showStatusFilter = !showStatusFilter"
@@ -309,8 +294,7 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
           </label>
         </div>
       </div>
-
-      <!-- 🔸 ความเร่งด่วน -->
+      <!-- ความเร่งด่วน -->
       <div class="relative">
         <button
           @click.stop="showUrgencyFilter = !showUrgencyFilter"
@@ -356,7 +340,6 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
           </label>
         </div>
       </div>
-
       <!-- ปุ่มล้าง -->
       <transition name="fade">
         <button
@@ -369,11 +352,9 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
       </transition>
     </div>
   </div>
-
-  <!-- 🧾 ตาราง -->
+  <!-- ตาราง -->
   <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-7xl">
     <h1 class="text-xl font-bold text-back mb-6">ตรวจสอบคำร้องแจ้งซ่อมทั้งหมด</h1>
-
     <TableComponent
       :columns="columns"
       :rows="filteredRows"
@@ -383,14 +364,13 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
       @assign="openAssignPopup"
     />
   </div>
-  <!-- 🧑‍🔧 Popup มอบหมายงาน -->
+  <!-- Popup มอบหมายงาน -->
   <div
     v-if="showAssignPopup"
     class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50"
   >
     <div class="bg-white rounded-xl shadow-lg w-full max-w-lg p-6 relative">
       <h2 class="text-xl font-semibold mb-4 text-blue-700">มอบหมายงานให้ผู้รับผิดชอบหลัก</h2>
-
       <!-- ปุ่มปิด -->
       <button
         @click="closeAssignPopup"
@@ -399,7 +379,7 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
         ✕
       </button>
 
-      <!-- 🔧 ประเภทช่าง -->
+      <!-- ประเภทช่าง -->
       <select
         v-model="selectedType"
         class="border border-gray-300 rounded-md px-3 py-2 w-full mb-3 focus:ring-2 focus:ring-blue-400 focus:outline-none"
@@ -409,15 +389,13 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
           {{ type.tt_name }}
         </option>
       </select>
-
-      <!-- 🔍 ช่องค้นหา -->
+      <!-- ช่องค้นหา -->
       <input
         v-model="searchTech"
         type="text"
         placeholder="ค้นหาช่าง..."
         class="border border-gray-300 rounded-md px-3 py-2 w-full mb-4 focus:ring-2 focus:ring-blue-400 focus:outline-none"
       />
-
       <!-- รายชื่อช่าง -->
       <div class="max-h-60 overflow-y-auto space-y-2">
         <div
