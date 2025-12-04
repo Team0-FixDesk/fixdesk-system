@@ -21,32 +21,32 @@
       <!-- Card 1 -->
       <div class="bg-white rounded-lg border p-6 w-60">
         <div class="text-center">
-          <p class="text-gray-600 text-sm">จำนวนรายการ</p>
           <h2 class="text-2xl font-bold text-blue-600">{{ itemsCount }} รายการ</h2>
+          <p class="text-gray-600 text-sm">จำนวนรายการ</p>
         </div>
       </div>
 
       <!-- Card 2 -->
       <div class="bg-white rounded-lg border p-6 w-60">
         <div class="text-center">
-          <p class="text-gray-600 text-sm">ของเข้าใหม่วันนี้</p>
           <h2 class="text-2xl font-bold text-orange-500">{{ itemsNew }} รายการ</h2>
+          <p class="text-gray-600 text-sm">ของเข้าใหม่วันนี้</p>
         </div>
       </div>
 
       <!-- Card 3 -->
       <div class="bg-white rounded-lg border p-6 w-60">
         <div class="text-center">
-          <p class="text-gray-600 text-sm">คำขอเบิกรออนุมัติ</p>
           <h2 class="text-2xl font-bold text-green-600">{{ itemRequestWaiting }} รายการ</h2>
+          <p class="text-gray-600 text-sm">คำขอเบิกรออนุมัติ</p>
         </div>
       </div>
 
       <!-- Card 4 -->
       <div class="bg-white rounded-lg border p-6 w-60">
         <div class="text-center">
-          <p class="text-gray-600 text-sm">คำขอเบิกไม่อนุมัติ</p>
           <h2 class="text-2xl font-bold text-red-600">{{ itemRequestDeclined }} รายการ</h2>
+          <p class="text-gray-600 text-sm">คำขอเบิกไม่อนุมัติ</p>
         </div>
       </div>
     </div>
