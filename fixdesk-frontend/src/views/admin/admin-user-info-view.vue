@@ -1285,7 +1285,7 @@ async function handleDeleteTechType(item) {
             </p>
           </div>
           <!-- ชื่อ - นามสกุล (ภาษาไทย) -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3 mt-3">
             <div>
               <label class="block text-sm font-medium mb-1.5">
                 ชื่อ (ไทย) <span class="text-red-500">*</span>
@@ -1324,7 +1324,7 @@ async function handleDeleteTechType(item) {
           <!-- ชื่อ - นามสกุล (ภาษาอังกฤษ) -->
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
             <div>
-              <label class="block text-sm font-medium mb-1.5">ชื่อ (EN)</label>
+              <label class="block text-sm font-medium mb-1.5">ชื่อ (ภาษาอังกฤษ)</label>
               <input
                 v-model="editForm.us_first_name_en"
                 type="text"
@@ -1339,7 +1339,7 @@ async function handleDeleteTechType(item) {
               </p>
             </div>
             <div>
-              <label class="block text-sm font-medium mb-1.5">นามสกุล (EN)</label>
+              <label class="block text-sm font-medium mb-1.5">นามสกุล (ภาษาอังกฤษ)</label>
               <input
                 v-model="editForm.us_last_name_en"
                 type="text"
@@ -1442,7 +1442,7 @@ async function handleDeleteTechType(item) {
             </div>
           </div>
           <!-- ปุ่มต่าง ๆ -->
-          <div class="flex gap-3">
+          <div class="flex gap-3 flex-col sm:flex-row mt-6">
             <button
               type="button"
               @click="closeEditModal"
