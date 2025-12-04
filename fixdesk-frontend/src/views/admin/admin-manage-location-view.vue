@@ -1,12 +1,8 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
-import TableComponent from '@/components/table-component.vue'
-
 defineOptions({ name: 'AdminManageLocationView' })
 
-const router = useRouter()
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
 
 // Helper function to get auth headers
@@ -24,6 +20,7 @@ const rooms = ref([])
 const searchQuery = ref('')
 const selectedBuilding = ref('')
 const selectedFloor = ref('')
+const currentPage = ref(1)
 const perPage = 10
 const sortOrder = ref('ก-ฮ') // 'ก-ฮ', 'ฮ-ก'
 
@@ -46,8 +43,58 @@ const newBuildingName = ref('')
 const newFloorName = ref('')
 const roomName = ref('')
 
-// ✅ Table columns
-const columns = ['อาคาร', 'ID', 'ชั้น', 'ห้อง', 'ตัวดำเนินการ']
+// Validation states
+const validationErrors = ref({
+  buildingName: false,
+  floorName: false,
+  roomName: false,
+  modalName: false,
+  newBuildingName: false,
+  newFloorName: false,
+})
+
+const errorMessages = ref({
+  buildingName: '',
+  floorName: '',
+  roomName: '',
+  modalName: '',
+  newBuildingName: '',
+  newFloorName: '',
+})
+
+// VALIDATION FUNCTIONS
+function validateAlphanumeric(value, fieldName) {
+  const regex = /^[ก-๙a-zA-Z0-9\s/]*$/
+
+  if (!value.trim()) {
+    validationErrors.value[fieldName] = true
+    errorMessages.value[fieldName] = `กรุณากรอกข้อมูล`
+    return false
+  }
+
+  if (!regex.test(value)) {
+    validationErrors.value[fieldName] = true
+    errorMessages.value[fieldName] =
+      `กรุณากรอกชื่อ${getFieldLabel(fieldName)}เป็นตัวอักษรไทย อังกฤษ ตัวเลข และ / เท่านั้น`
+    return false
+  }
+
+  validationErrors.value[fieldName] = false
+  errorMessages.value[fieldName] = ''
+  return true
+}
+
+function getFieldLabel(fieldName) {
+  const labels = {
+    buildingName: 'อาคาร',
+    floorName: 'ชั้น',
+    roomName: 'ห้อง',
+    modalName: 'ข้อมูล',
+    newBuildingName: 'อาคาร',
+    newFloorName: 'ชั้น',
+  }
+  return labels[fieldName] || ''
+}
 
 // FETCH DATA
 async function fetchBuildings() {
@@ -62,15 +109,8 @@ async function fetchBuildings() {
 
 async function fetchFloors(buildingId) {
   try {
-    console.log('fetchFloors called with buildingId:', buildingId)
     const res = await fetch(`${API_BASE}/floors/${buildingId}`)
     const data = await res.json()
-    console.log('fetchFloors response:', data)
-    console.table(data) // แสดงเป็นตาราง
-    if (data.length > 0) {
-      console.log('First floor object keys:', Object.keys(data[0]))
-      console.log('First floor object:', JSON.stringify(data[0], null, 2))
-    }
     floors.value = data
   } catch (err) {
     console.error('Error fetching floors:', err)
@@ -79,15 +119,8 @@ async function fetchFloors(buildingId) {
 
 async function fetchRooms(floorId) {
   try {
-    console.log('fetchRooms called with floorId:', floorId)
     const res = await fetch(`${API_BASE}/rooms/${floorId}`)
     const data = await res.json()
-    console.log('fetchRooms response:', data)
-    console.table(data) // แสดงเป็นตาราง
-    if (data.length > 0) {
-      console.log('First room object keys:', Object.keys(data[0]))
-      console.log('First room object:', JSON.stringify(data[0], null, 2))
-    }
     rooms.value = data
   } catch (err) {
     console.error('Error fetching rooms:', err)
@@ -97,7 +130,6 @@ async function fetchRooms(floorId) {
 // COMPUTED DATA
 const displayData = computed(() => {
   let data = []
-
   // ขั้นที่ 1: ถ้าไม่เลือกอาคาร แสดงอาคารทั้งหมด
   if (!selectedBuilding.value) {
     data = buildings.value.map((b) => ({
@@ -153,134 +185,21 @@ const displayData = computed(() => {
   } else {
     data.sort((a, b) => b.name.localeCompare(a.name, 'th'))
   }
-
   return data
 })
 
-// ✅ Detail view computed properties
-const modalDetailData = computed(() => {
-  if (!modalData.value.id || modalMode.value !== 'view') return null
-
-  const currentItem = displayData.value.find(item => item.id === modalData.value.id)
-  if (!currentItem) return null
-
-  // หาชั้นที่เกี่ยวข้อง
-  let relevantFloors = []
-
-  if (currentItem.type === 'building') {
-    // สำหรับอาคาร: API /floors/{buildingId} ส่งกลับชั้นของอาคารนั้นอยู่แล้ว
-    relevantFloors = floors.value
-    console.log('Building floors (no filter needed):', relevantFloors)
-  }
-  else if (currentItem.type === 'floor') {
-    // สำหรับชั้น: API /rooms/{floorId} ส่งกลับห้องในชั้นนั้นอยู่แล้ว
-    // ไม่ต้อง filter floors เพราะแสดงแค่รายห้องในชั้นนี้
-    relevantFloors = [{
-      floor_id: currentItem.id,
-      floor_name: currentItem.name,
-      // rooms จะถูกใช้โดยตรงจาก rooms.value ที่โหลดมา
-    }]
-    console.log('Floor detail (single floor):', relevantFloors)
-  }
-  else if (currentItem.type === 'room') {
-    // สำหรับห้อง: แสดงข้อมูลห้องเดียว ไม่ต้องแสดง floors อื่น
-    relevantFloors = []
-    console.log('Room detail (no floors needed)')
-  }
-
-  const floorDetails = relevantFloors.map(floor => {
-    const floorId = floor.floor_id || floor.fl_id || floor.id
-    // หาห้องในแต่ละชั้น
-    let floorRooms = []
-
-    if (currentItem.type === 'building') {
-      // สำหรับอาคาร: filter จาก rooms ที่ collect มาจากหลายชั้น
-      floorRooms = rooms.value.filter(room => {
-        const roomFloorName = room.floor_name
-        const currentFloorName = floor.floor_name || floor.fl_name
-        const isMatch = roomFloorName === currentFloorName
-        return isMatch
-      })
-    }
-    else if (currentItem.type === 'floor') {
-      // สำหรับชั้น: ใช้ rooms.value ทั้งหมดเพราะ API ส่งกลับห้องในชั้นนั้นอยู่แล้ว
-      floorRooms = rooms.value
-    }
-
-    console.log('Room processing:', {
-      itemType: currentItem.type,
-      floorName: floor.floor_name || floor.fl_name,
-      roomsCount: floorRooms.length,
-      rooms: floorRooms
-    })
-
-    console.log('Floor detail:', {
-      floor,
-      floorId,
-      floorName: floor.floor_name || floor.fl_name,
-      roomsFound: floorRooms.length,
-      rooms: floorRooms
-    })
-
-    return {
-      floorId: floorId,
-      floorName: floor.floor_name || floor.fl_name,
-      roomCount: floorRooms.length,
-      rooms: floorRooms.map(room => ({
-        id: room.room_id || room.rm_id || room.id,
-        name: room.room_name || room.rm_name || room.name
-      }))
-    }
-  })
-
-  // คำนวณสถิติรวม
-  const totalFloors = floorDetails.length
-  const totalRooms = floorDetails.reduce((sum, floor) => sum + floor.roomCount, 0)
-
-  console.log('modalDetailData computed:', {
-    currentItem,
-    relevantFloors,
-    floorDetails,
-    totalFloors,
-    totalRooms,
-    rawFloors: floors.value,
-    rawRooms: rooms.value
-  })
-
-  return {
-    type: currentItem.type,
-    name: currentItem.name,
-    buildingName: currentItem.building || currentItem.name,
-    floorName: currentItem.floor,
-    totalFloors,
-    totalRooms,
-    floorDetails,
-    // ข้อมูลเฉพาะ
-    ...(currentItem.type === 'floor' && {
-      buildingName: currentItem.building,
-      floorRooms: floorDetails[0]?.rooms || []
-    }),
-    ...(currentItem.type === 'room' && {
-      buildingName: currentItem.building,
-      floorName: currentItem.floor
-    })
-  }
+const totalEntries = computed(() => displayData.value.length)
+const totalPages = computed(() => Math.ceil(displayData.value.length / perPage))
+const startEntry = computed(() =>
+  totalEntries.value === 0 ? 0 : (currentPage.value - 1) * perPage + 1,
+)
+const endEntry = computed(() => Math.min(currentPage.value * perPage, totalEntries.value))
+const paginatedData = computed(() => {
+  const start = (currentPage.value - 1) * perPage
+  return displayData.value.slice(start, start + perPage)
 })
 
-// ✅ Convert data to table rows format
-const tableRows = computed(() => {
-  return displayData.value.map((item) => [
-    item.building,
-    item.id, // TableComponent ใช้ row[1] เป็น ID (ซ่อนใน column 1)
-    item.floor,
-    item.room,
-    'actions' // This will be handled by TableComponent
-  ])
-})
-
-
-
-// ACIONS
+// ACTIONS
 async function handleBuildingChange() {
   if (selectedBuilding.value) {
     await fetchFloors(selectedBuilding.value)
@@ -289,6 +208,7 @@ async function handleBuildingChange() {
   }
   selectedFloor.value = ''
   rooms.value = []
+  currentPage.value = 1
 }
 
 async function handleFloorChange() {
@@ -297,6 +217,7 @@ async function handleFloorChange() {
   } else {
     rooms.value = []
   }
+  currentPage.value = 1
 }
 
 function handleClearFilters() {
@@ -305,13 +226,10 @@ function handleClearFilters() {
   floors.value = []
   rooms.value = []
   searchQuery.value = ''
+  currentPage.value = 1
 }
 
-function handleEdit(id) {
-  // TableComponent ส่ง ID มา (row[1])
-  const item = displayData.value.find(item => item.id === id)
-  if (!item) return
-
+function handleEdit(item) {
   console.log('Edit:', item)
   modalMode.value = 'edit'
   modalStep.value = 2 // ข้าม step 1 เพราะรู้ type แล้ว
@@ -336,113 +254,7 @@ function handleEdit(id) {
   showModal.value = true
 }
 
-async function handleDetail(id) {
-  // TableComponent ส่ง ID มา (row[1])
-  const item = displayData.value.find(item => item.id === id)
-  if (!item) return
-
-  // แสดง modal ในโหมดดูรายละเอียด (ไม่สามารถแก้ไขได้)
-  modalMode.value = 'view'
-  modalStep.value = 2
-  modalType.value = item.type
-  modalData.value = {
-    id: item.id,
-    name: item.name,
-    building_id:
-      item.type === 'floor'
-        ? selectedBuilding.value
-        : item.type === 'room'
-          ? selectedBuilding.value
-          : '',
-    floor_id: item.type === 'room' ? selectedFloor.value : '',
-  }
-
-  // โหลดข้อมูลที่จำเป็นสำหรับแสดงรายละเอียด
-  try {
-    if (item.type === 'building') {
-      // โหลดชั้นทั้งหมดในอาคาร
-      console.log('Fetching floors for building:', item.id)
-      await fetchFloors(item.id)
-      console.log('Floors loaded:', floors.value)
-
-      // รอ floors โหลดเสร็จ แล้วโหลดห้องในแต่ละชั้น
-      const allRooms = []
-      const floorPromises = floors.value.map(async (floor) => {
-        const floorId = floor.floor_id || floor.fl_id
-        if (floorId) {
-          try {
-            const res = await fetch(`${API_BASE}/rooms/${floorId}`)
-            const roomData = await res.json()
-            return roomData.map(room => ({
-              ...room,
-              floor_id: floorId,
-              floor_name: floor.floor_name || floor.fl_name
-            }))
-          } catch (err) {
-            console.error(`Error fetching rooms for floor ${floorId}:`, err)
-            return []
-          }
-        }
-        return []
-      })
-
-      const roomArrays = await Promise.all(floorPromises)
-      roomArrays.forEach(roomArray => {
-        allRooms.push(...roomArray)
-      })
-
-      rooms.value = allRooms
-      console.log('Building detail loaded:', {
-        buildingId: item.id,
-        floorsCount: floors.value.length,
-        totalRooms: allRooms.length,
-        floors: floors.value,
-        rooms: allRooms
-      })
-    }
-    else if (item.type === 'floor') {
-      // โหลดห้องทั้งหมดในชั้น
-      await fetchRooms(item.id)
-    }
-    else if (item.type === 'room') {
-      // สำหรับห้อง ต้องโหลดข้อมูลอาคารและชั้นที่เกี่ยวข้อง
-      // หา building_id จาก item.building
-      const building = buildings.value.find(b =>
-        (b.building_name || b.bd_name) === item.building
-      )
-      if (building) {
-        const buildingId = building.building_id || building.bd_id
-        await fetchFloors(buildingId)
-
-        // โหลดห้องทั้งหมดในอาคารเพื่อแสดงรายละเอียด
-        const allRooms = []
-        for (const floor of floors.value) {
-          const floorId = floor.floor_id || floor.fl_id
-          if (floorId) {
-            try {
-              const res = await fetch(`${API_BASE}/rooms/${floorId}`)
-              const roomData = await res.json()
-              allRooms.push(...roomData)
-            } catch (err) {
-              console.error(`Error fetching rooms for floor ${floorId}:`, err)
-            }
-          }
-        }
-        rooms.value = allRooms
-      }
-    }
-  } catch (error) {
-    console.error('Error loading detail data:', error)
-  }
-
-  showModal.value = true
-}
-
-function handleDelete(id) {
-  // TableComponent ส่ง ID มา (row[1])
-  const item = displayData.value.find(item => item.id === id)
-  if (!item) return
-
+function handleDelete(item) {
   console.log('Delete:', item)
   confirmDelete(item)
 }
@@ -524,9 +336,6 @@ function handleAdd() {
   showModal.value = true
 }
 
-
-
-
 function closeModal() {
   showModal.value = false
   modalStep.value = 1
@@ -546,6 +355,11 @@ function closeModal() {
 }
 
 async function saveLocation() {
+  // Validate input first
+  if (!validateAlphanumeric(modalData.value.name, 'modalName')) {
+    return
+  }
+
   if (!modalData.value.name.trim()) {
     await Swal.fire({
       icon: 'warning',
@@ -666,6 +480,20 @@ async function handleBulkBuildingChange() {
 // ฟังก์ชันสำหรับ Bulk Create
 async function bulkCreateLocation() {
   try {
+    // Validate all inputs first
+    if (
+      buildingMode.value === 'new' &&
+      !validateAlphanumeric(newBuildingName.value, 'newBuildingName')
+    ) {
+      return
+    }
+    if (floorMode.value === 'new' && !validateAlphanumeric(newFloorName.value, 'newFloorName')) {
+      return
+    }
+    if (!validateAlphanumeric(roomName.value, 'roomName')) {
+      return
+    }
+
     let buildingId = modalData.value.building_id
     let floorId = modalData.value.floor_id
 
@@ -808,7 +636,17 @@ async function refreshData() {
   }
 }
 
+function nextPage() {
+  if (currentPage.value < totalPages.value) currentPage.value++
+}
 
+function prevPage() {
+  if (currentPage.value > 1) currentPage.value--
+}
+
+function goToPage(page) {
+  if (page >= 1 && page <= totalPages.value) currentPage.value = page
+}
 
 onMounted(async () => {
   await fetchBuildings()
@@ -816,114 +654,253 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-7xl">
+  <div class="bg-white rounded-xl shadow-md p-12 mx-auto max-w-7xl">
     <!-- 🔹 หัวข้อ -->
-    <h1 class="text-xl font-bold text-black mb-6">สถานที่ทั้งหมด</h1>
+    <h1 class="text-xl font-bold text-blue-700 mb-2">สถานที่ทั้งหมด</h1>
     <p class="text-sm text-gray-600 mb-6">ค้นหาตรองและเรียงลำดับรายการอาคาร ชั้น ห้อง</p>
 
     <!-- แถบค้นหาและตัวกรอง -->
-    <div class="mb-6">
-      <div class="flex flex-wrap items-center justify-between gap-3">
-        <div class="flex flex-wrap items-center gap-3">
-          <!-- ช่องค้นหา -->
-          <input
-            v-model="searchQuery"
-            type="text"
-            placeholder="ค้นหาอาคาร / ชั้น / ห้อง"
-            class="w-[260px] h-10 px-4 rounded-lg border border-gray-300 bg-white focus:ring-2 focus:ring-blue-500"
-          />
-
-          <!-- Dropdown เรียงลำดับ -->
-          <select
-            v-model="sortOrder"
-            class="h-10 px-3 rounded-lg border border-gray-300 bg-white text-gray-700 focus:ring-2 focus:ring-blue-400 focus:outline-none text-sm"
-          >
-            <option value="ก-ฮ">เรียงตามอักษร ก-ฮ</option>
-            <option value="ฮ-ก">เรียงตามอักษร ฮ-ก</option>
-          </select>
-
-          <!-- Dropdown เลือกอาคาร -->
-          <select
-            v-model="selectedBuilding"
-            @change="handleBuildingChange"
-            class="h-10 px-3 rounded-lg border border-gray-300 bg-white text-gray-700 focus:ring-2 focus:ring-blue-400 focus:outline-none text-sm min-w-[120px]"
-          >
-            <option value="">ทุกอาคาร</option>
-            <option
-              v-for="building in buildings"
-              :key="building.building_id"
-              :value="building.building_id"
-            >
-              {{ building.building_name }}
-            </option>
-          </select>
-
-          <!-- Dropdown เลือกชั้น (แสดงเมื่อเลือกอาคารแล้ว) -->
-          <select
-            v-if="selectedBuilding"
-            v-model="selectedFloor"
-            @change="handleFloorChange"
-            class="h-10 px-3 rounded-lg border border-gray-300 bg-white text-gray-700 focus:ring-2 focus:ring-blue-400 focus:outline-none text-sm min-w-[120px]"
-          >
-            <option value="">ทุกชั้น</option>
-            <option v-for="floor in floors" :key="floor.floor_id" :value="floor.floor_id">
-              {{ floor.floor_name }}
-            </option>
-          </select>
-
-          <!-- ปุ่มล้างตัวกรอง -->
-          <button
-            v-if="selectedBuilding || searchQuery"
-            @click="handleClearFilters"
-            class="text-blue-600 hover:text-blue-700 text-sm font-medium"
-          >
-            ล้างตัวกรอง
-          </button>
-        </div>
-        
-        <!-- ปุ่มเพิ่มสถานที่ -->
+    <div class="flex items-center gap-3 mb-6">
+      <!-- ช่องค้นหา -->
+      <div class="relative flex-1 max-w-xs">
+        <input
+          v-model="searchQuery"
+          type="text"
+          placeholder="ค้นหา"
+          class="w-full border border-gray-300 rounded-lg px-4 py-2 pr-12 focus:ring-2 focus:ring-blue-400 focus:outline-none"
+        />
         <button
-          @click="handleAdd"
-          class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition text-sm whitespace-nowrap"
+          class="absolute right-2 top-1/2 -translate-y-1/2 text-white bg-blue-600 hover:bg-blue-700 rounded px-3 py-1.5"
         >
-          <span class="text-xl leading-none">+</span>
-          <span>เพิ่มสถานที่</span>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-4 w-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Dropdown เรียงลำดับ -->
+      <select
+        v-model="sortOrder"
+        class="border border-gray-300 rounded-lg px-4 py-2 bg-white focus:ring-2 focus:ring-blue-400 focus:outline-none text-sm"
+      >
+        <option value="ก-ฮ">เรียงตามอักษร ก-ฮ</option>
+        <option value="ฮ-ก">เรียงตามอักษร ฮ-ก</option>
+      </select>
+
+      <!-- Dropdown เลือกอาคาร -->
+      <select
+        v-model="selectedBuilding"
+        @change="handleBuildingChange"
+        class="border border-gray-300 rounded-lg px-4 py-2 bg-white focus:ring-2 focus:ring-blue-400 focus:outline-none text-sm min-w-[150px]"
+      >
+        <option value="">ทุกอาคาร</option>
+        <option
+          v-for="building in buildings"
+          :key="building.building_id"
+          :value="building.building_id"
+        >
+          {{ building.building_name }}
+        </option>
+      </select>
+
+      <!-- Dropdown เลือกชั้น (แสดงเมื่อเลือกอาคารแล้ว) -->
+      <select
+        v-if="selectedBuilding"
+        v-model="selectedFloor"
+        @change="handleFloorChange"
+        class="border border-gray-300 rounded-lg px-4 py-2 bg-white focus:ring-2 focus:ring-blue-400 focus:outline-none text-sm min-w-[150px]"
+      >
+        <option value="">ทุกชั้น</option>
+        <option v-for="floor in floors" :key="floor.floor_id" :value="floor.floor_id">
+          {{ floor.floor_name }}
+        </option>
+      </select>
+
+      <!-- ปุ่มล้างตัวกรอง -->
+      <button
+        v-if="selectedBuilding || searchQuery"
+        @click="handleClearFilters"
+        class="text-sm text-blue-600 hover:text-blue-700 font-medium whitespace-nowrap"
+      >
+        ล้างตัวกรอง
+      </button>
+
+      <!-- ปุ่มเพิ่มสถานที่ -->
+      <button
+        @click="handleAdd"
+        class="ml-auto flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition text-sm whitespace-nowrap"
+      >
+        <span class="text-xl leading-none">+</span>
+        <span>เพิ่มสถานที่</span>
+      </button>
+    </div>
+
+    <!-- ตาราง -->
+    <div class="overflow-x-auto border border-gray-200 rounded-lg">
+      <table class="w-full text-sm text-left text-gray-700 border-collapse">
+        <thead class="bg-gray-50 border-b border-gray-200">
+          <tr>
+            <th class="px-6 py-3 text-center font-semibold">อาคาร</th>
+            <th class="px-6 py-3 text-center font-semibold">ชั้น</th>
+            <th class="px-6 py-3 text-center font-semibold">ห้อง</th>
+            <th class="px-6 py-3 text-center font-semibold">หมายเหตุ</th>
+            <th class="px-6 py-3 text-center font-semibold">การจัดการ</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <tr
+            v-for="item in paginatedData"
+            :key="`${item.type}-${item.id}`"
+            class="bg-white border-b hover:bg-blue-50 transition"
+          >
+            <td class="text-center px-6 py-3">{{ item.building }}</td>
+            <td class="text-center px-6 py-3">{{ item.floor }}</td>
+            <td class="text-center px-6 py-3">{{ item.room }}</td>
+            <td class="text-center px-6 py-3">-</td>
+            <td class="text-center px-6 py-3">
+              <div class="flex items-center justify-center gap-2">
+                <!-- ปุ่มแก้ไข -->
+                <button
+                  @click="handleEdit(item)"
+                  class="flex items-center justify-center w-9 h-8 bg-yellow-400 hover:bg-yellow-500 text-white rounded-lg transition"
+                  title="แก้ไข"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-5 w-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                    />
+                  </svg>
+                </button>
+
+                <!-- ปุ่มลบ -->
+                <button
+                  @click="handleDelete(item)"
+                  class="flex items-center justify-center w-9 h-8 bg-red-500 hover:bg-red-600 text-white rounded-lg transition"
+                  title="ลบ"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-5 w-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </td>
+          </tr>
+
+          <!-- ไม่มีข้อมูล -->
+          <tr v-if="paginatedData.length === 0">
+            <td colspan="5" class="text-center py-6 text-gray-500">— ไม่พบข้อมูล —</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="flex items-center justify-between mt-4">
+      <div class="text-sm text-gray-500">
+        Showing {{ startEntry }} to {{ endEntry }} of {{ totalEntries }} entries
+      </div>
+
+      <div
+        class="flex items-center gap-2 transition-opacity duration-200"
+        :class="{ 'opacity-0 pointer-events-none': totalPages <= 1 }"
+      >
+        <button
+          @click="goToPage(1)"
+          :disabled="currentPage === 1"
+          class="px-3 py-1 border border-gray-300 rounded-md text-sm bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          «
+        </button>
+
+        <button
+          @click="prevPage"
+          :disabled="currentPage === 1"
+          class="px-3 py-1 border border-gray-300 rounded-md text-sm bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          ‹
+        </button>
+
+        <button
+          v-for="page in totalPages"
+          :key="page"
+          @click="goToPage(page)"
+          :class="[
+            'px-3 py-1 border border-gray-300 rounded-md text-sm transition-colors',
+            currentPage === page
+              ? 'bg-blue-600 text-white border-blue-600'
+              : 'bg-white hover:bg-gray-50',
+          ]"
+        >
+          {{ page }}
+        </button>
+
+        <button
+          @click="nextPage"
+          :disabled="currentPage === totalPages"
+          class="px-3 py-1 border border-gray-300 rounded-md text-sm bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          ›
+        </button>
+
+        <button
+          @click="goToPage(totalPages)"
+          :disabled="currentPage === totalPages"
+          class="px-3 py-1 border border-gray-300 rounded-md text-sm bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          »
         </button>
       </div>
     </div>
 
-    <!-- ตาราง -->
-    <div class="-mx-2 sm:mx-0 overflow-x-auto">
-      <TableComponent
-        :columns="columns"
-        :rows="tableRows"
-        :perPage="perPage"
-        mode="full"
-        @detail="handleDetail"
-        @edit="handleEdit"
-        @delete="handleDelete"
-      />
-    </div>
-
-    <!-- 🔹 Modal เพิ่ม/แก้ไขสถานที่ -->
+    <!-- Modal เพิ่ม/แก้ไขสถานที่ -->
     <div
       v-if="showModal"
-      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-2 sm:px-0"
+      class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50"
       @click="closeModal"
     >
       <div
-        class="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden relative"
+        class="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-hidden relative"
         @click.stop
       >
         <!-- Header (ติดด้านบน) -->
-        <div class="sticky top-0 bg-white z-10 px-4 sm:px-6 pt-4 sm:pt-6 pb-4 border-b border-gray-100">
+        <div
+          class="sticky top-0 bg-white z-10 px-4 sm:px-6 pt-4 sm:pt-6 pb-4 border-b border-gray-100"
+        >
           <div class="flex justify-between items-center">
-            <h2 class="text-xl font-bold text-gray-800">
-              {{
-                modalMode === 'add' ? 'เพิ่มสถานที่'
-                : modalMode === 'edit' ? 'แก้ไขสถานที่'
-                : 'รายละเอียดสถานที่'
-              }}
+            <h2 class="text-xl font-bold text-blue-700">
+              {{ modalMode === 'add' ? 'เพิ่มสถานที่' : 'แก้ไขสถานที่' }}
             </h2>
             <button
               @click="closeModal"
@@ -935,14 +912,17 @@ onMounted(async () => {
         </div>
 
         <!-- Content (scrollable) -->
-        <div class="overflow-y-auto px-4 sm:px-6 pb-4 sm:pb-6" style="max-height: calc(80vh - 140px);">
+        <div
+          class="overflow-y-auto px-4 sm:px-6 pb-4 sm:pb-6"
+          style="max-height: calc(80vh - 140px)"
+        >
           <!-- Progress Steps (เฉพาะโหมด add) -->
           <div v-if="modalMode === 'add'" class="flex items-center justify-center mb-6 gap-2 pt-4">
             <div class="flex items-center">
               <div
                 :class="[
                   'w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm transition-colors',
-                  modalStep === 1 ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-600'
+                  modalStep === 1 ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-600',
                 ]"
               >
                 1
@@ -972,7 +952,8 @@ onMounted(async () => {
             <!-- Mode Selection -->
             <div class="space-y-3 mb-6">
               <!-- Single Level Mode -->
-              <label class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400"
+              <label
+                class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400"
                 :class="!bulkCreateMode ? 'border-blue-600 bg-blue-50' : 'border-gray-200'"
               >
                 <input
@@ -985,12 +966,15 @@ onMounted(async () => {
                   <div class="flex items-center gap-2">
                     <span class="font-semibold text-gray-800">เพิ่มทีละระดับ</span>
                   </div>
-                  <p class="text-xs text-gray-500 mt-1">เลือกเพิ่ม อาคาร, ชั้น หรือ ห้อง ทีละอย่าง</p>
+                  <p class="text-xs text-gray-500 mt-1">
+                    เลือกเพิ่ม อาคาร, ชั้น หรือ ห้อง ทีละอย่าง
+                  </p>
                 </div>
               </label>
 
               <!-- Bulk Create Mode -->
-              <label class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400"
+              <label
+                class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400"
                 :class="bulkCreateMode ? 'border-blue-600 bg-blue-50' : 'border-gray-200'"
               >
                 <input
@@ -1002,7 +986,9 @@ onMounted(async () => {
                 <div class="ml-3">
                   <div class="flex items-center gap-2">
                     <span class="font-semibold text-gray-800">สร้างหลายระดับพร้อมกัน</span>
-                    <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">เร็วกว่า</span>
+                    <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full"
+                      >เร็วกว่า</span
+                    >
                   </div>
                   <p class="text-xs text-gray-500 mt-1">สร้างอาคาร + ชั้น + ห้อง ในครั้งเดียว</p>
                 </div>
@@ -1014,7 +1000,8 @@ onMounted(async () => {
               <p class="text-sm font-semibold text-gray-700 mb-2">เลือกประเภท:</p>
 
               <!-- Option: Building -->
-              <label class="flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400"
+              <label
+                class="flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400"
                 :class="modalType === 'building' ? 'border-blue-600 bg-blue-50' : 'border-gray-200'"
               >
                 <input
@@ -1032,7 +1019,8 @@ onMounted(async () => {
               </label>
 
               <!-- Option: Floor -->
-              <label class="flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400"
+              <label
+                class="flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400"
                 :class="modalType === 'floor' ? 'border-blue-600 bg-blue-50' : 'border-gray-200'"
               >
                 <input
@@ -1050,7 +1038,8 @@ onMounted(async () => {
               </label>
 
               <!-- Option: Room -->
-              <label class="flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400"
+              <label
+                class="flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400"
                 :class="modalType === 'room' ? 'border-blue-600 bg-blue-50' : 'border-gray-200'"
               >
                 <input
@@ -1087,111 +1076,6 @@ onMounted(async () => {
 
           <!-- Step 2: กรอกข้อมูล -->
           <div v-if="modalStep === 2" class="space-y-4">
-
-            <!-- 🔍 Detail View Mode -->
-            <div v-if="modalMode === 'view' && modalDetailData" class="space-y-6">
-
-              <!-- Summary Card (ไม่แสดงเมื่อมีการ filter ชั้น) -->
-              <div v-if="!selectedFloor" :class="[
-                'rounded-lg p-4',
-                modalDetailData.type === 'building' ? 'bg-blue-50' : 'bg-purple-50'
-              ]">
-                <h3 :class="[
-                  'text-lg font-bold mb-3',
-                  modalDetailData.type === 'building' ? 'text-blue-800' :
-                  modalDetailData.type === 'floor' ? 'text-green-800' : 'text-purple-800'
-                ]">
-                  ข้อมูล{{ modalDetailData.type === 'building' ? 'อาคาร' :
-                            modalDetailData.type === 'floor' ? 'ชั้น' : 'ห้อง' }}
-                </h3>
-
-                <!-- ข้อมูลหลัก -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-                  <p class="text-gray-700">
-                    <span class="font-semibold">ชื่อ{{ modalDetailData.type === 'building' ? 'อาคาร' :
-                                                      modalDetailData.type === 'floor' ? 'ชั้น' : 'ห้อง' }}:</span>
-                    {{ modalDetailData.name }}
-                  </p>
-
-                  <p v-if="modalDetailData.type !== 'building'" class="text-gray-700">
-                    <span class="font-semibold">อาคาร:</span> {{ modalDetailData.buildingName }}
-                  </p>
-
-                  <p v-if="modalDetailData.type === 'room'" class="text-gray-700">
-                    <span class="font-semibold">ชั้น:</span> {{ modalDetailData.floorName }}
-                  </p>
-                </div>
-
-                <!-- สถิติ -->
-                <div class="grid grid-cols-2 gap-4">
-                  <div class="bg-white rounded-lg p-3 text-center">
-                    <div class="text-2xl font-bold text-blue-600">{{ modalDetailData.totalFloors }}</div>
-                    <div class="text-sm text-gray-600">ชั้นทั้งหมด</div>
-                  </div>
-                  <div class="bg-white rounded-lg p-3 text-center">
-                    <div class="text-2xl font-bold text-green-600">{{ modalDetailData.totalRooms }}</div>
-                    <div class="text-sm text-gray-600">ห้องทั้งหมด</div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Detailed Breakdown (ไม่แสดงเมื่อมีการ filter ชั้น) -->
-              <div v-if="!selectedFloor && modalDetailData.floorDetails.length > 0" class="space-y-4">
-                <h4 class="font-semibold text-gray-800 flex items-center gap-2">
-                  รายละเอียดแต่ละชั้น
-                  <span class="text-sm font-normal text-gray-600">({{ modalDetailData.totalFloors }} ชั้น)</span>
-                </h4>
-
-                <div class="space-y-3">
-                  <div
-                    v-for="(floor, index) in modalDetailData.floorDetails"
-                    :key="floor.floorId || index"
-                    class="border border-gray-200 rounded-lg p-4 bg-gray-50"
-                  >
-                    <div class="flex justify-between items-center mb-3">
-                      <h5 class="font-medium text-gray-800">{{ floor.floorName }}</h5>
-                      <span class="text-sm text-blue-600 bg-blue-100 px-3 py-1 rounded-full">
-                        {{ floor.roomCount }} ห้อง
-                      </span>
-                    </div>
-
-                    <div v-if="floor.rooms.length > 0" class="mt-2">
-                      <p class="text-sm text-gray-600 mb-2">ห้องในชั้นนี้:</p>
-                      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                        <div
-                          v-for="room in floor.rooms"
-                          :key="room.id || room.name"
-                          class="text-xs bg-white border border-gray-300 rounded-lg px-3 py-2 text-center hover:bg-gray-50 transition-colors"
-                        >
-                          <span class="font-medium">{{ room.name || room }}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <p v-else class="text-sm text-gray-500 italic">ยังไม่มีห้องในชั้นนี้</p>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Floor Detail - Simple Room List (เมื่อมีการ filter ชั้น) -->
-              <div v-if="selectedFloor && modalDetailData.floorDetails.length > 0" class="space-y-4">
-                <div v-for="(floor, index) in modalDetailData.floorDetails" :key="floor.floorId || index">
-                  <div v-if="floor.rooms.length > 0" class="space-y-3">
-                    <h4 class="font-semibold text-gray-800">รายชื่อห้องทั้งหมด</h4>
-                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                      <div
-                        v-for="room in floor.rooms"
-                        :key="room.id || room.name"
-                        class="bg-white border border-gray-300 rounded-lg px-3 py-2 text-center hover:bg-gray-50 transition-colors"
-                      >
-                        <span class="font-medium">{{ room.name || room }}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <p v-else class="text-gray-500 italic text-center py-8">ยังไม่มีห้องในชั้นนี้</p>
-                </div>
-              </div>
-            </div>
-
             <!-- Bulk Create Mode -->
             <div v-if="bulkCreateMode" class="space-y-4">
               <div class="flex items-center gap-2 p-3 bg-blue-50 rounded-lg mb-4">
@@ -1216,15 +1100,15 @@ onMounted(async () => {
                 <select
                   v-if="buildingMode === 'existing'"
                   v-model="modalData.building_id"
-                  :disabled="modalMode === 'view'"
                   @change="handleBulkBuildingChange"
-                  :class="[
-                    'w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none',
-                    modalMode === 'view' ? 'border-gray-200 bg-gray-50 text-gray-600 cursor-not-allowed' : 'border-gray-300'
-                  ]"
+                  class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none"
                 >
                   <option value="">-- เลือกอาคาร --</option>
-                  <option v-for="building in buildings" :key="building.building_id" :value="building.building_id">
+                  <option
+                    v-for="building in buildings"
+                    :key="building.building_id"
+                    :value="building.building_id"
+                  >
                     {{ building.building_name }}
                   </option>
                 </select>
@@ -1238,13 +1122,24 @@ onMounted(async () => {
                   />
                   <span class="text-sm font-medium">สร้างอาคารใหม่</span>
                 </label>
-                <input
-                  v-if="buildingMode === 'new'"
-                  v-model="newBuildingName"
-                  type="text"
-                  placeholder="ชื่ออาคารใหม่"
-                  class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none"
-                />
+                <div v-if="buildingMode === 'new'" class="space-y-2">
+                  <input
+                    v-model="newBuildingName"
+                    type="text"
+                    placeholder="ชื่ออาคารใหม่"
+                    :class="[
+                      'w-full border rounded-lg px-4 py-2 focus:ring-2 focus:outline-none transition-colors',
+                      validationErrors.newBuildingName
+                        ? 'border-red-500 focus:ring-red-400 bg-red-50'
+                        : 'border-gray-300 focus:ring-blue-400',
+                    ]"
+                    @input="() => validateAlphanumeric(newBuildingName, 'newBuildingName')"
+                    @blur="() => validateAlphanumeric(newBuildingName, 'newBuildingName')"
+                  />
+                  <p v-if="validationErrors.newBuildingName" class="text-red-500 text-sm mt-1">
+                    {{ errorMessages.newBuildingName }}
+                  </p>
+                </div>
               </div>
 
               <!-- Floor Section -->
@@ -1261,20 +1156,18 @@ onMounted(async () => {
                     :disabled="buildingMode === 'new' || !modalData.building_id"
                     class="w-4 h-4 text-blue-600 disabled:opacity-50"
                   />
-                  <span class="text-sm font-medium" :class="{'text-gray-400': buildingMode === 'new' || !modalData.building_id}">
+                  <span
+                    class="text-sm font-medium"
+                    :class="{ 'text-gray-400': buildingMode === 'new' || !modalData.building_id }"
+                  >
                     เลือกจากชั้นที่มีอยู่
                   </span>
                 </label>
                 <select
                   v-if="floorMode === 'existing'"
                   v-model="modalData.floor_id"
-                  :disabled="modalMode === 'view' || buildingMode === 'new' || !modalData.building_id"
-                  :class="[
-                    'w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none',
-                    modalMode === 'view' || buildingMode === 'new' || !modalData.building_id
-                      ? 'border-gray-200 bg-gray-50 text-gray-600 cursor-not-allowed'
-                      : 'border-gray-300'
-                  ]"
+                  :disabled="buildingMode === 'new' || !modalData.building_id"
+                  class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none disabled:bg-gray-100"
                 >
                   <option value="">-- เลือกชั้น --</option>
                   <option v-for="floor in floors" :key="floor.floor_id" :value="floor.floor_id">
@@ -1291,13 +1184,24 @@ onMounted(async () => {
                   />
                   <span class="text-sm font-medium">สร้างชั้นใหม่</span>
                 </label>
-                <input
-                  v-if="floorMode === 'new'"
-                  v-model="newFloorName"
-                  type="text"
-                  placeholder="ชื่อชั้นใหม่"
-                  class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none"
-                />
+                <div v-if="floorMode === 'new'" class="space-y-2">
+                  <input
+                    v-model="newFloorName"
+                    type="text"
+                    placeholder="ชื่อชั้นใหม่"
+                    :class="[
+                      'w-full border rounded-lg px-4 py-2 focus:ring-2 focus:outline-none transition-colors',
+                      validationErrors.newFloorName
+                        ? 'border-red-500 focus:ring-red-400 bg-red-50'
+                        : 'border-gray-300 focus:ring-blue-400',
+                    ]"
+                    @input="() => validateAlphanumeric(newFloorName, 'newFloorName')"
+                    @blur="() => validateAlphanumeric(newFloorName, 'newFloorName')"
+                  />
+                  <p v-if="validationErrors.newFloorName" class="text-red-500 text-sm mt-1">
+                    {{ errorMessages.newFloorName }}
+                  </p>
+                </div>
               </div>
 
               <!-- Room Section -->
@@ -1306,15 +1210,25 @@ onMounted(async () => {
                   <span>ห้อง <span class="text-red-500">*</span></span>
                 </h3>
 
-                <input
-                  v-model="roomName"
-                  type="text"
-                  placeholder="ชื่อห้อง (ต้องระบุ)"
-                  class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none"
-                />
-                <p class="text-xs text-gray-600">
-                   ห้องจะถูกสร้างในชั้นที่เลือกหรือสร้างขึ้นมาใหม่
-                </p>
+                <div class="space-y-2">
+                  <input
+                    v-model="roomName"
+                    type="text"
+                    placeholder="ชื่อห้อง (ต้องระบุ)"
+                    :class="[
+                      'w-full border rounded-lg px-4 py-2 focus:ring-2 focus:outline-none transition-colors',
+                      validationErrors.roomName
+                        ? 'border-red-500 focus:ring-red-400 bg-red-50'
+                        : 'border-gray-300 focus:ring-blue-400',
+                    ]"
+                    @input="() => validateAlphanumeric(roomName, 'roomName')"
+                    @blur="() => validateAlphanumeric(roomName, 'roomName')"
+                  />
+                  <p v-if="validationErrors.roomName" class="text-red-500 text-sm mt-1">
+                    {{ errorMessages.roomName }}
+                  </p>
+                </div>
+                <p class="text-xs text-gray-600">ห้องจะถูกสร้างในชั้นที่เลือกหรือสร้างขึ้นมาใหม่</p>
               </div>
 
               <!-- Actions for Bulk Create -->
@@ -1336,6 +1250,19 @@ onMounted(async () => {
 
             <!-- Single Level Mode (แบบเดิม) -->
             <div v-else>
+              <!-- แสดงประเภทที่เลือก -->
+              <div class="flex items-center gap-2 p-3 bg-blue-50 rounded-lg mb-4">
+                <span class="text-2xl">
+                  {{ modalType === 'building' ? '' : modalType === 'floor' ? '' : '' }}
+                </span>
+                <span class="font-semibold text-blue-800">
+                  {{ modalMode === 'add' ? 'เพิ่ม' : 'แก้ไข'
+                  }}{{
+                    modalType === 'building' ? 'อาคาร' : modalType === 'floor' ? 'ชั้น' : 'ห้อง'
+                  }}
+                </span>
+              </div>
+
               <!-- เลือกอาคาร (สำหรับ floor และ room) -->
               <div v-if="modalType === 'floor' || modalType === 'room'">
                 <label class="block text-sm font-semibold text-gray-700 mb-2">
@@ -1343,17 +1270,16 @@ onMounted(async () => {
                 </label>
                 <select
                   v-model="modalData.building_id"
-                  :disabled="modalMode === 'edit' || modalMode === 'view'"
+                  :disabled="modalMode === 'edit'"
                   @change="handleModalBuildingChange"
-                  :class="[
-                    'w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none',
-                    modalMode === 'edit' || modalMode === 'view'
-                      ? 'border-gray-200 bg-gray-50 text-gray-600 cursor-not-allowed'
-                      : 'border-gray-300'
-                  ]"
+                  class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none disabled:bg-gray-100"
                 >
                   <option value="">เลือกอาคาร</option>
-                  <option v-for="building in buildings" :key="building.building_id" :value="building.building_id">
+                  <option
+                    v-for="building in buildings"
+                    :key="building.building_id"
+                    :value="building.building_id"
+                  >
                     {{ building.building_name }}
                   </option>
                 </select>
@@ -1366,13 +1292,8 @@ onMounted(async () => {
                 </label>
                 <select
                   v-model="modalData.floor_id"
-                  :disabled="modalMode === 'edit' || modalMode === 'view' || !modalData.building_id"
-                  :class="[
-                    'w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none',
-                    modalMode === 'edit' || modalMode === 'view' || !modalData.building_id
-                      ? 'border-gray-200 bg-gray-50 text-gray-600 cursor-not-allowed'
-                      : 'border-gray-300'
-                  ]"
+                  :disabled="modalMode === 'edit' || !modalData.building_id"
+                  class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none disabled:bg-gray-100"
                 >
                   <option value="">เลือกชั้น</option>
                   <option v-for="floor in floors" :key="floor.floor_id" :value="floor.floor_id">
@@ -1384,20 +1305,30 @@ onMounted(async () => {
               <!-- ชื่อ -->
               <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-2">
-                  ชื่อ{{ modalType === 'building' ? 'อาคาร' : modalType === 'floor' ? 'ชั้น' : 'ห้อง' }}
+                  ชื่อ{{
+                    modalType === 'building' ? 'อาคาร' : modalType === 'floor' ? 'ชั้น' : 'ห้อง'
+                  }}
                   <span class="text-red-500">*</span>
                 </label>
-                <input
-                  v-model="modalData.name"
-                  type="text"
-                  :placeholder="`ระบุชื่อ${modalType === 'building' ? 'อาคาร' : modalType === 'floor' ? 'ชั้น' : 'ห้อง'}`"
-                  :disabled="modalMode === 'view'"
-                  :class="[
-                    'w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none',
-                    modalMode === 'view' ? 'border-gray-200 bg-gray-50 text-gray-600 cursor-not-allowed' : 'border-gray-300'
-                  ]"
-                  @keyup.enter="modalMode !== 'view' && saveLocation"
-                />
+                <div class="space-y-2">
+                  <input
+                    v-model="modalData.name"
+                    type="text"
+                    :placeholder="`ระบุชื่อ${modalType === 'building' ? 'อาคาร' : modalType === 'floor' ? 'ชั้น' : 'ห้อง'}`"
+                    :class="[
+                      'w-full border rounded-lg px-4 py-2 focus:ring-2 focus:outline-none transition-colors',
+                      validationErrors.modalName
+                        ? 'border-red-500 focus:ring-red-400 bg-red-50'
+                        : 'border-gray-300 focus:ring-blue-400',
+                    ]"
+                    @input="() => validateAlphanumeric(modalData.name, 'modalName')"
+                    @blur="() => validateAlphanumeric(modalData.name, 'modalName')"
+                    @keyup.enter="saveLocation"
+                  />
+                  <p v-if="validationErrors.modalName" class="text-red-500 text-sm mt-1">
+                    {{ errorMessages.modalName }}
+                  </p>
+                </div>
               </div>
 
               <!-- Actions for Single Level -->
@@ -1417,18 +1348,10 @@ onMounted(async () => {
                   ยกเลิก
                 </button>
                 <button
-                  v-if="modalMode !== 'view'"
                   @click="saveLocation"
                   class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition"
                 >
                   {{ modalMode === 'add' ? 'เพิ่ม' : 'บันทึก' }}
-                </button>
-                <button
-                  v-if="modalMode === 'view'"
-                  @click="closeModal"
-                  class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition"
-                >
-                  ปิด
                 </button>
               </div>
             </div>
@@ -1438,8 +1361,7 @@ onMounted(async () => {
         <!-- Footer Actions (ติดด้านล่าง) -->
         <div class="sticky bottom-0 bg-white z-10 px-4 sm:px-6 py-4 border-t border-gray-100">
           <!-- ย้าย action buttons -->
-          <div class="flex gap-3">
-          </div>
+          <div class="flex gap-3"></div>
         </div>
       </div>
     </div>
