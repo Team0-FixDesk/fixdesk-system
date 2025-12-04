@@ -76,7 +76,7 @@ function prevPage() {
               <div v-if="cell === 'actions'" class="flex justify-center gap-2">
                 <!-- ปุ่มดูรายละเอียด (ใช้เหมือนกันทุกโหมด) -->
                 <div
-                  class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center bg-blue-500 hover:bg-blue-700 text-white rounded-md transition cursor-pointer"
+                  class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center bg-[#1E48D1] hover:bg-[#163A9B] text-white rounded-md transition cursor-pointer"
                   title="ดูรายละเอียด"
                   @click="$emit('detail', row[1])"
                 >

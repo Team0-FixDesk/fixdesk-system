@@ -12,7 +12,7 @@ const goToCreate = () => {
 <template>
   <button
     @click="goToCreate"
-    class="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-[#1E48D1] hover:bg-[#1539a9] text-white font-medium shadow-sm transition"
+    class="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-[#1E48D1] hover:bg-[#163A9B] text-white font-medium shadow-sm transition"
   >
     <svg
       xmlns="http://www.w3.org/2000/svg"
