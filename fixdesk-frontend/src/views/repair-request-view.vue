@@ -507,7 +507,7 @@ function validateForm() {
             <input
               v-model="formData.assetCode"
               type="text"
-              class="w-full text-xm bg-white border border-neutral-400 rounded-md placeholder-[#A1A1A1]"
+              class="w-full text-xm bg-white border-neutral-400 rounded-md placeholder-[#A1A1A1] text-sm px-3 py-2"
               placeholder="กรอกเลขครุภัณฑ์ (ถ้ามี)"
             />
           </div>
