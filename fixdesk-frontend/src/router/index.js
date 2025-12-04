@@ -56,10 +56,11 @@ import StockManageInventoryView from '../views/stock/stock-manage-inventory-view
  * ROUTER CONFIG
  * ----------------------------------------------------- */
 const router = createRouter({
+
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
-    { path: '/', redirect: '/login' },
-    { path: '/login', name: 'login', component: LoginView },
+    // { path: '/', redirect: '/login' },
+    // { path: '/login', name: 'login', component: LoginView },
     {
       path: '/main',
       component: MainLayout,
@@ -68,6 +69,14 @@ const router = createRouter({
          * USER
          * ------------------------------ */
         { path: 'user-home', component: UserHomeView, meta: { role: ['User'] } },
+
+        {
+          path: 'user-home',
+          name: 'user-home',
+          component: UserHomeView,
+          meta: { role: ['User'] }
+        },
+
 
         /* ------------------------------
          * ADMIN
@@ -109,24 +118,24 @@ const router = createRouter({
         {
           path: 'repair-request',
           component: RepairRequestView,
-          meta: { role: ['User','Admin','Technician','Manager','Stock'] }
+          meta: { role: ['User', 'Admin', 'Technician', 'Manager', 'Stock'] }
         },
         {
           path: 'my-list',
           component: MyListView,
-          meta: { role: ['User','Admin','Technician','Manager','Stock'] }
+          meta: { role: ['User', 'Admin', 'Technician', 'Manager', 'Stock'] }
         },
         {
           path: 'repair-detail/:code',
           name: 'RepairDetail',
           component: () => import('@/views/repair-detail-view.vue'),
-          meta: { role: ['User','Admin','Technician','Manager','Stock'] }
+          meta: { role: ['User', 'Admin', 'Technician', 'Manager', 'Stock'] }
         },
         {
           path: 'repair-edit/:code',
           name: 'RepairEdit',
           component: () => import('@/views/repair-edit-view.vue'),
-          meta: { role: ['User','Admin','Technician','Manager','Stock'] }
+          meta: { role: ['User', 'Admin', 'Technician', 'Manager', 'Stock'] }
         },
       ],
     },
