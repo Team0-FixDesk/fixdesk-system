@@ -4,11 +4,11 @@ import { ref, computed } from 'vue'
 const props = defineProps({
   columns: {
     type: Array,
-    default: () => [],
+    default: () => [],        // ✅ อันนี้คือเพิ่ม
   },
   rows: {
     type: Array,
-    default: () => [],
+    default: () => [],        // ✅ เพิ่ม
   },
   perPage: {
     type: Number,
@@ -17,12 +17,13 @@ const props = defineProps({
   // mode:
   //  - "full"       : edit/delete
   //  - "assign"     : มอบหมายงาน
-  //  - "technician" : 3 ปุ่ม รับงาน / เปลี่ยนสถานะ / เสร็จสิ้น
+  //  - "technician" : 3 ปุ่ม รับงาน / เปลี่ยนสถานะ / เสร็จสิ้น   ✅ เพิ่มคอมเมนต์ + mode ใหม่
   mode: {
     type: String,
     default: 'full',
   },
 })
+
 
 
 const isPendingStatus = (row) => typeof row[5] === 'string' && row[5].includes('รอดำเนินการ')
@@ -46,6 +47,7 @@ function prevPage() {
   if (currentPage.value > 1) currentPage.value--
 }
 </script>
+
 
 <template>
   <div class="relative overflow-x-auto">
@@ -82,21 +84,20 @@ function prevPage() {
 
             <!-- คอลัมน์อื่น -->
             <td v-else-if="ci !== 1" class="px-3 py-2 sm:px-6 sm:py-4 text-center">
+              <!-- คอลัมน์ action -->
               <div v-if="cell === 'actions'" class="flex justify-center gap-2">
-                <!-- ปุ่มดูรายละเอียด (ใช้เหมือนกันทุกโหมด) -->
+                <!-- ปุ่มดูรายละเอียด (ใช้ทุกโหมด) -->
                 <div
                   class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center bg-[#1E48D1] hover:bg-[#163A9B] text-white rounded-md transition cursor-pointer"
                   title="ดูรายละเอียด"
                   @click="$emit('detail', row[1])"
                 >
                   <img src="/icon/info-icon.svg" alt="info" class="w-5 h-5" />
-                </button>
-              </div>
+                </div>
 
-              <!-- 🟩 คอลัมน์ "การจัดการ" เงื่อนไขแสดงปุ่ม -->
-              <div v-else-if="cell === 'actions'" class="flex justify-center">
+                <!-- โหมด technician -->
                 <template v-if="props.mode === 'technician'">
-                  <!-- 1) สถานะ = pending → แสดงปุ่ม "รับงาน" -->
+                  <!-- 1) pending → ปุ่มรับงาน -->
                   <button
                     v-if="row[7] === 'pending'"
                     class="px-4 py-2 text-xs font-medium text-white bg-[#005a9a] rounded-[8px] shadow-md hover:shadow-lg hover:bg-[#005a9a] transition"
@@ -105,7 +106,7 @@ function prevPage() {
                     รับงาน
                   </button>
 
-                  <!-- 2) สถานะ ≠ pending และ ≠ done → แสดงปุ่ม "เปลี่ยนสถานะ" -->
+                  <!-- 2) ไม่ใช่ pending และไม่ใช่ done → เปลี่ยนสถานะ -->
                   <button
                     v-else-if="row[7] !== 'done'"
                     class="px-4 py-2 text-xs font-medium text-white bg-[#FBC02D] rounded-[8px] shadow-md hover:shadow-lg hover:bg-[#F9A825] transition"
@@ -114,7 +115,7 @@ function prevPage() {
                     เปลี่ยนสถานะ
                   </button>
 
-                  <!-- 3) สถานะ = done → แสดง "เสร็จสิ้น" เทา ๆ ไม่สามารถกดได้ -->
+                  <!-- 3) done → แสดงเสร็จสิ้น -->
                   <span
                     v-else
                     class="px-4 py-2 text-xs font-medium text-gray-400 bg-gray-100 rounded-full cursor-default"
@@ -123,8 +124,8 @@ function prevPage() {
                   </span>
                 </template>
 
-                <!-- โหมด user (หน้า MyList: ล็อกจากสถานะ) -->
-                <template v-if="props.mode === 'user'">
+                <!-- โหมด user (ล็อกตามสถานะรอดำเนินการ) -->
+                <template v-else-if="props.mode === 'user'">
                   <!-- ปุ่มแก้ไข -->
                   <div
                     :class="[
@@ -134,7 +135,9 @@ function prevPage() {
                         : 'bg-gray-300 text-gray-400 cursor-not-allowed',
                     ]"
                     :title="
-                      isPendingStatus(row) ? 'แก้ไข' : 'ไม่สามารถแก้ไขได้ (สถานะไม่ใช่รอดำเนินการ)'
+                      isPendingStatus(row)
+                        ? 'แก้ไข'
+                        : 'ไม่สามารถแก้ไขได้ (สถานะไม่ใช่รอดำเนินการ)'
                     "
                     @click="isPendingStatus(row) && $emit('edit', row[1])"
                   >
@@ -149,14 +152,18 @@ function prevPage() {
                         ? 'bg-red-500 hover:bg-red-600 text-white cursor-pointer'
                         : 'bg-gray-300 text-gray-400 cursor-not-allowed',
                     ]"
-                    :title="isPendingStatus(row) ? 'ลบ' : 'ไม่สามารถลบได้ (สถานะไม่ใช่รอดำเนินการ)'"
+                    :title="
+                      isPendingStatus(row)
+                        ? 'ลบ'
+                        : 'ไม่สามารถลบได้ (สถานะไม่ใช่รอดำเนินการ)'
+                    "
                     @click="isPendingStatus(row) && $emit('delete', row[1])"
                   >
                     <img src="/icon/bin-icon.svg" alt="delete" class="w-5 h-5 opacity-90" />
                   </div>
                 </template>
 
-                <!-- โหมด full (หน้าอื่น ๆ ใช้ — ไม่ล็อกสถานะ) -->
+                <!-- โหมด full (edit/delete ปกติ) -->
                 <template v-else-if="props.mode === 'full'">
                   <div
                     class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center bg-yellow-400 hover:bg-yellow-500 text-white rounded-md transition cursor-pointer"
@@ -187,7 +194,7 @@ function prevPage() {
                 </template>
               </div>
 
-              <!-- ถ้าไม่ใช่ detail / actions -->
+              <!-- ถ้าไม่ใช่ actions -->
               <slot
                 v-else
                 :name="`cell-${ci}`"
