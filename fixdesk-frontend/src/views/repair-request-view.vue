@@ -257,7 +257,12 @@ onMounted(() => {
 })
 
 async function handleSubmit() {
-  // 🔥 เช็กความเร่งด่วนก่อนเลย
+   // เช็กฟิลด์อื่น ๆ ตามปกติ
+  if (!validateForm()) {
+    Swal.fire('ข้อมูลไม่ครบถ้วน', 'กรุณาตรวจสอบช่องที่มีเครื่องหมาย *', 'error')
+    return
+  }
+  // เช็กความเร่งด่วน
   if (!formData.value.urgency) {
     await Swal.fire({
       title: 'ยังไม่ได้เลือกความเร่งด่วน',
@@ -266,12 +271,6 @@ async function handleSubmit() {
       confirmButtonText: 'ตกลง',
       confirmButtonColor: '#f59e0b',
     })
-    return
-  }
-
-  // แล้วค่อยเช็กฟิลด์อื่น ๆ ตามปกติ
-  if (!validateForm()) {
-    Swal.fire('ข้อมูลไม่ครบถ้วน', 'กรุณาตรวจสอบช่องที่มีเครื่องหมาย *', 'error')
     return
   }
 
@@ -617,7 +616,7 @@ function validateForm() {
             <textarea
               v-model="formData.issueDescription"
               :class="[
-                'flex-1 w-full min-h-[220px] sm:min-h-[280px] text-sm bg-white border rounded-md resize-none px-3 py-2',
+                'flex-1 w-full min-h-[220px] sm:min-h-[280px] text-sm bg-white border rounded-md resize-none placeholder-[#A1A1A1] px-3 py-2',
                 errors.issueDescription ? 'border-red-500' : 'border-neutral-400',
               ]"
               placeholder="กรุณากรอกสาเหตุ/อาการที่เสีย"
