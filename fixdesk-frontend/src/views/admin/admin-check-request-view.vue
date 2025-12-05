@@ -235,8 +235,10 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
 </script>
 
 <template>
-  <div class="bg-gray-50 rounded-xl p-1 mx-auto max-w-7xl">
-    <!-- ฟิลเตอร์ -->
+  <!-- ตาราง -->
+  <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-7xl">
+    <h1 class="text-xl font-bold text-back mb-6">ตรวจสอบคำร้องแจ้งซ่อมทั้งหมด</h1>
+     <!-- ฟิลเตอร์ -->
     <div class="flex flex-wrap items-center gap-3 mb-6">
       <input
         v-model="searchQuery"
@@ -352,10 +354,6 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
         </button>
       </transition>
     </div>
-  </div>
-  <!-- ตาราง -->
-  <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-7xl">
-    <h1 class="text-xl font-bold text-back mb-6">ตรวจสอบคำร้องแจ้งซ่อมทั้งหมด</h1>
     <TableComponent
       :columns="columns"
       :rows="filteredRows"

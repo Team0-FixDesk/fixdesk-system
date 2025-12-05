@@ -1,11 +1,8 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
-
 defineOptions({ name: 'AdminManageLocationView' })
 
-const router = useRouter()
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
 
 // Helper function to get auth headers
@@ -46,6 +43,59 @@ const newBuildingName = ref('')
 const newFloorName = ref('')
 const roomName = ref('')
 
+// Validation states
+const validationErrors = ref({
+  buildingName: false,
+  floorName: false,
+  roomName: false,
+  modalName: false,
+  newBuildingName: false,
+  newFloorName: false,
+})
+
+const errorMessages = ref({
+  buildingName: '',
+  floorName: '',
+  roomName: '',
+  modalName: '',
+  newBuildingName: '',
+  newFloorName: '',
+})
+
+// VALIDATION FUNCTIONS
+function validateAlphanumeric(value, fieldName) {
+  const regex = /^[ก-๙a-zA-Z0-9\s/]*$/
+
+  if (!value.trim()) {
+    validationErrors.value[fieldName] = true
+    errorMessages.value[fieldName] = `กรุณากรอกข้อมูล`
+    return false
+  }
+
+  if (!regex.test(value)) {
+    validationErrors.value[fieldName] = true
+    errorMessages.value[fieldName] =
+      `กรุณากรอกชื่อ${getFieldLabel(fieldName)}เป็นตัวอักษรไทย อังกฤษ ตัวเลข และ / เท่านั้น`
+    return false
+  }
+
+  validationErrors.value[fieldName] = false
+  errorMessages.value[fieldName] = ''
+  return true
+}
+
+function getFieldLabel(fieldName) {
+  const labels = {
+    buildingName: 'อาคาร',
+    floorName: 'ชั้น',
+    roomName: 'ห้อง',
+    modalName: 'ข้อมูล',
+    newBuildingName: 'อาคาร',
+    newFloorName: 'ชั้น',
+  }
+  return labels[fieldName] || ''
+}
+
 // FETCH DATA
 async function fetchBuildings() {
   try {
@@ -80,7 +130,6 @@ async function fetchRooms(floorId) {
 // COMPUTED DATA
 const displayData = computed(() => {
   let data = []
-
   // ขั้นที่ 1: ถ้าไม่เลือกอาคาร แสดงอาคารทั้งหมด
   if (!selectedBuilding.value) {
     data = buildings.value.map((b) => ({
@@ -136,7 +185,6 @@ const displayData = computed(() => {
   } else {
     data.sort((a, b) => b.name.localeCompare(a.name, 'th'))
   }
-
   return data
 })
 
@@ -151,7 +199,7 @@ const paginatedData = computed(() => {
   return displayData.value.slice(start, start + perPage)
 })
 
-// ACIONS
+// ACTIONS
 async function handleBuildingChange() {
   if (selectedBuilding.value) {
     await fetchFloors(selectedBuilding.value)
@@ -307,6 +355,11 @@ function closeModal() {
 }
 
 async function saveLocation() {
+  // Validate input first
+  if (!validateAlphanumeric(modalData.value.name, 'modalName')) {
+    return
+  }
+
   if (!modalData.value.name.trim()) {
     await Swal.fire({
       icon: 'warning',
@@ -427,6 +480,20 @@ async function handleBulkBuildingChange() {
 // ฟังก์ชันสำหรับ Bulk Create
 async function bulkCreateLocation() {
   try {
+    // Validate all inputs first
+    if (
+      buildingMode.value === 'new' &&
+      !validateAlphanumeric(newBuildingName.value, 'newBuildingName')
+    ) {
+      return
+    }
+    if (floorMode.value === 'new' && !validateAlphanumeric(newFloorName.value, 'newFloorName')) {
+      return
+    }
+    if (!validateAlphanumeric(roomName.value, 'roomName')) {
+      return
+    }
+
     let buildingId = modalData.value.building_id
     let floorId = modalData.value.floor_id
 
@@ -587,8 +654,8 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="bg-white rounded-xl shadow-md p-12 mx-auto max-w-6xl">
-    <!-- หัวข้อ -->
+  <div class="bg-white rounded-xl shadow-md p-12 mx-auto max-w-7xl">
+    <!-- 🔹 หัวข้อ -->
     <h1 class="text-xl font-bold text-blue-700 mb-2">สถานที่ทั้งหมด</h1>
     <p class="text-sm text-gray-600 mb-6">ค้นหาตรองและเรียงลำดับรายการอาคาร ชั้น ห้อง</p>
 
@@ -817,7 +884,7 @@ onMounted(async () => {
       </div>
     </div>
 
-    <!-- 🔹 Modal เพิ่ม/แก้ไขสถานที่ -->
+    <!-- Modal เพิ่ม/แก้ไขสถานที่ -->
     <div
       v-if="showModal"
       class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50"
@@ -1055,13 +1122,24 @@ onMounted(async () => {
                   />
                   <span class="text-sm font-medium">สร้างอาคารใหม่</span>
                 </label>
-                <input
-                  v-if="buildingMode === 'new'"
-                  v-model="newBuildingName"
-                  type="text"
-                  placeholder="ชื่ออาคารใหม่"
-                  class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none"
-                />
+                <div v-if="buildingMode === 'new'" class="space-y-2">
+                  <input
+                    v-model="newBuildingName"
+                    type="text"
+                    placeholder="ชื่ออาคารใหม่"
+                    :class="[
+                      'w-full border rounded-lg px-4 py-2 focus:ring-2 focus:outline-none transition-colors',
+                      validationErrors.newBuildingName
+                        ? 'border-red-500 focus:ring-red-400 bg-red-50'
+                        : 'border-gray-300 focus:ring-blue-400',
+                    ]"
+                    @input="() => validateAlphanumeric(newBuildingName, 'newBuildingName')"
+                    @blur="() => validateAlphanumeric(newBuildingName, 'newBuildingName')"
+                  />
+                  <p v-if="validationErrors.newBuildingName" class="text-red-500 text-sm mt-1">
+                    {{ errorMessages.newBuildingName }}
+                  </p>
+                </div>
               </div>
 
               <!-- Floor Section -->
@@ -1106,13 +1184,24 @@ onMounted(async () => {
                   />
                   <span class="text-sm font-medium">สร้างชั้นใหม่</span>
                 </label>
-                <input
-                  v-if="floorMode === 'new'"
-                  v-model="newFloorName"
-                  type="text"
-                  placeholder="ชื่อชั้นใหม่"
-                  class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none"
-                />
+                <div v-if="floorMode === 'new'" class="space-y-2">
+                  <input
+                    v-model="newFloorName"
+                    type="text"
+                    placeholder="ชื่อชั้นใหม่"
+                    :class="[
+                      'w-full border rounded-lg px-4 py-2 focus:ring-2 focus:outline-none transition-colors',
+                      validationErrors.newFloorName
+                        ? 'border-red-500 focus:ring-red-400 bg-red-50'
+                        : 'border-gray-300 focus:ring-blue-400',
+                    ]"
+                    @input="() => validateAlphanumeric(newFloorName, 'newFloorName')"
+                    @blur="() => validateAlphanumeric(newFloorName, 'newFloorName')"
+                  />
+                  <p v-if="validationErrors.newFloorName" class="text-red-500 text-sm mt-1">
+                    {{ errorMessages.newFloorName }}
+                  </p>
+                </div>
               </div>
 
               <!-- Room Section -->
@@ -1121,12 +1210,24 @@ onMounted(async () => {
                   <span>ห้อง <span class="text-red-500">*</span></span>
                 </h3>
 
-                <input
-                  v-model="roomName"
-                  type="text"
-                  placeholder="ชื่อห้อง (ต้องระบุ)"
-                  class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none"
-                />
+                <div class="space-y-2">
+                  <input
+                    v-model="roomName"
+                    type="text"
+                    placeholder="ชื่อห้อง (ต้องระบุ)"
+                    :class="[
+                      'w-full border rounded-lg px-4 py-2 focus:ring-2 focus:outline-none transition-colors',
+                      validationErrors.roomName
+                        ? 'border-red-500 focus:ring-red-400 bg-red-50'
+                        : 'border-gray-300 focus:ring-blue-400',
+                    ]"
+                    @input="() => validateAlphanumeric(roomName, 'roomName')"
+                    @blur="() => validateAlphanumeric(roomName, 'roomName')"
+                  />
+                  <p v-if="validationErrors.roomName" class="text-red-500 text-sm mt-1">
+                    {{ errorMessages.roomName }}
+                  </p>
+                </div>
                 <p class="text-xs text-gray-600">ห้องจะถูกสร้างในชั้นที่เลือกหรือสร้างขึ้นมาใหม่</p>
               </div>
 
@@ -1152,7 +1253,7 @@ onMounted(async () => {
               <!-- แสดงประเภทที่เลือก -->
               <div class="flex items-center gap-2 p-3 bg-blue-50 rounded-lg mb-4">
                 <span class="text-2xl">
-                  {{ modalType === 'building' ? ' ' : modalType === 'floor' ? ' ' : ' ' }}
+                  {{ modalType === 'building' ? '' : modalType === 'floor' ? '' : '' }}
                 </span>
                 <span class="font-semibold text-blue-800">
                   {{ modalMode === 'add' ? 'เพิ่ม' : 'แก้ไข'
@@ -1209,13 +1310,25 @@ onMounted(async () => {
                   }}
                   <span class="text-red-500">*</span>
                 </label>
-                <input
-                  v-model="modalData.name"
-                  type="text"
-                  :placeholder="`ระบุชื่อ${modalType === 'building' ? 'อาคาร' : modalType === 'floor' ? 'ชั้น' : 'ห้อง'}`"
-                  class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none"
-                  @keyup.enter="saveLocation"
-                />
+                <div class="space-y-2">
+                  <input
+                    v-model="modalData.name"
+                    type="text"
+                    :placeholder="`ระบุชื่อ${modalType === 'building' ? 'อาคาร' : modalType === 'floor' ? 'ชั้น' : 'ห้อง'}`"
+                    :class="[
+                      'w-full border rounded-lg px-4 py-2 focus:ring-2 focus:outline-none transition-colors',
+                      validationErrors.modalName
+                        ? 'border-red-500 focus:ring-red-400 bg-red-50'
+                        : 'border-gray-300 focus:ring-blue-400',
+                    ]"
+                    @input="() => validateAlphanumeric(modalData.name, 'modalName')"
+                    @blur="() => validateAlphanumeric(modalData.name, 'modalName')"
+                    @keyup.enter="saveLocation"
+                  />
+                  <p v-if="validationErrors.modalName" class="text-red-500 text-sm mt-1">
+                    {{ errorMessages.modalName }}
+                  </p>
+                </div>
               </div>
 
               <!-- Actions for Single Level -->

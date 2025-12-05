@@ -184,7 +184,9 @@ async function handleDelete(repairCode) {
 </script>
 
 <template>
-  <div class="bg-gray-50 rounded-xl p-1 mx-auto max-w-7xl">
+  <!-- ตาราง -->
+  <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-7xl">
+    <h1 class="text-xl font-bold text-black mb-6">รายการของฉัน</h1>
     <!-- ฟิลเตอร์ -->
     <div class="mb-6">
       <div class="flex flex-wrap items-center justify-between gap-3">
@@ -343,11 +345,6 @@ async function handleDelete(repairCode) {
         <RepairButton />
       </div>
     </div>
-  </div>
-
-  <!-- ตาราง -->
-  <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-7xl">
-    <h1 class="text-xl font-bold text-black mb-2">รายการของฉัน</h1>
     <div class="p-3 mx-auto max-w-8xl">
       <TableComponent
         :columns="columns"

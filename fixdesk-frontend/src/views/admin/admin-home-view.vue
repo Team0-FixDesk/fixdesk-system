@@ -12,26 +12,21 @@
           :disabled="loading"
           class="bg-gray-500 hover:bg-gray-600 disabled:opacity-50 text-white px-4 py-2 rounded-md flex items-center"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="h-5 w-5 mr-1"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-            />
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
           รีเฟรช
         </button>
-        <!-- component ปุ่มแจ้งซ่อม-->
-        <RepairButton />
+
+        <button class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md flex items-center">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+          </svg>
+          แจ้งซ่อม
+        </button>
       </div>
     </div>
+    
     <!-- Stats cards -->
     <CardHomeComponent :items="statItems" />
     <!-- Recent requests table -->
@@ -43,12 +38,11 @@
         <!-- Loading state -->
         <div v-if="loading" class="min-h-[372px] flex items-center justify-center">
           <div class="text-center">
-            <div
-              class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"
-            ></div>
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
             <p class="text-gray-600">กำลังโหลดข้อมูล...</p>
           </div>
         </div>
+
         <!-- Error state -->
         <div v-else-if="error" class="min-h-[372px] flex items-center justify-center">
           <div class="text-center">
@@ -62,9 +56,9 @@
             </button>
           </div>
         </div>
+
         <!-- Data table -->
-        <div v-else class="min-h-[372px]">
-          <!-- กำหนดความสูงขั้นต่ำคงที่ -->
+        <div v-else class="min-h-[372px]"> <!-- กำหนดความสูงขั้นต่ำคงที่ -->
           <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
               <tr>
@@ -290,10 +284,10 @@
 import CardHomeComponent from '@/components/card-home-component.vue'
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import RepairButton from '@/components/repair-button.vue'
 
 const router = useRouter()
 
+// ตัวแปรสำหรับเก็บข้อมูลจาก API
 const repairRequests = ref([])
 const loading = ref(false)
 const error = ref(null)
