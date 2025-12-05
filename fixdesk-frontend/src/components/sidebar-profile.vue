@@ -31,7 +31,7 @@ const editForm = ref({
   us_phone: '',
   oldPassword: '',
   password: '',
-  confirmPassword: ''
+  confirmPassword: '',
 })
 
 const errors = ref({
@@ -48,21 +48,27 @@ const errors = ref({
   tempOldPassword: '',
 })
 
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('token') || sessionStorage.getItem('token')
+  return {
+    'Content-Type': 'application/json',
+    Authorization: token ? `Bearer ${token}` : '',
+  }
+}
+
 onMounted(() => {
-  const token = localStorage.getItem('token')
+  const token = localStorage.getItem('token') || sessionStorage.getItem('token')
   if (token) {
     try {
       const decoded = jwtDecode(token)
       tokenData.value = decoded
-      
+
       userFullname.value = decoded.us_first_name_th || decoded.us_user_name || 'ผู้ใช้ระบบ'
       firstNameTH.value = decoded.us_first_name_th || ''
       lastNameTH.value = decoded.us_last_name_th || ''
       firstNameEN.value = decoded.us_first_name_en || ''
       lastNameEN.value = decoded.us_last_name_en || ''
       username.value = decoded.us_user_name || ''
-
-      
     } catch (err) {
       console.error('❌ Decode token error:', err)
     }
@@ -77,14 +83,45 @@ function toggleDropdown() {
 function logout(e) {
   e.stopPropagation()
   localStorage.removeItem('token')
+  localStorage.removeItem('session_user')
+  sessionStorage.removeItem('token')
+  sessionStorage.removeItem('session_user')
   window.location.href = '/login'
 }
-
 
 // รีเซ็ตฟอร์มและ errors
 function resetProfileForm() {
   editForm.value.us_phone = '';
   errors.value.us_phone = '';
+  }
+function resetForm() {
+  editForm.value = {
+    us_ttn_id: '',
+    us_department: '',
+    us_phone: '',
+    oldPassword: '',
+    password: '',
+    confirmPassword: '',
+  }
+
+  firstNameTH.value = ''
+  lastNameTH.value = ''
+  firstNameEN.value = ''
+  lastNameEN.value = ''
+  username.value = ''
+
+  errors.value = {
+    us_ttn_id: '',
+    firstNameTH: '',
+    lastNameTH: '',
+    firstNameEN: '',
+    lastNameEN: '',
+    us_department: '',
+    us_phone: '',
+    username: '',
+    password: '',
+    confirmPassword: '',
+  }
 }
 
 function resetPasswordForm() {
@@ -95,6 +132,38 @@ function resetPasswordForm() {
 }
 
 
+// ดึงข้อมูลจาก database
+async function fetchDataFromDB() {
+  try {
+    const res = await fetch(`${API_BASE}/users`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    })
+
+    const data = await res.json()
+
+    if (data) {
+      editForm.value.us_ttn_id = data.us_ttn_id || editForm.value.us_ttn_id
+      editForm.value.us_department = data.us_department || editForm.value.us_department
+      editForm.value.us_phone = data.us_phone || editForm.value.us_phone
+      firstNameTH.value = data.us_first_name_th || firstNameTH.value
+      lastNameTH.value = data.us_last_name_th || lastNameTH.value
+      firstNameEN.value = data.us_first_name_en || firstNameEN.value
+      lastNameEN.value = data.us_last_name_en || lastNameEN.value
+      username.value = data.us_user_name || username.value
+    }
+  } catch (err) {
+    console.error('❌ Fetch user data error:', err)
+  }
+}
+
+async function openPopup() {
+  resetForm()
+  // ❌ initFormFromToken()   เอาออก
+  await loadUserData() // ดึงจาก DB ตาม userId ที่อยู่ใน token
+  activeTab.value = 'personal'
+  showPopup.value = true
+}
 
 function validateProfileForm() {
   let valid = true;
@@ -118,6 +187,57 @@ function validateProfileForm() {
         icon: "warning",
         confirmButtonColor: "#f59e0b" // สีส้ม Warning
     });
+function validateForm() {
+  let valid = true
+  errors.value = {
+    us_ttn_id: '',
+    firstNameTH: '',
+    lastNameTH: '',
+    firstNameEN: '',
+    lastNameEN: '',
+    us_department: '',
+    us_phone: '',
+    username: '',
+    password: '',
+    confirmPassword: '',
+  }
+  if (!/^\d{9,10}$/.test(editForm.value.us_phone)) {
+    errors.value.us_phone = 'เบอร์โทรศัพท์ต้องมี 9 หรือ 10 หลัก'
+    valid = false
+  }
+  if (!editForm.value.us_ttn_id) {
+    errors.value.us_ttn_id = 'เลือกคำนำหน้า'
+    valid = false
+  }
+  if (!firstNameTH.value) {
+    errors.value.firstNameTH = 'กรุณากรอกชื่อ (ไทย)'
+    valid = false
+  }
+  if (!lastNameTH.value) {
+    errors.value.lastNameTH = 'กรุณากรอกนามสกุล (ไทย)'
+    valid = false
+  }
+  if (!editForm.value.us_phone) {
+    errors.value.us_phone = 'กรุณากรอกเบอร์โทรศัพท์'
+    valid = false
+  }
+  if (!username.value) {
+    errors.value.username = 'กรุณากรอกชื่อบัญชีผู้ใช้'
+    valid = false
+  }
+  if (!editForm.value.oldPassword) {
+    errors.value.oldPassword = 'กรุณากรอกรหัสผ่านเดิม'
+    valid = false
+  }
+
+  if (editForm.value.password) {
+    if (!editForm.value.confirmPassword) {
+      errors.value.confirmPassword = 'กรุณายืนยันรหัสผ่านใหม่'
+      valid = false
+    } else if (editForm.value.password !== editForm.value.confirmPassword) {
+      errors.value.confirmPassword = 'รหัสผ่านใหม่ไม่ตรงกัน'
+      return 'passwordMismatch'
+    }
   }
 
   return valid;
@@ -167,6 +287,78 @@ function validatePasswordForm() {
         html: messages.join("<br/>"),
         confirmButtonColor: "#f59e0b" //orange
       });
+async function saveProfile() {
+  const validateResult = validateForm()
+
+  if (validateResult === 'passwordMismatch') {
+    return Swal.fire({
+      icon: 'error',
+      title: 'รหัสผ่านไม่ตรงกัน',
+      text: 'กรุณากรอกรหัสผ่านใหม่ให้ตรงกัน',
+    })
+  }
+
+  if (!validateResult) {
+    return Swal.fire({
+      icon: 'warning',
+      title: 'กรุณากรอกข้อมูลให้ครบ',
+      text: 'กรุณาตรวจสอบข้อมูลอีกครั้ง',
+    })
+  }
+
+  // ยืนยันก่อนบันทึก
+  const { isConfirmed } = await Swal.fire({
+    title: 'ยืนยันการบันทึก?',
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'บันทึก',
+    cancelButtonText: 'ยกเลิก',
+  })
+  if (!isConfirmed) return
+
+  try {
+    const userId = tokenData.value?.us_id
+    if (!userId) {
+      return Swal.fire({
+        icon: 'error',
+        title: 'ผิดพลาด',
+        text: 'ไม่พบข้อมูลผู้ใช้ กรุณาเข้าสู่ระบบใหม่',
+      })
+    }
+
+    // เตรียมข้อมูลส่งไป backend
+    const payload = {
+      us_ttn_id: editForm.value.us_ttn_id,
+      us_department: editForm.value.us_department,
+      us_phone: editForm.value.us_phone,
+      us_first_name_th: firstNameTH.value,
+      us_last_name_th: lastNameTH.value,
+      us_first_name_en: firstNameEN.value,
+      us_last_name_en: lastNameEN.value,
+      us_user_name: username.value,
+
+      // ต้องส่ง oldPassword ทุกครั้งถ้าผู้ใช้กรอกรหัสใหม่
+      oldPassword: editForm.value.oldPassword || '',
+
+      // optional ถ้าไม่แก้จะเป็น ""
+      password: editForm.value.password || '',
+    }
+
+    const res = await fetch(`${API_BASE}/edit-personal/${userId}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload),
+    })
+
+    const data = await res.json()
+
+    // ❗ ถ้ารหัสผ่านเดิมผิด → backend ต้องส่ง error กลับมา → ห้ามบันทึก
+    if (!res.ok) {
+      return Swal.fire({
+        icon: 'error',
+        title: data.message || 'อัปเดตไม่สำเร็จ',
+        text: data.error || '',
+      })
     }
   }
 
@@ -186,31 +378,50 @@ async function saveProfile(type='profile') {
   tempOldPassword.value = '';     // ล้างค่ารหัสผ่านปัจจุบัน
   errors.value.tempOldPassword = ''; // ล้างค่า error
   showPopupConfirm.value = true;  // เปิด Popup
-}
+    // ดึงข้อมูลล่าสุดจาก backend เพื่อ sync กับ popup
+    await loadUserData() // ← ต้องมีฟังก์ชันนี้ (ผมให้ด้านล่าง)
 
+    Swal.fire({
+      icon: 'success',
+      title: 'บันทึกสำเร็จ',
+      text: data.message || 'อัปเดตข้อมูลส่วนตัวเรียบร้อยแล้ว',
+    })
+
+    closePopup()
+  } catch (err) {
+    console.error('saveProfile error:', err)
+    Swal.fire({
+      icon: 'error',
+      title: 'ข้อผิดพลาด',
+      text: 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ โปรดตรวจสอบ backend',
+    })
+  }
+}
 
 async function loadUserData() {
   try {
-    const userId = tokenData.value?.us_id;
-    if (!userId) return;
+    const userId = tokenData.value?.us_id
+    if (!userId) return
 
-    const res = await fetch(`${API_BASE}/user/${userId}`);
-    if (!res.ok) throw new Error("ไม่พบข้อมูลผู้ใช้");
+    const res = await fetch(`${API_BASE}/user/${userId}`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    })
+    if (!res.ok) throw new Error('ไม่พบข้อมูลผู้ใช้')
 
-    const data = await res.json();
+    const data = await res.json()
 
     // อัปเดตข้อมูลใน popup
-    editForm.value.us_ttn_id = data.us_ttn_id;
-    editForm.value.us_department = data.us_department;
-    editForm.value.us_phone = data.us_phone;
-    firstNameTH.value = data.us_first_name_th;
-    lastNameTH.value = data.us_last_name_th;
-    firstNameEN.value = data.us_first_name_en;
-    lastNameEN.value = data.us_last_name_en;
-    username.value = data.us_user_name;
-
+    editForm.value.us_ttn_id = data.us_ttn_id
+    editForm.value.us_department = data.us_department
+    editForm.value.us_phone = data.us_phone
+    firstNameTH.value = data.us_first_name_th
+    lastNameTH.value = data.us_last_name_th
+    firstNameEN.value = data.us_first_name_en
+    lastNameEN.value = data.us_last_name_en
+    username.value = data.us_user_name
   } catch (err) {
-    console.error("โหลดข้อมูลผู้ใช้ล้มเหลว:", err);
+    console.error('โหลดข้อมูลผู้ใช้ล้มเหลว:', err)
   }
 }
 
@@ -296,23 +507,25 @@ async function executeSave() {
 }
 
 const getFullNameTH = () => {
-  const title = {
-    1: "นาย",
-    2: "นาง",
-    3: "นางสาว",
-    4: "อื่นๆ"
-  }[editForm.value.us_ttn_id] || ""
+  const title =
+    {
+      1: 'นาย',
+      2: 'นาง',
+      3: 'นางสาว',
+      4: 'อื่นๆ',
+    }[editForm.value.us_ttn_id] || ''
 
   return `${title}${firstNameTH.value} ${lastNameTH.value}`.trim()
 }
 
 const getFullNameEN = () => {
-  const title = {
-    1: "Mr.",
-    2: "Mrs.",
-    3: "Ms.",
-    4: "Other"
-  }[editForm.value.us_ttn_id] || ""
+  const title =
+    {
+      1: 'Mr.',
+      2: 'Mrs.',
+      3: 'Ms.',
+      4: 'Other',
+    }[editForm.value.us_ttn_id] || ''
 
   return `${title}${firstNameEN.value} ${lastNameEN.value}`.trim()
 }
@@ -356,7 +569,9 @@ function closeAllPopup() {
     <!-- ลูกศร: แสดงเฉพาะตอนขยาย -->
     <img
       v-if="props.expanded"
-      :src="showDropdown ? '/icon/sidebar/chevron-down-icon.svg' : '/icon/sidebar/chevron-up-icon.svg'"
+      :src="
+        showDropdown ? '/icon/sidebar/chevron-down-icon.svg' : '/icon/sidebar/chevron-up-icon.svg'
+      "
       alt="Chevron Icon"
       class="w-5 h-5 ml-auto transition-transform duration-200"
     />

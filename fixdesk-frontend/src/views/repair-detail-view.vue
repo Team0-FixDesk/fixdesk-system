@@ -10,13 +10,45 @@ const isLoading = ref(true)
 const isError = ref(false)
 const repairCode = route.params.code
 
+// จัดการไฟล์มีเดีย
+const mediaFiles = ref([])
+
+// ฟังก์ชันจัดการไฟล์มีเดีย
+function processMediaFiles(rfImage) {
+  if (!rfImage) {
+    mediaFiles.value = []
+    return
+  }
+
+  let files = []
+  try {
+    // ถ้าเป็น JSON string ให้ parse
+    files = typeof rfImage === 'string' ? JSON.parse(rfImage) : rfImage
+  } catch (err) {
+    console.error('ไม่สามารถ parse rf_image ได้:', err)
+    files = []
+  }
+
+  mediaFiles.value = files.map(filePath => {
+    const fileName = filePath.split('/').pop()
+    const fileExt = fileName.split('.').pop().toLowerCase()
+
+    return {
+      path: filePath,
+      fullUrl: `${API_BASE}${filePath}`,
+      fileName: fileName,
+      isImage: ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExt),
+      isVideo: ['mp4', 'avi', 'mov', 'wmv'].includes(fileExt)
+    }
+  })
+}
+
 // ดึงข้อมูลรายละเอียดใบแจ้งซ่อม
 async function fetchRepairDetail() {
   try {
     const res = await fetch(`${API_BASE}/repair-requests/${repairCode}?_=${Date.now()}`)
     const data = await res.json()
     if (!res.ok) throw new Error(data.message || 'โหลดข้อมูลไม่สำเร็จ')
-
     // สร้าง timeline จากเวลาใน DB
     const timeline = buildTimelineFromRepair(data)
     // รวมทั้งหมดเข้า object เดียว
@@ -24,7 +56,7 @@ async function fetchRepairDetail() {
       ...data,
       timeline,
     }
-
+    processMediaFiles(data.rf_image)
     console.log('โหลดข้อมูลสำเร็จ:', repair.value)
   } catch (err) {
     console.error('โหลดข้อมูลไม่สำเร็จ:', err)
@@ -59,6 +91,37 @@ function getUrgencyBadge(urgency) {
       return `<span class="inline-flex justify-center items-center w-28 sm:w-36 h-7 sm:h-8 px-3 rounded-full bg-green-100 text-green-600 font-semibold text-xs sm:text-sm">ไม่เร่งด่วน</span>`
     default:
       return `<span class="inline-flex justify-center items-center px-4 py-1.5 rounded-full bg-gray-100 text-gray-500 font-medium text-xs sm:text-sm">-</span>`
+  }
+}
+
+// Media Modal (รองรับทั้งรูปภาพและวิดีโอ)
+const showLightbox = ref(false)
+const currentMediaIndex = ref(0)
+
+function openMedia(index) {
+  currentMediaIndex.value = index
+  showLightbox.value = true
+  // ไม่ต้องใช้ showVideoModal แยก ใช้ showLightbox เดียวกัน
+}
+
+function closeMedia() {
+  showLightbox.value = false
+  // รีเซ็ต video element เมื่อปิด
+  const videos = document.querySelectorAll('video')
+  videos.forEach(video => {
+    video.pause()
+  })
+}
+
+function nextMedia() {
+  if (currentMediaIndex.value < mediaFiles.value.length - 1) {
+    currentMediaIndex.value++
+  }
+}
+
+function prevMedia() {
+  if (currentMediaIndex.value > 0) {
+    currentMediaIndex.value--
   }
 }
 
@@ -235,17 +298,72 @@ onMounted(fetchRepairDetail)
                 </div>
               </div>
 
-              <div
-                class="border border-dashed border-gray-300 rounded-lg flex items-center justify-center text-gray-400 text-xs sm:text-sm p-2 sm:p-3"
-              >
-                <template v-if="repair?.rf_image">
-                  <img
-                    :src="`${API_BASE}/uploads/${repair.rf_image}`"
-                    alt="รูปที่แนบ"
-                    class="max-h-40 sm:max-h-56 rounded-lg object-contain w-full"
-                  />
+              <!-- แสดงไฟล์มีเดีย -->
+              <div class="border border-dashed border-gray-300 rounded-lg p-2 sm:p-3">
+                <template v-if="mediaFiles.length > 0">
+                  <!-- หากมีไฟล์เดียว แสดงไฟล์แรก -->
+                  <template v-if="mediaFiles.length === 1">
+                    <img
+                      v-if="mediaFiles[0].isImage"
+                      :src="mediaFiles[0].fullUrl"
+                      :alt="mediaFiles[0].fileName"
+                      class="max-h-40 sm:max-h-56 rounded-lg object-contain w-full cursor-pointer hover:opacity-90 transition"
+                      @click="openMedia(0)"
+                    />
+                    <video
+                      v-else-if="mediaFiles[0].isVideo"
+                      :src="mediaFiles[0].fullUrl"
+                      controls
+                      class="max-h-40 sm:max-h-56 rounded-lg w-full cursor-pointer"
+                      @click="openMedia(0)"
+                    >
+                      เบราว์เซอร์ของคุณไม่สามารถเล่นวิดีโอได้
+                    </video>
+                  </template>
+
+                  <!-- หากมีหลายไฟล์ แสดงเป็น grid -->
+                  <template v-else>
+                    <div class="grid grid-cols-2 gap-2">
+                      <template v-for="(file, index) in mediaFiles.slice(0, 3)" :key="index">
+                        <div class="relative">
+                          <img
+                            v-if="file.isImage"
+                            :src="file.fullUrl"
+                            :alt="file.fileName"
+                            class="h-20 sm:h-24 w-full rounded-lg object-cover cursor-pointer hover:opacity-90 transition"
+                            @click="openMedia(index)"
+                          />
+                          <video
+                            v-else-if="file.isVideo"
+                            :src="file.fullUrl"
+                            class="h-20 sm:h-24 w-full rounded-lg object-cover"
+                            muted
+                            @click="openMedia(index)"
+                          >
+                          </video>
+
+                          <!-- ไอคอนวิดีโอ -->
+                          <div v-if="file.isVideo" class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 rounded-lg cursor-pointer" @click="openMedia(index)">
+                            <svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
+                              <path d="M6.3 2.84A1 1 0 004 3.75v12.5a1 1 0 001.65.76L17.3 10.76a1 1 0 000-1.52L5.65 3.08z"/>
+                            </svg>
+                          </div>
+                        </div>
+                      </template>
+
+                      <!-- ถ้ามีมากกว่า 3 ไฟล์ -->
+                      <div v-if="mediaFiles.length > 3" class="h-20 sm:h-24 rounded-lg bg-gray-100 flex items-center justify-center cursor-pointer" @click="openMedia(3)">
+                        <span class="text-gray-500 font-medium">+{{ mediaFiles.length - 3 }}</span>
+                      </div>
+                    </div>
+                  </template>
                 </template>
-                <template v-else>ไม่มีการแนบรูปภาพ</template>
+
+                <template v-else>
+                  <div class="flex items-center justify-center text-gray-400 text-xs sm:text-sm min-h-[80px]">
+                    ไม่มีการแนบไฟล์
+                  </div>
+                </template>
               </div>
             </div>
           </div>
@@ -351,6 +469,49 @@ onMounted(fetchRepairDetail)
     <!-- เผื่อไว้กรณีไม่มีข้อมูลเลย -->
     <div v-else class="text-center text-gray-400 py-16 text-sm sm:text-base">
       ไม่มีข้อมูลที่จะแสดง
+    </div>
+  </div>
+
+  <!-- Media Modal สำหรับทั้งรูปภาพและวิดีโอ -->
+  <div v-if="showLightbox" class="fixed inset-0 z-50 bg-black bg-opacity-90 flex items-center justify-center" @click="closeMedia">
+    <div class="relative max-w-4xl max-h-full p-4" @click.stop>
+      <!-- ปุ่มปิด -->
+      <button @click="closeMedia" class="absolute -top-4 -right-4 w-10 h-10 bg-black bg-opacity-50 rounded-full flex items-center justify-center text-white text-2xl hover:text-gray-300 hover:bg-opacity-70 z-10">
+        ×
+      </button>
+
+      <!-- รูปภาพ -->
+      <img
+        v-if="mediaFiles[currentMediaIndex]?.isImage"
+        :src="mediaFiles[currentMediaIndex]?.fullUrl"
+        :alt="mediaFiles[currentMediaIndex]?.fileName"
+        class="max-w-full max-h-full object-contain"
+      />
+
+      <!-- วิดีโอ -->
+      <video
+        v-else-if="mediaFiles[currentMediaIndex]?.isVideo"
+        :src="mediaFiles[currentMediaIndex]?.fullUrl"
+        controls
+        autoplay
+        class="max-w-full max-h-full"
+        :key="currentMediaIndex"
+      >
+        เบราว์เซอร์ของคุณไม่สามารถเล่นวิดีโอได้
+      </video>
+
+      <!-- ปุ่มนำทาง -->
+      <button v-if="mediaFiles.length > 1 && currentMediaIndex > 0" @click="prevMedia" class="absolute -left-6 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-black bg-opacity-50 rounded-full flex items-center justify-center text-white text-2xl hover:text-gray-300 hover:bg-opacity-70">
+        ‹
+      </button>
+      <button v-if="mediaFiles.length > 1 && currentMediaIndex < mediaFiles.length - 1" @click="nextMedia" class="absolute -right-6 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-black bg-opacity-50 rounded-full flex items-center justify-center text-white text-2xl hover:text-gray-300 hover:bg-opacity-70">
+        ›
+      </button>
+
+      <!-- ตัวนับและประเภทไฟล์ -->
+      <div v-if="mediaFiles.length > 1" class="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-white text-sm bg-black bg-opacity-50 px-3 py-1 rounded">
+        {{ currentMediaIndex + 1 }} / {{ mediaFiles.length }}
+      </div>
     </div>
   </div>
 </template>

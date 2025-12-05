@@ -9,16 +9,13 @@ const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
 
 /* Helper สำหรับแนบ Token */
 const getAuthHeaders = () => {
-  const token = localStorage.getItem('token')
+  const token = localStorage.getItem('token') || sessionStorage.getItem('token')
   return {
     'Content-Type': 'application/json',
     Authorization: `Bearer ${token}`,
   }
 }
 
-/* ===============================
- * 💾 STATE
- * =============================== */
 const columns = [
   'วันที่',
   'ใบแจ้งซ่อม',
@@ -38,12 +35,10 @@ const showStatusFilter = ref(false)
 const showUrgencyFilter = ref(false)
 const selectedDate = ref('')
 
-/* ===============================
- * 📦 ดึงข้อมูลรายการแจ้งซ่อมทั้งหมด (Admin)
- * =============================== */
+// ดึงข้อมูลรายการแจ้งซ่อมทั้งหมด (Admin)
 async function fetchAllRepairs() {
   try {
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token')
     if (!token) {
       Swal.fire('หมดเวลาเข้าสู่ระบบ', 'กรุณาเข้าสู่ระบบใหม่', 'warning')
       router.push('/login')
@@ -53,6 +48,7 @@ async function fetchAllRepairs() {
     const res = await fetch(`${API_BASE}/admin/repairs`, { headers: getAuthHeaders() })
     if (res.status === 401) {
       Swal.fire('หมดเวลาเข้าสู่ระบบ', 'กรุณาเข้าสู่ระบบใหม่', 'warning')
+      sessionStorage.removeItem('token')
       localStorage.removeItem('token')
       router.push('/login')
       return
@@ -61,7 +57,6 @@ async function fetchAllRepairs() {
     const data = await res.json()
     if (!res.ok) throw new Error(data.message || 'โหลดข้อมูลไม่สำเร็จ')
 
-    // ✅ แปลง object → array (ไม่ใส่หมายเลขครุภัณฑ์)
     rows.value = data.map((r) => {
       const urgencyBadge =
         {
@@ -77,49 +72,72 @@ async function fetchAllRepairs() {
           done: `<span class="inline-flex justify-center items-center w-28 h-8 rounded-full bg-green-100 text-green-700 font-medium">เสร็จสิ้น</span>`,
         }[r.rf_user_status] || '-'
 
-      return [
-        new Date(r.rf_create_at).toLocaleDateString('th-TH'), // วันที่
-        r.rf_code, // ใบแจ้งซ่อม
-        `${r.us_first_name} ${r.us_last_name}`, // ชื่อผู้แจ้ง
-        r.department_name || '-', // แสดงหน่วยงาน
-        r.tt_name || '-', // ประเภทงาน
-        urgencyBadge, // ความเร่งด่วน
-        statusBadge, // สถานะงาน
-        'actions', // การดำเนินการ
-      ]
+      const createdAt = new Date(r.rf_create_at)
+
+      return {
+        // raw
+        date: createdAt,
+        code: r.rf_code,
+        requester: `${r.us_first_name} ${r.us_last_name}`,
+        department: r.department_name || '-',
+        type: r.tt_name || '-',
+        urgencyKey: r.rf_urgency,      // 'low' | 'medium' | 'high'
+        statusKey: r.rf_user_status,   // 'pending' | 'in_progress' | 'done'
+
+        // for display
+        dateDisplay: createdAt.toLocaleDateString('th-TH'),
+        urgencyBadge,
+        statusBadge,
+      }
     })
   } catch (err) {
-    console.error('❌ โหลดข้อมูลไม่สำเร็จ:', err)
+    console.error('โหลดข้อมูลไม่สำเร็จ:', err)
     Swal.fire('เกิดข้อผิดพลาด', err.message, 'error')
   }
 }
 
-/* ===============================
- * 🔍 FILTER
- * =============================== */
+// FILTER
 const filteredRows = computed(() => {
   const q = searchQuery.value.toLowerCase()
-  return rows.value.filter((r) => {
-    const matchSearch =
-      r[1].toLowerCase().includes(q) ||
-      r[2].toLowerCase().includes(q) ||
-      r[3].toLowerCase().includes(q)
+  const selectedDateObj = selectedDate.value ? new Date(selectedDate.value) : null
 
-    const urgencyKey = ['low', 'medium', 'high'].find((k) => r[4].includes(k))
-    const statusKey = ['pending', 'in_progress', 'done'].find((k) => r[5].includes(k))
+  return rows.value
+    .filter((r) => {
+      // ค้นหาตาม code / ผู้แจ้ง / ประเภท
+      const matchSearch =
+        r.code.toLowerCase().includes(q) ||
+        r.requester.toLowerCase().includes(q) ||
+        r.type.toLowerCase().includes(q)
 
-    const matchUrgency =
-      selectedUrgencies.value.length === 0 || selectedUrgencies.value.includes(urgencyKey)
-    const matchStatus =
-      selectedStatuses.value.length === 0 || selectedStatuses.value.includes(statusKey)
-    const matchDate =
-      !selectedDate.value ||
-      new Date(r[0]).toLocaleDateString('th-TH') ===
-        new Date(selectedDate.value).toLocaleDateString('th-TH')
+      // ความเร่งด่วน
+      const matchUrgency =
+        selectedUrgencies.value.length === 0 ||
+        selectedUrgencies.value.includes(r.urgencyKey)
 
-    return matchSearch && matchUrgency && matchStatus && matchDate
-  })
+      // สถานะ
+      const matchStatus =
+        selectedStatuses.value.length === 0 ||
+        selectedStatuses.value.includes(r.statusKey)
+
+      // วันที่ (เทียบแบบตัดเวลาออก เหลือแค่วัน)
+      const matchDate =
+        !selectedDateObj ||
+        r.date.toDateString() === selectedDateObj.toDateString()
+
+      return matchSearch && matchUrgency && matchStatus && matchDate
+    })
+    .map((r) => [
+      r.dateDisplay,     // วันที่
+      r.code,            // ใบแจ้งซ่อม
+      r.requester,       // ชื่อผู้แจ้ง
+      r.type,            // ประเภท
+      r.department,      // หน่วยงาน
+      r.urgencyBadge,    // ความเร่งด่วน
+      r.statusBadge,     // สถานะงาน
+      'actions',         // การดำเนินการ
+    ])
 })
+
 
 function clearFilters() {
   selectedStatuses.value = []
@@ -135,9 +153,7 @@ function closeDropdown(e) {
   }
 }
 
-/* ===============================
- * 🧭 ACTION BUTTONS
- * =============================== */
+// ACTION BUTTONS
 const goToDetail = (code) => router.push(`/main/repair-detail/${code}`)
 
 async function handleAssign(code) {
@@ -154,9 +170,7 @@ async function handleAssign(code) {
   }
 }
 
-/* ===============================
- * 🧩 Popup มอบหมายงาน
- * =============================== */
+//🧩 Popup มอบหมายงาน
 const showAssignPopup = ref(false)
 const technicians = ref([])
 const technicianTypes = ref([])
@@ -237,9 +251,6 @@ async function confirmAssign() {
   }
 }
 
-/* ===============================
- * 🚀 LIFECYCLE
- * =============================== */
 onMounted(() => {
   fetchAllRepairs()
   document.addEventListener('click', closeDropdown)
@@ -248,8 +259,10 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
 </script>
 
 <template>
-  <div class="bg-gray-50 rounded-xl p-1 mx-auto max-w-7xl">
-    <!-- 🔍 ฟิลเตอร์ -->
+  <!-- ตาราง -->
+  <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-7xl">
+    <h1 class="text-xl font-bold text-back mb-6">ตรวจสอบคำร้องแจ้งซ่อมทั้งหมด</h1>
+     <!-- ฟิลเตอร์ -->
     <div class="flex flex-wrap items-center gap-3 mb-6">
       <input
         v-model="searchQuery"
@@ -262,8 +275,7 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
         type="date"
         class="h-10 px-3 rounded-lg border border-gray-300 bg-white text-gray-700"
       />
-
-      <!-- 🔸 สถานะ -->
+      <!-- สถานะ -->
       <div class="relative">
         <button
           @click.stop="showStatusFilter = !showStatusFilter"
@@ -309,8 +321,7 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
           </label>
         </div>
       </div>
-
-      <!-- 🔸 ความเร่งด่วน -->
+      <!-- ความเร่งด่วน -->
       <div class="relative">
         <button
           @click.stop="showUrgencyFilter = !showUrgencyFilter"
@@ -356,7 +367,6 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
           </label>
         </div>
       </div>
-
       <!-- ปุ่มล้าง -->
       <transition name="fade">
         <button
@@ -368,12 +378,6 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
         </button>
       </transition>
     </div>
-  </div>
-
-  <!-- 🧾 ตาราง -->
-  <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-7xl">
-    <h1 class="text-xl font-bold text-back mb-6">ตรวจสอบคำร้องแจ้งซ่อมทั้งหมด</h1>
-
     <TableComponent
       :columns="columns"
       :rows="filteredRows"
@@ -383,14 +387,13 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
       @assign="openAssignPopup"
     />
   </div>
-  <!-- 🧑‍🔧 Popup มอบหมายงาน -->
+  <!-- Popup มอบหมายงาน -->
   <div
     v-if="showAssignPopup"
     class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50"
   >
     <div class="bg-white rounded-xl shadow-lg w-full max-w-lg p-6 relative">
       <h2 class="text-xl font-semibold mb-4 text-blue-700">มอบหมายงานให้ผู้รับผิดชอบหลัก</h2>
-
       <!-- ปุ่มปิด -->
       <button
         @click="closeAssignPopup"
@@ -399,7 +402,7 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
         ✕
       </button>
 
-      <!-- 🔧 ประเภทช่าง -->
+      <!-- ประเภทช่าง -->
       <select
         v-model="selectedType"
         class="border border-gray-300 rounded-md px-3 py-2 w-full mb-3 focus:ring-2 focus:ring-blue-400 focus:outline-none"
@@ -409,15 +412,13 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
           {{ type.tt_name }}
         </option>
       </select>
-
-      <!-- 🔍 ช่องค้นหา -->
+      <!-- ช่องค้นหา -->
       <input
         v-model="searchTech"
         type="text"
         placeholder="ค้นหาช่าง..."
         class="border border-gray-300 rounded-md px-3 py-2 w-full mb-4 focus:ring-2 focus:ring-blue-400 focus:outline-none"
       />
-
       <!-- รายชื่อช่าง -->
       <div class="max-h-60 overflow-y-auto space-y-2">
         <div

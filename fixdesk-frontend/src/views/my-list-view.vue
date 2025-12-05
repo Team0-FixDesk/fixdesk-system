@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import TableComponent from '@/components/table-component.vue'
+import RepairButton from '@/components/repair-button.vue'
 import { useRouter } from 'vue-router'
 import Sweetalert from 'sweetalert2'
 
@@ -48,7 +49,7 @@ function parseJwt(token) {
 
 // ดึงข้อมูลรายการแจ้งซ่อม
 async function fetchMyRepairs() {
-  const token = localStorage.getItem('token')
+  const token = localStorage.getItem('token') || sessionStorage.getItem('token')
   if (!token) return
   const payload = parseJwt(token)
   const userId = payload.us_id
@@ -162,7 +163,7 @@ async function handleDelete(repairCode) {
   if (!result.isConfirmed) return
 
   try {
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token')
     const res = await fetch(`${API_BASE}/my-repairs/${repairCode}`, {
       method: 'DELETE',
       headers: {
@@ -180,11 +181,12 @@ async function handleDelete(repairCode) {
     Sweetalert.fire('เกิดข้อผิดพลาด', err.message, 'error')
   }
 }
-
 </script>
 
 <template>
-  <div class="bg-gray-50 rounded-xl p-1 mx-auto max-w-7xl">
+  <!-- ตาราง -->
+  <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-7xl">
+    <h1 class="text-xl font-bold text-black mb-6">รายการของฉัน</h1>
     <!-- ฟิลเตอร์ -->
     <div class="mb-6">
       <div class="flex flex-wrap items-center justify-between gap-3">
@@ -339,29 +341,10 @@ async function handleDelete(repairCode) {
           </transition>
         </div>
 
-        <button
-          @click="goToCreate"
-          class="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-[#1E48D1] hover:bg-[#1539a9] text-white font-medium shadow-sm transition"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="w-4 h-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14m7-7H5" />
-          </svg>
-          แจ้งซ่อม
-        </button>
+        <!-- component ปุ่มแจ้งซ่อม-->
+        <RepairButton />
       </div>
     </div>
-  </div>
-
-  <!-- ตาราง -->
-  <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-7xl">
-    <h1 class="text-xl font-bold text-black mb-2">รายการของฉัน</h1>
     <div class="p-3 mx-auto max-w-8xl">
       <TableComponent
         :columns="columns"
