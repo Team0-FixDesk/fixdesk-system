@@ -120,7 +120,7 @@ function validateProfileForm() {
     })
   }
 
-  return valid
+  return valid;
 }
 
 function validatePasswordForm() {
@@ -666,6 +666,7 @@ function closeAllPopup() {
               ยืนยัน
             </button>
           </div>
+
         </div>
       </div>
     </div>
