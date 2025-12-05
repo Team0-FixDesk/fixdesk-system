@@ -1465,17 +1465,17 @@ app.put("/edit-personal/:id", async (req, res) => {
       return res.status(404).json({ message: "ไม่พบผู้ใช้นี้" });
     }
 
-    // 2) ตรวจสอบรหัสผ่านเดิม **บังคับทุกครั้ง**
+    // 2) ตรวจสอบรหัสผ่านปัจจุบัน **บังคับทุกครั้ง**
     if (!oldPassword) {
       return res.status(400).json({
-        message: "กรุณากรอกรหัสผ่านเดิมเพื่อบันทึกข้อมูล",
+        message: "กรุณากรอกรหัสผ่านปัจจุบันเพื่อบันทึกข้อมูล",
       });
     }
 
     const isMatch = await bcrypt.compare(oldPassword, user[0].us_user_pass);
     if (!isMatch) {
       return res.status(400).json({
-        message: "รหัสผ่านเดิมไม่ถูกต้อง",
+        message: "รหัสผ่านปัจจุบันไม่ถูกต้อง",
       });
     }
 
@@ -1562,26 +1562,106 @@ app.get("/user/:id", async (req, res) => {
    SERVER START
    ========================= */
 // ดึงคำนำหน้าชื่อทั้งหมด
-app.get("/titles", authMiddleware, (req, res) => {
-  const sql = `
-    SELECT 
-      ttn_id,
-      ttn_title_th AS ttn_name_th  -- alias ให้ตรงกับที่ frontend ใช้
-    FROM title_name
-    ORDER BY ttn_id ASC
-  `;
+app.put("/edit-personal/:id", async (req, res) => {
+  const { id } = req.params;
 
-  db.query(sql, (err, results) => {
-    if (err) {
-      console.error("Error fetching titles:", err);
-      return res
-        .status(500)
-        .json({ message: "เกิดข้อผิดพลาดในการดึงข้อมูลคำนำหน้า" });
+  const {
+    us_ttn_id,
+    us_department,
+    us_phone,
+    us_first_name_th,
+    us_last_name_th,
+    us_first_name_en,
+    us_last_name_en,
+    us_user_name,
+    oldPassword,
+    password, // รหัสผ่านใหม่ (optional)
+  } = req.body;
+
+  // ตรวจฟิลด์สำคัญ
+  if (!us_ttn_id || !us_first_name_th || !us_last_name_th || !us_phone) {
+    return res.status(400).json({
+      message: "ข้อมูลไม่ครบ กรุณากรอกให้ครบทุกช่อง",
+    });
+  }
+
+  try {
+    // 1) ดึงข้อมูลเดิมจาก DB
+    const [user] = await db
+      .promise()
+      .query("SELECT us_user_pass FROM user WHERE us_id = ?", [id]);
+
+    if (!user.length) {
+      return res.status(404).json({ message: "ไม่พบผู้ใช้นี้" });
     }
-    res.json(results);
-  });
-});
 
+    // 2) ตรวจสอบรหัสผ่านปัจจุบัน **บังคับทุกครั้ง**
+    if (!oldPassword) {
+      return res.status(400).json({
+        message: "กรุณากรอกรหัสผ่านปัจจุบันเพื่อบันทึกข้อมูล",
+      });
+    }
+
+    const isMatch = await bcrypt.compare(oldPassword, user[0].us_user_pass);
+    if (!isMatch) {
+      return res.status(400).json({
+        message: "รหัสผ่านปัจจุบันไม่ถูกต้อง",
+      });
+    }
+
+    // เก็บรหัสผ่านใหม่ หรือใช้รหัสเดิม
+    let newPassword = user[0].us_user_pass;
+    if (password) {
+      newPassword = await bcrypt.hash(password, 10);
+    }
+
+    // 3) อัปเดตข้อมูล
+    const sql = `
+      UPDATE user SET 
+        us_ttn_id = ?,
+        us_department = ?,
+        us_phone = ?,
+        us_first_name_th = ?,
+        us_last_name_th = ?,
+        us_first_name_en = ?,
+        us_last_name_en = ?,
+        us_user_name = ?,
+        us_user_pass = ?
+      WHERE us_id = ?
+    `;
+
+    const params = [
+      us_ttn_id,
+      us_department || null,
+      us_phone || null,
+      us_first_name_th,
+      us_last_name_th,
+      us_first_name_en || null,
+      us_last_name_en || null,
+      us_user_name,
+      newPassword,
+      id,
+    ];
+
+    const [result] = await db.promise().query(sql, params);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "ไม่พบผู้ใช้" });
+    }
+
+    res.json({
+      message: "อัปเดตข้อมูลส่วนตัวสำเร็จ",
+      updated: result.affectedRows,
+    });
+
+  } catch (err) {
+    console.error("❌ Database error:", err);
+    res.status(500).json({
+      message: "อัปเดตข้อมูลไม่สำเร็จ",
+      error: err.message,
+    });
+  }
+});
 // ดึงบทบาทผู้ใช้ทั้งหมด
 app.get("/roles", authMiddleware, (req, res) => {
   const sql = `
