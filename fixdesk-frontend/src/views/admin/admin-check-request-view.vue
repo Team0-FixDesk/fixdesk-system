@@ -57,7 +57,6 @@ async function fetchAllRepairs() {
     const data = await res.json()
     if (!res.ok) throw new Error(data.message || 'โหลดข้อมูลไม่สำเร็จ')
 
-    // แปลง object → array (ไม่ใส่หมายเลขครุภัณฑ์)
     rows.value = data.map((r) => {
       const urgencyBadge =
         {
@@ -73,16 +72,23 @@ async function fetchAllRepairs() {
           done: `<span class="inline-flex justify-center items-center w-28 h-8 rounded-full bg-green-100 text-green-700 font-medium">เสร็จสิ้น</span>`,
         }[r.rf_user_status] || '-'
 
-      return [
-        new Date(r.rf_create_at).toLocaleDateString('th-TH'), // วันที่
-        r.rf_code, // ใบแจ้งซ่อม
-        `${r.us_first_name} ${r.us_last_name}`, // ชื่อผู้แจ้ง
-        r.department_name || '-', // แสดงหน่วยงาน
-        r.tt_name || '-', // ประเภทงาน
-        urgencyBadge, // ความเร่งด่วน
-        statusBadge, // สถานะงาน
-        'actions', // การดำเนินการ
-      ]
+      const createdAt = new Date(r.rf_create_at)
+
+      return {
+        // raw
+        date: createdAt,
+        code: r.rf_code,
+        requester: `${r.us_first_name} ${r.us_last_name}`,
+        department: r.department_name || '-',
+        type: r.tt_name || '-',
+        urgencyKey: r.rf_urgency,      // 'low' | 'medium' | 'high'
+        statusKey: r.rf_user_status,   // 'pending' | 'in_progress' | 'done'
+
+        // for display
+        dateDisplay: createdAt.toLocaleDateString('th-TH'),
+        urgencyBadge,
+        statusBadge,
+      }
     })
   } catch (err) {
     console.error('โหลดข้อมูลไม่สำเร็จ:', err)
@@ -93,27 +99,45 @@ async function fetchAllRepairs() {
 // FILTER
 const filteredRows = computed(() => {
   const q = searchQuery.value.toLowerCase()
-  return rows.value.filter((r) => {
-    const matchSearch =
-      r[1].toLowerCase().includes(q) ||
-      r[2].toLowerCase().includes(q) ||
-      r[3].toLowerCase().includes(q)
+  const selectedDateObj = selectedDate.value ? new Date(selectedDate.value) : null
 
-    const urgencyKey = ['low', 'medium', 'high'].find((k) => r[4].includes(k))
-    const statusKey = ['pending', 'in_progress', 'done'].find((k) => r[5].includes(k))
+  return rows.value
+    .filter((r) => {
+      // ค้นหาตาม code / ผู้แจ้ง / ประเภท
+      const matchSearch =
+        r.code.toLowerCase().includes(q) ||
+        r.requester.toLowerCase().includes(q) ||
+        r.type.toLowerCase().includes(q)
 
-    const matchUrgency =
-      selectedUrgencies.value.length === 0 || selectedUrgencies.value.includes(urgencyKey)
-    const matchStatus =
-      selectedStatuses.value.length === 0 || selectedStatuses.value.includes(statusKey)
-    const matchDate =
-      !selectedDate.value ||
-      new Date(r[0]).toLocaleDateString('th-TH') ===
-        new Date(selectedDate.value).toLocaleDateString('th-TH')
+      // ความเร่งด่วน
+      const matchUrgency =
+        selectedUrgencies.value.length === 0 ||
+        selectedUrgencies.value.includes(r.urgencyKey)
 
-    return matchSearch && matchUrgency && matchStatus && matchDate
-  })
+      // สถานะ
+      const matchStatus =
+        selectedStatuses.value.length === 0 ||
+        selectedStatuses.value.includes(r.statusKey)
+
+      // วันที่ (เทียบแบบตัดเวลาออก เหลือแค่วัน)
+      const matchDate =
+        !selectedDateObj ||
+        r.date.toDateString() === selectedDateObj.toDateString()
+
+      return matchSearch && matchUrgency && matchStatus && matchDate
+    })
+    .map((r) => [
+      r.dateDisplay,     // วันที่
+      r.code,            // ใบแจ้งซ่อม
+      r.requester,       // ชื่อผู้แจ้ง
+      r.type,            // ประเภท
+      r.department,      // หน่วยงาน
+      r.urgencyBadge,    // ความเร่งด่วน
+      r.statusBadge,     // สถานะงาน
+      'actions',         // การดำเนินการ
+    ])
 })
+
 
 function clearFilters() {
   selectedStatuses.value = []
