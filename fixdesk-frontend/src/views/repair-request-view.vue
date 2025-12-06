@@ -257,7 +257,7 @@ onMounted(() => {
 })
 
 async function handleSubmit() {
-   // เช็กฟิลด์อื่น ๆ ตามปกติ
+  // เช็กฟิลด์อื่น ๆ ตามปกติ
   if (!validateForm()) {
     Swal.fire('ข้อมูลไม่ครบถ้วน', 'กรุณาตรวจสอบช่องที่มีเครื่องหมาย *', 'error')
     return
@@ -416,6 +416,32 @@ function validateForm() {
   }
   return valid
 }
+
+// validate ทีละช่อง เรียกตอน onInput / onChange */
+function validateField(field) {
+  switch (field) {
+    case 'repairType':
+      errors.value.repairType = formData.value.repairType ? '' : 'กรุณาเลือกประเภทงานซ่อม'
+      break
+    case 'building':
+      errors.value.building = formData.value.building ? '' : 'กรุณาเลือกอาคาร'
+      break
+    case 'floor':
+      errors.value.floor = formData.value.floor ? '' : 'กรุณาเลือกชั้น'
+      break
+    case 'room':
+      errors.value.room = formData.value.room ? '' : 'กรุณาเลือกห้อง'
+      break
+    case 'problemDetail':
+      errors.value.problemDetail = formData.value.problemDetail.trim() ? '' : 'กรุณากรอกหัวข้อปัญหา'
+      break
+    case 'issueDescription':
+      errors.value.issueDescription = formData.value.issueDescription.trim()
+        ? ''
+        : 'กรุณากรอกสาเหตุ/อาการเสีย'
+      break
+  }
+}
 </script>
 
 <template>
@@ -423,11 +449,6 @@ function validateForm() {
     <!-- หัวข้อ -->
     <div class="mb-6">
       <h1 class="text-lg sm:text-xl font-bold text-black">แบบฟอร์มแจ้งซ่อม</h1>
-
-      <!-- แสดงชื่อหน่วยงาน (ถ้าอยากให้แสดงเฉย ๆ) -->
-      <p class="text-gray-600 text-sm sm:text-base mt-2">
-        {{ formData.department || 'ชื่อหน่วยงาน' }}
-      </p>
     </div>
     <div class="mx-auto max-w-6xl">
       <!-- ฟอร์มหลัก -->
@@ -484,6 +505,7 @@ function validateForm() {
 
             <select
               v-model="formData.repairType"
+              @change="validateField('repairType')"
               :class="[
                 'w-full text-xm bg-white border rounded-md text-neutral-700 text-sm px-3 py-2',
                 errors.repairType ? 'border-red-500' : 'border-neutral-400',
@@ -520,6 +542,7 @@ function validateForm() {
           <p class="text-neutral-400 text-xs mb-2">กรอกปัญหาที่ต้องการให้ตรวจสอบหรือซ่อมแซม</p>
           <input
             v-model="formData.problemDetail"
+            @input="validateField('problemDetail')"
             type="text"
             :class="[
               'w-full text-sm bg-white border rounded-md placeholder-[#A1A1A1] px-3 py-2',
@@ -541,7 +564,12 @@ function validateForm() {
             <p class="text-neutral-400 text-xs mb-2">โปรดระบุชื่ออาคารที่พบปัญหา</p>
             <select
               v-model="formData.building"
-              @change="fetchFloors(formData.building)"
+              @change="
+                () => {
+                  fetchFloors(formData.building)
+                  validateField('building')
+                }
+              "
               :class="[
                 'w-full text-xm bg-white border rounded-md text-neutral-700 text-sm px-3 py-2',
                 errors.building ? 'border-red-500' : 'border-neutral-400',
@@ -564,7 +592,12 @@ function validateForm() {
             <p class="text-neutral-400 text-xs mb-2">โปรดเลือกชั้นที่พบปัญหา</p>
             <select
               v-model="formData.floor"
-              @change="fetchRooms(formData.floor)"
+              @change="
+                () => {
+                  fetchRooms(formData.floor)
+                  validateField('floor')
+                }
+              "
               :class="[
                 'w-full text-xm bg-white border rounded-md text-neutral-700 text-sm px-3 py-2',
                 errors.floor ? 'border-red-500' : 'border-neutral-400',
@@ -587,6 +620,7 @@ function validateForm() {
             <p class="text-neutral-400 text-xs mb-2">โปรดเลือกห้องหรือพื้นที่ที่พบปัญหา</p>
             <select
               v-model="formData.room"
+              @change="validateField('room')"
               :class="[
                 'w-full text-xm bg-white border rounded-md text-neutral-700 text-sm px-3 py-2',
                 errors.room ? 'border-red-500' : 'border-neutral-400',
@@ -615,6 +649,7 @@ function validateForm() {
           <div class="flex flex-col flex-1">
             <textarea
               v-model="formData.issueDescription"
+              @input="validateField('issueDescription')"
               :class="[
                 'flex-1 w-full min-h-[220px] sm:min-h-[280px] text-sm bg-white border rounded-md resize-none placeholder-[#A1A1A1] px-3 py-2',
                 errors.issueDescription ? 'border-red-500' : 'border-neutral-400',

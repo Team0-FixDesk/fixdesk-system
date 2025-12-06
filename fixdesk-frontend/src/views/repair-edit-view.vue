@@ -272,11 +272,6 @@ async function handleSubmit() {
     <!-- หัวข้อ -->
     <div class="mb-6">
       <h1 class="text-xl font-bold text-black">แก้ไขแบบฟอร์มแจ้งซ่อม</h1>
-
-      <!-- แสดงชื่อหน่วยงาน (ถ้าอยากให้แสดงเฉย ๆ) -->
-      <p class="text-gray-600 text-base mt-2">
-        {{ formData.department || 'ชื่อหน่วยงาน' }}
-      </p>
     </div>
     <div class="p-12 mx-auto max-w-8xl">
       <!-- ฟอร์มหลัก -->
