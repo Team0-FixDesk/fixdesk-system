@@ -1,31 +1,31 @@
-# ================================
-# Stage 1: Build Vue App
-# ================================
+# Build Vue
 FROM node:lts AS build-stage
 
-WORKDIR /app
+ARG NODE_ENV=production
+ENV NODE_ENV=$NODE_ENV
 
-# เอาแค่ package*.json มาก่อน
+WORKDIR /app
 COPY package*.json ./
 
-# ลง deps ทั้งหมด (รวม devDependencies)
-RUN npm install
-
-# คัดลอกโค้ดที่เหลือ
+# Clean install with proper NODE_ENV
+ENV NODE_ENV=production
+RUN npm ci --include=dev
 COPY . .
 
-# ถ้าจำเป็นต้องแก้ rollup จริง ๆ ค่อยใช้
-# RUN npm rebuild rollup
+# Verify and build
+RUN npx vite build
 
-# build
-RUN npm run build
+# Serve with nginx
+FROM nginx:alpine AS production-stage
 
-# ================================
-# Stage 2: Serve with Nginx
-# ================================
-FROM nginx:stable-alpine AS production-stage
+# Install wget for health checks
+RUN apk add --no-cache wget
 
+# Copy built files
 COPY --from=build-stage /app/dist /usr/share/nginx/html
+
+# Copy custom nginx configuration
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
 

@@ -15,4 +15,23 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     },
   },
+  build: {
+    // Cache busting - สร้าง hash ใหม่ทุกครั้งที่ build
+    rollupOptions: {
+      output: {
+        // Hash ไฟล์ชื่อเพื่อป้องกัน cache
+        entryFileNames: 'assets/[name].[hash].js',
+        chunkFileNames: 'assets/[name].[hash].js',
+        assetFileNames: 'assets/[name].[hash].[ext]'
+      }
+    },
+    // Source map สำหรับ debugging
+    sourcemap: false
+  },
+  server: {
+    // สำหรับ development
+    headers: {
+      'Cache-Control': 'no-cache'
+    }
+  }
 })
