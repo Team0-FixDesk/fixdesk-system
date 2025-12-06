@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue'
-import SidebarProfile from '@/components/sidebar-profile.vue'
+import SidebarProfile from '@/components/sidebar-profile-component.vue'
 
 // สถานะเปิด/ปิด sidebar
 const isOpen = ref(false)
@@ -10,9 +10,21 @@ const menus = [
   { icon: '/icon/sidebar/home-icon.svg', label: 'หน้าหลัก', path: '/main/stock-home' },
   { icon: '/icon/sidebar/repair-icon.svg', label: 'แจ้งซ่อม', path: '/main/repair-request' },
   { icon: '/icon/sidebar/list-icon.svg', label: 'รายการของฉัน', path: '/main/my-list' },
-  { icon: '/icon/sidebar/logs-list-icon.svg', label: 'รายการเบิกของ', path: '/main/stock-withdraw-list' },
-  { icon: '/icon/sidebar/history-list-icon.svg', label: 'ประวัติการเบิกของ', path: '/main/stock-withdraw-history' },
-  { icon: '/icon/sidebar/stock-icon.svg', label: 'จัดการคลัง', path: '/main/stock-manage-inventory' },
+  {
+    icon: '/icon/sidebar/logs-list-icon.svg',
+    label: 'รายการเบิกของ',
+    path: '/main/stock-withdraw-list',
+  },
+  {
+    icon: '/icon/sidebar/history-list-icon.svg',
+    label: 'ประวัติการเบิกของ',
+    path: '/main/stock-withdraw-history',
+  },
+  {
+    icon: '/icon/sidebar/stock-icon.svg',
+    label: 'จัดการคลัง',
+    path: '/main/stock-manage-inventory',
+  },
 ]
 </script>
 
