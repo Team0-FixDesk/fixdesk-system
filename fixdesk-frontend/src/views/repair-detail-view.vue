@@ -1,14 +1,23 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
 const route = useRoute()
+const router = useRouter()
 
 const repair = ref(null)
 const isLoading = ref(true)
 const isError = ref(false)
 const repairCode = route.params.code
+
+function goBack() {
+  if (window.history.length > 1) {
+    router.go(-1) // หรือ router.back()
+  } else {
+    router.push('/main/my-list') // fallback ถ้าไม่มี history
+  }
+}
 
 // จัดการไฟล์มีเดีย
 const mediaFiles = ref([])
@@ -29,7 +38,7 @@ function processMediaFiles(rfImage) {
     files = []
   }
 
-  mediaFiles.value = files.map(filePath => {
+  mediaFiles.value = files.map((filePath) => {
     const fileName = filePath.split('/').pop()
     const fileExt = fileName.split('.').pop().toLowerCase()
 
@@ -38,7 +47,7 @@ function processMediaFiles(rfImage) {
       fullUrl: `${API_BASE}${filePath}`,
       fileName: fileName,
       isImage: ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExt),
-      isVideo: ['mp4', 'avi', 'mov', 'wmv'].includes(fileExt)
+      isVideo: ['mp4', 'avi', 'mov', 'wmv'].includes(fileExt),
     }
   })
 }
@@ -108,7 +117,7 @@ function closeMedia() {
   showLightbox.value = false
   // รีเซ็ต video element เมื่อปิด
   const videos = document.querySelectorAll('video')
-  videos.forEach(video => {
+  videos.forEach((video) => {
     video.pause()
   })
 }
@@ -128,9 +137,31 @@ function prevMedia() {
 // แปลงวัน-เวลาเป็นรูปแบบไทย (วันที่ + เวลา)
 function formatDateTimeTH(value) {
   if (!value) return null
-  return new Date(value).toLocaleString('th-TH', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
+
+  const date = new Date(value).toLocaleDateString('th-TH', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
+
+  const time = new Date(value).toLocaleTimeString('th-TH', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
+
+  return `${date} เวลา ${time}`
+}
+
+function formatFullThaiDate(dateValue) {
+  if (!dateValue) return '-'
+
+  const date = new Date(dateValue)
+
+  return date.toLocaleDateString('th-TH', {
+    year: 'numeric', // พ.ศ.
+    month: 'long', // กุมภาพันธ์
+    day: 'numeric', // 10
   })
 }
 
@@ -138,32 +169,40 @@ function formatDateTimeTH(value) {
 function buildTimelineFromRepair(data) {
   const timeline = []
 
-  // Step 1: รอดำเนินการ (ใช้เวลา create_at)
-  if (data.rf_create_at) {
-    timeline.push({
-      date: formatDateTimeTH(data.rf_create_at),
-      title: 'รอดำเนินการ',
-      detail: 'ระบบได้รับใบแจ้งซ่อมของคุณแล้ว',
-    })
-  }
+  const steps = [
+    { key: 'rf_create_at', title: 'รอดำเนินการ', detail: 'ระบบได้รับใบแจ้งซ่อมของคุณแล้ว' },
+    { key: 'rf_in_process_at', title: 'กำลังดำเนินการ', detail: 'เจ้าหน้าที่กำลังดำเนินการ' },
+    { key: 'rf_done_at', title: 'ดำเนินการเสร็จสิ้น', detail: 'งานซ่อมเสร็จเรียบร้อยแล้ว' },
+  ]
 
-  // Step 2: กำลังดำเนินการ (ถ้ามี in_process_at)
-  if (data.rf_in_process_at) {
-    timeline.push({
-      date: formatDateTimeTH(data.rf_in_process_at),
-      title: 'กำลังดำเนินการ',
-      detail: 'เจ้าหน้าที่ช่างกำลังดำเนินการซ่อมแซม',
-    })
-  }
+  let lastReachedIndex = -1
 
-  // Step 3: ดำเนินการเสร็จสิ้น (ถ้ามี done_at)
-  if (data.rf_done_at) {
+  steps.forEach((step, index) => {
+    if (data[step.key]) {
+      lastReachedIndex = index
+    }
+  })
+
+  steps.forEach((step, index) => {
+    const isReached = index <= lastReachedIndex
+    const isCurrent = index === lastReachedIndex
+    const isLast = index === steps.length - 1
+
     timeline.push({
-      date: formatDateTimeTH(data.rf_done_at),
-      title: 'ดำเนินการเสร็จสิ้น',
-      detail: 'งานซ่อมเสร็จสิ้นแล้ว',
+      date: data[step.key] ? formatDateTimeTH(data[step.key]) : null,
+      title: step.title,
+      detail: step.detail,
+
+      state:
+        isLast && isReached
+          ? 'past' // ขั้นสุดท้ายและถึงแล้ว = past (เขียว)
+          : isReached
+            ? isCurrent
+              ? 'current'
+              : 'past'
+            : 'future',
     })
-  }
+  })
 
   return timeline
 }
@@ -195,23 +234,51 @@ onMounted(fetchRepairDetail)
         <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <!-- ซ้าย -->
           <div>
-            <h1 class="text-lg sm:text-xl font-bold text-gray-900 mb-1">รายละเอียดงานซ่อม</h1>
-            <p class="text-gray-700 font-semibold text-sm sm:text-base">{{ repair?.rf_code }}</p>
-            <p class="text-gray-500 mt-2 text-sm sm:text-base">
-              รายละเอียด : {{ repair?.rf_detail || '-' }}
-            </p>
+            <div class="flex items-center gap-4 mb-6">
+              <!-- ปุ่มย้อนกลับ -->
+              <div
+                class="w-11 h-11 rounded-lg bg-gray-50 border border-gray-300 flex items-center justify-center cursor-pointer hover:bg-gray-200 transition"
+                @click="goBack"
+              >
+                <img src="/icon/back-icon.svg" class="w-6 h-6 sm:w-5 sm:h-5" />
+              </div>
+
+              <!-- หัวข้อ + Code -->
+              <div class="flex flex-col leading-tight">
+                <h1 class="text-lg sm:text-xl font-bold text-gray-600">รายละเอียดงานซ่อม</h1>
+
+                <p class="text-gray-800 font-semibold text-sm sm:text-base">
+                  {{ repair?.rf_code }}
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <p class="text-gray-700 text-sm sm:text-base">
+                <span class="break-all">
+                  รายละเอียด:
+                  {{ repair?.rf_problem || '-' }}
+                </span>
+              </p>
+              <p class="text-gray-500 mt-2 text-sm sm:text-base break-all">
+                สาเหตุ/อาการ:
+                <span class="break-all">
+                  {{ repair?.rf_detail || '-' }}
+                </span>
+              </p>
+            </div>
           </div>
 
           <!-- ขวา (Badge สถานะ / ความเร่งด่วน / ประเภท) -->
           <div
-            class="flex flex-wrap gap-2 sm:gap-3 justify-start md:justify-end text-xs sm:text-sm"
+            class="flex flex-nowrap gap-2 sm:gap-3 justify-start md:justify-end items-center text-xs sm:text-sm"
           >
             <span v-html="getUserStatusBadge(repair?.rf_user_status)"></span>
             <span v-html="getUrgencyBadge(repair?.rf_urgency)"></span>
             <span
-              class="inline-flex justify-center items-center px-4 py-1.5 rounded-full bg-gray-100 text-gray-600 font-medium"
+              class="inline-flex justify-center items-center px-4 py-1.5 rounded-full bg-gray-100 text-gray-600 font-medium whitespace-nowrap"
             >
-              ประเภท : {{ repair?.repair_type_name || '-' }}
+              ประเภท: {{ repair?.repair_type_name || '-' }}
             </span>
           </div>
         </div>
@@ -231,7 +298,7 @@ onMounted(fetchRepairDetail)
               {{ repair?.main_technician || '-' }}
             </p>
             <p class="text-sm text-gray-500 mt-1">
-              ตำแหน่ง :
+              ตำแหน่ง:
               <span class="font-medium text-gray-800 text-sm sm:text-base">
                 {{ repair?.tech_position || '-' }}
               </span>
@@ -241,11 +308,7 @@ onMounted(fetchRepairDetail)
           <div class="border border-gray-200 rounded-lg p-3 sm:p-4">
             <p class="text-xs sm:text-sm text-gray-500">แจ้งซ่อมเมื่อ</p>
             <p class="font-medium text-gray-800 text-sm sm:text-base">
-              {{
-                repair?.rf_create_at
-                  ? new Date(repair.rf_create_at).toLocaleDateString('th-TH')
-                  : '-'
-              }}
+              {{ formatFullThaiDate(repair?.rf_create_at) }}
             </p>
           </div>
         </div>
@@ -256,45 +319,67 @@ onMounted(fetchRepairDetail)
         <div class="lg:col-span-2 space-y-6">
           <!-- กล่องสถานที่และอุปกรณ์ -->
           <div class="bg-white border border-gray-200 rounded-xl p-4 sm:p-6 shadow-sm">
-            <h2 class="text-lg font-semibold text-gray-800 mb-4">สถานที่และอุปกรณ์</h2>
+            <div class="border-b border-gray-300 pb-2 mb-4">
+              <h2 class="text-lg font-semibold text-gray-800">สถานที่และอุปกรณ์</h2>
+            </div>
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
               <div class="space-y-4">
-                <div class="flex items-center gap-3">
+                <div class="flex items-start gap-3">
                   <div
-                    class="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-lg bg-blue-500"
+                    class="min-w-[42px] min-h-[42px] sm:min-w-[46px] sm:min-h-[46px] flex items-center justify-center rounded-lg bg-blue-500"
                   >
-                    <img src="/icon/building-icon.svg" class="w-4 h-4 sm:w-5 sm:h-5" />
+                    <img src="/icon/building-icon.svg" class="w-6 h-6 sm:w-7 sm:h-7" />
                   </div>
-
-                  <p class="text-sm sm:text-base">
-                    <span class="text-gray-500">อาคาร/ชั้น/ห้อง:</span>
-                    {{ repair?.building_name || '-' }} / {{ repair?.floor_name || '-' }} /
-                    {{ repair?.room_name || '-' }}
-                  </p>
+                  <div>
+                    <span class="text-sm sm:text-base leading-tight text-gray-500 block">
+                      อาคาร/ชั้น/ห้อง:
+                    </span>
+                    <span
+                      class="text-sm sm:text-base leading-tight text-gray-700 block tracking-wide break-all"
+                    >
+                      {{ repair?.building_name || '-' }}/{{ repair?.floor_name || '-' }}/{{
+                        repair?.room_name || '-'
+                      }}
+                    </span>
+                  </div>
                 </div>
 
-                <div class="flex items-center gap-3">
+                <div class="flex items-start gap-3">
                   <div
-                    class="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-lg bg-green-500"
+                    class="min-w-[42px] min-h-[42px] sm:min-w-[46px] sm:min-h-[46px] flex items-center justify-center rounded-lg bg-green-500"
                   >
-                    <img src="/icon/prop-icon.svg" class="w-4 h-4 sm:w-5 sm:h-5" />
+                    <img src="/icon/prop-icon.svg" class="w-6 h-6 sm:w-7 sm:h-7" />
                   </div>
-                  <p class="text-sm sm:text-base">
-                    <span class="text-gray-500">หมายเลขครุภัณฑ์:</span>
-                    {{ repair?.rf_prop_number || '-' }}
-                  </p>
+                  <div>
+                    <span class="text-sm sm:text-base leading-tight text-gray-500 block"
+                      >หมายเลขครุภัณฑ์:</span
+                    >
+                    <span
+                      class="text-sm sm:text-base leading-tight text-gray-700 block tracking-wide"
+                    >
+                      {{ repair?.rf_prop_number || '-' }}
+                    </span>
+                  </div>
                 </div>
 
-                <div class="flex items-center gap-3">
+                <div class="flex items-start gap-3">
                   <div
-                    class="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-lg bg-amber-500"
+                    class="min-w-[42px] min-h-[42px] sm:min-w-[46px] sm:min-h-[46px] flex items-center justify-center rounded-lg bg-amber-500"
                   >
-                    <img src="/icon/item-icon.svg" class="w-4 h-4 sm:w-5 sm:h-5" />
+                    <img src="/icon/item-icon.svg" class="w-6 h-6 sm:w-7 sm:h-7" />
                   </div>
-                  <p class="text-sm sm:text-base">
-                    <span class="text-gray-500">อุปกรณ์ที่ชำรุด:</span>
-                    {{ repair?.rf_problem || '-' }}
-                  </p>
+
+                  <div>
+                    <span class="text-sm sm:text-base leading-tight text-gray-500 block"
+                      >อุปกรณ์ที่ชำรุด:</span
+                    >
+                    <span
+                      class="text-sm sm:text-base leading-tight text-gray-700 block tracking-wide"
+                    >
+                      {{ repair?.rf_problem || '-' }}
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -339,20 +424,29 @@ onMounted(fetchRepairDetail)
                             class="h-20 sm:h-24 w-full rounded-lg object-cover"
                             muted
                             @click="openMedia(index)"
-                          >
-                          </video>
+                          ></video>
 
                           <!-- ไอคอนวิดีโอ -->
-                          <div v-if="file.isVideo" class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 rounded-lg cursor-pointer" @click="openMedia(index)">
+                          <div
+                            v-if="file.isVideo"
+                            class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 rounded-lg cursor-pointer"
+                            @click="openMedia(index)"
+                          >
                             <svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
-                              <path d="M6.3 2.84A1 1 0 004 3.75v12.5a1 1 0 001.65.76L17.3 10.76a1 1 0 000-1.52L5.65 3.08z"/>
+                              <path
+                                d="M6.3 2.84A1 1 0 004 3.75v12.5a1 1 0 001.65.76L17.3 10.76a1 1 0 000-1.52L5.65 3.08z"
+                              />
                             </svg>
                           </div>
                         </div>
                       </template>
 
                       <!-- ถ้ามีมากกว่า 3 ไฟล์ -->
-                      <div v-if="mediaFiles.length > 3" class="h-20 sm:h-24 rounded-lg bg-gray-100 flex items-center justify-center cursor-pointer" @click="openMedia(3)">
+                      <div
+                        v-if="mediaFiles.length > 3"
+                        class="h-20 sm:h-24 rounded-lg bg-gray-100 flex items-center justify-center cursor-pointer"
+                        @click="openMedia(3)"
+                      >
                         <span class="text-gray-500 font-medium">+{{ mediaFiles.length - 3 }}</span>
                       </div>
                     </div>
@@ -360,7 +454,9 @@ onMounted(fetchRepairDetail)
                 </template>
 
                 <template v-else>
-                  <div class="flex items-center justify-center text-gray-400 text-xs sm:text-sm min-h-[80px]">
+                  <div
+                    class="flex items-center justify-center text-gray-400 text-xs sm:text-sm min-h-[80px]"
+                  >
                     ไม่มีการแนบไฟล์
                   </div>
                 </template>
@@ -391,10 +487,11 @@ onMounted(fetchRepairDetail)
         <div class="space-y-6">
           <!-- ข้อมูลผู้แจ้ง -->
           <div class="bg-white border border-gray-200 rounded-xl p-4 sm:p-6 shadow-sm">
-            <div class="flex items-center gap-2 mb-3">
+            <div class="border-b border-gray-300 pb-2 mb-4 flex items-center gap-2">
               <img src="/icon/user-icon2.svg" class="w-10 h-10" />
               <h2 class="text-base sm:text-lg font-semibold text-gray-800">ข้อมูลผู้แจ้ง</h2>
             </div>
+
             <div class="space-y-2 text-gray-700 text-sm sm:text-base">
               <p><span class="text-gray-500">ชื่อ:</span> {{ repair?.reporter?.name || '-' }}</p>
               <p>
@@ -409,45 +506,63 @@ onMounted(fetchRepairDetail)
 
           <!-- สถานะการดำเนินงาน -->
           <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-            <div class="flex items-center gap-2 mb-3">
+            <div class="border-b border-gray-300 pb-2 mb-4 flex items-center gap-2">
               <img src="/icon/time-icon.svg" class="w-8 h-8" />
               <h2 class="text-base sm:text-lg font-semibold text-gray-800">สถานะการดำเนินงาน</h2>
             </div>
 
             <!-- timeline -->
             <div class="mt-2 flex flex-col w-full items-start">
-              <div v-for="(step, i) in repair?.timeline || []" :key="i" class="group flex w-full">
-                <!-- คอลัมน์แกน + วงกลม (กว้างเท่าไอคอนเวลา) -->
+              <div
+                v-for="(step, i) in repair?.timeline || []"
+                :key="step.key || i"
+                class="flex w-full"
+              >
+                <!-- คอลัมน์เส้น + วงกลม -->
                 <div class="relative w-8 flex justify-center">
                   <!-- เส้นแนวตั้ง -->
                   <div
                     v-if="i !== (repair?.timeline?.length || 0) - 1"
-                    class="absolute left-1/2 top-0 h-full w-0.5 -translate-x-1/2 bg-gray-200"
+                    class="absolute left-1/2 top-0 h-full w-0.5 -translate-x-1/2"
+                    :class="{
+                      // เส้นก่อนหน้าสถานะปัจจุบัน/ที่ผ่านแล้ว → เขียว
+                      'bg-green-400':
+                        (step.state === 'past' || step.state === 'current') &&
+                        (repair?.timeline?.[i + 1]?.state === 'past' ||
+                          repair?.timeline?.[i + 1]?.state === 'current'),
+                      // สเต็ปที่ยังไม่ถึง → เทา
+                      'bg-gray-200': !(
+                        (step.state === 'past' || step.state === 'current') &&
+                        (repair?.timeline?.[i + 1]?.state === 'past' ||
+                          repair?.timeline?.[i + 1]?.state === 'current')
+                      ),
+                    }"
                   ></div>
 
                   <!-- วงกลม -->
                   <span
-                    class="relative z-10 flex h-7 w-7 items-center justify-center rounded-full text-white shrink-0"
+                    class="relative z-10 flex h-5 w-5 rounded-full ring-8 ring-white shadow"
                     :class="{
-                      'bg-yellow-400': i === 0,
-                      'bg-amber-500': i === 1,
-                      'bg-green-500': i > 1,
+                      'bg-green-500': step.state === 'past',
+                      'bg-yellow-400': step.state === 'current',
+                      'bg-gray-300': step.state === 'future',
                     }"
-                  >
-                    <img src="/icon/circle-check-icon.svg" class="w-4 h-4 object-contain" />
-                  </span>
+                  ></span>
                 </div>
 
-                <!-- เนื้อหา -->
+                <!-- เนื้อหา (ไม่มีกรอบ, เวลาอยู่ด้านบนเหมือนเดิม) -->
                 <div class="flex-1 -translate-y-1 pl-3 pb-6 text-gray-600">
                   <div class="flex flex-col space-y-0.5">
-                    <p class="text-sm text-gray-500  ">
+                    <!-- เวลาอยู่ด้านบน -->
+                    <p class="text-sm text-gray-500">
                       {{ step.date }}
                     </p>
-                    <p class="font-bold text-gray-600 text-sm sm:text-base">
+                    <!-- หัวข้อ -->
+                    <p class=" text-gray-900 text-sm sm:text-base">
                       {{ step.title }}
                     </p>
-                    <p class="text-sm text-gray-500 ">
+                    <!-- รายละเอียดย่อย -->
+                    <p class="text-sm text-gray-500">
                       {{ step.detail }}
                     </p>
                   </div>
@@ -473,10 +588,17 @@ onMounted(fetchRepairDetail)
   </div>
 
   <!-- Media Modal สำหรับทั้งรูปภาพและวิดีโอ -->
-  <div v-if="showLightbox" class="fixed inset-0 z-50 bg-black bg-opacity-90 flex items-center justify-center" @click="closeMedia">
+  <div
+    v-if="showLightbox"
+    class="fixed inset-0 z-50 bg-black bg-opacity-90 flex items-center justify-center"
+    @click="closeMedia"
+  >
     <div class="relative max-w-4xl max-h-full p-4" @click.stop>
       <!-- ปุ่มปิด -->
-      <button @click="closeMedia" class="absolute -top-4 -right-4 w-10 h-10 bg-black bg-opacity-50 rounded-full flex items-center justify-center text-white text-2xl hover:text-gray-300 hover:bg-opacity-70 z-10">
+      <button
+        @click="closeMedia"
+        class="absolute -top-4 -right-4 w-10 h-10 bg-black bg-opacity-50 rounded-full flex items-center justify-center text-white text-2xl hover:text-gray-300 hover:bg-opacity-70 z-10"
+      >
         ×
       </button>
 
@@ -501,15 +623,26 @@ onMounted(fetchRepairDetail)
       </video>
 
       <!-- ปุ่มนำทาง -->
-      <button v-if="mediaFiles.length > 1 && currentMediaIndex > 0" @click="prevMedia" class="absolute -left-6 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-black bg-opacity-50 rounded-full flex items-center justify-center text-white text-2xl hover:text-gray-300 hover:bg-opacity-70">
+      <button
+        v-if="mediaFiles.length > 1 && currentMediaIndex > 0"
+        @click="prevMedia"
+        class="absolute -left-6 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-black bg-opacity-50 rounded-full flex items-center justify-center text-white text-2xl hover:text-gray-300 hover:bg-opacity-70"
+      >
         ‹
       </button>
-      <button v-if="mediaFiles.length > 1 && currentMediaIndex < mediaFiles.length - 1" @click="nextMedia" class="absolute -right-6 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-black bg-opacity-50 rounded-full flex items-center justify-center text-white text-2xl hover:text-gray-300 hover:bg-opacity-70">
+      <button
+        v-if="mediaFiles.length > 1 && currentMediaIndex < mediaFiles.length - 1"
+        @click="nextMedia"
+        class="absolute -right-6 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-black bg-opacity-50 rounded-full flex items-center justify-center text-white text-2xl hover:text-gray-300 hover:bg-opacity-70"
+      >
         ›
       </button>
 
       <!-- ตัวนับและประเภทไฟล์ -->
-      <div v-if="mediaFiles.length > 1" class="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-white text-sm bg-black bg-opacity-50 px-3 py-1 rounded">
+      <div
+        v-if="mediaFiles.length > 1"
+        class="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-white text-sm bg-black bg-opacity-50 px-3 py-1 rounded"
+      >
         {{ currentMediaIndex + 1 }} / {{ mediaFiles.length }}
       </div>
     </div>
