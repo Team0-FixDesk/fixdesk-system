@@ -27,7 +27,7 @@ const formData = ref({
   problemDetail: '',
   issueDescription: '',
   urgency: '',
-  uploadedFile: null,
+  uploadedFiles: [],
 })
 
 /* errors สำหรับแต่ละช่อง (เหมือนหน้าสร้าง) */
@@ -40,6 +40,16 @@ const errors = ref({
   issueDescription: '',
   urgency: '',
 })
+
+const filePreview = ref([]) // list ไฟล์ไว้โชว์
+const maxFiles = 5
+const isDragOver = ref(false)
+
+const showPreviewModal = ref(false)
+const currentPreviewIndex = ref(0)
+
+/** เก็บ path ของไฟล์เดิมที่ยังคงอยู่ใน DB (จาก rf_image) */
+const existingFiles = ref([]) // ex: ['/uploads/repair/RF_xxx.jpg', ...]
 
 async function fetchTechnicianTypes() {
   try {
@@ -99,11 +109,151 @@ async function fetchRooms(floorId) {
   }
 }
 
-
 // File Upload
 function handleFileUpload(event) {
-  const file = event.target.files[0]
-  formData.value.uploadedFile = file || null
+  const files = Array.from(event.target.files)
+  processFiles(files)
+}
+
+function handleDragOver(event) {
+  event.preventDefault()
+  isDragOver.value = true
+}
+
+function handleDragLeave(event) {
+  event.preventDefault()
+  isDragOver.value = false
+}
+
+function handleDrop(event) {
+  event.preventDefault()
+  isDragOver.value = false
+
+  const files = Array.from(event.dataTransfer.files)
+  if (files.length > 0) {
+    processFiles(files)
+  }
+}
+
+function processFiles(files) {
+  // เช็คจำนวนไฟล์
+  if (formData.value.uploadedFiles.length + files.length > maxFiles) {
+    Swal.fire({
+      title: 'ไฟล์เกินกำหนด',
+      text: `สามารถอัพโหลดได้สูงสุด ${maxFiles} ไฟล์`,
+      icon: 'warning',
+      confirmButtonText: 'ตกลง',
+    })
+    return
+  }
+
+  // เช็คประเภทไฟล์
+  const allowedTypes = [
+    'image/jpeg',
+    'image/jpg',
+    'image/png',
+    'image/gif',
+    'image/webp',
+    'video/mp4',
+    'video/avi',
+    'video/mov',
+    'video/wmv',
+  ]
+  const invalidFiles = files.filter((file) => !allowedTypes.includes(file.type))
+
+  if (invalidFiles.length > 0) {
+    Swal.fire({
+      title: 'ประเภทไฟล์ไม่ถูกต้อง',
+      text: 'รองรับเฉพาะไฟล์รูปภาพ (jpg, png, gif, webp) และวิดีโอ (mp4, avi, mov, wmv)',
+      icon: 'error',
+      confirmButtonText: 'ตกลง',
+    })
+    return
+  }
+
+  // เช็คขนาดไฟล์ (50MB)
+  const maxSize = 50 * 1024 * 1024
+  const oversizedFiles = files.filter((file) => file.size > maxSize)
+  if (oversizedFiles.length > 0) {
+    Swal.fire({
+      title: 'ไฟล์ใหญ่เกินไป',
+      text: 'ขนาดไฟล์ต้องไม่เกิน 50MB',
+      icon: 'error',
+      confirmButtonText: 'ตกลง',
+    })
+    return
+  }
+
+  // เพิ่มไฟล์ใหม่และสร้าง preview
+  files.forEach((file) => {
+    formData.value.uploadedFiles.push(file)
+
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      filePreview.value.push({
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        url: e.target.result,
+        isImage: file.type.startsWith('image/'),
+        isVideo: file.type.startsWith('video/'),
+        fromServer: false, // ไฟล์ใหม่
+        serverPath: null,
+        fileRef: file,
+      })
+    }
+    reader.readAsDataURL(file)
+  })
+}
+
+// ลบไฟล์ (ทั้งไฟล์เก่าและใหม่)
+function removeFile(index) {
+  const item = filePreview.value[index]
+
+  // ถ้าเป็นไฟล์เดิมจาก server
+  if (item?.fromServer && item.serverPath) {
+    const filename = item.serverPath.split('/').pop()
+
+    // เรียก backend เพื่อลบไฟล์บน disk (optional)
+    fetch(`${API_BASE}/delete-file/${filename}`, {
+      method: 'DELETE',
+    }).catch((err) => {
+      console.error('ลบไฟล์บนเซิร์ฟเวอร์ไม่สำเร็จ:', err)
+    })
+
+    // เอา path นี้ออกจาก existingFiles (ถือว่าไม่เก็บแล้ว)
+    existingFiles.value = existingFiles.value.filter((p) => p !== item.serverPath)
+  }
+
+  // ถ้าเป็นไฟล์ใหม่
+  if (!item?.fromServer && item.fileRef) {
+    formData.value.uploadedFiles = formData.value.uploadedFiles.filter((f) => f !== item.fileRef)
+  }
+
+  // ลบออกจาก preview เสมอ
+  filePreview.value.splice(index, 1)
+}
+
+// Modal Preview
+function openPreview(index) {
+  currentPreviewIndex.value = index
+  showPreviewModal.value = true
+}
+
+function closePreview() {
+  showPreviewModal.value = false
+}
+
+function nextPreview() {
+  if (currentPreviewIndex.value < filePreview.value.length - 1) {
+    currentPreviewIndex.value++
+  }
+}
+
+function prevPreview() {
+  if (currentPreviewIndex.value > 0) {
+    currentPreviewIndex.value--
+  }
 }
 
 // Urgency Options
@@ -154,6 +304,30 @@ async function fetchRepairDetail() {
     formData.value.problemDetail = data.rf_problem || ''
     formData.value.issueDescription = data.rf_detail || ''
     formData.value.urgency = data.rf_urgency || 'medium'
+
+    // ดึงรูปเดิมจาก rf_image
+    const images = Array.isArray(data.rf_image) ? data.rf_image : []
+    existingFiles.value = images // เก็บ path ของไฟล์ที่ยังอยู่ใน DB
+
+    // เคลียร์ preview เดิม แล้วเติมไฟล์จาก server เข้าไป
+    filePreview.value = []
+
+    images.forEach((path) => {
+      const filename = path.split('/').pop()
+      const isVideo = /\.(mp4|avi|mov|wmv)$/i.test(path)
+
+      filePreview.value.push({
+        name: filename,
+        size: null,
+        type: isVideo ? 'video/*' : 'image/*',
+        url: `${API_BASE}${path}`, // ex: http://localhost:3000/uploads/repair/xxx.jpg
+        isImage: !isVideo,
+        isVideo,
+        fromServer: true, // flag ว่ามาจาก server
+        serverPath: path,
+        fileRef: null,
+      })
+    })
 
     console.log('โหลดข้อมูลใบแจ้งซ่อมสำเร็จ:', formData.value)
   } catch (err) {
@@ -291,23 +465,29 @@ async function handleSubmit() {
     if (!token) throw new Error('Token not found')
 
     const payload = parseJwt(token)
-    const body = {
-      us_id: payload.us_id,
-      phone_number: formData.value.phoneNumber,
-      repair_type_id: formData.value.repairType,
-      building_id: formData.value.building,
-      floor_id: formData.value.floor,
-      room_id: formData.value.room,
-      asset_code: formData.value.assetCode || null,
-      problem_detail: formData.value.problemDetail,
-      issue_description: formData.value.issueDescription,
-      urgency: formData.value.urgency || 'medium',
-    }
 
-    const res = await fetch(`${API_BASE}/repair-requests/${repairCode}`, {
+    // ใช้ FormData เพื่อรองรับไฟล์
+    const formDataToSend = new FormData()
+    formDataToSend.append('us_id', payload.us_id)
+    formDataToSend.append('phone_number', formData.value.phoneNumber)
+    formDataToSend.append('repair_type_id', formData.value.repairType)
+    formDataToSend.append('room_id', formData.value.room)
+    formDataToSend.append('asset_code', formData.value.assetCode || '')
+    formDataToSend.append('problem_detail', formData.value.problemDetail)
+    formDataToSend.append('issue_description', formData.value.issueDescription)
+    formDataToSend.append('urgency', formData.value.urgency || 'medium')
+
+    // ส่งรายการไฟล์เดิมที่ "ยังเก็บไว้"
+    formDataToSend.append('existing_files', JSON.stringify(existingFiles.value || []))
+
+    // แนบไฟล์ใหม่
+    formData.value.uploadedFiles.forEach((file) => {
+      formDataToSend.append('files', file)
+    })
+
+    const res = await fetch(`${API_BASE}/repair-requests-with-files/${repairCode}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
+      body: formDataToSend,
     })
 
     const data = await res.json()
@@ -559,16 +739,111 @@ async function handleSubmit() {
           <div class="flex flex-col flex-1">
             <label
               for="dropzone-file"
-              class="flex flex-col items-center justify-center w-full border-2 border-dashed rounded-lg cursor-pointer transition flex-1 min-h-[220px] sm:min-h-[280px] mb-4"
+              :class="[
+                'flex flex-col items-center justify-center w-full border-2 border-dashed rounded-lg cursor-pointer transition flex-1 min-h-[220px] sm:min-h-[280px] mb-4',
+                isDragOver
+                  ? 'border-blue-400 bg-blue-50 scale-105'
+                  : 'border-gray-300 bg-gray-50 hover:bg-gray-100',
+              ]"
+              @dragover="handleDragOver"
+              @dragleave="handleDragLeave"
+              @drop="handleDrop"
             >
               <div class="flex flex-col items-center justify-center pt-5 pb-6">
-                <img src="/icon/image-up-icon.svg" class="w-10 h-10 mb-2 opacity-70" />
-                <p class="text-sm text-gray-500">
-                  <span class="font-semibold">เลือกไฟล์ หรือลากไฟล์เพื่ออัปโหลด</span>
+                <div :class="['transition-all duration-200', isDragOver ? 'scale-110' : '']">
+                  <img
+                    src="/icon/image-up-icon.svg"
+                    :class="['w-10 h-10 mb-2', isDragOver ? 'opacity-80' : 'opacity-70']"
+                  />
+                </div>
+
+                <p
+                  :class="[
+                    'text-sm mb-1',
+                    isDragOver ? 'text-blue-600 font-semibold' : 'text-gray-500',
+                  ]"
+                >
+                  <span class="font-semibold">
+                    {{ isDragOver ? 'วางไฟล์ที่นี่' : 'ลากไฟล์ หรือ คลิกเพื่อเลือกไฟล์' }}
+                  </span>
                 </p>
+
+                <p class="text-xs text-gray-400 mt-1">
+                  รองรับ: รูปภาพ, วิดีโอ (สูงสุด {{ maxFiles }} ไฟล์, 50MB/ไฟล์)
+                </p>
+                <p class="text-xs text-gray-500 mt-1">สามารถแนบหลักฐานประกอบการแจ้งซ่อมได้</p>
+
+                <div class="flex items-center gap-2 mt-2">
+                  <span class="text-xs px-2 py-1 bg-green-100 text-green-700 rounded">JPG</span>
+                  <span class="text-xs px-2 py-1 bg-green-100 text-green-700 rounded">PNG</span>
+                  <span class="text-xs px-2 py-1 bg-green-100 text-green-700 rounded">MP4</span>
+                  <span class="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded">+อื่นๆ</span>
+                </div>
               </div>
-              <input id="dropzone-file" type="file" class="hidden" @change="handleFileUpload" />
+              <input
+                id="dropzone-file"
+                type="file"
+                multiple
+                accept="image/*,video/*"
+                class="hidden"
+                @change="handleFileUpload"
+              />
             </label>
+
+            <!-- แสดง preview ไฟล์เก่า+ใหม่ -->
+            <div v-if="filePreview.length > 0" class="space-y-2 mb-4">
+              <div
+                v-for="(file, index) in filePreview"
+                :key="index"
+                class="flex items-center gap-3 p-2 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                @click="openPreview(index)"
+              >
+                <div
+                  class="flex-shrink-0 w-12 h-12 rounded-md overflow-hidden bg-gray-200 flex items-center justify-center"
+                >
+                  <img
+                    v-if="file.isImage"
+                    :src="file.url"
+                    :alt="file.name"
+                    class="w-full h-full object-cover"
+                  />
+                  <svg
+                    v-else-if="file.isVideo"
+                    class="w-6 h-6 text-gray-500"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      d="M6.3 2.84A1 1 0 004 3.75v12.5a1 1 0 001.65.76L17.3 10.76a1 1 0 000-1.52L5.65 3.08z"
+                    />
+                  </svg>
+                </div>
+
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-medium text-gray-800 truncate">{{ file.name }}</p>
+                  <p class="text-xs text-gray-500">
+                    <!-- ถ้าไม่มี size (ไฟล์เก่า) จะไม่โชว์ MB แค่ว่าง ๆ -->
+                    <span v-if="file.size">{{ (file.size / 1024 / 1024).toFixed(1) }} MB</span>
+                  </p>
+                </div>
+
+                <button
+                  @click.stop="removeFile(index)"
+                  class="flex-shrink-0 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center text-sm hover:bg-red-600 transition-colors"
+                  title="ลบไฟล์"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+
+            <!-- เมื่อไม่มีไฟล์ -->
+            <div
+              v-if="filePreview.length === 0"
+              class="text-center text-gray-400 text-sm mb-4 py-2 border border-dashed border-gray-200 rounded-lg"
+            >
+              ไม่มีไฟล์แนบ (สามารถบันทึกฟอร์มได้โดยไม่แนบไฟล์)
+            </div>
 
             <!-- ปุ่มเร่งด่วน -->
             <div class="flex flex-col sm:flex-row justify-center items-center gap-4 sm:gap-6 mt-4">
@@ -608,6 +883,68 @@ async function handleSubmit() {
         @confirm="confirmSubmit"
         @cancel="cancelSubmit"
       />
+    </div>
+
+    <!-- Preview Modal -->
+    <div
+      v-if="showPreviewModal"
+      class="fixed inset-0 z-50 bg-black bg-opacity-90 flex items-center justify-center"
+      @click="closePreview"
+    >
+      <div class="relative max-w-4xl max-h-full p-4" @click.stop>
+        <button
+          @click="closePreview"
+          class="absolute -top-4 -right-4 w-10 h-10 bg-black bg-opacity-50 rounded-full flex items-center justify-center text-white text-2xl hover:text-gray-300 hover:bg-opacity-70 z-10"
+        >
+          ×
+        </button>
+
+        <img
+          v-if="filePreview[currentPreviewIndex]?.isImage"
+          :src="filePreview[currentPreviewIndex]?.url"
+          :alt="filePreview[currentPreviewIndex]?.name"
+          class="max-w-full max-h-full object-contain"
+        />
+
+        <video
+          v-else-if="filePreview[currentPreviewIndex]?.isVideo"
+          :src="filePreview[currentPreviewIndex]?.url"
+          controls
+          autoplay
+          class="max-w-full max-h-full"
+          :key="currentPreviewIndex"
+        >
+          เบราว์เซอร์ของคุณไม่สามารถเล่นวิดีโอได้
+        </video>
+
+        <button
+          v-if="filePreview.length > 1 && currentPreviewIndex > 0"
+          @click="prevPreview"
+          class="absolute -left-6 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-black bg-opacity-50 rounded-full flex items-center justify-center text-white text-2xl hover:text-gray-300 hover:bg-opacity-70"
+        >
+          ‹
+        </button>
+        <button
+          v-if="filePreview.length > 1 && currentPreviewIndex < filePreview.length - 1"
+          @click="nextPreview"
+          class="absolute -right-6 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-black bg-opacity-50 rounded-full flex items-center justify-center text-white text-2xl hover:text-gray-300 hover:bg-opacity-70"
+        >
+          ›
+        </button>
+
+        <div
+          v-if="filePreview.length > 1"
+          class="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-white text-sm bg-black bg-opacity-50 px-3 py-1 rounded"
+        >
+          {{ currentPreviewIndex + 1 }} / {{ filePreview.length }}
+        </div>
+
+        <div
+          class="absolute top-4 left-4 text-white text-sm bg-black bg-opacity-50 px-3 py-1 rounded"
+        >
+          {{ filePreview[currentPreviewIndex]?.name }}
+        </div>
+      </div>
     </div>
   </div>
 </template>
