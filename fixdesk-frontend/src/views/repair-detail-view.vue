@@ -1,6 +1,8 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import RepairStatusTimeline from '@/components/status-timeline-component.vue'
+
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
 const route = useRoute()
@@ -166,45 +168,62 @@ function formatFullThaiDate(dateValue) {
 }
 
 // สร้าง timeline จากข้อมูลเวลาในฟอร์ม
-function buildTimelineFromRepair(data) {
-  const timeline = []
+function buildTimelineFromRepair(repairData) {
+  const timelineSteps = []
 
-  const steps = [
-    { key: 'rf_create_at', title: 'รอดำเนินการ', detail: 'ระบบได้รับใบแจ้งซ่อมของคุณแล้ว' },
-    { key: 'rf_in_process_at', title: 'กำลังดำเนินการ', detail: 'เจ้าหน้าที่กำลังดำเนินการ' },
-    { key: 'rf_done_at', title: 'ดำเนินการเสร็จสิ้น', detail: 'งานซ่อมเสร็จเรียบร้อยแล้ว' },
+  const statusConfigs = [
+    {
+      key: 'rf_create_at',
+      title: 'รอดำเนินการ',
+      description: 'ระบบได้รับใบแจ้งซ่อมของคุณแล้ว',
+    },
+    {
+      key: 'rf_in_process_at',
+      title: 'กำลังดำเนินการ',
+      description: 'เจ้าหน้าที่กำลังดำเนินการซ่อมแซม',
+    },
+    {
+      key: 'rf_done_at',
+      title: 'ดำเนินการเสร็จสิ้น',
+      description: 'งานซ่อมเสร็จเรียบร้อยแล้ว',
+    },
   ]
 
   let lastReachedIndex = -1
 
-  steps.forEach((step, index) => {
-    if (data[step.key]) {
+  statusConfigs.forEach((status, index) => {
+    if (repairData[status.key]) {
       lastReachedIndex = index
     }
   })
 
-  steps.forEach((step, index) => {
+  statusConfigs.forEach((status, index) => {
     const isReached = index <= lastReachedIndex
     const isCurrent = index === lastReachedIndex
-    const isLast = index === steps.length - 1
+    const isLastStep = index === statusConfigs.length - 1
 
-    timeline.push({
-      date: data[step.key] ? formatDateTimeTH(data[step.key]) : null,
-      title: step.title,
-      detail: step.detail,
+    let stepState = 'upcoming' // ยังไม่ถึง
 
-      state:
-        isLast && isReached
-          ? 'past' // ขั้นสุดท้ายและถึงแล้ว = past (เขียว)
-          : isReached
-            ? isCurrent
-              ? 'current'
-              : 'past'
-            : 'future',
+    if (isReached) {
+      // ถ้าถึงขั้นสุดท้ายแล้ว → completed
+      if (isLastStep) {
+        stepState = 'completed'
+      } else if (isCurrent) {
+        stepState = 'current'
+      } else {
+        stepState = 'completed'
+      }
+    }
+
+    timelineSteps.push({
+      displayTime: repairData[status.key] ? formatDateTimeTH(repairData[status.key]) : null,
+      title: status.title,
+      description: status.description,
+      stepState,
     })
   })
 
-  return timeline
+  return timelineSteps
 }
 
 // เรียกใช้งานเมื่อโหลดหน้า
@@ -511,71 +530,7 @@ onMounted(fetchRepairDetail)
               <h2 class="text-base sm:text-lg font-semibold text-gray-800">สถานะการดำเนินงาน</h2>
             </div>
 
-            <!-- timeline -->
-            <div class="mt-2 flex flex-col w-full items-start">
-              <div
-                v-for="(step, i) in repair?.timeline || []"
-                :key="step.key || i"
-                class="flex w-full"
-              >
-                <!-- คอลัมน์เส้น + วงกลม -->
-                <div class="relative w-8 flex justify-center">
-                  <!-- เส้นแนวตั้ง -->
-                  <div
-                    v-if="i !== (repair?.timeline?.length || 0) - 1"
-                    class="absolute left-1/2 top-0 h-full w-0.5 -translate-x-1/2"
-                    :class="{
-                      // เส้นก่อนหน้าสถานะปัจจุบัน/ที่ผ่านแล้ว → เขียว
-                      'bg-green-400':
-                        (step.state === 'past' || step.state === 'current') &&
-                        (repair?.timeline?.[i + 1]?.state === 'past' ||
-                          repair?.timeline?.[i + 1]?.state === 'current'),
-                      // สเต็ปที่ยังไม่ถึง → เทา
-                      'bg-gray-200': !(
-                        (step.state === 'past' || step.state === 'current') &&
-                        (repair?.timeline?.[i + 1]?.state === 'past' ||
-                          repair?.timeline?.[i + 1]?.state === 'current')
-                      ),
-                    }"
-                  ></div>
-
-                  <!-- วงกลม -->
-                  <span
-                    class="relative z-10 flex h-5 w-5 rounded-full ring-8 ring-white shadow"
-                    :class="{
-                      'bg-green-500': step.state === 'past',
-                      'bg-yellow-400': step.state === 'current',
-                      'bg-gray-300': step.state === 'future',
-                    }"
-                  ></span>
-                </div>
-
-                <!-- เนื้อหา (ไม่มีกรอบ, เวลาอยู่ด้านบนเหมือนเดิม) -->
-                <div class="flex-1 -translate-y-1 pl-3 pb-6 text-gray-600">
-                  <div class="flex flex-col space-y-0.5">
-                    <!-- เวลาอยู่ด้านบน -->
-                    <p class="text-sm text-gray-500">
-                      {{ step.date }}
-                    </p>
-                    <!-- หัวข้อ -->
-                    <p class=" text-gray-900 text-sm sm:text-base">
-                      {{ step.title }}
-                    </p>
-                    <!-- รายละเอียดย่อย -->
-                    <p class="text-sm text-gray-500">
-                      {{ step.detail }}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div
-              v-if="!repair?.timeline || !repair.timeline.length"
-              class="text-gray-400 text-xs sm:text-sm text-center"
-            >
-              - ยังไม่มีประวัติการดำเนินการ -
-            </div>
+            <RepairStatusTimeline :timeline-steps="repair?.timeline || []" />
           </div>
         </div>
       </div>

@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import TableComponent from '@/components/table-component.vue'
-import RepairButton from '@/components/repair-button.vue'
+import RepairButton from '@/components/repair-button-component.vue'
 import { useRouter } from 'vue-router'
 import Sweetalert from 'sweetalert2'
 
