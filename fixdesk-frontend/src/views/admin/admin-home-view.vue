@@ -18,7 +18,7 @@
           รีเฟรช
         </button>
 
-        <button class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md flex items-center">
+        <button class="bg-[#1E48D1] hover:bg-[#163A9B] text-white px-4 py-2 rounded-md flex items-center">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
           </svg>
@@ -26,7 +26,7 @@
         </button>
       </div>
     </div>
-    
+
     <!-- Stats cards -->
     <CardHomeComponent :items="statItems" />
     <!-- Recent requests table -->
@@ -155,7 +155,7 @@
                 <td class="px-6 py-4 whitespace-nowrap text-sm">
                   <button
                     @click="goToRepairDetail(request.ticketId)"
-                    class="w-9 h-8 flex items-center justify-center bg-blue-500 hover:bg-blue-700 text-white rounded-md transition cursor-pointer"
+                    class="w-9 h-8 flex items-center justify-center bg-[#1E48D1] hover:bg-[#163A9B] text-white rounded-md transition cursor-pointer"
                     title="ดูรายละเอียด"
                   >
                     <img src="/icon/info-icon.svg" alt="ดูรายละเอียด" class="h-5 w-5" />

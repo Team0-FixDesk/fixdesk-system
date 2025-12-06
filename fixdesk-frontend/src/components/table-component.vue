@@ -2,21 +2,31 @@
 import { ref, computed } from 'vue'
 
 const props = defineProps({
-  columns: Array,
-  rows: Array,
+  columns: {
+    type: Array,
+    default: () => [],        // ✅ อันนี้คือเพิ่ม
+  },
+  rows: {
+    type: Array,
+    default: () => [],        // ✅ เพิ่ม
+  },
   perPage: {
     type: Number,
     default: 3,
   },
+  // mode:
+  //  - "full"       : edit/delete
+  //  - "assign"     : มอบหมายงาน
+  //  - "technician" : 3 ปุ่ม รับงาน / เปลี่ยนสถานะ / เสร็จสิ้น   ✅ เพิ่มคอมเมนต์ + mode ใหม่
   mode: {
     type: String,
-    default: 'full', // 'full' = มี แก้ไข/ลบ  |  'assign' = มี มอบหมายงาน
+    default: 'full',
   },
 })
 
 
-const isPendingStatus = (row) => typeof row[5] === 'string' && row[5].includes('รอดำเนินการ')
 
+const isPendingStatus = (row) => typeof row[5] === 'string' && row[5].includes('รอดำเนินการ')
 const currentPage = ref(1)
 const totalEntries = computed(() => props.rows.length)
 const totalPages = computed(() => Math.ceil(totalEntries.value / props.perPage))
@@ -24,7 +34,7 @@ const totalPages = computed(() => Math.ceil(totalEntries.value / props.perPage))
 const paginatedRows = computed(() => {
   const start = (currentPage.value - 1) * props.perPage
   const end = start + props.perPage
-  return props.rows.slice(start, end)
+  return (props.rows || []).slice(start, end)
 })
 
 function goToPage(page) {
@@ -37,6 +47,7 @@ function prevPage() {
   if (currentPage.value > 1) currentPage.value--
 }
 </script>
+
 
 <template>
   <div class="relative overflow-x-auto">
@@ -66,25 +77,55 @@ function prevPage() {
             <!-- คอลัมน์แรก -->
             <th
               v-if="ci === 0"
-              class="px-6 py-4 font-medium whitespace-nowrap text-black text-center"
+              class="px-6 py-4 font-medium text-center text-black whitespace-nowrap"
             >
               {{ cell }}
             </th>
 
             <!-- คอลัมน์อื่น -->
             <td v-else-if="ci !== 1" class="px-3 py-2 sm:px-6 sm:py-4 text-center">
+              <!-- คอลัมน์ action -->
               <div v-if="cell === 'actions'" class="flex justify-center gap-2">
-                <!-- ปุ่มดูรายละเอียด (ใช้เหมือนกันทุกโหมด) -->
+                <!-- ปุ่มดูรายละเอียด (ใช้ทุกโหมด) -->
                 <div
-                  class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center bg-blue-500 hover:bg-blue-700 text-white rounded-md transition cursor-pointer"
+                  class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center bg-[#1E48D1] hover:bg-[#163A9B] text-white rounded-md transition cursor-pointer"
                   title="ดูรายละเอียด"
                   @click="$emit('detail', row[1])"
                 >
                   <img src="/icon/info-icon.svg" alt="info" class="w-5 h-5" />
                 </div>
 
-                <!-- โหมด user (หน้า MyList: ล็อกจากสถานะ) -->
-                <template v-if="props.mode === 'user'">
+                <!-- โหมด technician -->
+                <template v-if="props.mode === 'technician'">
+                  <!-- 1) pending → ปุ่มรับงาน -->
+                  <button
+                    v-if="row[7] === 'pending'"
+                    class="px-4 py-2 text-xs font-medium text-white bg-[#005a9a] rounded-[8px] shadow-md hover:shadow-lg hover:bg-[#005a9a] transition"
+                    @click="$emit('accept', row[1])"
+                  >
+                    รับงาน
+                  </button>
+
+                  <!-- 2) ไม่ใช่ pending และไม่ใช่ done → เปลี่ยนสถานะ -->
+                  <button
+                    v-else-if="row[7] !== 'done'"
+                    class="px-4 py-2 text-xs font-medium text-white bg-[#FBC02D] rounded-[8px] shadow-md hover:shadow-lg hover:bg-[#F9A825] transition"
+                    @click="$emit('change-status', row[1])"
+                  >
+                    เปลี่ยนสถานะ
+                  </button>
+
+                  <!-- 3) done → แสดงเสร็จสิ้น -->
+                  <span
+                    v-else
+                    class="px-4 py-2 text-xs font-medium text-gray-400 bg-gray-100 rounded-full cursor-default"
+                  >
+                    เสร็จสิ้น
+                  </span>
+                </template>
+
+                <!-- โหมด user (ล็อกตามสถานะรอดำเนินการ) -->
+                <template v-else-if="props.mode === 'user'">
                   <!-- ปุ่มแก้ไข -->
                   <div
                     :class="[
@@ -94,7 +135,9 @@ function prevPage() {
                         : 'bg-gray-300 text-gray-400 cursor-not-allowed',
                     ]"
                     :title="
-                      isPendingStatus(row) ? 'แก้ไข' : 'ไม่สามารถแก้ไขได้ (สถานะไม่ใช่รอดำเนินการ)'
+                      isPendingStatus(row)
+                        ? 'แก้ไข'
+                        : 'ไม่สามารถแก้ไขได้ (สถานะไม่ใช่รอดำเนินการ)'
                     "
                     @click="isPendingStatus(row) && $emit('edit', row[1])"
                   >
@@ -109,14 +152,18 @@ function prevPage() {
                         ? 'bg-red-500 hover:bg-red-600 text-white cursor-pointer'
                         : 'bg-gray-300 text-gray-400 cursor-not-allowed',
                     ]"
-                    :title="isPendingStatus(row) ? 'ลบ' : 'ไม่สามารถลบได้ (สถานะไม่ใช่รอดำเนินการ)'"
+                    :title="
+                      isPendingStatus(row)
+                        ? 'ลบ'
+                        : 'ไม่สามารถลบได้ (สถานะไม่ใช่รอดำเนินการ)'
+                    "
                     @click="isPendingStatus(row) && $emit('delete', row[1])"
                   >
                     <img src="/icon/bin-icon.svg" alt="delete" class="w-5 h-5 opacity-90" />
                   </div>
                 </template>
 
-                <!-- โหมด full (หน้าอื่น ๆ ใช้ — ไม่ล็อกสถานะ) -->
+                <!-- โหมด full (edit/delete ปกติ) -->
                 <template v-else-if="props.mode === 'full'">
                   <div
                     class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center bg-yellow-400 hover:bg-yellow-500 text-white rounded-md transition cursor-pointer"
@@ -170,14 +217,14 @@ function prevPage() {
         <button
           @click="goToPage(1)"
           :disabled="currentPage === 1"
-          class="px-3 py-2 border-r border-gray-300 text-gray-500 hover:bg-gray-100 disabled:opacity-40"
+          class="px-3 py-2 text-gray-500 border-r border-gray-300 hover:bg-gray-100 disabled:opacity-40"
         >
           «
         </button>
         <button
           @click="prevPage"
           :disabled="currentPage === 1"
-          class="px-3 py-2 border-r border-gray-300 text-gray-500 hover:bg-gray-100 disabled:opacity-40"
+          class="px-3 py-2 text-gray-500 border-r border-gray-300 hover:bg-gray-100 disabled:opacity-40"
         >
           ‹
         </button>
@@ -199,7 +246,7 @@ function prevPage() {
         <button
           @click="nextPage"
           :disabled="currentPage === totalPages"
-          class="px-3 py-2 border-r border-gray-300 text-gray-500 hover:bg-gray-100 disabled:opacity-40"
+          class="px-3 py-2 text-gray-500 border-r border-gray-300 hover:bg-gray-100 disabled:opacity-40"
         >
           ›
         </button>
