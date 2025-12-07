@@ -74,6 +74,9 @@ async function fetchAllRepairs() {
 
       const createdAt = new Date(r.rf_create_at)
 
+      // ใช้ rf_assigned_tech_id เป็นหลัก
+      const isAssigned = !!r.rf_assigned_tech_id
+
       return {
         // raw
         date: createdAt,
@@ -81,8 +84,10 @@ async function fetchAllRepairs() {
         requester: `${r.us_first_name} ${r.us_last_name}`,
         department: r.department_name || '-',
         type: r.tt_name || '-',
-        urgencyKey: r.rf_urgency,      // 'low' | 'medium' | 'high'
-        statusKey: r.rf_user_status,   // 'pending' | 'in_progress' | 'done'
+        urgencyKey: r.rf_urgency,
+        statusKey: r.rf_user_status,
+
+        assigned: isAssigned, // ⬅ ตัวนี้ใช้ใน TableComponent
 
         // for display
         dateDisplay: createdAt.toLocaleDateString('th-TH'),
@@ -103,41 +108,32 @@ const filteredRows = computed(() => {
 
   return rows.value
     .filter((r) => {
-      // ค้นหาตาม code / ผู้แจ้ง / ประเภท
       const matchSearch =
         r.code.toLowerCase().includes(q) ||
         r.requester.toLowerCase().includes(q) ||
         r.type.toLowerCase().includes(q)
 
-      // ความเร่งด่วน
       const matchUrgency =
-        selectedUrgencies.value.length === 0 ||
-        selectedUrgencies.value.includes(r.urgencyKey)
+        selectedUrgencies.value.length === 0 || selectedUrgencies.value.includes(r.urgencyKey)
 
-      // สถานะ
       const matchStatus =
-        selectedStatuses.value.length === 0 ||
-        selectedStatuses.value.includes(r.statusKey)
+        selectedStatuses.value.length === 0 || selectedStatuses.value.includes(r.statusKey)
 
-      // วันที่ (เทียบแบบตัดเวลาออก เหลือแค่วัน)
-      const matchDate =
-        !selectedDateObj ||
-        r.date.toDateString() === selectedDateObj.toDateString()
+      const matchDate = !selectedDateObj || r.date.toDateString() === selectedDateObj.toDateString()
 
       return matchSearch && matchUrgency && matchStatus && matchDate
     })
     .map((r) => [
-      r.dateDisplay,     // วันที่
-      r.code,            // ใบแจ้งซ่อม
-      r.requester,       // ชื่อผู้แจ้ง
-      r.type,            // ประเภท
-      r.department,      // หน่วยงาน
-      r.urgencyBadge,    // ความเร่งด่วน
-      r.statusBadge,     // สถานะงาน
-      'actions',         // การดำเนินการ
+      r.dateDisplay, // 0 วันที่
+      r.code, // 1 ใบแจ้งซ่อม
+      r.requester, // 2 ชื่อผู้แจ้ง
+      r.type, // 3 ประเภท
+      r.department, // 4 หน่วยงาน
+      r.urgencyBadge, // 5 ความเร่งด่วน
+      r.statusBadge, // 6 สถานะงาน
+      'actions', // 7 การดำเนินการ (ให้ TableComponent เรนเดอร์ปุ่ม)
     ])
 })
-
 
 function clearFilters() {
   selectedStatuses.value = []
@@ -170,7 +166,7 @@ async function handleAssign(code) {
   }
 }
 
-//🧩 Popup มอบหมายงาน
+// Popup มอบหมายงาน
 const showAssignPopup = ref(false)
 const technicians = ref([])
 const technicianTypes = ref([])
@@ -225,6 +221,7 @@ async function confirmAssign() {
     Swal.fire('กรุณาเลือกช่าง', '', 'warning')
     return
   }
+
   loadingAssign.value = true
   try {
     const res = await fetch(`${API_BASE}/assign-repair`, {
@@ -236,12 +233,38 @@ async function confirmAssign() {
       }),
     })
 
+    const resBody = await res.json()
+
+    // เคส backend บอกว่ามอบหมายแล้ว
     if (!res.ok) {
-      const error = await res.json()
-      throw new Error(error.message || 'มอบหมายงานไม่สำเร็จ')
+      const msg = resBody.message || 'มอบหมายงานไม่สำเร็จ'
+
+      // ถ้าข้อความบอกว่างานถูกมอบหมายแล้ว → เซ็ต assigned ให้ฝั่งหน้าเว็บด้วย
+      if (msg.includes('มอบหมายแล้ว') || msg.includes('ถูกมอบหมายแล้ว')) {
+        const target = rows.value.find((r) => r.code === selectedRepairId.value)
+        if (target) {
+          target.assigned = true
+          rows.value = [...rows.value] // trigger reactive
+        }
+
+        Swal.fire('แจ้งเตือน', msg, 'info')
+        closeAssignPopup()
+        return
+      }
+
+      throw new Error(msg)
     }
 
+    // เคสมอบหมายสำเร็จปกติ
     await fetchAllRepairs()
+
+    // กันเหนียว ถ้า backend ยังไม่ส่ง flag กลับมา
+    const target = rows.value.find((r) => r.code === selectedRepairId.value)
+    if (target) {
+      target.assigned = true
+    }
+    rows.value = [...rows.value]
+
     Swal.fire('สำเร็จ', 'มอบหมายงานเรียบร้อยแล้ว', 'success')
     closeAssignPopup()
   } catch (err) {
@@ -262,7 +285,7 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
   <!-- ตาราง -->
   <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-7xl">
     <h1 class="text-xl font-bold text-back mb-6">ตรวจสอบคำร้องแจ้งซ่อมทั้งหมด</h1>
-     <!-- ฟิลเตอร์ -->
+    <!-- ฟิลเตอร์ -->
     <div class="flex flex-wrap items-center gap-3 mb-6">
       <input
         v-model="searchQuery"
@@ -381,6 +404,7 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
     <TableComponent
       :columns="columns"
       :rows="filteredRows"
+      :raw-rows="rows"
       :perPage="10"
       mode="assign"
       @detail="goToDetail"

@@ -14,11 +14,11 @@ const loggedInUserName = loggedInUser?.name || 'ผู้ใช้งาน'
 
 // ตัวแปรสถานะหลักของหน้า
 const router = useRouter()
-const allMyRepairs = ref([])           // งานของฉันทั้งหมด
-const recentRepairs = ref([])          // 5 รายการล่าสุด
-const selectedTrackingCode = ref('')   // ใบแจ้งซ่อมที่เลือกเพื่อแสดง timeline
-const selectedTimelineSteps = ref([])  // ข้อมูล timeline ของงานที่เลือก
-const isTimelineLoading = ref(false)   // สถานะโหลด timeline อยู่หรือไม่
+const allMyRepairs = ref([]) // งานของฉันทั้งหมด
+const recentRepairs = ref([]) // 5 รายการล่าสุด
+const selectedTrackingCode = ref('') // ใบแจ้งซ่อมที่เลือกเพื่อแสดง timeline
+const selectedTimelineSteps = ref([]) // ข้อมูล timeline ของงานที่เลือก
+const isTimelineLoading = ref(false) // สถานะโหลด timeline อยู่หรือไม่
 
 // ฟังก์ชันถอดรหัส JWT แบบง่าย
 function parseJwt(token) {
@@ -117,8 +117,7 @@ async function fetchRecentRepairs() {
     allMyRepairs.value = sorted
     recentRepairs.value = sorted.slice(0, 5)
 
-    const defaultRepair =
-      sorted.find((r) => r.rf_user_status === 'in_progress') || sorted[0]
+    const defaultRepair = sorted.find((r) => r.rf_user_status === 'in_progress') || sorted[0]
 
     if (defaultRepair) {
       selectedTrackingCode.value = defaultRepair.rf_code
@@ -177,7 +176,7 @@ function formatDateTimeTH(value) {
   return `${date} เวลา ${time}`
 }
 
-// สร้างข้อมูล timeline จากเวลาในฐานข้อมูล
+// สร้างข้อมูล timeline จากเวลาในฐานข้อมูล (แก้: ซ่อนไว้ไม่ให้ส่ง description ถ้าเป็น upcoming)
 function buildTimelineFromRepair(repairData) {
   const timelineSteps = []
 
@@ -222,7 +221,8 @@ function buildTimelineFromRepair(repairData) {
     timelineSteps.push({
       displayTime: repairData[status.key] ? formatDateTimeTH(repairData[status.key]) : null,
       title: status.title,
-      description: status.description,
+      // <-- เปลี่ยนตรงนี้: ส่ง description เฉพาะเมื่อถึงสถานะ (isReached) เท่านั้น
+      description: isReached ? status.description : null,
       stepState,
     })
   })

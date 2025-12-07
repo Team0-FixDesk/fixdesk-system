@@ -361,6 +361,7 @@ module.exports = function RepairFormRoutes(db) {
         rf.rf_create_at,
         rf.rf_user_status,
         COALESCE(rf.rf_urgency, 'medium') AS rf_urgency,
+        rf.rf_assigned_tech_id,
         u.us_first_name_th AS us_first_name,
         u.us_last_name_th AS us_last_name,
         u.us_department AS department_name,
@@ -652,8 +653,6 @@ module.exports = function RepairFormRoutes(db) {
     SET 
       rf_tt_id = ?,
       rf_assigned_tech_id = ?,
-      rf_user_status = 'in_progress',
-      rf_in_process_at = IF(rf_in_process_at IS NULL, NOW(), rf_in_process_at),
       rf_update_at = NOW()
     WHERE rf_code = ?
       AND rf_user_status = 'pending'
