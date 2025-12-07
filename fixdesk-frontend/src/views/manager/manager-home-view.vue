@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-white rounded-xl shadow-md p-12 mx-auto max-w-8xl container mx-auto px-5 py-6">
+  <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-8xl">
     <div class="max-w-7xl mx-auto space-y-6">
       <!-- Header -->
       <div class="mb-6">
@@ -84,44 +84,30 @@
           <!-- Pie Chart: สถานะงานซ่อม -->
           <div class="bg-white rounded-lg shadow p-6">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">สถานะงานซ่อม</h3>
-            <v-chart
-              class="w-full h-80"
-              :option="statusPieOption"
-              autoresize
-            />
+            <v-chart class="w-full h-80" :option="statusPieOption" autoresize />
           </div>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <!-- Line Chart: แนวโน้มการแจ้งซ่อม -->
           <div class="bg-white rounded-lg shadow p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">แนวโน้มการแจ้งซ่อม (7 วันที่ผ่านมา)</h3>
-            <v-chart
-              class="w-full h-80"
-              :option="trendLineOption"
-              autoresize
-            />
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">
+              แนวโน้มการแจ้งซ่อม (7 วันที่ผ่านมา)
+            </h3>
+            <v-chart class="w-full h-80" :option="trendLineOption" autoresize />
           </div>
 
           <!-- Gauge Chart: ประสิทธิภาพการซ่อม -->
           <div class="bg-white rounded-lg shadow p-6">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">ประสิทธิภาพการซ่อม</h3>
-            <v-chart
-              class="w-full h-80"
-              :option="efficiencyGaugeOption"
-              autoresize
-            />
+            <v-chart class="w-full h-80" :option="efficiencyGaugeOption" autoresize />
           </div>
         </div>
 
         <!-- Department Performance -->
         <div class="bg-white rounded-lg shadow p-6">
           <h3 class="text-lg font-semibold text-gray-900 mb-4">งานซ่อมแยกตามประเภท</h3>
-          <v-chart
-            class="w-full h-96"
-            :option="departmentBarOption"
-            autoresize
-          />
+          <v-chart class="w-full h-96" :option="departmentBarOption" autoresize />
         </div>
       </template>
     </div>
@@ -161,41 +147,43 @@ const monthlyRepairOption = ref({
     left: 'center',
     textStyle: {
       color: '#374151',
-      fontSize: 16
-    }
+      fontSize: 16,
+    },
   },
   tooltip: {
     trigger: 'axis',
     axisPointer: {
-      type: 'shadow'
-    }
+      type: 'shadow',
+    },
   },
   xAxis: {
     type: 'category',
     data: ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.'],
     axisLabel: {
-      color: '#6B7280'
-    }
+      color: '#6B7280',
+    },
   },
   yAxis: {
     type: 'value',
     axisLabel: {
-      color: '#6B7280'
-    }
-  },
-  series: [{
-    data: [0, 0, 0, 0, 0, 0],
-    type: 'bar',
-    itemStyle: {
-      color: '#1E48D1',
-      borderRadius: [4, 4, 0, 0]
+      color: '#6B7280',
     },
-    emphasis: {
+  },
+  series: [
+    {
+      data: [0, 0, 0, 0, 0, 0],
+      type: 'bar',
       itemStyle: {
-        color: '#163A9B'
-      }
-    }
-  }]
+        color: '#1E48D1',
+        borderRadius: [4, 4, 0, 0],
+      },
+      emphasis: {
+        itemStyle: {
+          color: '#163A9B',
+        },
+      },
+    },
+  ],
 })
 
 // Status Pie Chart
@@ -210,14 +198,14 @@ const statusPieOption = ref({
   //   }
   // },
   tooltip: {
-    trigger: 'item'
+    trigger: 'item',
   },
   legend: {
     orient: 'horizontal',
     bottom: '0%',
     textStyle: {
-      color: '#6B7280'
-    }
+      color: '#6B7280',
+    },
   },
   series: [{
     name: 'สถานะ',
@@ -246,11 +234,11 @@ const trendLineOption = ref({
     left: 'center',
     textStyle: {
       color: '#374151',
-      fontSize: 16
-    }
+      fontSize: 16,
+    },
   },
   tooltip: {
-    trigger: 'axis'
+    trigger: 'axis',
   },
   xAxis: {
     type: 'category',
@@ -258,41 +246,48 @@ const trendLineOption = ref({
     data: ['วันจันทร์', 'วันอังคาร', 'วันพุธ', 'วันพฤหัส', 'วันศุกร์', 'วันเสาร์', 'วันอาทิตย์'],
     // TODO: ควรเป็นวันที่จริงย้อนหลัง 7 วัน เช่น ['1 ธ.ค.', '2 ธ.ค.', ...]
     axisLabel: {
-      color: '#6B7280'
-    }
+      color: '#6B7280',
+    },
   },
   yAxis: {
     type: 'value',
     axisLabel: {
-      color: '#6B7280'
-    }
+      color: '#6B7280',
+    },
   },
-  series: [{
-    data: [0, 0, 0, 0, 0, 0, 0],
-    type: 'line',
-    smooth: true,
-    itemStyle: {
-      color: '#1E48D1'
+  series: [
+    {
+      data: [0, 0, 0, 0, 0, 0, 0],
+      type: 'line',
+      smooth: true,
+      itemStyle: {
+        color: '#1E48D1',
+      },
+      lineStyle: {
+        color: '#1E48D1',
+        width: 3,
+      },
+      areaStyle: {
+        color: {
+          type: 'linear',
+          x: 0,
+          y: 0,
+          x2: 0,
+          y2: 1,
+          colorStops: [
+            {
+              offset: 0,
+              color: 'rgba(30, 72, 209, 0.3)',
+            },
+            {
+              offset: 1,
+              color: 'rgba(30, 72, 209, 0.1)',
+            },
+          ],
+        },
+      },
     },
-    lineStyle: {
-      color: '#1E48D1',
-      width: 3
-    },
-    areaStyle: {
-      color: {
-        type: 'linear',
-        x: 0,
-        y: 0,
-        x2: 0,
-        y2: 1,
-        colorStops: [{
-          offset: 0, color: 'rgba(30, 72, 209, 0.3)'
-        }, {
-          offset: 1, color: 'rgba(30, 72, 209, 0.1)'
-        }]
-      }
-    }
-  }]
+  ],
 })
 
 // Efficiency Gauge Chart
@@ -302,65 +297,67 @@ const efficiencyGaugeOption = ref({
     left: 'center',
     textStyle: {
       color: '#374151',
-      fontSize: 16
-    }
+      fontSize: 16,
+    },
   },
   tooltip: {
-    formatter: '{a} <br/>{b} : {c}%'
+    formatter: '{a} <br/>{b} : {c}%',
   },
-  series: [{
-    name: 'ประสิทธิภาพ',
-    type: 'gauge',
-    center: ['50%', '60%'],
-    radius: '80%',
-    progress: {
-      show: true,
-      width: 18
-    },
-    axisLine: {
-      lineStyle: {
-        width: 18
-      }
-    },
-    axisTick: {
-      show: false
-    },
-    splitLine: {
-      length: 15,
-      lineStyle: {
-        width: 2,
-        color: '#999'
-      }
-    },
-    axisLabel: {
-      distance: 25,
-      color: '#6B7280',
-      fontSize: 12
-    },
-    anchor: {
-      show: true,
-      showAbove: true,
-      size: 25,
+  series: [
+    {
+      name: 'ประสิทธิภาพ',
+      type: 'gauge',
+      center: ['50%', '60%'],
+      radius: '80%',
+      progress: {
+        show: true,
+        width: 18,
+      },
+      axisLine: {
+        lineStyle: {
+          width: 18,
+        },
+      },
+      axisTick: {
+        show: false,
+      },
+      splitLine: {
+        length: 15,
+        lineStyle: {
+          width: 2,
+          color: '#999',
+        },
+      },
+      axisLabel: {
+        distance: 25,
+        color: '#6B7280',
+        fontSize: 12,
+      },
+      anchor: {
+        show: true,
+        showAbove: true,
+        size: 25,
+        itemStyle: {
+          borderWidth: 10,
+        },
+      },
+      title: {
+        show: false,
+      },
+      detail: {
+        valueAnimation: true,
+        formatter: '{value}%',
+        color: '#1E48D1',
+        fontSize: 24,
+        fontWeight: 'bold',
+        offsetCenter: [0, '70%'],
+      },
+      data: [{ value: 0 }],
       itemStyle: {
-        borderWidth: 10
-      }
+        color: '#10B981',
+      },
     },
-    title: {
-      show: false
-    },
-    detail: {
-      valueAnimation: true,
-      formatter: '{value}%',
-      color: '#1E48D1',
-      fontSize: 24,
-      fontWeight: 'bold',
-      offsetCenter: [0, '70%']
-    },
-    data: [{ value: 0 }],
-    itemStyle: {
-      color: '#10B981'
-    }
-  }]
+  ],
 })
 
 // Department Bar Chart
@@ -370,26 +367,26 @@ const departmentBarOption = ref({
     left: 'center',
     textStyle: {
       color: '#374151',
-      fontSize: 16
-    }
+      fontSize: 16,
+    },
   },
   tooltip: {
     trigger: 'axis',
     axisPointer: {
-      type: 'shadow'
-    }
+      type: 'shadow',
+    },
   },
   grid: {
     left: '3%',
     right: '4%',
     bottom: '3%',
-    containLabel: true
+    containLabel: true,
   },
   xAxis: {
     type: 'value',
     axisLabel: {
-      color: '#6B7280'
-    }
+      color: '#6B7280',
+    },
   },
   yAxis: {
     type: 'category',
@@ -397,22 +394,24 @@ const departmentBarOption = ref({
     data: ['ไม่มีข้อมูล'],
     // API READY: ข้อมูลจะมาจาก processTypeData() แล้ว
     axisLabel: {
-      color: '#6B7280'
-    }
+      color: '#6B7280',
+    },
   },
-  series: [{
-    name: 'จำนวนงาน',
-    type: 'bar',
-    // MOCKUP: ใช้ [0] เมื่อไม่มีข้อมูล
-    data: [0],
-    itemStyle: {
-      color: function(params) {
-        const colors = ['#1E48D1', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4']
-        return colors[params.dataIndex % colors.length]
+  series: [
+    {
+      name: 'จำนวนงาน',
+      type: 'bar',
+      // MOCKUP: ใช้ [0] เมื่อไม่มีข้อมูล
+      data: [0],
+      itemStyle: {
+        color: function (params) {
+          const colors = ['#1E48D1', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4']
+          return colors[params.dataIndex % colors.length]
+        },
+        borderRadius: [0, 4, 4, 0],
       },
-      borderRadius: [0, 4, 4, 0]
-    }
-  }]
+    },
+  ],
 })
 
 // Year Management Functions
@@ -457,7 +456,7 @@ async function fetchRepairData() {
     // API READY: /admin/repairs ใช้งานได้แล้ว
     // ENHANCEMENT: อาจเพิ่ม query params สำหรับ filter (date range, status, etc.)
     const response = await fetch(`${API_BASE}/admin/repairs`, {
-      headers: getAuthHeaders()
+      headers: getAuthHeaders(),
     })
     if (!response.ok) throw new Error('Failed to fetch repair data')
     const data = await response.json()
@@ -512,7 +511,7 @@ function processDashboardData(repairs, techTypes, previousYearRepairs = []) {
   statusPieOption.value.series[0].data = [
     { value: pendingRepairs, name: 'รอดำเนินการ', itemStyle: { color: '#F59E0B' } },
     { value: inProgressRepairs, name: 'กำลังซ่อม', itemStyle: { color: '#EAB308' } },
-    { value: completedRepairs, name: 'เสร็จสิ้น', itemStyle: { color: '#10B981' } }
+    { value: completedRepairs, name: 'เสร็จสิ้น', itemStyle: { color: '#10B981' } },
   ]
 
   // Process monthly data
@@ -579,7 +578,7 @@ function processDailyTrend(repairs) {
   // MOCKUP: ใช้ client-side processing แทน API ที่กรองแล้ว
   const today = new Date()
 
-  repairs.forEach(repair => {
+  repairs.forEach((repair) => {
     const repairDate = new Date(repair.rf_create_at)
     const daysDiff = Math.floor((today - repairDate) / (1000 * 60 * 60 * 24))
     if (daysDiff >= 0 && daysDiff < days) {
@@ -595,24 +594,24 @@ function processTypeData(repairs, techTypes) {
 
   // API READY: technician types มาจาก /technician-types แล้ว
   // Initialize counts
-  techTypes.forEach(type => {
+  techTypes.forEach((type) => {
     typeCounts[type.tt_name] = 0
   })
 
   // Count repairs by type
-  repairs.forEach(repair => {
+  repairs.forEach((repair) => {
     if (repair.tt_name && typeCounts.hasOwnProperty(repair.tt_name)) {
       typeCounts[repair.tt_name]++
     }
   })
 
   const sortedTypes = Object.entries(typeCounts)
-    .sort(([,a], [,b]) => b - a)
+    .sort(([, a], [, b]) => b - a)
     .slice(0, 6) // Top 6 types
 
   return {
     labels: sortedTypes.map(([name]) => name),
-    values: sortedTypes.map(([, count]) => count)
+    values: sortedTypes.map(([, count]) => count),
   }
 }
 
@@ -621,10 +620,7 @@ async function fetchDashboardData() {
     isLoading.value = true
     error.value = null
 
-    const [repairs, techTypes] = await Promise.all([
-      fetchRepairData(),
-      fetchTechnicianTypes()
-    ])
+    const [repairs, techTypes] = await Promise.all([fetchRepairData(), fetchTechnicianTypes()])
 
     // เก็บข้อมูลทั้งหมดไว้สำหรับ filter และ growth calculation
     allRepairs.value = repairs
