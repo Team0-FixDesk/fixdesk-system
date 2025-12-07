@@ -3,6 +3,7 @@ import { ref, reactive } from 'vue'
 import TableComponent from '@/components/table-component.vue'
 import { useRouter } from 'vue-router'
 import Sweetalert from 'sweetalert2'
+defineOptions({ name: 'StockWithdrawHistoryView' })
 
 // --- Table Columns หัวตาราง ---
 const columns = [
@@ -136,7 +137,3 @@ const selectedUrgencies = ref([])
     </div>
   </div>
 </template>
-
-<script setup>
-defineOptions({ name: 'StockWithdrawHistoryView' })
-</script>
