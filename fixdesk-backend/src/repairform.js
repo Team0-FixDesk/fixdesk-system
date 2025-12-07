@@ -150,8 +150,8 @@ module.exports = function RepairFormRoutes(db) {
           INSERT INTO repair_form
             (rf_code, rf_us_id, rf_tt_id, rf_room_id, rf_prop_number,
             rf_problem, rf_detail, rf_phone, rf_urgency, rf_image,
-            rf_user_status, rf_tech_status, rf_create_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'working', NOW())
+            rf_user_status, rf_create_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())
           `;
 
         db.query(
@@ -319,8 +319,8 @@ module.exports = function RepairFormRoutes(db) {
         INSERT INTO repair_form
         (rf_code, rf_us_id, rf_tt_id, rf_room_id, rf_prop_number,
         rf_problem, rf_detail, rf_phone, rf_urgency, rf_image,
-        rf_user_status, rf_tech_status, rf_create_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'working', NOW())
+        rf_user_status, rf_create_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())
         `;
 
       db.query(
@@ -361,6 +361,7 @@ module.exports = function RepairFormRoutes(db) {
         rf.rf_create_at,
         rf.rf_user_status,
         COALESCE(rf.rf_urgency, 'medium') AS rf_urgency,
+        rf.rf_assigned_tech_id,
         u.us_first_name_th AS us_first_name,
         u.us_last_name_th AS us_last_name,
         u.us_department AS department_name,
@@ -463,7 +464,6 @@ module.exports = function RepairFormRoutes(db) {
         rf.rf_in_process_at,
         rf.rf_done_at,
         rf.rf_user_status,
-        rf.rf_tech_status,
         rf.rf_prop_number,
         rf.rf_image,
   
@@ -522,7 +522,6 @@ module.exports = function RepairFormRoutes(db) {
         rf_problem: r.rf_problem || "-",
         rf_urgency: r.rf_urgency || "medium",
         rf_user_status: r.rf_user_status || "-",
-        rf_tech_status: r.rf_tech_status || "-",
         rf_phone: r.rf_phone || "-",
         rf_create_at: r.rf_create_at || "-",
         rf_in_process_at: r.rf_in_process_at || null,
@@ -652,8 +651,6 @@ module.exports = function RepairFormRoutes(db) {
     SET 
       rf_tt_id = ?,
       rf_assigned_tech_id = ?,
-      rf_user_status = 'in_progress',
-      rf_in_process_at = IF(rf_in_process_at IS NULL, NOW(), rf_in_process_at),
       rf_update_at = NOW()
     WHERE rf_code = ?
       AND rf_user_status = 'pending'

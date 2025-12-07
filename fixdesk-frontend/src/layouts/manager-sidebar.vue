@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue'
-import SidebarProfile from '@/components/sidebar-profile.vue'
+import SidebarProfile from '@/components/sidebar-profile-component.vue'
 
 // สถานะเปิด/ปิด sidebar
 const isOpen = ref(false)

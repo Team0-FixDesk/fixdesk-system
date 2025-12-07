@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import TableComponent from '@/components/table-component.vue'
-import RepairButton from '@/components/repair-button.vue'
+import RepairButton from '@/components/repair-button-component.vue'
 import { useRouter } from 'vue-router'
 import Sweetalert from 'sweetalert2'
 
@@ -10,6 +10,7 @@ defineOptions({ name: 'MyListView' })
 const router = useRouter()
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
 
+/* --- คอลัมน์ตาราง --- */
 const columns = [
   'วันที่',
   'ใบแจ้งซ่อม',
@@ -19,18 +20,26 @@ const columns = [
   'สถานะงาน',
   'ตัวดำเนินการ',
 ]
-const rows = ref([])
-const searchQuery = ref('')
-const selectedStatuses = ref([])
-const selectedUrgencies = ref([])
-const selectedTypes = ref([])
-const showStatusFilter = ref(false)
-const showUrgencyFilter = ref(false)
-const showTypeFilter = ref(false)
-const selectedDate = ref('')
-const technicianTypes = ref(['TI', 'ประปา', 'อิเล็กทรอนิกส์', 'ไฟฟ้า', 'ไม้'])
 
-// JWT Decode
+/* --- state / refs --- */
+// rows: เก็บข้อมูลที่รับจาก API (แต่ละแถวเป็น array ตามที่ TableComponent คาดหวัง)
+const rows = ref([])
+
+// ช่องค้นหา
+const searchQuery = ref('')
+
+// ตัวกรองสถานะ และ ความเร่งด่วน
+const selectedStatusFilters = ref([]) // ตัวกรองสถานะ (pending, in_progress, done)
+const selectedUrgencyFilters = ref([]) // ตัวกรองความเร่งด่วน (low, medium, high)
+
+// เปิด/ปิด dropdown
+const statusFilterOpen = ref(false)
+const urgencyFilterOpen = ref(false)
+
+// เลือกวันที่
+const selectedDate = ref('')
+
+/* --- ฟังก์ชันช่วย (JWT decode) --- */
 function parseJwt(token) {
   try {
     const base64Url = token.split('.')[1]
@@ -47,18 +56,23 @@ function parseJwt(token) {
   }
 }
 
-// ดึงข้อมูลรายการแจ้งซ่อม
-async function fetchMyRepairs() {
+/* --- ดึงข้อมูลรายการแจ้งซ่อมของผู้ใช้ --- */
+/* ชื่อใหม่: loadMyRepairs เพื่อสื่อว่ากำลังโหลดข้อมูล */
+async function loadMyRepairs() {
   const token = localStorage.getItem('token') || sessionStorage.getItem('token')
   if (!token) return
   const payload = parseJwt(token)
   const userId = payload.us_id
+
   try {
+    // หาก API ต้องการ Authorization header ให้เพิ่ม headers: { Authorization: `Bearer ${token}` }
     const res = await fetch(`${API_BASE}/my-repairs/${userId}`)
     const data = await res.json()
     if (!res.ok) throw new Error(data.message || 'โหลดข้อมูลไม่สำเร็จ')
 
+    // แปลงข้อมูลเป็นรูปแบบที่ TableComponent คาดหวัง (array ของ array)
     rows.value = data.map((repair) => {
+      // สร้าง badge สำหรับความเร่งด่วน (HTML string)
       let urgencyBadge = '-'
       switch (repair.rf_urgency) {
         case 'high':
@@ -72,6 +86,7 @@ async function fetchMyRepairs() {
           break
       }
 
+      // สร้าง badge สำหรับสถานะงาน (HTML string)
       const statusBadge = (() => {
         switch (repair.rf_user_status) {
           case 'pending':
@@ -100,57 +115,84 @@ async function fetchMyRepairs() {
   }
 }
 
-// ฟิลเตอร์
-const filteredRows = computed(() => {
-  return rows.value.filter((row) => {
-    const matchSearch =
-      row[1].includes(searchQuery.value) ||
-      row[2].includes(searchQuery.value) ||
-      row[3].includes(searchQuery.value)
+/* --- computed: แถวที่จะแสดง (กรองแล้ว) --- */
+/* ชื่อใหม่: visibleRows (อ่านว่า แถวที่เห็น/แสดง) */
+const visibleRows = computed(() => {
+  const q = searchQuery.value.toLowerCase()
+  const selUrg = selectedUrgencyFilters.value
+  const selStat = selectedStatusFilters.value
+  const selDate = selectedDate.value
 
-    const urgencyText = ['low', 'medium', 'high'].find((key) => row[4].includes(key))
-    const statusText = ['pending', 'in_progress', 'done'].find((key) => row[5].includes(key))
-    const matchUrgency =
-      selectedUrgencies.value.length === 0 || selectedUrgencies.value.includes(urgencyText)
-    const matchStatus =
-      selectedStatuses.value.length === 0 || selectedStatuses.value.includes(statusText)
+  return rows.value.filter((row) => {
+    // row shape: [dateDisplay, code, propNumber, department, urgencyBadge, statusBadge, 'actions']
+    const dateDisplay = String(row[0] || '')
+    const code = String(row[1] || '').toLowerCase()
+    const prop = String(row[2] || '').toLowerCase()
+    const dept = String(row[3] || '').toLowerCase()
+    const urgencyBadgeHtml = String(row[4] || '')
+    const statusBadgeHtml = String(row[5] || '')
+
+    // ค้นหาแบบพื้นฐาน (ใบแจ้งซ่อม / ครุภัณฑ์ / หน่วยงาน)
+    const matchSearch = code.includes(q) || prop.includes(q) || dept.includes(q)
+
+    // เนื่องจากเราเก็บ badge เป็น HTML string — หา key จากข้อความไทยใน badge
+    const urgencyKey = urgencyBadgeHtml.includes('เร่งด่วนมาก')
+      ? 'high'
+      : urgencyBadgeHtml.includes('เร่งด่วน')
+        ? 'medium'
+        : urgencyBadgeHtml.includes('ไม่เร่งด่วน')
+          ? 'low'
+          : ''
+
+    const statusKey = statusBadgeHtml.includes('รอดำเนินการ')
+      ? 'pending'
+      : statusBadgeHtml.includes('กำลังดำเนินการ')
+        ? 'in_progress'
+        : statusBadgeHtml.includes('ดำเนินการเสร็จสิ้น')
+          ? 'done'
+          : ''
+
+    const matchUrgency = selUrg.length === 0 || selUrg.includes(urgencyKey)
+    const matchStatus = selStat.length === 0 || selStat.includes(statusKey)
+
     const matchDate =
-      !selectedDate.value ||
-      new Date(row[0]).toLocaleDateString('th-TH') ===
-        new Date(selectedDate.value).toLocaleDateString('th-TH')
+      !selDate ||
+      new Date(dateDisplay).toLocaleDateString('th-TH') ===
+        new Date(selDate).toLocaleDateString('th-TH')
 
     return matchSearch && matchUrgency && matchStatus && matchDate
   })
 })
 
-function clearFilters() {
-  selectedUrgencies.value = []
-  selectedStatuses.value = []
-  selectedTypes.value = []
+/* --- รีเซ็ตตัวกรอง --- */
+function resetFilters() {
+  selectedUrgencyFilters.value = []
+  selectedStatusFilters.value = []
+  searchQuery.value = ''
+  selectedDate.value = ''
 }
 
-// ปิด dropdown เมื่อคลิกรอบนอก
-function closeDropdown(e) {
+/* --- ปิด dropdown เมื่อคลิกรอบนอก --- */
+function handleOutsideClick(e) {
   if (!e.target.closest('.relative')) {
-    showStatusFilter.value = false
-    showUrgencyFilter.value = false
-    showTypeFilter.value = false
+    statusFilterOpen.value = false
+    urgencyFilterOpen.value = false
   }
 }
 
+/* --- lifecycle --- */
 onMounted(() => {
-  fetchMyRepairs()
-  document.addEventListener('click', closeDropdown)
+  loadMyRepairs()
+  document.addEventListener('click', handleOutsideClick)
 })
-onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
+onBeforeUnmount(() => document.removeEventListener('click', handleOutsideClick))
 
-// ปุ่ม action ต่าง ๆ
-const goToCreate = () => router.push('/main/repair-request')
-const goToDetail = (code) => router.push(`/main/repair-detail/${code}`)
-const goToEdit = (code) => router.push(`/main/repair-edit/${code}`)
+/* --- ปุ่ม action --- */
+const openDetail = (code) => router.push(`/main/repair-detail/${code}`)
+const openEdit = (code) => router.push(`/main/repair-edit/${code}`)
 
-// ฟังก์ชันการลบ
-async function handleDelete(repairCode) {
+/* --- ลบรายการ --- */
+async function deleteRepair(repairCode) {
   const result = await Sweetalert.fire({
     title: 'ลบรายการนี้?',
     text: `คุณต้องการลบใบแจ้งซ่อมหมายเลข ${repairCode} หรือไม่?`,
@@ -206,26 +248,26 @@ async function handleDelete(repairCode) {
           <!-- ความเร่งด่วน -->
           <div class="relative">
             <button
-              @click.stop="showUrgencyFilter = !showUrgencyFilter"
+              @click.stop="urgencyFilterOpen = !urgencyFilterOpen"
               class="flex items-center gap-1 border border-gray-300 rounded-lg px-4 py-2 bg-white text-gray-700"
             >
               ความเร่งด่วน
               <img
                 src="/icon/sidebar/chevron-down-icon.svg"
                 class="w-4 h-4 opacity-70 transition-transform duration-200"
-                :class="{ 'rotate-180': showUrgencyFilter }"
+                :class="{ 'rotate-180': urgencyFilterOpen }"
                 alt="toggle"
               />
             </button>
             <div
-              v-if="showUrgencyFilter"
+              v-if="urgencyFilterOpen"
               class="absolute mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg p-3 text-sm text-gray-700 z-10"
             >
               <label class="flex items-center py-1">
                 <input
                   type="checkbox"
                   value="low"
-                  v-model="selectedUrgencies"
+                  v-model="selectedUrgencyFilters"
                   class="w-4 h-4 text-blue-600 border-gray-300"
                 />
                 <span class="ml-2">ไม่เร่งด่วน</span>
@@ -234,7 +276,7 @@ async function handleDelete(repairCode) {
                 <input
                   type="checkbox"
                   value="medium"
-                  v-model="selectedUrgencies"
+                  v-model="selectedUrgencyFilters"
                   class="w-4 h-4 text-blue-600 border-gray-300"
                 />
                 <span class="ml-2">เร่งด่วน</span>
@@ -243,7 +285,7 @@ async function handleDelete(repairCode) {
                 <input
                   type="checkbox"
                   value="high"
-                  v-model="selectedUrgencies"
+                  v-model="selectedUrgencyFilters"
                   class="w-4 h-4 text-blue-600 border-gray-300"
                 />
                 <span class="ml-2">เร่งด่วนมาก</span>
@@ -254,26 +296,26 @@ async function handleDelete(repairCode) {
           <!-- สถานะ -->
           <div class="relative">
             <button
-              @click.stop="showStatusFilter = !showStatusFilter"
+              @click.stop="statusFilterOpen = !statusFilterOpen"
               class="flex items-center gap-1 border border-gray-300 rounded-lg px-4 py-2 bg-white text-gray-700"
             >
               สถานะ
               <img
                 src="/icon/sidebar/chevron-down-icon.svg"
                 class="w-4 h-4 opacity-70 transition-transform duration-200"
-                :class="{ 'rotate-180': showStatusFilter }"
+                :class="{ 'rotate-180': statusFilterOpen }"
                 alt="toggle"
               />
             </button>
             <div
-              v-if="showStatusFilter"
+              v-if="statusFilterOpen"
               class="absolute mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg p-3 text-sm text-gray-700 z-10"
             >
               <label class="flex items-center py-1">
                 <input
                   type="checkbox"
                   value="pending"
-                  v-model="selectedStatuses"
+                  v-model="selectedStatusFilters"
                   class="w-4 h-4 text-blue-600 border-gray-300"
                 />
                 <span class="ml-2">รอดำเนินการ</span>
@@ -282,7 +324,7 @@ async function handleDelete(repairCode) {
                 <input
                   type="checkbox"
                   value="in_progress"
-                  v-model="selectedStatuses"
+                  v-model="selectedStatusFilters"
                   class="w-4 h-4 text-blue-600 border-gray-300"
                 />
                 <span class="ml-2">กำลังดำเนินการ</span>
@@ -291,7 +333,7 @@ async function handleDelete(repairCode) {
                 <input
                   type="checkbox"
                   value="done"
-                  v-model="selectedStatuses"
+                  v-model="selectedStatusFilters"
                   class="w-4 h-4 text-blue-600 border-gray-300"
                 />
                 <span class="ml-2">ดำเนินการเสร็จสิ้น</span>
@@ -299,41 +341,11 @@ async function handleDelete(repairCode) {
             </div>
           </div>
 
-          <!-- ประเภทงาน -->
-          <div class="relative">
-            <button
-              @click.stop="showTypeFilter = !showTypeFilter"
-              class="flex items-center gap-1 border border-gray-300 rounded-lg px-4 py-2 bg-white text-gray-700"
-            >
-              ประเภทงาน
-              <img
-                src="/icon/sidebar/chevron-down-icon.svg"
-                class="w-4 h-4 opacity-70 transition-transform duration-200"
-                :class="{ 'rotate-180': showTypeFilter }"
-                alt="toggle"
-              />
-            </button>
-            <div
-              v-if="showTypeFilter"
-              class="absolute mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg p-3 text-sm text-gray-700 z-10"
-            >
-              <label v-for="t in technicianTypes" :key="t" class="flex items-center py-1">
-                <input
-                  type="checkbox"
-                  :value="t"
-                  v-model="selectedTypes"
-                  class="w-4 h-4 text-blue-600 border-gray-300"
-                />
-                <span class="ml-2">{{ t }}</span>
-              </label>
-            </div>
-          </div>
-
           <!-- ปุ่มล้างตัวกรอง -->
           <transition name="fade">
             <button
-              v-if="selectedStatuses.length || selectedUrgencies.length || selectedTypes.length"
-              @click="clearFilters"
+              v-if="selectedStatusFilters.length || selectedUrgencyFilters.length || searchQuery"
+              @click="resetFilters"
               class="text-blue-600 hover:text-blue-700 text-sm font-medium"
             >
               ล้างตัวกรอง
@@ -341,19 +353,21 @@ async function handleDelete(repairCode) {
           </transition>
         </div>
 
-        <!-- component ปุ่มแจ้งซ่อม-->
+        <!-- ปุ่มแจ้งซ่อม -->
         <RepairButton />
       </div>
     </div>
+
+    <!-- ตาราง -->
     <div class="p-3 mx-auto max-w-8xl">
       <TableComponent
         :columns="columns"
-        :rows="filteredRows"
+        :rows="visibleRows"
         :perPage="10"
         mode="user"
-        @delete="handleDelete"
-        @detail="goToDetail"
-        @edit="goToEdit"
+        @delete="deleteRepair"
+        @detail="openDetail"
+        @edit="openEdit"
       />
     </div>
   </div>
