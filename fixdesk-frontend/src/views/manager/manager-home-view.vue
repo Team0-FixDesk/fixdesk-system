@@ -168,7 +168,7 @@ const statusPieOption = ref({
       center: ['50%', '45%'],
       data: [
         { value: 0, name: 'รอดำเนินการ', itemStyle: { color: '#F59E0B' } },
-        { value: 0, name: 'กำลังซ่อม', itemStyle: { color: '#EAB308' } },
+        { value: 0, name: 'กำลังดำเนินการ', itemStyle: { color: '#EAB308' } },
         { value: 0, name: 'เสร็จสิ้น', itemStyle: { color: '#10B981' } },
       ],
       emphasis: {
@@ -412,7 +412,7 @@ function processDashboardData(repairs, techTypes) {
   // NEED VALIDATION: ตรวจสอบว่า rf_user_status ใน DB เป็นค่าอะไรบ้าง
   const pendingRepairs = repairs.filter((r) => r.rf_user_status === 'pending').length
   const inProgressRepairs = repairs.filter((r) => r.rf_user_status === 'in_progress').length
-  const completedRepairs = repairs.filter((r) => r.rf_user_status === 'completed').length
+  const completedRepairs = repairs.filter((r) => r.rf_user_status === 'done').length
 
   summaryCards.value[0].value = totalRepairs
   summaryCards.value[1].value = pendingRepairs
@@ -422,7 +422,7 @@ function processDashboardData(repairs, techTypes) {
   // Update status pie chart
   statusPieOption.value.series[0].data = [
     { value: pendingRepairs, name: 'รอดำเนินการ', itemStyle: { color: '#F59E0B' } },
-    { value: inProgressRepairs, name: 'กำลังซ่อม', itemStyle: { color: '#EAB308' } },
+    { value: inProgressRepairs, name: 'กำลังดำเนินการ', itemStyle: { color: '#EAB308' } },
     { value: completedRepairs, name: 'เสร็จสิ้น', itemStyle: { color: '#10B981' } },
   ]
 
