@@ -240,7 +240,7 @@ const goToDetail = (code) => router.push(`/main/repair-detail/${code}`)
 </script>
 
 <template>
-  <div class="bg-white rounded-xl shadow-md max-w-7xl mx-auto p-6">
+  <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-8xl">
     <!-- ส่วนหัวทักทายและปุ่มแจ้งซ่อม -->
     <div class="flex items-center justify-between mb-4">
       <div>
