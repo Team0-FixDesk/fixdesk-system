@@ -150,8 +150,8 @@ module.exports = function RepairFormRoutes(db) {
           INSERT INTO repair_form
             (rf_code, rf_us_id, rf_tt_id, rf_room_id, rf_prop_number,
             rf_problem, rf_detail, rf_phone, rf_urgency, rf_image,
-            rf_user_status, rf_tech_status, rf_create_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'working', NOW())
+            rf_user_status, rf_create_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())
           `;
 
         db.query(
@@ -319,8 +319,8 @@ module.exports = function RepairFormRoutes(db) {
         INSERT INTO repair_form
         (rf_code, rf_us_id, rf_tt_id, rf_room_id, rf_prop_number,
         rf_problem, rf_detail, rf_phone, rf_urgency, rf_image,
-        rf_user_status, rf_tech_status, rf_create_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'working', NOW())
+        rf_user_status, rf_create_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())
         `;
 
       db.query(
@@ -464,7 +464,6 @@ module.exports = function RepairFormRoutes(db) {
         rf.rf_in_process_at,
         rf.rf_done_at,
         rf.rf_user_status,
-        rf.rf_tech_status,
         rf.rf_prop_number,
         rf.rf_image,
   
@@ -523,7 +522,6 @@ module.exports = function RepairFormRoutes(db) {
         rf_problem: r.rf_problem || "-",
         rf_urgency: r.rf_urgency || "medium",
         rf_user_status: r.rf_user_status || "-",
-        rf_tech_status: r.rf_tech_status || "-",
         rf_phone: r.rf_phone || "-",
         rf_create_at: r.rf_create_at || "-",
         rf_in_process_at: r.rf_in_process_at || null,
