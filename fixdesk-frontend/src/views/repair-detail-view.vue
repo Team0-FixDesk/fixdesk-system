@@ -3,7 +3,6 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import RepairStatusTimeline from '@/components/status-timeline-component.vue'
 
-
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
 const route = useRoute()
 const router = useRouter()
@@ -271,21 +270,6 @@ onMounted(fetchRepairDetail)
                 </p>
               </div>
             </div>
-
-            <div>
-              <p class="text-gray-700 text-sm sm:text-base">
-                <span class="break-all">
-                  รายละเอียด:
-                  {{ repair?.rf_problem || '-' }}
-                </span>
-              </p>
-              <p class="text-gray-500 mt-2 text-sm sm:text-base break-all">
-                สาเหตุ/อาการ:
-                <span class="break-all">
-                  {{ repair?.rf_detail || '-' }}
-                </span>
-              </p>
-            </div>
           </div>
 
           <!-- ขวา (Badge สถานะ / ความเร่งด่วน / ประเภท) -->
@@ -301,7 +285,20 @@ onMounted(fetchRepairDetail)
             </span>
           </div>
         </div>
-
+        <div>
+          <p class="text-gray-700 text-sm sm:text-base">
+            รายละเอียด:
+            <span class="break-word">
+              {{ repair?.rf_problem || '-' }}
+            </span>
+          </p>
+          <p class="text-gray-500 mt-2 text-sm sm:text-base">
+            สาเหตุ/อาการ:
+            <span class="break-word">
+              {{ repair?.rf_detail || '-' }}
+            </span>
+          </p>
+        </div>
         <!-- กล่องข้อมูล 3 ช่อง -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
           <div class="border border-gray-200 rounded-lg p-3 sm:p-4">

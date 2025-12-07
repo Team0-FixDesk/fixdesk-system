@@ -4,11 +4,11 @@ import { ref, computed } from 'vue'
 const props = defineProps({
   columns: {
     type: Array,
-    default: () => [],        // ✅ อันนี้คือเพิ่ม
+    default: () => [],
   },
   rows: {
     type: Array,
-    default: () => [],        // ✅ เพิ่ม
+    default: () => [],
   },
   perPage: {
     type: Number,
@@ -17,16 +17,21 @@ const props = defineProps({
   // mode:
   //  - "full"       : edit/delete
   //  - "assign"     : มอบหมายงาน
-  //  - "technician" : 3 ปุ่ม รับงาน / เปลี่ยนสถานะ / เสร็จสิ้น   ✅ เพิ่มคอมเมนต์ + mode ใหม่
+  //  - "technician" : 3 ปุ่ม รับงาน / เปลี่ยนสถานะ / เสร็จสิ้น
   mode: {
     type: String,
     default: 'full',
   },
+  // rawRows: ข้อมูลดิบแต่ละแถว ใช้ดู meta เช่น assigned, code เป็นต้น
+  rawRows: {
+    type: Array,
+    default: () => [],
+  },
 })
 
-
-
+/* ตรวจว่าแถวของ user อยู่สถานะรอดำเนินการหรือไม่ (ไว้ใช้กับโหมด user) */
 const isPendingStatus = (row) => typeof row[5] === 'string' && row[5].includes('รอดำเนินการ')
+
 const currentPage = ref(1)
 const totalEntries = computed(() => props.rows.length)
 const totalPages = computed(() => Math.ceil(totalEntries.value / props.perPage))
@@ -46,8 +51,20 @@ function nextPage() {
 function prevPage() {
   if (currentPage.value > 1) currentPage.value--
 }
-</script>
 
+/* หา meta ของแถวจาก rawRows ด้วย rf_code (อยู่ที่คอลัมน์ index 1) */
+function getRowMetaByCode(row) {
+  const code = row[1]
+  if (!code) return null
+  return props.rawRows.find((item) => item.code === code) || null
+}
+
+/* เช็คว่าแถวนั้นถูกมอบหมายงานแล้วหรือยัง */
+function isRowAssigned(row) {
+  const meta = getRowMetaByCode(row)
+  return !!meta?.assigned
+}
+</script>
 
 <template>
   <div class="relative overflow-x-auto">
@@ -124,7 +141,7 @@ function prevPage() {
                   </span>
                 </template>
 
-                <!-- โหมด user (ล็อกตามสถานะรอดำเนินการ) -->
+                <!-- โหมด user -->
                 <template v-else-if="props.mode === 'user'">
                   <!-- ปุ่มแก้ไข -->
                   <div
@@ -163,7 +180,7 @@ function prevPage() {
                   </div>
                 </template>
 
-                <!-- โหมด full (edit/delete ปกติ) -->
+                <!-- โหมด full -->
                 <template v-else-if="props.mode === 'full'">
                   <div
                     class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center bg-yellow-400 hover:bg-yellow-500 text-white rounded-md transition cursor-pointer"
@@ -184,13 +201,19 @@ function prevPage() {
 
                 <!-- โหมด assign -->
                 <template v-else-if="props.mode === 'assign'">
-                  <div
-                    class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center bg-green-600 hover:bg-green-700 text-white rounded-md transition cursor-pointer"
-                    title="มอบหมายงาน"
-                    @click="$emit('assign', row[1])"
+                  <button
+                    :class="[
+                      'w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center rounded-md transition',
+                      isRowAssigned(row)
+                        ? 'bg-gray-300 text-gray-400 cursor-not-allowed'
+                        : 'bg-green-600 hover:bg-green-700 text-white cursor-pointer',
+                    ]"
+                    :title="isRowAssigned(row) ? 'มอบหมายแล้ว' : 'มอบหมายงาน'"
+                    :disabled="isRowAssigned(row)"
+                    @click="!isRowAssigned(row) && $emit('assign', row[1])"
                   >
                     <img src="/icon/arrow-right.svg" alt="assign" class="w-5 h-5" />
-                  </div>
+                  </button>
                 </template>
               </div>
 
@@ -272,7 +295,6 @@ th {
   text-align: center;
   vertical-align: middle;
 }
-
 tbody tr:hover {
   background-color: #f9fafb;
 }
