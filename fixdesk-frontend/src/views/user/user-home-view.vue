@@ -242,10 +242,10 @@ const goToDetail = (code) => router.push(`/main/repair-detail/${code}`)
 <template>
   <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-8xl">
     <!-- ส่วนหัวทักทายและปุ่มแจ้งซ่อม -->
-    <div class="flex items-center justify-between mb-4">
+    <div class="flex justify-between items-center mb-6">
       <div>
-        <h1 class="text-xl font-bold">สวัสดีคุณ {{ loggedInUserName }}</h1>
-        <p class="text-xs text-gray-600">ระบบแจ้งเสียแจ้งซ่อมยินดีตอนรับ</p>
+        <h1 class="text-2xl font-bold text-gray-800">สวัสดีคุณ {{ loggedInUserName }}</h1>
+        <p class="text-sm text-gray-600 mt-1">ระบบแจ้งเสียแจ้งซ่อมยินดีตอนรับ</p>
       </div>
       <repairButton />
     </div>

@@ -206,7 +206,7 @@ onMounted(() => {
     <div class="flex justify-between items-center mb-6">
       <div>
         <h1 class="text-2xl font-bold text-gray-800">หน้าแรก</h1>
-        <p class="text-gray-600">ภาพรวมงานแจ้งเรียนแจ้งซ่อม</p>
+        <p class="text-sm text-gray-600 mt-1">ภาพรวมงานแจ้งเรียนแจ้งซ่อม</p>
       </div>
       <div class="flex space-x-2">
         <button

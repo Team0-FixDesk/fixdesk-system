@@ -1,13 +1,12 @@
 <template>
   <body>
-    <div class="w-full bg-[#f8fafc] py-2">
+    <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-8xl">
       <!-- Header -->
       <div class="mb-6">
-        <h1 class="text-2xl font-semibold text-gray-800 flex items-center gap-2">
+        <h1 class="text-2xl font-bold text-gray-800">
           สวัสดีคุณ ช่างธนภัทร
-          <span class="text-2xl">👋</span>
         </h1>
-        <p class="mt-1 text-sm text-gray-500">
+        <p class="text-sm text-gray-600 mt-1">
           วันนี้มีงานใหม่เข้ามา ดูภาพรวมและเริ่มงานได้จากที่นี่
         </p>
       </div>
