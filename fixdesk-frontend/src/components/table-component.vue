@@ -18,6 +18,8 @@ const props = defineProps({
   //  - "full"       : edit/delete
   //  - "assign"     : มอบหมายงาน
   //  - "technician" : 3 ปุ่ม รับงาน / เปลี่ยนสถานะ / เสร็จสิ้น
+  //  - "stock"
+
   mode: {
     type: String,
     default: 'full',
@@ -29,7 +31,6 @@ const props = defineProps({
   },
 })
 
-/* ตรวจว่าแถวของ user อยู่สถานะรอดำเนินการหรือไม่ (ไว้ใช้กับโหมด user) */
 const isPendingStatus = (row) => typeof row[5] === 'string' && row[5].includes('รอดำเนินการ')
 
 const currentPage = ref(1)
@@ -76,7 +77,7 @@ function isRowAssigned(row) {
           <th
             v-for="(col, i) in props.columns"
             :key="i"
-            v-show="i !== 1"
+            v-show="props.mode === 'stock' ? true : i !== 1"
             class="px-3 py-2 sm:px-6 sm:py-3 text-center"
           >
             {{ col }}
@@ -100,7 +101,10 @@ function isRowAssigned(row) {
             </th>
 
             <!-- คอลัมน์อื่น -->
-            <td v-else-if="ci !== 1" class="px-3 py-2 sm:px-6 sm:py-4 text-center">
+            <td
+              v-else-if="props.mode === 'stock' ? true : ci !== 1"
+              class="px-3 py-2 sm:px-6 sm:py-4 text-center"
+            >
               <!-- คอลัมน์ action -->
               <div v-if="cell === 'actions'" class="flex justify-center gap-2">
                 <!-- ปุ่มดูรายละเอียด (ใช้ทุกโหมด) -->
@@ -152,9 +156,7 @@ function isRowAssigned(row) {
                         : 'bg-gray-300 text-gray-400 cursor-not-allowed',
                     ]"
                     :title="
-                      isPendingStatus(row)
-                        ? 'แก้ไข'
-                        : 'ไม่สามารถแก้ไขได้ (สถานะไม่ใช่รอดำเนินการ)'
+                      isPendingStatus(row) ? 'แก้ไข' : 'ไม่สามารถแก้ไขได้ (สถานะไม่ใช่รอดำเนินการ)'
                     "
                     @click="isPendingStatus(row) && $emit('edit', row[1])"
                   >
@@ -169,11 +171,7 @@ function isRowAssigned(row) {
                         ? 'bg-red-500 hover:bg-red-600 text-white cursor-pointer'
                         : 'bg-gray-300 text-gray-400 cursor-not-allowed',
                     ]"
-                    :title="
-                      isPendingStatus(row)
-                        ? 'ลบ'
-                        : 'ไม่สามารถลบได้ (สถานะไม่ใช่รอดำเนินการ)'
-                    "
+                    :title="isPendingStatus(row) ? 'ลบ' : 'ไม่สามารถลบได้ (สถานะไม่ใช่รอดำเนินการ)'"
                     @click="isPendingStatus(row) && $emit('delete', row[1])"
                   >
                     <img src="/icon/bin-icon.svg" alt="delete" class="w-5 h-5 opacity-90" />
