@@ -1,8 +1,27 @@
 <script setup>
-import { ref } from 'vue'
-import TableComponent from '@/components/table-component.vue' 
+import { ref, onMounted } from 'vue'
+import TableComponent from '@/components/table-component.vue'
 import { useRouter } from 'vue-router'
 import Sweetalert from 'sweetalert2'
+
+// JWT Decode
+function parseJwt(token) {
+  try {
+    const base64Url = token.split('.')[1]
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join(''),
+    )
+    return JSON.parse(jsonPayload)
+  } catch (err) {
+    console.error('ไม่สามารถ decode token ได้:', err)
+    return {}
+  }
+}
+
 
 defineOptions({ name: 'StockManageInventoryView' })
 
@@ -18,91 +37,106 @@ const columns = [
   'ตัวดำเนินการ',
 ]
 
-// const router = useRouter()
+const router = useRouter()
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
+const isSubmitting = ref(false)
 
-// --- Card Data (Mockup) ---
-const itemsCount = ref(120)
-const itemsNew = ref(5)
-const itemRequestWaiting = ref(3)
-const itemRequestDeclined = ref(1)
-const itemNewToday = ref(10)
+// --- Dropdown หมวดหมู่ ---
+const typeOptions = ref([])
+const categoryFilter = ref([])
 
-// --- Table Data (Mockup) ---
-const filteredRows = ref([]) // ใส่ข้อมูลจริงตรงนี้ถ้ามี
+const fetchCategories = async () => {
+  try {
+    const response = await fetch(`${API_BASE}/category`)
+    if (!response.ok) throw new Error('Failed to fetch categories')
+    const data = await response.json()
+    categoryFilter.value = data
 
-// --- Filters ---
-const searchQuery = ref('')
-const showUrgencyFilter = ref(false)
-const showStatusFilter = ref(false) // แยกตัวแปรสำหรับ Dropdown สถานะ
-const showTypeFilter = ref(false) // แยกตัวแปรสำหรับ Dropdown หมวดหมู่
-const selectedUrgencies = ref([])
-const selectedTypes = ref([])
+    // Map ข้อมูลสำหรับ dropdown
+    typeOptions.value = data.map(cat => ({
+      value: cat.ct_id,
+      label: cat.ct_name
+    }))
+    console.log('Categories loaded:', typeOptions.value)
+  } catch (error) {
+    console.error("Error fetching categories:", error)
+  }
+}
 
-// Mock Data สำหรับ Filter หมวดหมู่
-const technicianTypes = ['ไฟฟ้า', 'ประปา', 'เครื่องมือช่าง', 'คอมพิวเตอร์']
+// Load categories เมื่อ component mount
+onMounted(() => {
+  fetchCategories()
+})
 
 // --- Modal State ---
 const showAddModal = ref(false)
+const showStatusFilter = ref(false)
+const showTypeFilter = ref(false)
 
-// --- File Upload State (ส่วนที่ขาดไป) ---
-const filePreview = ref([]) // เก็บข้อมูลไฟล์รูปภาพ [ { url, name, size, file } ]
-const isDragOver = ref(false) // สถานะว่ากำลังลากไฟล์อยู่เหนือพื้นที่หรือไม่
+// --- File Upload State ---
+const filePreview = ref([])
+const isDragOver = ref(false)
 
 // --- Form Data ---
-const addForm = ref({
+const formdata = ref({
   name: '',
   asset_no: '',
-  type_id: '',
+  ct_id: '',
   quantity: '',
   unit: '',
-  status: 'active' // Default value
+  status: 'active',
+  pd_upload_image: null
 })
+
+
 
 // --- Form Validation Errors ---
 const addErrors = ref({})
 
-// --- Dropdown หมวดหมู่ (Mockup) ---
-const typeOptions = ref([
-  { value: '1', label: 'ไฟฟ้า' },
-  { value: '2', label: 'ประปา' },
-  { value: '3', label: 'เครื่องมือช่าง' },
-  { value: '4', label: 'ครุภัณฑ์คอมพิวเตอร์' },
-])
+// --- Filter & Search ---
+const searchQuery = ref('')
+const selectedUrgencies = ref([])
+const selectedTypes = ref([])
+const itemsCount = ref(0)
+const itemsNew = ref(0)
+const itemRequestWaiting = ref(0)
+const itemRequestDeclined = ref(0)
+const itemNewToday = ref(0)
+
+// --- Mock filteredRows ---
+const filteredRows = ref([])
 
 // --- Methods ---
 
 // 1. Reset & Close Modal
 const closeAddModal = () => {
   showAddModal.value = false
-  
-  // Reset Form
-  addForm.value = {
+  formdata.value = {
     name: '',
     asset_no: '',
-    type_id: '',
+    ct_id: '',
     quantity: '',
     unit: '',
     status: 'active'
   }
-  
-  // Reset File
   filePreview.value = []
-  
-  // Reset Errors
   addErrors.value = {}
 }
 
 // 2. Validate Form
 const validateForm = () => {
   const errors = {}
-  if (!addForm.value.name) errors.name = 'กรุณากรอกชื่อรายการ'
-  if (!addForm.value.type_id) errors.type_id = 'กรุณาเลือกหมวดหมู่'
-  if (!addForm.value.quantity || addForm.value.quantity <= 0) errors.quantity = 'กรุณากรอกจำนวนที่ถูกต้อง'
-  if (!addForm.value.unit) errors.unit = 'กรุณากรอกหน่วยนับ'
+
+  if (!formdata.value.name) errors.name = 'กรุณากรอกชื่อรายการ'
+  if (!formdata.value.ct_id) errors.type_id = 'กรุณาเลือกหมวดหมู่'
+  if (!formdata.value.quantity || formdata.value.quantity <= 0)
+    errors.quantity = 'กรุณากรอกจำนวนที่ถูกต้อง'
+  if (!formdata.value.unit) errors.unit = 'กรุณากรอกหน่วยนับ'
 
   addErrors.value = errors
   return Object.keys(errors).length === 0
 }
+
 
 // 3. File Handling Methods (เพิ่มใหม่)
 const handleDragOver = (e) => {
@@ -153,22 +187,63 @@ const removeFile = (index) => {
 }
 
 // 4. Submit Form
-const confirmAddItem = () => {
+const confirmAddItem = async () => {
   if (!validateForm()) {
-    return // หยุดถ้าข้อมูลไม่ครบ
+    return
   }
 
-  // เตรียมข้อมูลสำหรับส่ง API
-  const formData = {
-    ...addForm.value,
-    image: filePreview.value.length > 0 ? filePreview.value[0].file : null
+  const formDataToSubmit = new FormData()
+  formDataToSubmit.append('pd_name', formdata.value.name)
+  formDataToSubmit.append('pd_asset_code', formdata.value.asset_no)
+  formDataToSubmit.append('pd_category_id', formdata.value.ct_id)
+  formDataToSubmit.append('pd_quantity', formdata.value.quantity)
+  formDataToSubmit.append('pd_unit_id', formdata.value.unit)
+  formDataToSubmit.append('status', formdata.value.status)
+
+  if (filePreview.value.length > 0) {
+    formDataToSubmit.append('pd_upload_image', filePreview.value[0].file)
   }
 
-  console.log("บันทึกรายการสำเร็จ:", formData)
-  // TODO: เรียก API ตรงนี้
+  try {
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token')
+    if (!token) throw new Error('ไม่พบ token')
 
-  // ปิด Modal
-  closeAddModal()
+    const res = await fetch(`${API_BASE}/add-stock`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      body: formDataToSubmit,
+    })
+
+    const contentType = res.headers.get('content-type')
+    let responseData
+
+    if (contentType && contentType.includes('application/json')) {
+      responseData = await res.json()
+    } else {
+      responseData = await res.text()
+      console.error('Server returned HTML instead of JSON:', responseData)
+      throw new Error('Server error - received HTML response')
+    }
+
+    if (!res.ok) throw new Error(responseData.message || 'บันทึกข้อมูลไม่สำเร็จ')
+
+    Sweetalert.fire({
+      icon: 'success',
+      title: 'สำเร็จ!',
+      text: 'บันทึกรายการสำเร็จ!'
+    })
+
+    closeAddModal()
+  } catch (error) {
+    console.error('Error adding item:', error)
+    Sweetalert.fire({
+      icon: 'error',
+      title: 'ผิดพลาด!',
+      text: error.message || 'เกิดข้อผิดพลาดในการบันทึกรายการ'
+    })
+  }
 }
 
 // --- Mock Action Methods ---
@@ -265,17 +340,17 @@ const goToEdit = (id) => console.log('Edit', id)
             </button>
             <div v-if="showTypeFilter"
               class="absolute mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg p-3 text-sm text-gray-700 z-10">
-              <label v-for="t in technicianTypes" :key="t" class="flex items-center py-1">
-                <input type="checkbox" :value="t" v-model="selectedTypes"
+              <label v-for="opt in typeOptions" :key="opt.value" class="flex items-center py-1">
+                <input type="checkbox" :value="opt.value" v-model="selectedTypes"
                   class="w-4 h-4 text-blue-600 border-gray-300" />
-                <span class="ml-2">{{ t }}</span>
+                <span class="ml-2">{{ opt.label }}</span>
               </label>
             </div>
           </div>
         </div>
       </div>
     </div>
-    <!-- Table --> 
+    <!-- Table -->
     <div class="p-3 mx-auto max-w-8xl">
       <TableComponent :columns="columns" :rows="filteredRows" :perPage="10" mode="user" @delete="handleDelete"
         @detail="goToDetail" @edit="goToEdit" />
@@ -313,7 +388,7 @@ const goToEdit = (id) => console.log('Edit', id)
                 ชื่อรายการ <span class="text-red-500">*</span>
               </label>
               <span class="text-xs text-gray-400 block mb-1">กรอกชื่อรายการของที่ต้องการเพิ่ม</span>
-              <input v-model="addForm.name" type="text" :class="[
+              <input v-model="formdata.name" type="text" :class="[
                 'text-black placeholder-gray-400 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-700 transition-all]',
                 addErrors.name ? 'border-red-500' : 'border-gray-300'
               ]" placeholder="กรุณากรอกชื่อรายการ" />
@@ -326,7 +401,7 @@ const goToEdit = (id) => console.log('Edit', id)
                   หมายเลขเลขครุภัณฑ์
                 </label>
                 <span class="text-xs text-gray-400 block mb-1">กรอกหมายเลขครุภัณฑ์ (ถ้ามี)</span>
-                <input v-model="addForm.asset_no" type="text"
+                <input v-model="formdata.asset_no" type="text"
                   class="text-black w-full px-3 py-2 border-gray-400 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder-gray-400 transition-all"
                   placeholder="กรุณากรอกเลขครุภัณฑ์" />
               </div>
@@ -336,7 +411,7 @@ const goToEdit = (id) => console.log('Edit', id)
                   หมวดหมู่ <span class="text-red-500">*</span>
                 </label>
                 <span class="text-xs text-gray-400 block mb-1">โปรดเลือกหมวดหมู่รายการ</span>
-                <select v-model="addForm.type_id" :class="[
+                <select v-model="formdata.ct_id" :class="[
                   'text-black placeholder-gray-400 w-full px-3 py-2 border rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all',
                   addErrors.type_id ? 'border-red-500' : 'border-gray-300'
                 ]">
@@ -354,7 +429,7 @@ const goToEdit = (id) => console.log('Edit', id)
                 <label class="block text-sm font-medium text-black mb-1">
                   จำนวน <span class="text-red-500">*</span>
                 </label>
-                <input v-model="addForm.quantity" type="number" min="1" :class="[
+                <input v-model="formdata.quantity" type="number" min="1" :class="[
                   'text-black placeholder-gray-400 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all',
                   addErrors.quantity ? 'border-red-500' : 'border-gray-300'
                 ]" placeholder="กรุณากรอกจำนวน" />
@@ -365,7 +440,7 @@ const goToEdit = (id) => console.log('Edit', id)
                 <label class="block text-sm font-medium text-black mb-1">
                   หน่วยนับ <span class="text-red-500">*</span>
                 </label>
-                <input v-model="addForm.unit" type="text" :class="[
+                <input v-model="formdata.unit" type="text" :class="[
                   'text-black placeholder-gray-400 placeholder-gray-400 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all',
                   addErrors.unit ? 'border-red-500' : 'border-gray-300'
                 ]" placeholder="กรุณากรอกหน่วยนับ" />
@@ -378,7 +453,7 @@ const goToEdit = (id) => console.log('Edit', id)
                 <label class="block text-sm font-medium text-black mb-1">
                   สถานะ <span class="text-red-500">*</span>
                 </label>
-                <select v-model="addForm.status"
+                <select v-model="formdata.status"
                   class="text-black placeholder-gray-400 w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all">
                   <option value="" disabled selected>กรุณาเลือกสถานะ</option>
                   <option value="active">พร้อมใช้งาน</option>
@@ -466,7 +541,7 @@ const goToEdit = (id) => console.log('Edit', id)
                 ยกเลิก
               </button>
 
-              <button type="submit"
+              <button type="submit" @click="confirmAddItem"
                 class="px-8 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded-md transition-colors font-medium shadow-sm text-sm">
                 บันทึก
               </button>

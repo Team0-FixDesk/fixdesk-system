@@ -4,40 +4,84 @@ const { authMiddleware } = require("../auth");
 module.exports = function StockRoutes(db) {
   const router = express.Router();
 
-  // ดึงรายการใบเบิกทั้งหมด
-  router.get("/stock-forms", authMiddleware, (req, res) => {
+  router.get("/show-stock", authMiddleware, (req, res) => {
     const query = `
     SELECT
-      sf.sf_id,
-      sf.sf_code,
-      sf.sf_create_at,
-      sf.sf_update_at,
-      sf.sf_urgency,
-      sf.sf_status,
-      sf.sf_us_id,
-      sf.sf_rf_id,
-      u.us_first_name_th AS requester_first_name,
-      u.us_last_name_th AS requester_last_name,
-      u.us_department AS requester_department,
-      rf.rf_code AS related_rf_code,
-      b.bd_name AS building_name,
-      f.fl_name AS floor_name,
-      r.room_name AS room_name
-    FROM stock_form sf
-    LEFT JOIN user u ON sf.sf_us_id = u.us_id
-    LEFT JOIN repair_form rf ON sf.sf_rf_id = rf.rf_id
-    LEFT JOIN room r ON rf.rf_room_id = r.room_id
-    LEFT JOIN floor f ON r.room_fl_id = f.fl_id
-    LEFT JOIN building b ON f.fl_bd_id = b.bd_id
-    ORDER BY sf.sf_create_at DESC
-    `;
+      pd.pd_id,
+      pd.pd_asset_code,
+      pd.pd_name,
+      ct.ct_name,
+      pd.pd_quantity,
+      un.units_name,
+      pd.pd_updated_at, 
+      pd.pd_upload_image
+    FROM products pd
+    LEFT JOIN categories ct ON pd.pd_category_id = ct.ct_id
+    LEFT JOIN units un ON pd.pd_unit_id = un.units_id
+    ORDER BY pd.pd_id DESC
+  `;
 
     db.query(query, (err, results) => {
       if (err) {
-        console.error("Error fetching stock forms:", err);
+        console.error("Error fetching inventory:", err);
         return res
           .status(500)
-          .json({ message: "ดึงข้อมูลใบเบิกไม่สำเร็จ", error: err.message });
+          .json({ message: "ดึงข้อมูลคลังสินค้าไม่สำเร็จ", error: err.message });
+      }
+      res.json(results);
+    });
+  });
+
+  router.post("/add-stock", authMiddleware, (req, res) => {
+    const {
+      pd_asset_code,
+      pd_name,
+      pd_category_id,
+      pd_quantity,
+      pd_unit_id,
+      pd_upload_image
+    } = req.body;
+
+    // Validate required fields
+    if (!pd_asset_code || !pd_name || !pd_category_id || !pd_quantity || !pd_unit_id) {
+      return res.status(400).json({
+        message: "Missing required fields",
+        required: ["pd_asset_code", "pd_name", "pd_category_id", "pd_quantity", "pd_unit_id"]
+      });
+    }
+
+    const query = `
+      INSERT INTO products 
+      (pd_asset_code, pd_name, pd_category_id, pd_quantity, pd_unit_id, pd_upload_image, pd_updated_at) 
+      VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())
+    `;
+
+    const params = [pd_asset_code, pd_name, pd_category_id, pd_quantity, pd_unit_id, pd_upload_image || null];
+
+    db.query(query, params, (err, results) => {
+      if (err) {
+        console.error("Error adding stock:", err);
+        return res.status(500).json({
+          message: "Failed to add inventory item",
+          error: err.message
+        });
+      }
+      res.status(201).json({
+        message: "Inventory item added successfully",
+        id: results.insertId
+      });
+    });
+  });
+
+  // เรียกหมวดหมู่
+  router.get("/category", (req, res) => {
+    const query = `SELECT ct_id, ct_name FROM categories ORDER BY ct_name ASC`;
+    db.query(query, (err, results) => {
+      if (err) {
+        console.error("Error fetching categories:", err);
+        return res
+          .status(500)
+          .json({ message: "ดึงข้อมูลหมวดหมู่ไม่สำเร็จ", error: err.message });
       }
       res.json(results);
     });
@@ -45,3 +89,5 @@ module.exports = function StockRoutes(db) {
 
   return router;
 };
+
+
