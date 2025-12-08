@@ -164,6 +164,23 @@ const visibleRows = computed(() => {
   })
 })
 
+/* --- ฟังก์ชันสลับเปิด/ปิด Dropdown (ให้เปิดได้ทีละอัน) --- */
+function toggleUrgencyFilter() {
+  urgencyFilterOpen.value = !urgencyFilterOpen.value
+  // ถ้าเปิด Urgency ให้ปิด Status ทันที
+  if (urgencyFilterOpen.value) {
+    statusFilterOpen.value = false
+  }
+}
+
+function toggleStatusFilter() {
+  statusFilterOpen.value = !statusFilterOpen.value
+  // ถ้าเปิด Status ให้ปิด Urgency ทันที
+  if (statusFilterOpen.value) {
+    urgencyFilterOpen.value = false
+  }
+}
+
 /* --- รีเซ็ตตัวกรอง --- */
 function resetFilters() {
   selectedUrgencyFilters.value = []
@@ -248,7 +265,7 @@ async function deleteRepair(repairCode) {
           <!-- ความเร่งด่วน -->
           <div class="relative">
             <button
-              @click.stop="urgencyFilterOpen = !urgencyFilterOpen"
+              @click.stop="toggleUrgencyFilter"
               class="flex items-center gap-1 border border-gray-300 rounded-lg px-4 py-2 bg-white text-gray-700"
             >
               ความเร่งด่วน
@@ -296,7 +313,7 @@ async function deleteRepair(repairCode) {
           <!-- สถานะ -->
           <div class="relative">
             <button
-              @click.stop="statusFilterOpen = !statusFilterOpen"
+              @click.stop="toggleStatusFilter"
               class="flex items-center gap-1 border border-gray-300 rounded-lg px-4 py-2 bg-white text-gray-700"
             >
               สถานะ

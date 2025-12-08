@@ -87,6 +87,20 @@ const filteredRows = computed(() => {
   })
 })
 
+function toggleRoleFilter() {
+  showRoleFilter.value = !showRoleFilter.value
+  if (showRoleFilter.value) {
+    showTechFilter.value = false // ปิด Tech ถ้าเปิด Role
+  }
+}
+
+function toggleTechFilter() {
+  showTechFilter.value = !showTechFilter.value
+  if (showTechFilter.value) {
+    showRoleFilter.value = false // ปิด Role ถ้าเปิด Tech
+  }
+}
+
 function clearFilters() {
   selectedRoles.value = []
   selectedTechTypes.value = []
@@ -691,10 +705,10 @@ async function handleDeleteTechType(item) {
 </script>
 
 <template>
-    <!-- ตาราง -->
-    <div class="bg-white bg-white rounded-xl shadow-md p-8 mx-auto max-w-7xl">
-      <h1 class="text-lg sm:text-xl font-bold text-black mb-6">จัดการผู้ใช้งานระบบ</h1>
-      <!-- ฟิลเตอร์ -->
+  <!-- ตาราง -->
+  <div class="bg-white bg-white rounded-xl shadow-md p-8 mx-auto max-w-7xl">
+    <h1 class="text-lg sm:text-xl font-bold text-black mb-6">จัดการผู้ใช้งานระบบ</h1>
+    <!-- ฟิลเตอร์ -->
     <div class="mb-6">
       <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-4">
         <div class="flex flex-wrap items-center gap-3">
@@ -708,7 +722,7 @@ async function handleDeleteTechType(item) {
           <!-- ฟิลเตอร์บทบาท -->
           <div class="relative">
             <button
-              @click.stop="showRoleFilter = !showRoleFilter"
+              @click.stop="toggleRoleFilter"
               class="h-10 flex items-center gap-2 border border-gray-300 rounded-lg px-4 py-2 bg-white text-gray-700"
             >
               บทบาท
@@ -737,9 +751,8 @@ async function handleDeleteTechType(item) {
           <!-- ฟิลเตอร์ตำแหน่ง -->
           <div class="relative">
             <button
-              @click.stop="showTechFilter = !showTechFilter"
-              class="h-10 flex items-center gap-2 border border-gray-300 rounded-lg px-4 py-2 bg-white text-gray-700"
-            >
+  @click.stop="toggleTechFilter"   class="h-10 flex items-center gap-2 border border-gray-300 rounded-lg px-4 py-2 bg-white text-gray-700"
+>
               ตำแหน่ง
               <img
                 src="/icon/sidebar/chevron-down-icon.svg"
@@ -886,7 +899,9 @@ async function handleDeleteTechType(item) {
           <!-- ชื่อ - นามสกุล (ภาษาอังกฤษ) -->
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1.5">ชื่อ (ภาษาอังกฤษ)</label>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5"
+                >ชื่อ (ภาษาอังกฤษ)</label
+              >
               <input
                 v-model="viewForm.us_first_name_en"
                 type="text"
@@ -895,7 +910,9 @@ async function handleDeleteTechType(item) {
               />
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1.5">นามสกุล (ภาษาอังกฤษ)</label>
+              <label class="block text-sm font-medium text-gray-700 mb-1.5"
+                >นามสกุล (ภาษาอังกฤษ)</label
+              >
               <input
                 v-model="viewForm.us_last_name_en"
                 type="text"
@@ -1415,14 +1432,18 @@ async function handleDeleteTechType(item) {
             <div>
               <label class="block text-sm font-medium mb-1.5">
                 ตำแหน่งช่าง
-                <span v-if="editForm.us_role_id === '2' || editForm.us_role_id === 2" class="text-red-500">*</span>
+                <span
+                  v-if="editForm.us_role_id === '2' || editForm.us_role_id === 2"
+                  class="text-red-500"
+                  >*</span
+                >
               </label>
               <select
                 v-model="editForm.us_tt_id"
                 :disabled="editForm.us_role_id !== '2' && editForm.us_role_id !== 2"
                 :class="[
                   'w-full px-3 py-2 border rounded-md',
-                  (editForm.us_role_id === '2' || editForm.us_role_id === 2)
+                  editForm.us_role_id === '2' || editForm.us_role_id === 2
                     ? editErrors.techType
                       ? 'border-red-500'
                       : 'border-gray-300'
@@ -1430,7 +1451,11 @@ async function handleDeleteTechType(item) {
                 ]"
               >
                 <option value="">
-                  {{ (editForm.us_role_id === '2' || editForm.us_role_id === 2) ? 'เลือกตำแหน่ง' : 'ไม่ระบุ' }}
+                  {{
+                    editForm.us_role_id === '2' || editForm.us_role_id === 2
+                      ? 'เลือกตำแหน่ง'
+                      : 'ไม่ระบุ'
+                  }}
                 </option>
                 <option v-for="opt in technicianOptions" :key="opt.value" :value="opt.value">
                   {{ opt.label }}

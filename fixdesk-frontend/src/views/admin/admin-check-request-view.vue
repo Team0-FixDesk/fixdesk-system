@@ -135,6 +135,21 @@ const filteredRows = computed(() => {
     ])
 })
 
+// [เพิ่มใหม่] ฟังก์ชันสำหรับสลับสถานะ Filter (Mutually Exclusive)
+function toggleStatusFilter() {
+  showStatusFilter.value = !showStatusFilter.value
+  if (showStatusFilter.value) {
+    showUrgencyFilter.value = false // ปิด Urgency ถ้าเปิด Status
+  }
+}
+
+function toggleUrgencyFilter() {
+  showUrgencyFilter.value = !showUrgencyFilter.value
+  if (showUrgencyFilter.value) {
+    showStatusFilter.value = false // ปิด Status ถ้าเปิด Urgency
+  }
+}
+
 function clearFilters() {
   selectedStatuses.value = []
   selectedUrgencies.value = []
@@ -301,7 +316,7 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
       <!-- สถานะ -->
       <div class="relative">
         <button
-          @click.stop="showStatusFilter = !showStatusFilter"
+          @click.stop="toggleStatusFilter"
           class="flex items-center gap-1 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg"
         >
           สถานะ
@@ -347,7 +362,7 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
       <!-- ความเร่งด่วน -->
       <div class="relative">
         <button
-          @click.stop="showUrgencyFilter = !showUrgencyFilter"
+          @click.stop="toggleUrgencyFilter"
           class="flex items-center gap-1 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg"
         >
           ความเร่งด่วน
