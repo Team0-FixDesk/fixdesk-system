@@ -7,20 +7,17 @@ const fs = require("fs");
 module.exports = function RepairFormRoutes(db) {
   const router = express.Router();
 
-  // Module อัพโหลดไฟล์Multer File Upload Configuration
-  // สร้างโฟลเดอร์ uploads
+  // --- ส่วน Upload File (เหมือนเดิม ไม่ต้องแก้) ---
   const repairUploadPath = path.join(__dirname, "..", "uploads", "repair");
   if (!fs.existsSync(repairUploadPath)) {
     fs.mkdirSync(repairUploadPath, { recursive: true });
   }
 
-  // กำหนด storage สำหรับ multer
   const storage = multer.diskStorage({
     destination: (req, file, callback) => {
       callback(null, repairUploadPath);
     },
     filename: (req, file, callback) => {
-      // สร้างชื่อไฟล์: RF_YYYYMMDD_HHMMSS_random.ext
       const dateTimeStamp = new Date()
         .toISOString()
         .replace(/[:.-]/g, "")
@@ -34,7 +31,6 @@ module.exports = function RepairFormRoutes(db) {
     },
   });
 
-  // กำหนด file filter
   const fileFilter = (req, file, callback) => {
     const allowedTypes = /jpeg|jpg|png|gif|webp|mp4|avi|mov|wmv/;
     const extname = allowedTypes.test(
@@ -52,23 +48,17 @@ module.exports = function RepairFormRoutes(db) {
     }
   };
 
-  // สร้าง multer instance
   const upload = multer({
     storage: storage,
-    limits: {
-      fileSize: 50 * 1024 * 1024, // 50MB limit
-      files: 5, // ไม่เกิน 5 ไฟล์
-    },
+    limits: { fileSize: 50 * 1024 * 1024, files: 5 },
     fileFilter: fileFilter,
   });
 
-  // อัพโหลดไฟล์สำหรับใบแจ้งซ่อม
   router.post("/upload-repair-files", upload.array("files", 5), (req, res) => {
     try {
       if (!req.files || req.files.length === 0) {
         return res.status(400).json({ message: "กรุณาเลือกไฟล์สำหรับอัพโหลด" });
       }
-      // สร้าง array ของ file paths
       const filePaths = req.files.map(
         (file) => `/uploads/repair/${file.filename}`
       );
@@ -81,7 +71,7 @@ module.exports = function RepairFormRoutes(db) {
           size: file.size,
           mimetype: file.mimetype,
         })),
-        filePaths: filePaths, // สำหรับเก็บใน database
+        filePaths: filePaths,
       });
     } catch (error) {
       console.error("Error uploading files:", error);
@@ -91,7 +81,6 @@ module.exports = function RepairFormRoutes(db) {
     }
   });
 
-  // ลบไฟล์
   router.delete("/delete-file/:filename", (req, res) => {
     const { filename } = req.params;
     const filePath = path.join(repairUploadPath, filename);
@@ -103,6 +92,8 @@ module.exports = function RepairFormRoutes(db) {
       res.json({ message: "ลบไฟล์สำเร็จ" });
     });
   });
+
+  // --- จบส่วน Upload ---
 
   // สร้างใบแจ้งซ่อมพร้อมอัพโหลดไฟล์
   router.post(
@@ -124,7 +115,7 @@ module.exports = function RepairFormRoutes(db) {
           .status(400)
           .json({ message: "ข้อมูลไม่ครบ กรุณากรอกให้ครบทุกช่อง" });
       }
-      // สร้างรหัสใบแจ้งซ่อม
+
       const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, "");
       const countQuery = `
         SELECT COUNT(*) AS count FROM repair_form
@@ -150,8 +141,8 @@ module.exports = function RepairFormRoutes(db) {
           INSERT INTO repair_form
             (rf_code, rf_us_id, rf_tt_id, rf_room_id, rf_prop_number,
             rf_problem, rf_detail, rf_phone, rf_urgency, rf_image,
-            rf_user_status, rf_tech_status, rf_create_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'working', NOW())
+            rf_user_status, rf_create_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())
           `;
 
         db.query(
@@ -207,14 +198,14 @@ module.exports = function RepairFormRoutes(db) {
         issue_description,
         urgency,
         phone_number,
-        existing_files, // ไฟล์เดิมที่ต้องการเก็บไว้
+        existing_files,
       } = req.body;
       if (!repair_type_id || !room_id || !problem_detail) {
         return res
           .status(400)
           .json({ message: "ข้อมูลไม่ครบ กรุณากรอกให้ครบทุกช่อง" });
       }
-      // รวมไฟล์เดิมกับไฟล์ใหม่
+
       const existingFilePaths = existing_files
         ? JSON.parse(existing_files)
         : [];
@@ -278,7 +269,7 @@ module.exports = function RepairFormRoutes(db) {
     }
   );
 
-  // สร้างแบบฟอร์มแจ้งซ่อม
+  // สร้างแบบฟอร์มแจ้งซ่อม (JSON only)
   router.post("/repair-requests", express.json(), (req, res) => {
     const {
       us_id,
@@ -296,7 +287,7 @@ module.exports = function RepairFormRoutes(db) {
         .status(400)
         .json({ message: "ข้อมูลไม่ครบ กรุณากรอกให้ครบทุกช่อง" });
     }
-    // สร้างรหัสตามวันที่ เช่น RF20251024-001
+
     const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, "");
     const countQuery = `
       SELECT COUNT(*) AS count FROM repair_form
@@ -310,17 +301,16 @@ module.exports = function RepairFormRoutes(db) {
       }
 
       const todayCount = results[0].count + 1;
-      const runningNumber = String(todayCount).padStart(3, "0"); // เช่น 001
+      const runningNumber = String(todayCount).padStart(3, "0");
       const rfCode = `RF${datePart}${runningNumber}`;
-      // แปลง file_paths เป็น JSON string สำหรับเก็บใน database
       const imageData = file_paths ? JSON.stringify(file_paths) : null;
 
       const insertQuery = `
         INSERT INTO repair_form
         (rf_code, rf_us_id, rf_tt_id, rf_room_id, rf_prop_number,
         rf_problem, rf_detail, rf_phone, rf_urgency, rf_image,
-        rf_user_status, rf_tech_status, rf_create_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'working', NOW())
+        rf_user_status, rf_create_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())
         `;
 
       db.query(
@@ -335,7 +325,7 @@ module.exports = function RepairFormRoutes(db) {
           issue_description,
           phone_number,
           urgency,
-          imageData, // เก็บ file paths เป็น JSON
+          imageData,
         ],
         (err2, results2) => {
           if (err2) {
@@ -352,8 +342,8 @@ module.exports = function RepairFormRoutes(db) {
     });
   });
 
-  // ดึงรายการแจ้งซ่อมทั้งหมด
   router.get("/admin/repairs", authMiddleware, (req, res) => {
+    // แก้ SQL: Join repair_assignment เพื่อหาหัวหน้า (is_lead=1)
     const query = `
       SELECT
         rf.rf_id,
@@ -370,7 +360,9 @@ module.exports = function RepairFormRoutes(db) {
       FROM repair_form rf
       LEFT JOIN user u ON rf.rf_us_id = u.us_id
       LEFT JOIN technician_type tt ON rf.rf_tt_id = tt.tt_id
-      LEFT JOIN user tech ON rf.rf_assigned_tech_id = tech.us_id
+      -- เชื่อมตารางมอบหมายงาน (เอาเฉพาะหัวหน้าทีม)
+      LEFT JOIN repair_assignment ra ON rf.rf_id = ra.ra_rf_id AND ra.ra_is_lead = 1
+      LEFT JOIN user tech ON ra.ra_us_id = tech.us_id
       ORDER BY rf.rf_create_at DESC
     `;
 
@@ -386,7 +378,7 @@ module.exports = function RepairFormRoutes(db) {
     });
   });
 
-  // ดึงรายการแจ้งซ่อมตาม id
+  // ดึงรายการแจ้งซ่อมตาม user id (My Repairs) - ไม่ต้องแก้ SQL เพราะดึงแค่ status ไม่ได้ดึงชื่อช่าง
   router.get("/my-repairs/:userId", (req, res) => {
     const { userId } = req.params;
     const query = `
@@ -419,7 +411,6 @@ module.exports = function RepairFormRoutes(db) {
     });
   });
 
-  // ลบรายการแจ้งซ่อมตาม id
   router.delete("/my-repairs/:code", authMiddleware, (req, res) => {
     const { code } = req.params;
     console.log("ลบฟอร์ม code =", code);
@@ -434,10 +425,6 @@ module.exports = function RepairFormRoutes(db) {
         return res.status(500).json({ message: "เกิดข้อผิดพลาดในระบบ" });
       }
       if (result.affectedRows === 0) {
-        console.warn(
-          "ไม่สามารถลบใบแจ้งซ่อมนี้ได้ (ไม่อยู่ในสถานะรอดำเนินการ):",
-          code
-        );
         return res.status(400).json({
           message:
             "ไม่สามารถลบใบแจ้งซ่อมนี้ได้ เนื่องจากรายการอยู่ระหว่างดำเนินการหรือเสร็จสิ้นแล้ว",
@@ -448,10 +435,10 @@ module.exports = function RepairFormRoutes(db) {
     });
   });
 
-  // ดึงรายละเอียดใบแจ้งซ่อมตาม code/รหัสใบแจ้งซ่อม
   router.get("/repair-requests/:code", (req, res) => {
     const { code } = req.params;
 
+    // แก้ SQL: Join repair_assignment เพื่อหาหัวหน้า
     const sql = `
       SELECT
         rf.rf_code,
@@ -463,7 +450,6 @@ module.exports = function RepairFormRoutes(db) {
         rf.rf_in_process_at,
         rf.rf_done_at,
         rf.rf_user_status,
-        rf.rf_tech_status,
         rf.rf_prop_number,
         rf.rf_image,
   
@@ -482,7 +468,7 @@ module.exports = function RepairFormRoutes(db) {
         u.us_phone AS reporter_phone,
         u.us_department AS reporter_department,
   
-        -- ผู้รับผิดชอบงานหลัก (ช่าง)
+        -- ผู้รับผิดชอบงานหลัก (หัวหน้าทีม)
         tech.us_id AS main_technician_id,
         CONCAT(tn_tech.ttn_title_th, tech.us_first_name_th, ' ', tech.us_last_name_th) AS main_technician_name,
         tt_tech.tt_name AS main_technician_position
@@ -497,8 +483,9 @@ module.exports = function RepairFormRoutes(db) {
       LEFT JOIN user u ON rf.rf_us_id = u.us_id
       LEFT JOIN title_name tn ON u.us_ttn_id = tn.ttn_id
   
-      -- ผู้รับผิดชอบงานหลัก (ช่างที่ถูก assign)
-      LEFT JOIN user tech ON rf.rf_assigned_tech_id = tech.us_id
+      -- เชื่อมตารางมอบหมายงาน (เฉพาะหัวหน้า)
+      LEFT JOIN repair_assignment ra ON rf.rf_id = ra.ra_rf_id AND ra.ra_is_lead = 1
+      LEFT JOIN user tech ON ra.ra_us_id = tech.us_id
       LEFT JOIN title_name tn_tech ON tech.us_ttn_id = tn_tech.ttn_id
       LEFT JOIN technician_type tt_tech ON tech.us_tt_id = tt_tech.tt_id
   
@@ -522,14 +509,12 @@ module.exports = function RepairFormRoutes(db) {
         rf_problem: r.rf_problem || "-",
         rf_urgency: r.rf_urgency || "medium",
         rf_user_status: r.rf_user_status || "-",
-        rf_tech_status: r.rf_tech_status || "-",
         rf_phone: r.rf_phone || "-",
         rf_create_at: r.rf_create_at || "-",
         rf_in_process_at: r.rf_in_process_at || null,
         rf_done_at: r.rf_done_at || null,
         rf_prop_number: r.rf_prop_number || "-",
-        rf_image: r.rf_image ? JSON.parse(r.rf_image) : null, // Parse JSON เป็น array
-        // id + name สถานที่/ประเภท
+        rf_image: r.rf_image ? JSON.parse(r.rf_image) : null,
         repair_type_id: r.repair_type_id || null,
         repair_type_name: r.repair_type_name || "-",
         building_id: r.building_id || null,
@@ -538,20 +523,17 @@ module.exports = function RepairFormRoutes(db) {
         floor_name: r.floor_name || "-",
         room_id: r.room_id || null,
         room_name: r.room_name || "-",
-        // ผู้แจ้ง
         reporter: {
           name: r.reporter_name || "-",
           phone: r.reporter_phone || "-",
           department: r.reporter_department || "-",
         },
-        // ผู้รับผิดชอบงานหลัก (สำหรับหน้า detail)
         main_technician: r.main_technician_name || "-",
         tech_position: r.main_technician_position || "-",
       });
     });
   });
 
-  // แก้ไขรายละเอียดใบแจ้งซ่อมตาม code/รหัสใบแจ้งซ่อม
   router.put("/repair-requests/:code", (req, res) => {
     const { code } = req.params;
     const {
@@ -563,14 +545,13 @@ module.exports = function RepairFormRoutes(db) {
       issue_description,
       urgency,
       phone_number,
-      file_paths, // เพิ่มรองรับการอัพเดตไฟล์
+      file_paths,
     } = req.body;
     if (!repair_type_id || !room_id || !problem_detail) {
       return res
         .status(400)
         .json({ message: "ข้อมูลไม่ครบ กรุณากรอกให้ครบทุกช่อง" });
     }
-    // จัดการไฟล์ที่อัพเดต
     const imageData = file_paths ? JSON.stringify(file_paths) : null;
 
     const sql = `
@@ -620,13 +601,13 @@ module.exports = function RepairFormRoutes(db) {
     });
   });
 
-  // มอบหมายงานให้ช่าง
   router.post("/assign-repair", authMiddleware, (req, res) => {
     const { rf_code, technician_id } = req.body;
     if (!rf_code || !technician_id) {
       return res.status(400).json({ message: "ข้อมูลไม่ครบถ้วน" });
     }
-    // ตรวจสอบว่าช่างมีอยู่จริงและเป็น role 'Technician'
+
+    // 1. ตรวจสอบช่าง
     const techQuery = `
     SELECT u.us_tt_id, u.us_role_id, r.role_name
     FROM user u
@@ -646,36 +627,60 @@ module.exports = function RepairFormRoutes(db) {
         return res.status(400).json({ message: "ผู้ใช้นี้ไม่ใช่ช่าง" });
       }
       const techTypeId = tech.us_tt_id;
-      // อัปเดตรายการแจ้งซ่อมโดยใช้ rf_code
-      const updateQuery = `
-    UPDATE repair_form
-    SET 
-      rf_tt_id = ?,
-      rf_assigned_tech_id = ?,
-      rf_user_status = 'in_progress',
-      rf_in_process_at = IF(rf_in_process_at IS NULL, NOW(), rf_in_process_at),
-      rf_update_at = NOW()
-    WHERE rf_code = ?
-      AND rf_user_status = 'pending'
-      `;
 
+      // 2. หา rf_id จาก rf_code ก่อน (เพราะ assignment ต้องใช้ id)
       db.query(
-        updateQuery,
-        [techTypeId, technician_id, rf_code],
-        (err2, result) => {
-          if (err2) {
-            console.error("Error updating repair_form:", err2);
-            return res.status(500).json({ message: "มอบหมายงานไม่สำเร็จ" });
+        "SELECT rf_id FROM repair_form WHERE rf_code = ?",
+        [rf_code],
+        (errRf, resRf) => {
+          if (errRf || resRf.length === 0) {
+            return res.status(404).json({ message: "ไม่พบใบแจ้งซ่อม" });
           }
-          if (result.affectedRows === 0) {
-            return res
-              .status(404)
-              .json({ message: "ไม่พบรายการหรือมอบหมายแล้ว" });
-          }
-          console.log(
-            `มอบหมายใบแจ้งซ่อม ${rf_code} ให้ช่าง ID ${technician_id}`
-          );
-          res.json({ message: "มอบหมายงานสำเร็จ" });
+          const rfId = resRf[0].rf_id;
+
+          // 3. เริ่ม Transaction หรือทำงานเป็นลำดับ
+          // A. อัปเดตประเภทงานใน repair_form (ตามประเภทของช่าง)
+          const updateFormQuery = `
+            UPDATE repair_form
+            SET rf_tt_id = ?, rf_update_at = NOW()
+            WHERE rf_id = ?
+          `;
+          db.query(updateFormQuery, [techTypeId, rfId], (errUp) => {
+            if (errUp) {
+              console.error("Error updating rf_tt_id:", errUp);
+            }
+
+            // B. ล้างคนเก่าออกก่อน (เพื่อให้ Assign ใหม่ได้สะดวก หรือจะใช้ Logic อื่นก็ได้)
+            // ในที่นี้สมมติว่าถ้า Assign ใหม่ ให้ลบ Assignments เก่าออกให้หมด เพื่อ Set ทีมใหม่
+            db.query(
+              "DELETE FROM repair_assignment WHERE ra_rf_id = ?",
+              [rfId],
+              (errDel) => {
+                if (errDel) {
+                  console.error("Error clearing old assignments:", errDel);
+                }
+
+                // C. Insert ลง repair_assignment (ตั้งเป็น Lead)
+                const insertAssign = `
+                  INSERT INTO repair_assignment (ra_rf_id, ra_us_id, ra_is_lead, ra_assigned_at)
+                  VALUES (?, ?, 1, NOW())
+                `;
+                db.query(insertAssign, [rfId, technician_id], (errIns) => {
+                  if (errIns) {
+                    console.error("Error inserting assignment:", errIns);
+                    return res
+                      .status(500)
+                      .json({ message: "มอบหมายงานไม่สำเร็จ" });
+                  }
+
+                  console.log(
+                    `มอบหมายใบแจ้งซ่อม ${rf_code} (ID: ${rfId}) ให้ช่าง ID ${technician_id}`
+                  );
+                  res.json({ message: "มอบหมายงานสำเร็จ" });
+                });
+              }
+            );
+          });
         }
       );
     });

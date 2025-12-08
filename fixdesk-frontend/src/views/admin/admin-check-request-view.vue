@@ -7,7 +7,6 @@ import Swal from 'sweetalert2'
 const router = useRouter()
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
 
-/* Helper สำหรับแนบ Token */
 const getAuthHeaders = () => {
   const token = localStorage.getItem('token') || sessionStorage.getItem('token')
   return {
@@ -73,18 +72,17 @@ async function fetchAllRepairs() {
         }[r.rf_user_status] || '-'
 
       const createdAt = new Date(r.rf_create_at)
+      const isAssigned = !!r.rf_assigned_tech_id
 
       return {
-        // raw
         date: createdAt,
         code: r.rf_code,
         requester: `${r.us_first_name} ${r.us_last_name}`,
         department: r.department_name || '-',
         type: r.tt_name || '-',
-        urgencyKey: r.rf_urgency,      // 'low' | 'medium' | 'high'
-        statusKey: r.rf_user_status,   // 'pending' | 'in_progress' | 'done'
-
-        // for display
+        urgencyKey: r.rf_urgency,
+        statusKey: r.rf_user_status,
+        assigned: isAssigned,
         dateDisplay: createdAt.toLocaleDateString('th-TH'),
         urgencyBadge,
         statusBadge,
@@ -103,41 +101,56 @@ const filteredRows = computed(() => {
 
   return rows.value
     .filter((r) => {
-      // ค้นหาตาม code / ผู้แจ้ง / ประเภท
       const matchSearch =
         r.code.toLowerCase().includes(q) ||
         r.requester.toLowerCase().includes(q) ||
         r.type.toLowerCase().includes(q)
 
-      // ความเร่งด่วน
       const matchUrgency =
-        selectedUrgencies.value.length === 0 ||
-        selectedUrgencies.value.includes(r.urgencyKey)
-
-      // สถานะ
+        selectedUrgencies.value.length === 0 || selectedUrgencies.value.includes(r.urgencyKey)
       const matchStatus =
-        selectedStatuses.value.length === 0 ||
-        selectedStatuses.value.includes(r.statusKey)
-
-      // วันที่ (เทียบแบบตัดเวลาออก เหลือแค่วัน)
-      const matchDate =
-        !selectedDateObj ||
-        r.date.toDateString() === selectedDateObj.toDateString()
+        selectedStatuses.value.length === 0 || selectedStatuses.value.includes(r.statusKey)
+      const matchDate = !selectedDateObj || r.date.toDateString() === selectedDateObj.toDateString()
 
       return matchSearch && matchUrgency && matchStatus && matchDate
     })
     .map((r) => [
-      r.dateDisplay,     // วันที่
-      r.code,            // ใบแจ้งซ่อม
-      r.requester,       // ชื่อผู้แจ้ง
-      r.type,            // ประเภท
-      r.department,      // หน่วยงาน
-      r.urgencyBadge,    // ความเร่งด่วน
-      r.statusBadge,     // สถานะงาน
-      'actions',         // การดำเนินการ
+      r.dateDisplay,
+      r.code,
+      r.requester,
+      r.type,
+      r.department,
+      r.urgencyBadge,
+      r.statusBadge,
+      'actions',
     ])
 })
 
+// Functions for Filters
+function toggleStatusFilter() {
+  showStatusFilter.value = !showStatusFilter.value
+  if (showStatusFilter.value) {
+    showUrgencyFilter.value = false
+  }
+}
+
+function toggleUrgencyFilter() {
+  showUrgencyFilter.value = !showUrgencyFilter.value
+  if (showUrgencyFilter.value) {
+    showStatusFilter.value = false
+  }
+}
+
+// Toggle สำหรับ Filter ใน Popup
+function toggleAssignTypeFilter() {
+  showAssignTypeFilter.value = !showAssignTypeFilter.value
+}
+
+// เลือกประเภทช่างใน Popup
+function selectAssignType(typeName) {
+  selectedType.value = typeName
+  showAssignTypeFilter.value = false
+}
 
 function clearFilters() {
   selectedStatuses.value = []
@@ -147,9 +160,11 @@ function clearFilters() {
 }
 
 function closeDropdown(e) {
+  // ปิดทุก Dropdown ถ้าคลิกข้างนอก
   if (!e.target.closest('.relative')) {
     showStatusFilter.value = false
     showUrgencyFilter.value = false
+    showAssignTypeFilter.value = false // ปิดตัวใน Popup ด้วย
   }
 }
 
@@ -170,7 +185,7 @@ async function handleAssign(code) {
   }
 }
 
-//🧩 Popup มอบหมายงาน
+// Popup มอบหมายงาน
 const showAssignPopup = ref(false)
 const technicians = ref([])
 const technicianTypes = ref([])
@@ -179,11 +194,16 @@ const searchTech = ref('')
 const selectedTechnician = ref(null)
 const selectedRepairId = ref(null)
 const loadingAssign = ref(false)
+const showAssignTypeFilter = ref(false) // ตัวแปรควบคุม Dropdown ใน Popup
 
 /* เปิด popup */
 function openAssignPopup(repairId) {
   selectedRepairId.value = repairId
   showAssignPopup.value = true
+  // Reset filter
+  selectedType.value = ''
+  searchTech.value = ''
+  showAssignTypeFilter.value = false
   fetchTechnicians()
 }
 
@@ -193,6 +213,7 @@ function closeAssignPopup() {
   selectedTechnician.value = null
   selectedType.value = ''
   searchTech.value = ''
+  showAssignTypeFilter.value = false
 }
 
 /* ดึงข้อมูลช่างทั้งหมด */
@@ -225,6 +246,7 @@ async function confirmAssign() {
     Swal.fire('กรุณาเลือกช่าง', '', 'warning')
     return
   }
+
   loadingAssign.value = true
   try {
     const res = await fetch(`${API_BASE}/assign-repair`, {
@@ -236,12 +258,32 @@ async function confirmAssign() {
       }),
     })
 
+    const resBody = await res.json()
+
+    // เคส backend บอกว่ามอบหมายแล้ว
     if (!res.ok) {
-      const error = await res.json()
-      throw new Error(error.message || 'มอบหมายงานไม่สำเร็จ')
+      const msg = resBody.message || 'มอบหมายงานไม่สำเร็จ'
+      if (msg.includes('มอบหมายแล้ว') || msg.includes('ถูกมอบหมายแล้ว')) {
+        const target = rows.value.find((r) => r.code === selectedRepairId.value)
+        if (target) {
+          target.assigned = true
+          rows.value = [...rows.value]
+        }
+        Swal.fire('แจ้งเตือน', msg, 'info')
+        closeAssignPopup()
+        return
+      }
+      throw new Error(msg)
     }
 
     await fetchAllRepairs()
+
+    const target = rows.value.find((r) => r.code === selectedRepairId.value)
+    if (target) {
+      target.assigned = true
+    }
+    rows.value = [...rows.value]
+
     Swal.fire('สำเร็จ', 'มอบหมายงานเรียบร้อยแล้ว', 'success')
     closeAssignPopup()
   } catch (err) {
@@ -259,10 +301,8 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
 </script>
 
 <template>
-  <!-- ตาราง -->
   <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-7xl">
     <h1 class="text-xl font-bold text-back mb-6">ตรวจสอบคำร้องแจ้งซ่อมทั้งหมด</h1>
-     <!-- ฟิลเตอร์ -->
     <div class="flex flex-wrap items-center gap-3 mb-6">
       <input
         v-model="searchQuery"
@@ -275,10 +315,9 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
         type="date"
         class="h-10 px-3 text-gray-700 bg-white border border-gray-300 rounded-lg"
       />
-      <!-- สถานะ -->
       <div class="relative">
         <button
-          @click.stop="showStatusFilter = !showStatusFilter"
+          @click.stop="toggleStatusFilter"
           class="flex items-center gap-1 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg"
         >
           สถานะ
@@ -321,10 +360,9 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
           </label>
         </div>
       </div>
-      <!-- ความเร่งด่วน -->
       <div class="relative">
         <button
-          @click.stop="showUrgencyFilter = !showUrgencyFilter"
+          @click.stop="toggleUrgencyFilter"
           class="flex items-center gap-1 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg"
         >
           ความเร่งด่วน
@@ -367,7 +405,6 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
           </label>
         </div>
       </div>
-      <!-- ปุ่มล้าง -->
       <transition name="fade">
         <button
           v-if="selectedStatuses.length || selectedUrgencies.length || searchQuery"
@@ -381,20 +418,20 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
     <TableComponent
       :columns="columns"
       :rows="filteredRows"
+      :raw-rows="rows"
       :perPage="10"
       mode="assign"
       @detail="goToDetail"
       @assign="openAssignPopup"
     />
   </div>
-  <!-- Popup มอบหมายงาน -->
+
   <div
     v-if="showAssignPopup"
     class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40"
   >
-    <div class="bg-white rounded-xl shadow-lg w-full max-w-lg p-6 relative">
-      <h2 class="text-xl font-semibold mb-4 text-blue-700">มอบหมายงานให้ผู้รับผิดชอบหลัก</h2>
-      <!-- ปุ่มปิด -->
+    <div class="bg-white rounded-lg shadow-lg w-full max-w-xl p-8 relative">
+      <h2 class="text-lg sm:text-xl font-bold text-black mb-6">มอบหมายงานให้ผู้รับผิดชอบหลัก</h2>
       <button
         @click="closeAssignPopup"
         class="absolute text-lg text-gray-500 top-4 right-4 hover:text-gray-700"
@@ -402,24 +439,53 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
         ✕
       </button>
 
-      <!-- ประเภทช่าง -->
-      <select
-        v-model="selectedType"
-        class="w-full px-3 py-2 mb-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 focus:outline-none"
-      >
-        <option value="">ประเภทช่างทั้งหมด</option>
-        <option v-for="type in technicianTypes" :key="type.tt_id" :value="type.tt_name">
-          {{ type.tt_name }}
-        </option>
-      </select>
-      <!-- ช่องค้นหา -->
-      <input
-        v-model="searchTech"
-        type="text"
-        placeholder="ค้นหาช่าง..."
-        class="w-full px-3 py-2 mb-4 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 focus:outline-none"
-      />
-      <!-- รายชื่อช่าง -->
+      <div class="flex flex-col sm:flex-row gap-3 mb-4">
+        <div class="relative w-full sm:w-1/2">
+          <button
+            @click.stop="toggleAssignTypeFilter"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none flex justify-between items-center bg-white text-gray-700 h-10"
+          >
+            <span class="truncate">{{ selectedType || 'ประเภทช่างทั้งหมด' }}</span>
+            <img
+              src="/icon/sidebar/chevron-down-icon.svg"
+              class="w-4 h-4 opacity-70 transition-transform duration-200 flex-shrink-0"
+              :class="{ 'rotate-180': showAssignTypeFilter }"
+            />
+          </button>
+
+          <div
+            v-if="showAssignTypeFilter"
+            class="absolute z-10 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto mt-1"
+          >
+            <div
+              @click="selectAssignType('')"
+              class="px-4 py-2 cursor-pointer hover:bg-gray-100 text-gray-700 text-sm"
+              :class="{ 'bg-blue-50 text-blue-700': selectedType === '' }"
+            >
+              ประเภทช่างทั้งหมด
+            </div>
+            <div
+              v-for="type in technicianTypes"
+              :key="type.tt_id"
+              @click="selectAssignType(type.tt_name)"
+              class="px-4 py-2 cursor-pointer hover:bg-gray-100 text-gray-700 text-sm"
+              :class="{ 'bg-blue-50 text-blue-700': selectedType === type.tt_name }"
+            >
+              {{ type.tt_name }}
+            </div>
+          </div>
+        </div>
+
+        <div class="w-full sm:w-1/2">
+          <input
+            v-model="searchTech"
+            type="text"
+            placeholder="ค้นหา"
+            class="w-full px-3 py-2 text-gray-700 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 focus:outline-none h-10"
+          />
+        </div>
+      </div>
+
       <div class="space-y-2 overflow-y-auto max-h-60">
         <div
           v-for="tech in filteredTechnicians"
@@ -428,19 +494,18 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
           @click="selectedTechnician = tech.us_id"
         >
           <div class="flex flex-col text-sm">
-            <p class="font-medium text-gray-800">
+            <p class="font-medium text-gray-900 text-base">
               {{ tech.prefix_name || '' }}{{ tech.us_first_name }} {{ tech.us_last_name }}
             </p>
-            <p class="text-gray-600">ประเภท: {{ tech.tt_name || '-' }}</p>
-            <p class="text-gray-600">โทร: {{ tech.us_phone || '-' }}</p>
-            <p class="text-gray-600">หน่วยงาน: {{ tech.us_department || '-' }}</p>
+            <p class="text-gray-700 text-sm">ประเภท: {{ tech.tt_name || '-' }}</p>
+            <p class="text-gray-700 text-sm">โทร: {{ tech.us_phone || '-' }}</p>
           </div>
           <input
             type="radio"
             name="selectedTech"
             :value="tech.us_id"
             v-model.number="selectedTechnician"
-            class="w-5 h-5 mt-2 cursor-pointer accent-blue-600"
+            class="w-5 h-5 mt-5 cursor-pointer border-2 border-[#1E48D1] accent-[#1E48D1]"
           />
         </div>
 
@@ -449,7 +514,6 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
         </p>
       </div>
 
-      <!-- ปุ่มล่าง -->
       <div class="flex justify-end gap-3 mt-6">
         <button
           @click="closeAssignPopup"
@@ -460,7 +524,7 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
         <button
           @click="confirmAssign"
           :disabled="!selectedTechnician || loadingAssign"
-          class="px-5 py-2 font-medium text-white transition bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
+          class="px-5 py-2 font-medium text-white transition bg-[#1E48D1] rounded-md hover:bg-blue-900 disabled:opacity-50"
         >
           {{ loadingAssign ? 'กำลังมอบหมาย...' : 'ยืนยัน' }}
         </button>
@@ -477,5 +541,16 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+/* สไตล์สำหรับ Scrollbar ใน Dropdown */
+.overflow-y-auto::-webkit-scrollbar {
+  width: 6px;
+}
+.overflow-y-auto::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+.overflow-y-auto::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
 }
 </style>
