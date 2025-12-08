@@ -37,9 +37,7 @@ const columns = [
   'ตัวดำเนินการ',
 ]
 
-const router = useRouter()
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
-const isSubmitting = ref(false)
 
 // --- Dropdown หมวดหมู่ ---
 const typeOptions = ref([])
@@ -139,11 +137,11 @@ const validateForm = () => {
 
 
 // 3. File Handling Methods (เพิ่มใหม่)
-const handleDragOver = (e) => {
+const handleDragOver = () => {
   isDragOver.value = true
 }
 
-const handleDragLeave = (e) => {
+const handleDragLeave = () => {
   isDragOver.value = false
 }
 
@@ -180,10 +178,6 @@ const processFile = (files) => {
     size: file.size,
     url: url
   }]
-}
-
-const removeFile = (index) => {
-  filePreview.value = [] // ล้าง Array
 }
 
 // 4. Submit Form

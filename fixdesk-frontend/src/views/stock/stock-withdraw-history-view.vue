@@ -121,10 +121,7 @@ const selectedUrgencies = ref([])
 
           <!-- ปุ่มล้างตัวกรอง -->
           <transition name="fade">
-            <button v-if="selectedStatuses.length || selectedUrgencies.length || selectedTypes.length"
-              @click="clearFilters" class="text-blue-600 hover:text-blue-700 text-sm font-medium">
-              ล้างตัวกรอง
-            </button>
+            
           </transition>
         </div>
       </div>
