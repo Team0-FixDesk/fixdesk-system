@@ -44,7 +44,7 @@ module.exports = function StockRoutes(db) {
     FROM products pd
     LEFT JOIN categories ct ON pd.pd_category_id = ct.ct_id
     LEFT JOIN units un ON pd.pd_unit_id = un.units_id
-    ORDER BY pd.pd_id DESC
+    ORDER BY pd.pd_id ASC;
   `;
 
     db.query(query, (err, results) => {

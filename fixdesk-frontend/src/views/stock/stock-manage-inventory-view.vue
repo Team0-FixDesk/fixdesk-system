@@ -3,6 +3,15 @@ import { ref, onMounted } from 'vue'
 import TableComponent from '@/components/table-component.vue'
 import { useRouter } from 'vue-router'
 import Sweetalert from 'sweetalert2'
+const router = useRouter()
+
+
+function getAuthHeaders() {
+  const token = localStorage.getItem('token') || sessionStorage.getItem('token')
+  return {
+    'Authorization': `Bearer ${token}`,
+  }
+} 
 
 // JWT Decode
 function parseJwt(token) {
@@ -64,6 +73,7 @@ const fetchCategories = async () => {
 // Load categories เมื่อ component mount
 onMounted(() => {
   fetchCategories()
+  fetchAllStock()
 })
 
 // --- Modal State ---
@@ -101,8 +111,43 @@ const itemRequestWaiting = ref(0)
 const itemRequestDeclined = ref(0)
 const itemNewToday = ref(0)
 
-// --- Mock filteredRows ---
+// --- ดึงข้อมูล Table มาแสดง filteredRows ---
 const filteredRows = ref([])
+async function fetchAllStock() {
+  try {
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token')
+    if (!token) {
+      Swal.fire('หมดเวลาเข้าสู่ระบบ', 'กรุณาเข้าสู่ระบบใหม่', 'warning')
+      router.push('/login')
+      return
+    }
+
+    const res = await fetch(`${API_BASE}/show-stock`, { headers: getAuthHeaders() })
+
+    if (res.status === 401) {
+      Swal.fire('หมดเวลาเข้าสู่ระบบ', 'กรุณาเข้าสู่ระบบใหม่', 'warning')
+      sessionStorage.removeItem('token')
+      localStorage.removeItem('token')
+      router.push('/login')
+      return
+    }
+
+    const data = await res.json()
+    filteredRows.value = data.map(item => ([
+      item.pd_id,
+      item.pd_asset_code || '-',   // ← กันข้อมูลหาย
+      item.pd_name,
+      item.ct_name,
+      item.pd_quantity,
+      item.units_name,
+      item.status === 'active' ? 'พร้อมใช้งาน' : 'ไม่พร้อมใช้งาน',
+      ''
+    ]))
+    return
+  } catch (error) {
+    console.error('Error fetching stock data:', error)
+  }
+}
 
 // --- Methods ---
 
@@ -535,7 +580,7 @@ const goToEdit = (id) => console.log('Edit', id)
                 ยกเลิก
               </button>
 
-              <button type="submit" @click="confirmAddItem"
+              <button type="button" @click="confirmAddItem"
                 class="px-8 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded-md transition-colors font-medium shadow-sm text-sm">
                 บันทึก
               </button>
