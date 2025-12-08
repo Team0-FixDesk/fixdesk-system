@@ -4,11 +4,11 @@ import { ref, computed } from 'vue'
 const props = defineProps({
   columns: {
     type: Array,
-    default: () => [],        // ✅ อันนี้คือเพิ่ม
+    default: () => [], // ✅ อันนี้คือเพิ่ม
   },
   rows: {
     type: Array,
-    default: () => [],        // ✅ เพิ่ม
+    default: () => [], // ✅ เพิ่ม
   },
   perPage: {
     type: Number,
@@ -17,14 +17,14 @@ const props = defineProps({
   // mode:
   //  - "full"       : edit/delete
   //  - "assign"     : มอบหมายงาน
-  //  - "technician" : 3 ปุ่ม รับงาน / เปลี่ยนสถานะ / เสร็จสิ้น   ✅ เพิ่มคอมเมนต์ + mode ใหม่
+  //  - "technician" : 3 ปุ่ม รับงาน / เปลี่ยนสถานะ / เสร็จสิ้น
+  //  - "stock"
+
   mode: {
     type: String,
     default: 'full',
   },
 })
-
-
 
 const isPendingStatus = (row) => typeof row[5] === 'string' && row[5].includes('รอดำเนินการ')
 const currentPage = ref(1)
@@ -48,7 +48,6 @@ function prevPage() {
 }
 </script>
 
-
 <template>
   <div class="relative overflow-x-auto">
     <table class="min-w-[640px] w-full text-xs sm:text-sm text-left text-black border-collapse">
@@ -59,7 +58,7 @@ function prevPage() {
           <th
             v-for="(col, i) in props.columns"
             :key="i"
-            v-show="i !== 1"
+            v-show="props.mode === 'stock' ? true : i !== 1"
             class="px-3 py-2 sm:px-6 sm:py-3 text-center"
           >
             {{ col }}
@@ -83,7 +82,10 @@ function prevPage() {
             </th>
 
             <!-- คอลัมน์อื่น -->
-            <td v-else-if="ci !== 1" class="px-3 py-2 sm:px-6 sm:py-4 text-center">
+            <td
+              v-else-if="props.mode === 'stock' ? true : ci !== 1"
+              class="px-3 py-2 sm:px-6 sm:py-4 text-center"
+            >
               <!-- คอลัมน์ action -->
               <div v-if="cell === 'actions'" class="flex justify-center gap-2">
                 <!-- ปุ่มดูรายละเอียด (ใช้ทุกโหมด) -->
@@ -135,9 +137,7 @@ function prevPage() {
                         : 'bg-gray-300 text-gray-400 cursor-not-allowed',
                     ]"
                     :title="
-                      isPendingStatus(row)
-                        ? 'แก้ไข'
-                        : 'ไม่สามารถแก้ไขได้ (สถานะไม่ใช่รอดำเนินการ)'
+                      isPendingStatus(row) ? 'แก้ไข' : 'ไม่สามารถแก้ไขได้ (สถานะไม่ใช่รอดำเนินการ)'
                     "
                     @click="isPendingStatus(row) && $emit('edit', row[1])"
                   >
@@ -152,11 +152,7 @@ function prevPage() {
                         ? 'bg-red-500 hover:bg-red-600 text-white cursor-pointer'
                         : 'bg-gray-300 text-gray-400 cursor-not-allowed',
                     ]"
-                    :title="
-                      isPendingStatus(row)
-                        ? 'ลบ'
-                        : 'ไม่สามารถลบได้ (สถานะไม่ใช่รอดำเนินการ)'
-                    "
+                    :title="isPendingStatus(row) ? 'ลบ' : 'ไม่สามารถลบได้ (สถานะไม่ใช่รอดำเนินการ)'"
                     @click="isPendingStatus(row) && $emit('delete', row[1])"
                   >
                     <img src="/icon/bin-icon.svg" alt="delete" class="w-5 h-5 opacity-90" />
