@@ -23,7 +23,7 @@ module.exports = function TechnicianRoutes(db) {
         WHERE u.us_role_id = 2
         ORDER BY u.us_first_name_th ASC
         `;
-    
+
     db.query(query, (err, results) => {
       if (err) {
         console.error("Error fetching technicians:", err);
@@ -187,20 +187,17 @@ module.exports = function TechnicianRoutes(db) {
       u.us_last_name_th AS us_last_name,
       u.us_department AS department_name,
       tt.tt_name,
-      tech.us_first_name_th AS tech_first_name,
-      tech.us_last_name_th AS tech_last_name,
-      rf.rf_assigned_tech_id AS assigned_tech_id,
       b.bd_name AS building_name,
       f.fl_name AS floor_name,
       r.room_name AS room_name
     FROM repair_form rf
+    JOIN repair_assignment ra ON rf.rf_id = ra.ra_rf_id  -- เพิ่มบรรทัดนี้: เชื่อมตารางมอบหมายงาน
     LEFT JOIN user u ON rf.rf_us_id = u.us_id
     LEFT JOIN technician_type tt ON rf.rf_tt_id = tt.tt_id
-    LEFT JOIN user tech ON rf.rf_assigned_tech_id = tech.us_id
     LEFT JOIN room r ON rf.rf_room_id = r.room_id
     LEFT JOIN floor f ON r.room_fl_id = f.fl_id
     LEFT JOIN building b ON f.fl_bd_id = b.bd_id
-    WHERE rf.rf_assigned_tech_id = ?
+    WHERE ra.ra_us_id = ?  -- แก้ไขบรรทัดนี้: เช็ค ID ช่างจากตาราง assignment แทน
     ORDER BY rf.rf_create_at DESC
     `;
 
