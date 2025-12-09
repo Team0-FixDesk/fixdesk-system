@@ -2,10 +2,26 @@
   <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-8xl">
     <div class="max-w-7xl mx-auto space-y-6">
       <!-- Header -->
-      <div class="flex justify-between items-center mb-6">
-        <div>
-          <h1 class="text-2xl font-bold text-gray-800">Dashboard ผู้บริหาร</h1>
-          <p class="text-sm text-gray-600 mt-1">ภาพรวมการดำเนินงานระบบแจ้งซ่อม</p>
+      <div class="mb-6">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">Dashboard ผู้บริหาร</h1>
+            <p class="text-gray-600 mt-2">ภาพรวมการดำเนินงานระบบแจ้งซ่อม</p>
+          </div>
+
+          <!-- Year Selector -->
+          <div class="flex items-center gap-3">
+            <label class="text-sm font-medium text-gray-700">เลือกปี:</label>
+            <select
+              v-model="selectedYear"
+              @change="updateDashboard"
+              class="px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm"
+            >
+              <option v-for="year in availableYears" :key="year" :value="year">
+                {{ formatYearDisplay(year) }}
+              </option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -29,15 +45,40 @@
 
       <!-- Dashboard Content -->
       <template v-else>
-        <!-- Summary Cards -->
-        <CardHomeComponent :items="summaryCards" />
+        <!-- Summary Cards with Growth Indicators -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+          <div v-for="(card, index) in summaryCards" :key="index" class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm font-medium text-gray-600">{{ card.label }}</p>
+                <p :class="card.colorClass + ' text-2xl font-bold'">{{ card.value }} {{ card.unit }}</p>
+              </div>
+              <div class="text-right">
+                <div v-if="card.growth !== undefined" :class="[
+                  'text-sm font-medium flex items-center',
+                  card.growth > 0 ? 'text-green-600' : card.growth < 0 ? 'text-red-600' : 'text-gray-500'
+                ]">
+                  <span v-if="card.growth > 0">↗</span>
+                  <span v-else-if="card.growth < 0">↘</span>
+                  <span v-else>→</span>
+                  <span class="ml-1">{{ Math.abs(card.growth) }}%</span>
+                </div>
+                <div class="text-xs text-gray-500 mt-1">เทียบปีที่แล้ว</div>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <!-- Charts Section -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <!-- Bar Chart: งานซ่อมแต่ละเดือน -->
           <div class="bg-white rounded-lg shadow p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">งานซ่อมรายเดือน</h3>
-            <v-chart class="w-full h-80" :option="monthlyRepairOption" autoresize />
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">งานซ่อมรายเดือน - {{ formatYearDisplay(selectedYear) }}</h3>
+            <v-chart
+              class="w-full h-80"
+              :option="monthlyRepairOption"
+              autoresize
+            />
           </div>
 
           <!-- Pie Chart: สถานะงานซ่อม -->
@@ -85,12 +126,18 @@ const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
 const isLoading = ref(true)
 const error = ref(null)
 
-// Summary Cards Data
+// Year Selection & Data Management
+const selectedYear = ref(new Date().getFullYear())
+const allRepairs = ref([])
+const allTechTypes = ref([])
+const availableYears = ref([])
+
+// Summary Cards Data with Growth Indicators
 const summaryCards = ref([
-  { value: 0, label: 'งานซ่อมทั้งหมด', colorClass: 'text-blue-600', unit: 'งาน' },
-  { value: 0, label: 'รอดำเนินการ', colorClass: 'text-orange-500', unit: 'งาน' },
-  { value: 0, label: 'กำลังซ่อม', colorClass: 'text-yellow-500', unit: 'งาน' },
-  { value: 0, label: 'เสร็จสิ้น', colorClass: 'text-green-600', unit: 'งาน' },
+  { value: 0, label: 'งานซ่อมทั้งหมด', colorClass: 'text-blue-600', unit: 'งาน', growth: 0 },
+  { value: 0, label: 'รอดำเนินการ', colorClass: 'text-orange-500', unit: 'งาน', growth: 0 },
+  { value: 0, label: 'กำลังดำเนินการ', colorClass: 'text-yellow-500', unit: 'งาน', growth: 0 },
+  { value: 0, label: 'เสร็จสิ้น', colorClass: 'text-green-600', unit: 'งาน', growth: 0 }
 ])
 
 // Monthly Repair Bar Chart
@@ -369,6 +416,36 @@ const departmentBarOption = ref({
   ],
 })
 
+// Year Management Functions
+const formatYearDisplay = (year) => {
+  const buddhistYear = year + 543
+  return `ปี ${buddhistYear} (${year})`
+}
+
+const updateDashboard = () => {
+  console.log('🔄 updateDashboard called, selectedYear:', selectedYear.value)
+  if (allRepairs.value.length > 0) {
+    // Filter repairs for selected year
+    const currentYearRepairs = allRepairs.value.filter(repair => {
+      return new Date(repair.rf_create_at).getFullYear() === selectedYear.value
+    })
+    console.log('📈 Current year repairs:', currentYearRepairs.length)
+
+    // Calculate previous year data for growth indicators
+    const previousYearRepairs = allRepairs.value.filter(repair => {
+      return new Date(repair.rf_create_at).getFullYear() === selectedYear.value - 1
+    })
+    console.log('📉 Previous year repairs:', previousYearRepairs.length)
+
+    processDashboardData(currentYearRepairs, allTechTypes.value, previousYearRepairs)
+  }
+}
+
+const calculateGrowth = (current, previous) => {
+  if (previous === 0) return current > 0 ? 100 : 0
+  return Math.round(((current - previous) / previous) * 100)
+}
+
 // Build authorization headers for API requests
 const getAuthHeaders = () => {
   const token = localStorage.getItem('token') || sessionStorage.getItem('token')
@@ -406,18 +483,31 @@ async function fetchTechnicianTypes() {
 }
 
 // Process and update dashboard data
-function processDashboardData(repairs, techTypes) {
-  // Update summary cards - ข้อมูลมาจาก API จริงแล้ว
+function processDashboardData(repairs, techTypes, previousYearRepairs = []) {
+  // Update summary cards with growth calculation
   const totalRepairs = repairs.length
-  // NEED VALIDATION: ตรวจสอบว่า rf_user_status ใน DB เป็นค่าอะไรบ้าง
-  const pendingRepairs = repairs.filter((r) => r.rf_user_status === 'pending').length
-  const inProgressRepairs = repairs.filter((r) => r.rf_user_status === 'in_progress').length
-  const completedRepairs = repairs.filter((r) => r.rf_user_status === 'done').length
+  const pendingRepairs = repairs.filter(r => r.rf_user_status === 'pending').length
+  const inProgressRepairs = repairs.filter(r => r.rf_user_status === 'in_progress').length
+  const completedRepairs = repairs.filter(r => r.rf_user_status === 'done').length
 
+  // Previous year data for growth calculation
+  const prevTotalRepairs = previousYearRepairs.length
+  const prevPendingRepairs = previousYearRepairs.filter(r => r.rf_user_status === 'pending').length
+  const prevInProgressRepairs = previousYearRepairs.filter(r => r.rf_user_status === 'in_progress').length
+  const prevCompletedRepairs = previousYearRepairs.filter(r => r.rf_user_status === 'done').length
+
+  // Update summary cards with growth indicators
   summaryCards.value[0].value = totalRepairs
+  summaryCards.value[0].growth = calculateGrowth(totalRepairs, prevTotalRepairs)
+
   summaryCards.value[1].value = pendingRepairs
+  summaryCards.value[1].growth = calculateGrowth(pendingRepairs, prevPendingRepairs)
+
   summaryCards.value[2].value = inProgressRepairs
+  summaryCards.value[2].growth = calculateGrowth(inProgressRepairs, prevInProgressRepairs)
+
   summaryCards.value[3].value = completedRepairs
+  summaryCards.value[3].growth = calculateGrowth(completedRepairs, prevCompletedRepairs)
 
   // Update status pie chart
   statusPieOption.value.series[0].data = [
@@ -428,8 +518,20 @@ function processDashboardData(repairs, techTypes) {
 
   // Process monthly data
   const monthlyData = processMonthlyData(repairs)
-  monthlyRepairOption.value.series[0].data = monthlyData.values
-  monthlyRepairOption.value.xAxis.data = monthlyData.labels
+  console.log('Updating monthly chart with:', monthlyData)
+
+  // Force update chart options
+  monthlyRepairOption.value = {
+    ...monthlyRepairOption.value,
+    xAxis: {
+      ...monthlyRepairOption.value.xAxis,
+      data: monthlyData.labels
+    },
+    series: [{
+      ...monthlyRepairOption.value.series[0],
+      data: monthlyData.values
+    }]
+  }
 
   // Process daily trend (last 7 days)
   const dailyData = processDailyTrend(repairs)
@@ -446,36 +548,29 @@ function processDashboardData(repairs, techTypes) {
 }
 
 function processMonthlyData(repairs) {
-  // MOCKUP: ใช้ชื่อเดือนแบบคงที่ อาจต้อง dynamic ตาม locale
-  const months = [
-    'ม.ค.',
-    'ก.พ.',
-    'มี.ค.',
-    'เม.ย.',
-    'พ.ค.',
-    'มิ.ย.',
-    'ก.ค.',
-    'ส.ค.',
-    'ก.ย.',
-    'ต.ค.',
-    'พ.ย.',
-    'ธ.ค.',
-  ]
-  // API READY: การคำนวณปีปัจจุบันทำงานดีแล้ว
-  const currentYear = new Date().getFullYear()
-  const monthlyCount = new Array(12).fill(0)
+  // แสดงข้อมูลตามปีที่เลือก (ไม่ใช่ rolling 12 เดือน)
+  const monthNames = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
+                     'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
 
-  repairs.forEach((repair) => {
-    const date = new Date(repair.rf_create_at)
-    if (date.getFullYear() === currentYear) {
-      monthlyCount[date.getMonth()]++
-    }
-  })
+  const monthlyData = []
+  const labels = []
 
-  return {
-    labels: months.slice(0, new Date().getMonth() + 1),
-    values: monthlyCount.slice(0, new Date().getMonth() + 1),
+  console.log('processMonthlyData - repairs for year', selectedYear.value, ':', repairs.length)
+
+  // แสดงทุกเดือนของปีที่เลือก (ม.ค. - ธ.ค.)
+  for (let month = 0; month < 12; month++) {
+    // นับงานในเดือนนั้นๆ ของปีที่เลือก
+    const count = repairs.filter(repair => {
+      const repairDate = new Date(repair.rf_create_at)
+      return repairDate.getFullYear() === selectedYear.value && repairDate.getMonth() === month
+    }).length
+
+    monthlyData.push(count)
+    labels.push(monthNames[month])
   }
+
+  console.log('Monthly data result:', { labels, values: monthlyData })
+  return { labels, values: monthlyData }
 }
 
 function processDailyTrend(repairs) {
@@ -529,7 +624,24 @@ async function fetchDashboardData() {
 
     const [repairs, techTypes] = await Promise.all([fetchRepairData(), fetchTechnicianTypes()])
 
-    processDashboardData(repairs, techTypes)
+    // เก็บข้อมูลทั้งหมดไว้สำหรับ filter และ growth calculation
+    allRepairs.value = repairs
+    allTechTypes.value = techTypes
+
+    // สร้าง availableYears จากข้อมูลจริง
+    const years = new Set()
+    repairs.forEach(repair => {
+      const year = new Date(repair.rf_create_at).getFullYear()
+      years.add(year)
+    })
+    availableYears.value = Array.from(years).sort((a, b) => b - a) // เรียงใหม่ -> เก่า
+
+    // ตั้งปีเริ่มต้นเป็นปีล่าสุดที่มีข้อมูล
+    if (availableYears.value.length > 0) {
+      selectedYear.value = availableYears.value[0]
+    }
+
+    updateDashboard()
   } catch (err) {
     console.error('Error fetching dashboard data:', err)
     error.value = 'ไม่สามารถโหลดข้อมูลได้ กรุณาลองใหม่อีกครั้ง'

@@ -196,6 +196,8 @@ function buildTimelineFromRepair(repairData) {
     }
   })
 
+  // ในฟังก์ชัน buildTimelineFromRepair ของไฟล์แรก
+
   statusConfigs.forEach((status, index) => {
     const isReached = index <= lastReachedIndex
     const isCurrent = index === lastReachedIndex
@@ -217,7 +219,9 @@ function buildTimelineFromRepair(repairData) {
     timelineSteps.push({
       displayTime: repairData[status.key] ? formatDateTimeTH(repairData[status.key]) : null,
       title: status.title,
-      description: status.description,
+
+      description: isReached ? status.description : null,
+
       stepState,
     })
   })

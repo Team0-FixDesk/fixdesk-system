@@ -1,8 +1,11 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router' // เพิ่ม router
 import Swal from 'sweetalert2'
+
 defineOptions({ name: 'AdminManageLocationView' })
 
+const router = useRouter() // เรียกใช้ router
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
 
 // Helper function to get auth headers
@@ -12,6 +15,24 @@ const getAuthHeaders = () => {
     'Content-Type': 'application/json',
     Authorization: `Bearer ${token}`,
   }
+}
+
+// ฟังก์ชันสำหรับเช็ค Token หมดอายุ
+const handleAuthError = (status) => {
+  if (status === 401) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'หมดเวลาเข้าสู่ระบบ',
+      text: 'กรุณาเข้าสู่ระบบใหม่',
+      confirmButtonText: 'ตกลง',
+    }).then(() => {
+      localStorage.removeItem('token')
+      sessionStorage.removeItem('token')
+      router.push('/login')
+    })
+    return true
+  }
+  return false
 }
 
 const buildings = ref([])
@@ -96,10 +117,12 @@ function getFieldLabel(fieldName) {
   return labels[fieldName] || ''
 }
 
-// FETCH DATA
+// FETCH DATA (ปรับปรุง: เพิ่ม Header และเช็ค 401)
 async function fetchBuildings() {
   try {
-    const res = await fetch(`${API_BASE}/buildings`)
+    const res = await fetch(`${API_BASE}/buildings`, { headers: getAuthHeaders() }) // เพิ่ม header
+    if (handleAuthError(res.status)) return // เช็ค 401
+
     const data = await res.json()
     buildings.value = data
   } catch (err) {
@@ -109,7 +132,9 @@ async function fetchBuildings() {
 
 async function fetchFloors(buildingId) {
   try {
-    const res = await fetch(`${API_BASE}/floors/${buildingId}`)
+    const res = await fetch(`${API_BASE}/floors/${buildingId}`, { headers: getAuthHeaders() }) // เพิ่ม header
+    if (handleAuthError(res.status)) return
+
     const data = await res.json()
     floors.value = data
   } catch (err) {
@@ -119,7 +144,9 @@ async function fetchFloors(buildingId) {
 
 async function fetchRooms(floorId) {
   try {
-    const res = await fetch(`${API_BASE}/rooms/${floorId}`)
+    const res = await fetch(`${API_BASE}/rooms/${floorId}`, { headers: getAuthHeaders() }) // เพิ่ม header
+    if (handleAuthError(res.status)) return
+
     const data = await res.json()
     rooms.value = data
   } catch (err) {
@@ -287,6 +314,8 @@ async function confirmDelete(item) {
       headers: getAuthHeaders(),
     })
 
+    if (handleAuthError(res.status)) return
+
     const data = await res.json()
 
     if (!res.ok) {
@@ -418,6 +447,8 @@ async function saveLocation() {
       body: JSON.stringify(body),
     })
 
+    if (handleAuthError(res.status)) return
+
     const data = await res.json()
 
     if (!res.ok) {
@@ -515,6 +546,8 @@ async function bulkCreateLocation() {
         body: JSON.stringify({ bd_name: newBuildingName.value.trim() }),
       })
 
+      if (handleAuthError(res.status)) return
+
       const data = await res.json()
 
       if (!res.ok) {
@@ -556,6 +589,8 @@ async function bulkCreateLocation() {
         }),
       })
 
+      if (handleAuthError(res.status)) return
+
       const data = await res.json()
 
       if (!res.ok) {
@@ -595,6 +630,8 @@ async function bulkCreateLocation() {
         room_fl_id: floorId,
       }),
     })
+
+    if (handleAuthError(res.status)) return
 
     const data = await res.json()
 
@@ -655,13 +692,10 @@ onMounted(async () => {
 
 <template>
   <div class="bg-white rounded-xl shadow-md p-12 mx-auto max-w-7xl">
-    <!-- 🔹 หัวข้อ -->
     <h1 class="text-xl font-bold text-blue-700 mb-2">สถานที่ทั้งหมด</h1>
     <p class="text-sm text-gray-600 mb-6">ค้นหาตรองและเรียงลำดับรายการอาคาร ชั้น ห้อง</p>
 
-    <!-- แถบค้นหาและตัวกรอง -->
     <div class="flex items-center gap-3 mb-6">
-      <!-- ช่องค้นหา -->
       <div class="relative flex-1 max-w-xs">
         <input
           v-model="searchQuery"
@@ -689,7 +723,6 @@ onMounted(async () => {
         </button>
       </div>
 
-      <!-- Dropdown เรียงลำดับ -->
       <select
         v-model="sortOrder"
         class="border border-gray-300 rounded-lg px-4 py-2 bg-white focus:ring-2 focus:ring-blue-400 focus:outline-none text-sm"
@@ -698,7 +731,6 @@ onMounted(async () => {
         <option value="ฮ-ก">เรียงตามอักษร ฮ-ก</option>
       </select>
 
-      <!-- Dropdown เลือกอาคาร -->
       <select
         v-model="selectedBuilding"
         @change="handleBuildingChange"
@@ -714,7 +746,6 @@ onMounted(async () => {
         </option>
       </select>
 
-      <!-- Dropdown เลือกชั้น (แสดงเมื่อเลือกอาคารแล้ว) -->
       <select
         v-if="selectedBuilding"
         v-model="selectedFloor"
@@ -727,7 +758,6 @@ onMounted(async () => {
         </option>
       </select>
 
-      <!-- ปุ่มล้างตัวกรอง -->
       <button
         v-if="selectedBuilding || searchQuery"
         @click="handleClearFilters"
@@ -736,7 +766,6 @@ onMounted(async () => {
         ล้างตัวกรอง
       </button>
 
-      <!-- ปุ่มเพิ่มสถานที่ -->
       <button
         @click="handleAdd"
         class="ml-auto flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition text-sm whitespace-nowrap"
@@ -746,7 +775,6 @@ onMounted(async () => {
       </button>
     </div>
 
-    <!-- ตาราง -->
     <div class="overflow-x-auto border border-gray-200 rounded-lg">
       <table class="w-full text-sm text-left text-gray-700 border-collapse">
         <thead class="bg-gray-50 border-b border-gray-200">
@@ -771,7 +799,6 @@ onMounted(async () => {
             <td class="text-center px-6 py-3">-</td>
             <td class="text-center px-6 py-3">
               <div class="flex items-center justify-center gap-2">
-                <!-- ปุ่มแก้ไข -->
                 <button
                   @click="handleEdit(item)"
                   class="flex items-center justify-center w-9 h-8 bg-yellow-400 hover:bg-yellow-500 text-white rounded-lg transition"
@@ -793,7 +820,6 @@ onMounted(async () => {
                   </svg>
                 </button>
 
-                <!-- ปุ่มลบ -->
                 <button
                   @click="handleDelete(item)"
                   class="flex items-center justify-center w-9 h-8 bg-red-500 hover:bg-red-600 text-white rounded-lg transition"
@@ -818,7 +844,6 @@ onMounted(async () => {
             </td>
           </tr>
 
-          <!-- ไม่มีข้อมูล -->
           <tr v-if="paginatedData.length === 0">
             <td colspan="5" class="text-center py-6 text-gray-500">— ไม่พบข้อมูล —</td>
           </tr>
@@ -826,7 +851,6 @@ onMounted(async () => {
       </table>
     </div>
 
-    <!-- Pagination -->
     <div class="flex items-center justify-between mt-4">
       <div class="text-sm text-gray-500">
         Showing {{ startEntry }} to {{ endEntry }} of {{ totalEntries }} entries
@@ -884,7 +908,6 @@ onMounted(async () => {
       </div>
     </div>
 
-    <!-- Modal เพิ่ม/แก้ไขสถานที่ -->
     <div
       v-if="showModal"
       class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50"
@@ -894,7 +917,6 @@ onMounted(async () => {
         class="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-hidden relative"
         @click.stop
       >
-        <!-- Header (ติดด้านบน) -->
         <div
           class="sticky top-0 bg-white z-10 px-4 sm:px-6 pt-4 sm:pt-6 pb-4 border-b border-gray-100"
         >
@@ -911,12 +933,10 @@ onMounted(async () => {
           </div>
         </div>
 
-        <!-- Content (scrollable) -->
         <div
           class="overflow-y-auto px-4 sm:px-6 pb-4 sm:pb-6"
           style="max-height: calc(80vh - 140px)"
         >
-          <!-- Progress Steps (เฉพาะโหมด add) -->
           <div v-if="modalMode === 'add'" class="flex items-center justify-center mb-6 gap-2 pt-4">
             <div class="flex items-center">
               <div
@@ -945,13 +965,10 @@ onMounted(async () => {
             </div>
           </div>
 
-          <!-- Step 1: เลือกประเภท (เฉพาะโหมด add) -->
           <div v-if="modalMode === 'add' && modalStep === 1" class="space-y-4">
             <p class="text-sm text-gray-600 mb-4">คุณต้องการเพิ่มสถานที่แบบไหน?</p>
 
-            <!-- Mode Selection -->
             <div class="space-y-3 mb-6">
-              <!-- Single Level Mode -->
               <label
                 class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400"
                 :class="!bulkCreateMode ? 'border-blue-600 bg-blue-50' : 'border-gray-200'"
@@ -972,7 +989,6 @@ onMounted(async () => {
                 </div>
               </label>
 
-              <!-- Bulk Create Mode -->
               <label
                 class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400"
                 :class="bulkCreateMode ? 'border-blue-600 bg-blue-50' : 'border-gray-200'"
@@ -995,11 +1011,9 @@ onMounted(async () => {
               </label>
             </div>
 
-            <!-- Type Selection (แสดงเมื่อเลือก Single Level Mode) -->
             <div v-if="!bulkCreateMode" class="space-y-3">
               <p class="text-sm font-semibold text-gray-700 mb-2">เลือกประเภท:</p>
 
-              <!-- Option: Building -->
               <label
                 class="flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400"
                 :class="modalType === 'building' ? 'border-blue-600 bg-blue-50' : 'border-gray-200'"
@@ -1018,7 +1032,6 @@ onMounted(async () => {
                 </div>
               </label>
 
-              <!-- Option: Floor -->
               <label
                 class="flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400"
                 :class="modalType === 'floor' ? 'border-blue-600 bg-blue-50' : 'border-gray-200'"
@@ -1037,7 +1050,6 @@ onMounted(async () => {
                 </div>
               </label>
 
-              <!-- Option: Room -->
               <label
                 class="flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400"
                 :class="modalType === 'room' ? 'border-blue-600 bg-blue-50' : 'border-gray-200'"
@@ -1057,7 +1069,6 @@ onMounted(async () => {
               </label>
             </div>
 
-            <!-- Actions for Step 1 -->
             <div class="flex gap-3 mt-6">
               <button
                 @click="closeModal"
@@ -1074,15 +1085,12 @@ onMounted(async () => {
             </div>
           </div>
 
-          <!-- Step 2: กรอกข้อมูล -->
           <div v-if="modalStep === 2" class="space-y-4">
-            <!-- Bulk Create Mode -->
             <div v-if="bulkCreateMode" class="space-y-4">
               <div class="flex items-center gap-2 p-3 bg-blue-50 rounded-lg mb-4">
                 <span class="font-semibold text-blue-800">สร้างหลายระดับพร้อมกัน</span>
               </div>
 
-              <!-- Building Section -->
               <div class="border-2 border-gray-200 rounded-lg p-4 space-y-3">
                 <h3 class="font-semibold text-gray-800 flex items-center gap-2">
                   <span>อาคาร</span>
@@ -1142,7 +1150,6 @@ onMounted(async () => {
                 </div>
               </div>
 
-              <!-- Floor Section -->
               <div class="border-2 border-gray-200 rounded-lg p-4 space-y-3">
                 <h3 class="font-semibold text-gray-800 flex items-center gap-2">
                   <span>ชั้น</span>
@@ -1170,7 +1177,11 @@ onMounted(async () => {
                   class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none disabled:bg-gray-100"
                 >
                   <option value="">-- เลือกชั้น --</option>
-                  <option v-for="floor in floors" :key="floor.floor_id" :value="floor.floor_id">
+                  <option
+                    v-for="floor in floors"
+                    :key="floor.floor_id"
+                    :value="floor.floor_id"
+                  >
                     {{ floor.floor_name }}
                   </option>
                 </select>
@@ -1204,7 +1215,6 @@ onMounted(async () => {
                 </div>
               </div>
 
-              <!-- Room Section -->
               <div class="border-2 border-blue-200 rounded-lg p-4 space-y-3 bg-blue-50">
                 <h3 class="font-semibold text-gray-800 flex items-center gap-2">
                   <span>ห้อง <span class="text-red-500">*</span></span>
@@ -1231,7 +1241,6 @@ onMounted(async () => {
                 <p class="text-xs text-gray-600">ห้องจะถูกสร้างในชั้นที่เลือกหรือสร้างขึ้นมาใหม่</p>
               </div>
 
-              <!-- Actions for Bulk Create -->
               <div class="flex gap-3 mt-6">
                 <button
                   @click="prevStep"
@@ -1248,9 +1257,7 @@ onMounted(async () => {
               </div>
             </div>
 
-            <!-- Single Level Mode (แบบเดิม) -->
             <div v-else>
-              <!-- แสดงประเภทที่เลือก -->
               <div class="flex items-center gap-2 p-3 bg-blue-50 rounded-lg mb-4">
                 <span class="text-2xl">
                   {{ modalType === 'building' ? '' : modalType === 'floor' ? '' : '' }}
@@ -1263,7 +1270,6 @@ onMounted(async () => {
                 </span>
               </div>
 
-              <!-- เลือกอาคาร (สำหรับ floor และ room) -->
               <div v-if="modalType === 'floor' || modalType === 'room'">
                 <label class="block text-sm font-semibold text-gray-700 mb-2">
                   อาคาร <span class="text-red-500">*</span>
@@ -1285,7 +1291,6 @@ onMounted(async () => {
                 </select>
               </div>
 
-              <!-- เลือกชั้น (สำหรับ room) -->
               <div v-if="modalType === 'room'">
                 <label class="block text-sm font-semibold text-gray-700 mb-2">
                   ชั้น <span class="text-red-500">*</span>
@@ -1302,7 +1307,6 @@ onMounted(async () => {
                 </select>
               </div>
 
-              <!-- ชื่อ -->
               <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-2">
                   ชื่อ{{
@@ -1331,7 +1335,6 @@ onMounted(async () => {
                 </div>
               </div>
 
-              <!-- Actions for Single Level -->
               <div class="flex gap-3 mt-6">
                 <button
                   v-if="modalMode === 'add'"
@@ -1358,9 +1361,7 @@ onMounted(async () => {
           </div>
         </div>
 
-        <!-- Footer Actions (ติดด้านล่าง) -->
         <div class="sticky bottom-0 bg-white z-10 px-4 sm:px-6 py-4 border-t border-gray-100">
-          <!-- ย้าย action buttons -->
           <div class="flex gap-3"></div>
         </div>
       </div>
