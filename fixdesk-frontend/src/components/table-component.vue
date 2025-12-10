@@ -14,28 +14,25 @@ const props = defineProps({
     type: Number,
     default: 3,
   },
-  // mode:
-  //  - "full"       : edit/delete
-  //  - "assign"     : มอบหมายงาน
-  //  - "technician" : 3 ปุ่ม รับงาน / เปลี่ยนสถานะ / เสร็จสิ้น
-  //  - "stock"
-
   mode: {
     type: String,
     default: 'full',
   },
-  // rawRows: ข้อมูลดิบแต่ละแถว ใช้ดู meta เช่น assigned, code เป็นต้น
+  // rawRows: ข้อมูลดิบแต่ละแถว (object) — ใช้ดู meta เช่น assigned, code, status เป็นต้น
   rawRows: {
     type: Array,
     default: () => [],
   },
+  // (optional) current logged-in user id — ถ้ามีจะช่วยตรวจ permission เพิ่มเติม
+  currentUserId: {
+    type: [String, Number],
+    default: null,
+  },
 })
 
-const isPendingStatus = (row) => typeof row[5] === 'string' && row[5].includes('รอดำเนินการ')
-
 const currentPage = ref(1)
-const totalEntries = computed(() => props.rows.length)
-const totalPages = computed(() => Math.ceil(totalEntries.value / props.perPage))
+const totalEntries = computed(() => (props.rows || []).length)
+const totalPages = computed(() => Math.max(1, Math.ceil(totalEntries.value / props.perPage)))
 
 const paginatedRows = computed(() => {
   const start = (currentPage.value - 1) * props.perPage
@@ -53,17 +50,126 @@ function prevPage() {
   if (currentPage.value > 1) currentPage.value--
 }
 
-/* หา meta ของแถวจาก rawRows ด้วย rf_code (อยู่ที่คอลัมน์ index 1) */
+/* หา meta ของแถวจาก rawRows ด้วย rf_code หรือ code (รองรับทั้งสองแบบ) */
 function getRowMetaByCode(row) {
-  const code = row[1]
+  const code = row[1] // convention: index 1 = code
   if (!code) return null
-  return props.rawRows.find((item) => item.code === code) || null
+  // rawRows อาจประกอบด้วย objects ที่มี property ต่างกัน เช่น code / rf_code / rfCode
+  return (
+    props.rawRows.find((item) => {
+      if (!item) return false
+      // ถ้า item เป็น array ให้รองรับ index 1 ด้วย
+      if (Array.isArray(item) && item[1] === code) return true
+      if (item.code === code) return true
+      if (item.rf_code === code) return true
+      if (item.rfCode === code) return true
+      if (item.us_user_name && item.us_user_name === code) return true
+      if (item.username && item.username === code) return true
+      if (item.us_id && String(item.us_id) === String(code)) return true
+      if (item.id && String(item.id) === String(code)) return true
+      if (item.rf_code && String(item.rf_code) === String(code)) return true
+      return false
+    }) || null
+  )
 }
 
-/* เช็คว่าแถวนั้นถูกมอบหมายงานแล้วหรือยัง */
+/* ตรวจว่าบัญชี/แถวนี้มีฟอร์มแจ้งซ่อม หรือ assignment ที่เกี่ยวข้องหรือไม่ (frontend guard) */
+function rowHasActiveRepairs(row) {
+  const meta = getRowMetaByCode(row)
+  if (!meta) return false
+
+  // หลายกรณีที่ backend อาจส่งมา -> รองรับหลายชื่อตัวแปร
+  if (meta.has_repairs) return true
+  if (meta.hasActiveRepairs) return !!meta.hasActiveRepairs
+  if (meta.has_active_repairs) return !!meta.has_active_repairs
+  if (typeof meta.repair_count === 'number') return meta.repair_count > 0
+  if (meta.repair_count && Number(meta.repair_count) > 0) return true
+  if (typeof meta.assignment_count === 'number' && meta.assignment_count > 0) return true
+  if (meta.assignment_count && Number(meta.assignment_count) > 0) return true
+  if (Array.isArray(meta.assigned_users) && meta.assigned_users.length > 0) return true
+  if (meta.assigned === true || meta.assigned === 1) return true
+  if (meta.ra_id) return true
+  if (meta.rf_us_id) return true
+  // fallback: any key containing "repair" with truthy value
+  for (const k of Object.keys(meta)) {
+    if (k.toLowerCase().includes('repair') && meta[k]) return true
+    if (k.toLowerCase().includes('assignment') && meta[k]) return true
+  }
+
+  return false
+}
+
+/* เช็คว่าแถวนั้นถูกมอบหมายงานแล้วหรือยัง (จาก rawRows) */
 function isRowAssigned(row) {
   const meta = getRowMetaByCode(row)
-  return !!meta?.assigned
+  if (!meta) return false
+
+  // raw data อาจเก็บชื่อ field ต่างกัน: assigned, ra_id, rf_assigned_tech_id, assigned_to ฯลฯ
+  if (meta.assigned === true || meta.assigned === 1) return true
+  if (meta.ra_id || meta.raId) return true
+  if (meta.rf_assigned_tech_id) return true
+  if (meta.assigned_to) return true
+  if (meta.assigned_users && meta.assigned_users.length > 0) return true
+
+  return false
+}
+
+/* เช็คว่าแถวนั้นหัวหน้าทีมหรือยัง (ra_is_lead === 1) */
+function isRowLeader(row) {
+  const meta = getRowMetaByCode(row)
+  if (!meta) return false
+
+  // บาง backend ใช้ ra_is_lead, บางที่ส่งเป็น object ของ assignment ที่มี is_lead
+  if (meta.ra_is_lead === 1 || meta.ra_is_lead === '1' || meta.ra_is_lead === true) return true
+  if (meta.is_lead === 1 || meta.is_lead === '1' || meta.is_lead === true) return true
+
+  // บางกรณี meta อาจมี array assigned_users ที่เก็บ object {us_id, is_lead}
+  if (Array.isArray(meta.assigned_users)) {
+    const lead = meta.assigned_users.find(
+      (u) => u.is_lead === 1 || u.is_lead === '1' || u.is_lead === true,
+    )
+    if (lead) return true
+  }
+
+  return false
+}
+
+/* เช็คว่าแถวนั้นอยู่ในสถานะ pending (สำหรับ user edit/delete หรือ technician accept) */
+function getRowStatus(row) {
+  const meta = getRowMetaByCode(row)
+  if (meta) return meta.rf_user_status || meta.status
+
+  const statusCell = row[5]
+  if (statusCell?.includes && statusCell?.includes('รอดำเนินการ')) return 'pending'
+  if (statusCell?.includes && statusCell?.includes('กำลังดำเนินการ')) return 'in_progress'
+  if (statusCell?.includes && statusCell?.includes('เสร็จสิ้น')) return 'done'
+
+  return null
+}
+
+const isPendingStatus = (row) => getRowStatus(row) === 'pending'
+
+const baseIconClass = 'w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center rounded-md transition'
+const assignBaseClass =
+  'w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center rounded-md transition'
+
+/* ตรวจ permission แก้ไข: ถ้ามี meta ที่บอกว่า protected/has_repairs -> return false */
+/* ตรวจ permission แก้ไข: ถ้ามี meta ที่บอกว่า protected/has_repairs -> return false
+   รวมถึงถ้าสถานะมีค่าและไม่ใช่ 'pending' จะห้ามแก้ไข/ลบ (ตาม requirement ของหน้า "ของฉัน") */
+function canEditUser(row) {
+  const meta = getRowMetaByCode(row)
+
+  // ถ้ามีสถานะ และสถานะไม่ใช่ pending -> ห้ามแก้ไข/ลบ
+  const status = getRowStatus(row)
+  if (status && status !== 'pending') return false
+
+  if (meta) {
+    if (typeof meta.can_edit !== 'undefined') return !!meta.can_edit
+    if (typeof meta.protected !== 'undefined') return !meta.protected
+    if (meta.role === 'ADMIN' || meta.role === 'admin' || meta.us_role_id === 1) return false
+    if (rowHasActiveRepairs(row)) return false
+  }
+  return true
 }
 </script>
 
@@ -77,7 +183,6 @@ function isRowAssigned(row) {
           <th
             v-for="(col, i) in props.columns"
             :key="i"
-            v-show="props.mode === 'stock' ? true : i !== 1"
             class="px-3 py-2 sm:px-6 sm:py-3 text-center"
           >
             {{ col }}
@@ -92,7 +197,6 @@ function isRowAssigned(row) {
           class="bg-white border-b border-[#E9E9E9] hover:bg-gray-50"
         >
           <template v-for="(cell, ci) in row" :key="ci">
-            <!-- คอลัมน์แรก -->
             <th
               v-if="ci === 0"
               class="px-6 py-4 font-medium text-center text-black whitespace-nowrap"
@@ -100,122 +204,180 @@ function isRowAssigned(row) {
               {{ cell }}
             </th>
 
-            <!-- คอลัมน์อื่น -->
-            <td
-              v-else-if="props.mode === 'stock' ? true : ci !== 1"
-              class="px-3 py-2 sm:px-6 sm:py-4 text-center"
-            >
-              <!-- คอลัมน์ action -->
+            <td v-else class="px-3 py-2 sm:px-6 sm:py-4 text-center">
               <div v-if="cell === 'actions'" class="flex justify-center gap-2">
-                <!-- ปุ่มดูรายละเอียด (ใช้ทุกโหมด) -->
+                <!-- ดูรายละเอียด (แสดงเสมอ) -->
                 <div
-                  class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center bg-[#1E48D1] hover:bg-[#163A9B] text-white rounded-md transition cursor-pointer"
+                  class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center bg-[#1E48D1] hover:bg-[#163A9B] text-white rounded-lg transition cursor-pointer"
                   title="ดูรายละเอียด"
                   @click="$emit('detail', row[1])"
                 >
                   <img src="/icon/info-icon.svg" alt="info" class="w-5 h-5" />
                 </div>
 
-                <!-- โหมด technician -->
-                <template v-if="props.mode === 'technician'">
-                  <!-- 1) pending → ปุ่มรับงาน -->
-                  <button
-                    v-if="row[7] === 'pending'"
-                    class="px-4 py-2 text-xs font-medium text-white bg-[#005a9a] rounded-[8px] shadow-md hover:shadow-lg hover:bg-[#005a9a] transition"
-                    @click="$emit('accept', row[1])"
-                  >
-                    รับงาน
-                  </button>
-
-                  <!-- 2) ไม่ใช่ pending และไม่ใช่ done → เปลี่ยนสถานะ -->
-                  <button
-                    v-else-if="row[7] !== 'done'"
-                    class="px-4 py-2 text-xs font-medium text-white bg-[#FBC02D] rounded-[8px] shadow-md hover:shadow-lg hover:bg-[#F9A825] transition"
-                    @click="$emit('change-status', row[1])"
-                  >
-                    เปลี่ยนสถานะ
-                  </button>
-
-                  <!-- 3) done → แสดงเสร็จสิ้น -->
-                  <span
-                    v-else
-                    class="px-4 py-2 text-xs font-medium text-gray-400 bg-gray-100 rounded-full cursor-default"
-                  >
-                    เสร็จสิ้น
-                  </span>
+                <!-- หากแถวถูกมอบหมายแล้ว AND ไม่ใช่หัวหน้า -> แสดงเฉพาะ detail เท่านั้น -->
+                <template v-if="isRowAssigned(row) && !isRowLeader(row)">
+                  <!-- nothing more here (detail already shown) -->
                 </template>
 
-                <!-- โหมด user -->
-                <template v-else-if="props.mode === 'user'">
-                  <!-- ปุ่มแก้ไข -->
-                  <div
-                    :class="[
-                      'w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center rounded-md transition',
-                      isPendingStatus(row)
-                        ? 'bg-yellow-400 hover:bg-yellow-500 text-white cursor-pointer'
-                        : 'bg-gray-300 text-gray-400 cursor-not-allowed',
-                    ]"
-                    :title="
-                      isPendingStatus(row) ? 'แก้ไข' : 'ไม่สามารถแก้ไขได้ (สถานะไม่ใช่รอดำเนินการ)'
-                    "
-                    @click="isPendingStatus(row) && $emit('edit', row[1])"
-                  >
-                    <img src="/icon/edit-icon.svg" alt="edit" class="w-5 h-5 opacity-90" />
-                  </div>
+                <!-- ถ้ายังไม่ถูกมอบหมาย หรือเป็นหัวหน้า -> แสดงชุดปุ่มตามโหมด -->
+                <template v-else>
+                  <!-- โหมด technician -->
+                  <template v-if="props.mode === 'technician'">
+                    <template v-if="getRowStatus(row) === 'pending'">
+                      <button
+                        class="px-4 py-2 text-xs font-medium text-white bg-[#005a9a] rounded-lg shadow-md hover:shadow-lg transition"
+                        @click="$emit('accept', row[1])"
+                      >
+                        รับงาน
+                      </button>
+                    </template>
 
-                  <!-- ปุ่มลบ -->
-                  <div
-                    :class="[
-                      'w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center rounded-md transition',
-                      isPendingStatus(row)
-                        ? 'bg-red-500 hover:bg-red-600 text-white cursor-pointer'
-                        : 'bg-gray-300 text-gray-400 cursor-not-allowed',
-                    ]"
-                    :title="isPendingStatus(row) ? 'ลบ' : 'ไม่สามารถลบได้ (สถานะไม่ใช่รอดำเนินการ)'"
-                    @click="isPendingStatus(row) && $emit('delete', row[1])"
-                  >
-                    <img src="/icon/bin-icon.svg" alt="delete" class="w-5 h-5 opacity-90" />
-                  </div>
-                </template>
+                    <template v-else-if="getRowStatus(row) !== 'done'">
+                      <button
+                        class="px-4 py-2 text-xs font-medium text-white bg-[#FBC02D] rounded-lg shadow-md hover:shadow-lg transition"
+                        @click="$emit('change-status', row[1])"
+                      >
+                        เปลี่ยนสถานะ
+                      </button>
+                    </template>
 
-                <!-- โหมด full -->
-                <template v-else-if="props.mode === 'full'">
-                  <div
-                    class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center bg-yellow-400 hover:bg-yellow-500 text-white rounded-md transition cursor-pointer"
-                    title="แก้ไข"
-                    @click="$emit('edit', row[1])"
-                  >
-                    <img src="/icon/edit-icon.svg" alt="edit" class="w-5 h-5" />
-                  </div>
+                    <template v-else>
+                      <span
+                        class="px-4 py-2 text-xs font-medium text-gray-400 bg-gray-100 rounded-lg cursor-default disable"
+                      >
+                        เสร็จสิ้น
+                      </span>
+                    </template>
+                  </template>
 
-                  <div
-                    class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center bg-red-500 hover:bg-red-600 text-white rounded-md transition cursor-pointer"
-                    title="ลบ"
-                    @click="$emit('delete', row[1])"
-                  >
-                    <img src="/icon/bin-icon.svg" alt="delete" class="w-5 h-5" />
-                  </div>
-                </template>
+                  <!-- โหมด user (แก้ไข/ลบ) -->
+                  <!-- โหมด user (แก้ไข/ลบ) -->
+                  <template v-else-if="props.mode === 'user'">
+                    <!-- ถ้ามีฟอร์มค้าง ให้แสดงปุ่ม disabled และ tooltip อธิบาย -->
+                    <template v-if="rowHasActiveRepairs(row)">
+                      <div
+                        :class="[baseIconClass, 'bg-gray-300 text-gray-400 cursor-not-allowed']"
+                        :title="'บัญชีนี้มีใบแจ้งซ่อมหรือการมอบหมายงานที่เชื่อมโยงอยู่ จึงไม่สามารถแก้ไขได้'"
+                      >
+                        <img src="/icon/edit-icon.svg" alt="edit" class="w-5 h-5 opacity-70" />
+                      </div>
 
-                <!-- โหมด assign -->
-                <template v-else-if="props.mode === 'assign'">
-                  <button
-                    :class="[
-                      'w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center rounded-md transition',
-                      isRowAssigned(row)
-                        ? 'bg-gray-300 text-gray-400 cursor-not-allowed'
-                        : 'bg-green-600 hover:bg-green-700 text-white cursor-pointer',
-                    ]"
-                    :title="isRowAssigned(row) ? 'มอบหมายแล้ว' : 'มอบหมายงาน'"
-                    :disabled="isRowAssigned(row)"
-                    @click="!isRowAssigned(row) && $emit('assign', row[1])"
-                  >
-                    <img src="/icon/arrow-right.svg" alt="assign" class="w-5 h-5" />
-                  </button>
+                      <div
+                        :class="[baseIconClass, 'bg-gray-300 text-gray-400 cursor-not-allowed']"
+                        :title="'บัญชีนี้มีใบแจ้งซ่อมหรือการมอบหมายงานที่เชื่อมโยงอยู่ จึงไม่สามารถลบได้'"
+                      >
+                        <img src="/icon/bin-icon.svg" alt="delete" class="w-5 h-5 opacity-70" />
+                      </div>
+                    </template>
+
+                    <!-- ถ้าไม่มีฟอร์มค้าง ให้ทำงานได้ตามปกติแต่ต้องเช็คสถานะด้วย -->
+                    <template v-else>
+                      <!-- ถ้าสถานะไม่ใช่ pending ให้ disabled (สีเทา + tooltip) -->
+                      <template v-if="!isPendingStatus(row)">
+                        <div
+                          :class="[baseIconClass, 'bg-gray-300 text-gray-400 cursor-not-allowed']"
+                          :title="'ไม่สามารถแก้ไขได้ (สถานะไม่ใช่รอดำเนินการ)'"
+                        >
+                          <img src="/icon/edit-icon.svg" alt="edit" class="w-5 h-5 opacity-70" />
+                        </div>
+
+                        <div
+                          :class="[baseIconClass, 'bg-gray-300 text-gray-400 cursor-not-allowed']"
+                          :title="'ไม่สามารถลบได้ (สถานะไม่ใช่รอดำเนินการ)'"
+                        >
+                          <img src="/icon/bin-icon.svg" alt="delete" class="w-5 h-5 opacity-70" />
+                        </div>
+                      </template>
+
+                      <!-- สถานะเป็น pending และไม่มีฟอร์มค้าง -> ปกติ -->
+                      <template v-else>
+                        <div
+                          :class="[
+                            baseIconClass,
+                            canEditUser(row)
+                              ? 'bg-yellow-400 hover:bg-yellow-500 text-white cursor-pointer'
+                              : 'bg-gray-300 text-gray-400 cursor-not-allowed',
+                          ]"
+                          :title="canEditUser(row) ? 'แก้ไข' : 'ไม่สามารถแก้ไขได้'"
+                          @click="canEditUser(row) && $emit('edit', row[1])"
+                        >
+                          <img src="/icon/edit-icon.svg" alt="edit" class="w-5 h-5 opacity-90" />
+                        </div>
+
+                        <div
+                          :class="[
+                            baseIconClass,
+                            canEditUser(row)
+                              ? 'bg-red-500 hover:bg-red-600 text-white cursor-pointer'
+                              : 'bg-gray-300 text-gray-400 cursor-not-allowed',
+                          ]"
+                          :title="canEditUser(row) ? 'ลบ' : 'ไม่สามารถลบได้'"
+                          @click="canEditUser(row) && $emit('delete', row[1])"
+                        >
+                          <img src="/icon/bin-icon.svg" alt="delete" class="w-5 h-5 opacity-90" />
+                        </div>
+                      </template>
+                    </template>
+                  </template>
+
+                  <!-- โหมด full (edit/delete) -->
+                  <template v-else-if="props.mode === 'full'">
+                    <template v-if="rowHasActiveRepairs(row)">
+                      <!-- แสดง disabled ถ้ามีฟอร์มค้าง -->
+                      <div
+                        class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center bg-gray-300 text-gray-400 rounded-md transition cursor-not-allowed"
+                        title="บัญชีนี้มีใบแจ้งซ่อมหรือการมอบหมายงานที่เชื่อมโยงอยู่ จึงไม่สามารถแก้ไขได้"
+                      >
+                        <img src="/icon/edit-icon.svg" alt="edit" class="w-5 h-5" />
+                      </div>
+
+                      <div
+                        class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center bg-gray-300 text-gray-400 rounded-md transition cursor-not-allowed"
+                        title="บัญชีนี้มีใบแจ้งซ่อมหรือการมอบหมายงานที่เชื่อมโยงอยู่ จึงไม่สามารถลบได้"
+                      >
+                        <img src="/icon/bin-icon.svg" alt="delete" class="w-5 h-5" />
+                      </div>
+                    </template>
+                    <template v-else>
+                      <div
+                        class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center bg-yellow-400 hover:bg-yellow-500 text-white rounded-md transition cursor-pointer"
+                        title="แก้ไข"
+                        @click="$emit('edit', row[1])"
+                      >
+                        <img src="/icon/edit-icon.svg" alt="edit" class="w-5 h-5" />
+                      </div>
+
+                      <div
+                        class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center bg-red-500 hover:bg-red-600 text-white rounded-md transition cursor-pointer"
+                        title="ลบ"
+                        @click="$emit('delete', row[1])"
+                      >
+                        <img src="/icon/bin-icon.svg" alt="delete" class="w-5 h-5" />
+                      </div>
+                    </template>
+                  </template>
+
+                  <!-- โหมด assign (มอบหมาย) -->
+                  <template v-else-if="props.mode === 'assign'">
+                    <button
+                      :class="[
+                        assignBaseClass,
+                        isRowAssigned(row)
+                          ? 'bg-gray-300 text-gray-400 cursor-not-allowed'
+                          : 'bg-green-600 hover:bg-green-700 text-white cursor-pointer',
+                      ]"
+                      :title="isRowAssigned(row) ? 'มอบหมายแล้ว' : 'มอบหมายงาน'"
+                      :disabled="isRowAssigned(row)"
+                      @click="!isRowAssigned(row) && $emit('assign', row[1])"
+                    >
+                      <img src="/icon/arrow-right.svg" alt="assign" class="w-5 h-5" />
+                    </button>
+                  </template>
                 </template>
               </div>
 
-              <!-- ถ้าไม่ใช่ actions -->
+              <!-- ถ้าไม่ใช่ actions ให้แสดงค่าปกติ (รองรับ HTML badges) -->
               <slot
                 v-else
                 :name="`cell-${ci}`"
