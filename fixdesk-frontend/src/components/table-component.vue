@@ -14,6 +14,13 @@ const props = defineProps({
     type: Number,
     default: 3,
   },
+  // mode:
+  //  - "full"       : edit/delete (ซ่อนคอลัมน์ที่ 1)
+  //  - "assign"     : มอบหมายงาน (ซ่อนคอลัมน์ที่ 1)
+  //  - "technician" : 3 ปุ่ม รับงาน / เปลี่ยนสถานะ / เสร็จสิ้น
+  //  - "stock"      : แสดงทุกคอลัมน์
+  //  - "location"   : สำหรับจัดการสถานที่ (แสดงทุกคอลัมน์ + ปุ่มเหมือน full)
+
   mode: {
     type: String,
     default: 'full',
@@ -29,6 +36,19 @@ const props = defineProps({
     default: null,
   },
 })
+
+  idColumnIndex: {
+    // เพิ่ม prop ใหม่
+    type: Number,
+    default: 1,
+  },
+})
+
+function getRowId(row) {
+  return row[props.idColumnIndex] || null
+}
+
+const isPendingStatus = (row) => typeof row[5] === 'string' && row[5].includes('รอดำเนินการ')
 
 const currentPage = ref(1)
 const totalEntries = computed(() => (props.rows || []).length)
@@ -183,6 +203,7 @@ function canEditUser(row) {
           <th
             v-for="(col, i) in props.columns"
             :key="i"
+            v-show="props.mode === 'stock' || props.mode === 'location' ? true : i !== 1"
             class="px-3 py-2 sm:px-6 sm:py-3 text-center"
           >
             {{ col }}
@@ -204,7 +225,12 @@ function canEditUser(row) {
               {{ cell }}
             </th>
 
-            <td v-else class="px-3 py-2 sm:px-6 sm:py-4 text-center">
+            <!-- คอลัมน์อื่น -->
+            <td
+              v-else-if="props.mode === 'stock' || props.mode === 'location' ? true : ci !== 1"
+              class="px-3 py-2 sm:px-6 sm:py-4 text-center"
+            >
+              <!-- คอลัมน์ action -->
               <div v-if="cell === 'actions'" class="flex justify-center gap-2">
                 <!-- ดูรายละเอียด (แสดงเสมอ) -->
                 <div
@@ -321,43 +347,6 @@ function canEditUser(row) {
                     </template>
                   </template>
 
-                  <!-- โหมด full (edit/delete) -->
-                  <template v-else-if="props.mode === 'full'">
-                    <template v-if="rowHasActiveRepairs(row)">
-                      <!-- แสดง disabled ถ้ามีฟอร์มค้าง -->
-                      <div
-                        class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center bg-gray-300 text-gray-400 rounded-md transition cursor-not-allowed"
-                        title="บัญชีนี้มีใบแจ้งซ่อมหรือการมอบหมายงานที่เชื่อมโยงอยู่ จึงไม่สามารถแก้ไขได้"
-                      >
-                        <img src="/icon/edit-icon.svg" alt="edit" class="w-5 h-5" />
-                      </div>
-
-                      <div
-                        class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center bg-gray-300 text-gray-400 rounded-md transition cursor-not-allowed"
-                        title="บัญชีนี้มีใบแจ้งซ่อมหรือการมอบหมายงานที่เชื่อมโยงอยู่ จึงไม่สามารถลบได้"
-                      >
-                        <img src="/icon/bin-icon.svg" alt="delete" class="w-5 h-5" />
-                      </div>
-                    </template>
-                    <template v-else>
-                      <div
-                        class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center bg-yellow-400 hover:bg-yellow-500 text-white rounded-md transition cursor-pointer"
-                        title="แก้ไข"
-                        @click="$emit('edit', row[1])"
-                      >
-                        <img src="/icon/edit-icon.svg" alt="edit" class="w-5 h-5" />
-                      </div>
-
-                      <div
-                        class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center bg-red-500 hover:bg-red-600 text-white rounded-md transition cursor-pointer"
-                        title="ลบ"
-                        @click="$emit('delete', row[1])"
-                      >
-                        <img src="/icon/bin-icon.svg" alt="delete" class="w-5 h-5" />
-                      </div>
-                    </template>
-                  </template>
-
                   <!-- โหมด assign (มอบหมาย) -->
                   <template v-else-if="props.mode === 'assign'">
                     <button
@@ -374,6 +363,39 @@ function canEditUser(row) {
                       <img src="/icon/arrow-right.svg" alt="assign" class="w-5 h-5" />
                     </button>
                   </template>
+                <!-- โหมด full และ location -->
+                <template v-if="props.mode === 'full' || props.mode === 'location'">
+                  <div
+                    class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center bg-yellow-400 hover:bg-yellow-500 text-white rounded-md transition cursor-pointer"
+                    title="แก้ไข"
+                    @click="$emit('edit', getRowId(row))"
+                  >
+                    <img src="/icon/edit-icon.svg" alt="edit" class="w-5 h-5" />
+                  </div>
+
+                  <div
+                    class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center bg-red-500 hover:bg-red-600 text-white rounded-md transition cursor-pointer"
+                    title="ลบ"
+                    @click="$emit('delete', getRowId(row))"
+                  >
+                    <img src="/icon/bin-icon.svg" alt="delete" class="w-5 h-5" />
+                  </div>
+                </template>
+                <!-- โหมด assign -->
+                <template v-else-if="props.mode === 'assign'">
+                  <button
+                    :class="[
+                      'w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center rounded-md transition',
+                      isRowAssigned(row)
+                        ? 'bg-gray-300 text-gray-400 cursor-not-allowed'
+                        : 'bg-green-600 hover:bg-green-700 text-white cursor-pointer',
+                    ]"
+                    :title="isRowAssigned(row) ? 'มอบหมายแล้ว' : 'มอบหมายงาน'"
+                    :disabled="isRowAssigned(row)"
+                    @click="!isRowAssigned(row) && $emit('assign', row[1])"
+                  >
+                    <img src="/icon/arrow-right.svg" alt="assign" class="w-5 h-5" />
+                  </button>
                 </template>
               </div>
 

@@ -127,7 +127,28 @@ module.exports = function LocationRoutes(db) {
     });
   });
 
-  // เรียกข้อมูลชั้น
+  // เรียกข้อมูลชั้นทั้งหมด (ใหม่)
+  router.get("/floors", (req, res) => {
+    const query = `
+      SELECT 
+        f.fl_id AS floor_id, 
+        f.fl_name AS floor_name,
+        f.fl_bd_id AS building_id,
+        b.bd_name AS building_name
+      FROM floor f
+      LEFT JOIN building b ON f.fl_bd_id = b.bd_id
+      ORDER BY b.bd_name, f.fl_name
+    `;
+    db.query(query, (err, results) => {
+      if (err) {
+        console.error("Database error (all floors):", err);
+        return res.status(500).json({ message: "โหลดข้อมูลชั้นไม่สำเร็จ" });
+      }
+      res.json(results);
+    });
+  });
+
+  // เรียกข้อมูลชั้นตามอาคาร
   router.get("/floors/:buildingId", (req, res) => {
     const { buildingId } = req.params;
     const query = `
@@ -292,7 +313,31 @@ module.exports = function LocationRoutes(db) {
     });
   });
 
-  // เรียกข้อมูลห้อง
+  // เรียกข้อมูลห้องทั้งหมด (ใหม่)
+  router.get("/rooms", (req, res) => {
+    const query = `
+      SELECT 
+        r.room_id AS room_id, 
+        r.room_name AS room_name,
+        r.room_fl_id AS floor_id,
+        f.fl_name AS floor_name,
+        f.fl_bd_id AS building_id,
+        b.bd_name AS building_name
+      FROM room r
+      LEFT JOIN floor f ON r.room_fl_id = f.fl_id
+      LEFT JOIN building b ON f.fl_bd_id = b.bd_id
+      ORDER BY b.bd_name, f.fl_name, r.room_name
+    `;
+    db.query(query, (err, results) => {
+      if (err) {
+        console.error("Database error (all rooms):", err);
+        return res.status(500).json({ message: "โหลดข้อมูลห้องไม่สำเร็จ" });
+      }
+      res.json(results);
+    });
+  });
+
+  // เรียกข้อมูลห้องตามชั้น
   router.get("/rooms/:floorId", (req, res) => {
     const { floorId } = req.params;
     const query = `
@@ -396,7 +441,7 @@ module.exports = function LocationRoutes(db) {
         [room_name.trim(), room_fl_id, id],
         (err2, results2) => {
           if (err2) {
-            console.error("rror checking duplicate room:", err2);
+            console.error("Error checking duplicate room:", err2);
             return res
               .status(500)
               .json({ message: "เกิดข้อผิดพลาดในการตรวจสอบข้อมูล" });
@@ -461,6 +506,86 @@ module.exports = function LocationRoutes(db) {
           return res.status(404).json({ message: "ไม่พบห้องที่ต้องการลบ" });
         }
         res.json({ message: "ลบห้องสำเร็จ" });
+      });
+    });
+  });
+
+  // เรียกข้อมูลสถานที่ทั้งหมดในครั้งเดียว (ใหม่)
+  router.get("/locations/all", (req, res) => {
+    // ดึงข้อมูลอาคาร
+    const buildingQuery =
+      "SELECT bd_id AS id, bd_name AS name, 'building' AS type FROM building";
+
+    // ดึงข้อมูลชั้นพร้อมข้อมูลอาคาร
+    const floorQuery = `
+      SELECT 
+        f.fl_id AS id, 
+        f.fl_name AS name, 
+        'floor' AS type,
+        f.fl_bd_id AS building_id,
+        b.bd_name AS building_name
+      FROM floor f
+      LEFT JOIN building b ON f.fl_bd_id = b.bd_id
+    `;
+
+    // ดึงข้อมูลห้องพร้อมข้อมูลชั้นและอาคาร
+    const roomQuery = `
+      SELECT 
+        r.room_id AS id, 
+        r.room_name AS name, 
+        'room' AS type,
+        r.room_fl_id AS floor_id,
+        f.fl_name AS floor_name,
+        f.fl_bd_id AS building_id,
+        b.bd_name AS building_name
+      FROM room r
+      LEFT JOIN floor f ON r.room_fl_id = f.fl_id
+      LEFT JOIN building b ON f.fl_bd_id = b.bd_id
+    `;
+
+    // ดึงข้อมูลทั้งหมดพร้อมกัน
+    db.query(buildingQuery, (err1, buildings) => {
+      if (err1) {
+        console.error("Error fetching buildings:", err1);
+        return res.status(500).json({ message: "โหลดข้อมูลอาคารไม่สำเร็จ" });
+      }
+
+      db.query(floorQuery, (err2, floors) => {
+        if (err2) {
+          console.error("Error fetching floors:", err2);
+          return res.status(500).json({ message: "โหลดข้อมูลชั้นไม่สำเร็จ" });
+        }
+
+        db.query(roomQuery, (err3, rooms) => {
+          if (err3) {
+            console.error("Error fetching rooms:", err3);
+            return res.status(500).json({ message: "โหลดข้อมูลห้องไม่สำเร็จ" });
+          }
+
+          // รวมข้อมูลทั้งหมด
+          const allLocations = [
+            ...buildings.map((b) => ({
+              ...b,
+              building: b.name,
+              floor: "-",
+              room: "-",
+            })),
+            ...floors.map((f) => ({
+              ...f,
+              building: f.building_name,
+              floor: f.name,
+              room: "-",
+            })),
+            ...rooms.map((r) => ({
+              ...r,
+              building: r.building_name,
+              floor: r.floor_name,
+              room: r.name,
+            })),
+          ];
+
+          res.json(allLocations);
+        });
       });
     });
   });
