@@ -4,11 +4,29 @@ import { useRouter } from 'vue-router'
 import TableComponent from '@/components/table-component.vue'
 import repairButtonComponent from '@/components/repair-button-component.vue'
 import Swal from 'sweetalert2'
+import { jwtDecode } from 'jwt-decode'
 
 const router = useRouter()
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
 const technicians = ref([])
 const acceptMode = ref("alone")
+
+// -----------------------------
+// 🔹 เก็บข้อมูล user จาก token
+// -----------------------------
+const tokenData = ref(null)
+
+function loadTokenData() {
+  const token = localStorage.getItem('token') || sessionStorage.getItem('token')
+  if (token) {
+    try {
+      tokenData.value = jwtDecode(token)
+    } catch (err) {
+      console.warn('ไม่สามารถ decode token:', err)
+      tokenData.value = null
+    }
+  }
+}
 
 /* Helper สำหรับแนบ Token */
 const getAuthHeaders = () => {
@@ -215,8 +233,7 @@ const goToDetail = (code) => router.push(`/main/repair-detail/${code}`)
 async function handleAccept(code) {
   await fetchTechnicians()
   currentAcceptCode.value = code
-  acceptMode.value = "alone"
-  selectedTeam.value = []
+  acceptMode.value = "team" // หรือ 'alone' ขึ้นกับปุ่มที่กด
   showAcceptPopup.value = true
 }
 
@@ -355,14 +372,14 @@ async function confirmAccept() {
 
     try {
       const res = await fetch(`${API_BASE}/assign-repair-team`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({
-          rf_code: code,
-          technician_ids: selectedTeam.value,
-          mode: 'merge',
-        }),
-      })
+  method: 'POST',
+  headers: getAuthHeaders(),
+  body: JSON.stringify({
+    rf_code: code,
+    technician_ids: selectedTeam.value, // ต้องมีตัวเอง
+    mode: 'merge',
+  }),
+})
 
       const payload = await res.json().catch(() => ({}))
       if (!res.ok) {
@@ -396,15 +413,21 @@ async function confirmAccept() {
 /* --- Placeholder Functions for Missing Logic --- */
 // (ฟังก์ชันเหล่านี้จำเป็นต้องมีเพื่อให้ Template ทำงานได้ 
 // หากคุณมีโค้ดส่วนนี้อยู่แล้ว ให้ใช้ของเดิมของคุณแทนส่วนนี้)
+/* กรองรายชื่อช่างตามประเภทและชื่อ */
 const filteredTechnicians = computed(() =>
   technicians.value.filter((t) => {
+    // ⭐ ซ่อนตัวเอง
+    if (t.us_id === tokenData.value?.us_id) return false
+
     const matchType = !selectedType.value || t.tt_name === selectedType.value
     const matchSearch =
       !searchTech.value ||
       `${t.us_first_name} ${t.us_last_name}`.toLowerCase().includes(searchTech.value.toLowerCase())
+
     return matchType && matchSearch
-  }),
+  })
 )
+
 
 function confirmAssign() {
     // Logic ปุ่มยืนยันใน Popup (Mockup)
@@ -443,14 +466,35 @@ function toggleSelectTeam(id) {
 
 async function fetchTechnicians() {
   try {
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token')
+    if (!token) throw new Error('ไม่พบ token')
+
+    const decoded = jwtDecode(token)
+    const currentUserId = decoded.us_id
+
     const res = await fetch(`${API_BASE}/technicians`, { headers: getAuthHeaders() })
     const typesRes = await fetch(`${API_BASE}/technician-types`)
-    technicians.value = await res.json()
+
+    const techs = await res.json()
     technicianTypes.value = await typesRes.json()
+
+    // Auto-select ตัวเอง + ซ่อน
+    technicians.value = techs.filter(t => t.us_id !== currentUserId)
+    // ตัวเองถูก auto-add
+    selectedTeam.value = [currentUserId]
   } catch (err) {
     console.error('❌ โหลดข้อมูลช่างไม่สำเร็จ:', err)
     Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถโหลดรายชื่อช่างได้', 'error')
   }
+}
+
+
+// ดึง user id ของช่างคนปัจจุบัน
+const me = technicians.value.find(t => t.us_id === tokenData.value?.us_id)
+
+// auto select ตัวเอง
+if (me) {
+  selectedTeam.value = [me.us_id]
 }
 
 
