@@ -165,7 +165,6 @@ async function fetchAllData() {
 }
 
 // วิธีสำรองถ้า endpoint ใหม่ยังไม่มี
-// วิธีสำรองถ้า endpoint ใหม่ยังไม่มี
 async function fetchAllDataAlternative() {
   try {
     // ดึงอาคารทั้งหมด
