@@ -8,6 +8,7 @@ import Swal from 'sweetalert2'
 const router = useRouter()
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
 const technicians = ref([])
+const acceptMode = ref("alone")
 
 /* Helper สำหรับแนบ Token */
 const getAuthHeaders = () => {
@@ -19,13 +20,13 @@ const getAuthHeaders = () => {
 }
 
 // เก็บข้อมูลดิบจาก backend (array of objects)
-const rowsData = ref([]) // <-- data จาก API จะเก็บที่นี่
+const rowsData = ref([])
 
 /* สร้าง rawRows และ rowsForTable เป็น computed จาก rowsData */
 const rawRows = computed(() =>
   rowsData.value.map((r) => ({
     rf_code: r.rf_code,
-    code: r.rf_code, // รองรับหลายชื่อตัวแปร
+    code: r.rf_code,
     rf_user_status: r.rf_user_status,
     rf_urgency: r.rf_urgency,
     assigned: !!r.ra_id,
@@ -36,7 +37,7 @@ const rawRows = computed(() =>
   })),
 )
 
-/* ===== แทนที่บล็อก rowsForTable เดิมด้วยอันนี้ ===== */
+/* rowsForTable */
 const rowsForTable = computed(() =>
   rowsData.value.map((r) => {
     const urgencyBadge =
@@ -65,14 +66,13 @@ const rowsForTable = computed(() =>
 
     const dateStr = r.rf_create_at ? new Date(r.rf_create_at).toLocaleDateString('th-TH') : '-'
 
-    // สำคัญ: กำหนดช่องสุดท้ายเป็น 'actions' เสมอ
     return [
-      dateStr,                 // 0 วันที่
-      r.rf_code || '-',        // 1 หมายเลขใบแจ้งซ่อม (code)
-      placeText,               // 2 สถานที่
-      urgencyBadge,            // 3 ความเร่งด่วน (html)
-      statusBadge,             // 4 สถานะ (html)
-      'actions',               // 5 การจัดการ -> TableComponent จะอ่าน rawRows เพื่อตัดสินการแสดงปุ่ม
+      dateStr,
+      r.rf_code || '-',
+      placeText,
+      urgencyBadge,
+      statusBadge,
+      'actions',
     ]
   }),
 )
@@ -86,6 +86,13 @@ const showStatusFilter = ref(false)
 const showUrgencyFilter = ref(false)
 const selectedDate = ref('')
 
+/* ===============================
+ * 📌 STATE สำหรับการรับงาน
+ * =============================== */
+const currentAcceptCode = ref(null)      // เก็บ rf_code ปัจจุบันที่กดรับ
+const showAcceptPopup = ref(false)       // ควบคุม popup รับงาน
+const selectedTeam = ref([])             // รายชื่อช่างในทีม (team mode)
+
 /* ป๊อปอัพมอบหมายงาน */
 const showAssignPopup = ref(false)
 const technicianTypes = ref([])
@@ -95,7 +102,7 @@ const selectedTechnician = ref(null)
 const loadingAssign = ref(false)
 
 /* ===============================
- * 📦 ดึงข้อมูลรายการแจ้งซ่อมทั้งหมด (Technician)
+ * 📦 ดึงข้อมูลรายการแจ้งซ่อมทั้งหมด
  * =============================== */
 async function fetchAllRepairs() {
   try {
@@ -120,7 +127,6 @@ async function fetchAllRepairs() {
     }
 
     const data = await res.json()
-    // เก็บผลดิบไว้ที่ rowsData (raw objects)
     rowsData.value = Array.isArray(data) ? data : []
   } catch (err) {
     console.error('❌ โหลดข้อมูลไม่สำเร็จ:', err)
@@ -129,7 +135,7 @@ async function fetchAllRepairs() {
 }
 
 /* ===============================
- * 🔍 FILTER (ใช้ rowsForTable ในการเรนเดอร์ แต่ถ้าต้องการ filter ด้านหน้าให้ปรับได้)
+ * 🔍 FILTER
  * =============================== */
 const filteredRows = computed(() => {
   const q = (searchQuery.value || '').toLowerCase()
@@ -138,7 +144,6 @@ const filteredRows = computed(() => {
 
   return rowsData.value
     .filter((r) => {
-      // search by code / place / type / requester (ปรับตามฟิลด์ที่ต้องการ)
       const code = String(r.rf_code || '').toLowerCase()
       const place = String(r.room_name || r.fl_name || r.bd_name || r.tt_name || '').toLowerCase()
       const type = String(r.tt_name || '').toLowerCase()
@@ -149,7 +154,7 @@ const filteredRows = computed(() => {
       return matchSearch && matchUrgency && matchStatus && matchDate
     })
     .map((r) => {
-      // แปลงเป็น row ที่ TableComponent คาด (เหมือน rowsForTable)
+      // แปลงเป็น row สำหรับ TableComponent
       const urgencyBadge =
         {
           low: `<span class="inline-flex items-center justify-center h-8 font-medium text-green-600 bg-green-100 rounded-full w-28">ไม่เร่งด่วน</span>`,
@@ -195,7 +200,6 @@ function clearFilters() {
   selectedDate.value = ''
 }
 
-/* ปิด dropdown เมื่อคลิกนอกรอบ */
 function closeDropdown(e) {
   if (!e.target.closest('.relative')) {
     showStatusFilter.value = false
@@ -204,200 +208,143 @@ function closeDropdown(e) {
 }
 
 /* ===============================
- * 🧭 ACTION BUTTONS (จาก TableComponent emits)
+ * 🧭 ACTION BUTTONS
  * =============================== */
 const goToDetail = (code) => router.push(`/main/repair-detail/${code}`)
 
 async function handleAccept(code) {
-  try {
-    // ดึงรายชื่อช่างมาก่อน (สำหรับกรณีเลือกเป็นทีม)
-    await fetchTechnicians()
+  await fetchTechnicians()
+  currentAcceptCode.value = code
+  acceptMode.value = "alone"
+  selectedTeam.value = []
+  showAcceptPopup.value = true
+}
 
-    // สร้าง html ของ sweetalert: radiobox + รายชื่อช่าง (checkboxes ปิดไว้เริ่มต้น)
-    const techListHtml =
-      technicians.value
-        .map(
-          (t) =>
-            `<label class="swal2-checkbox" style="display:block; margin:6px 0;">
-             <input type="checkbox" class="team-checkbox" value="${t.us_id}" />
-             &nbsp;${t.prefix_name || ''}${t.us_first_name || ''} ${t.us_last_name || ''} ${t.tt_name ? ' — ' + t.tt_name : ''}
-           </label>`,
-        )
-        .join('') || '<div style="color:#888">ไม่พบรายชื่อช่าง</div>'
+function closeAcceptPopup() {
+  showAcceptPopup.value = false
+}
 
-    const { value: result } = await Swal.fire({
-      title: 'รับงาน',
-      html: `<div style="text-align:left">
-           <label style="display:block; margin-bottom:8px;">
-             <input type="radio" name="accept_mode" value="alone" checked/> &nbsp;<strong>ทำงานคนเดียว</strong>
-           </label>
-           <label style="display:block; margin-bottom:8px;">
-             <input type="radio" name="accept_mode" value="team" /> &nbsp;<strong>ทำงานเป็นทีม</strong>
-           </label>
+async function confirmAccept() {
+  const code = currentAcceptCode.value
 
-           <div id="team-list" style="margin-top:10px; display:none; max-height:220px; overflow:auto; padding:6px; border-radius:6px; border:1px solid #eee;">
-             ${techListHtml}
-           </div>
-         </div>`,
-      showCancelButton: true,
-      confirmButtonText: 'ยืนยัน',
-      preConfirm: () => {
-        // อ่านค่าจาก DOM: mode + checked techs (ถ้า team)
-        const selectedMode = document.querySelector('input[name="accept_mode"]:checked')?.value
-        if (!selectedMode) {
-          Swal.showValidationMessage('โปรดเลือกโหมดการทำงาน')
-          return false
-        }
-        if (selectedMode === 'team') {
-          const checked = Array.from(document.querySelectorAll('.team-checkbox:checked')).map(
-            (el) => Number(el.value),
-          )
-          if (checked.length === 0) {
-            Swal.showValidationMessage('โปรดเลือกช่างอย่างน้อย 1 คนสำหรับทีม')
-            return false
-          }
-          return { mode: 'team', techs: checked }
-        }
-        return { mode: 'alone' }
-      },
-      didOpen: () => {
-        // เมื่อเปิด ให้เพิ่ม listener เปลี่ยนสถานะ show/hide ทีม
-        const radios = document.querySelectorAll('input[name="accept_mode"]')
-        const teamList = document.getElementById('team-list')
-        radios.forEach((r) =>
-          r.addEventListener('change', () => {
-            if (r.value === 'team' && r.checked) teamList.style.display = 'block'
-            if (r.value === 'alone' && r.checked) teamList.style.display = 'none'
-          }),
-        )
-      },
+  // โหมดทำงานคนเดียว
+  if (acceptMode.value === "alone") {
+    const res = await fetch(`${API_BASE}/technician/accept-job/${code}`, {
+      method: "PUT",
+      headers: getAuthHeaders(),
     })
 
-    if (!result) return // user ยกเลิก
-
-    // ถ้าเลือกทำคนเดียว -> เรียก API รับงาน (backend จะเช็คว่าเป็นช่างที่มอบหมายหรือไม่)
-    if (result.mode === 'alone') {
-      // เรียก endpoint รับงาน (เหมือนเดิม)
-      const res = await fetch(`${API_BASE}/technician/accept-job/${encodeURIComponent(code)}`, {
-        method: 'PUT',
-        headers: getAuthHeaders(),
-      })
-      const payload = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(payload.message || `ไม่สามารถรับงานได้ (status ${res.status})`)
-      Swal.fire('สำเร็จ', payload.message || 'มอบหมายและรับงานเรียบร้อย', 'success')
-      await fetchAllRepairs()
+    const payload = await res.json()
+    if (!res.ok) {
+      alert(payload.message || "ไม่สามารถรับงานได้")
       return
     }
 
-    // ถ้าเลือกเป็นทีม -> พยายามเรียก endpoint สำหรับมอบหมายเป็นทีม
-    // --- แทนที่บล็อก team ใน handleAccept ด้วยนี้ ---
-    if (result.mode === 'team') {
-      const technicianIds = result.techs // array of ids
-      try {
-        // 1) เรียก /assign-repair-team (ใช้ mode 'merge' เพื่อไม่ล้างคนเก่า)
-        const teamRes = await fetch(`${API_BASE}/assign-repair-team`, {
-          method: 'POST',
-          headers: getAuthHeaders(),
-          body: JSON.stringify({ rf_code: code, technician_ids: technicianIds, mode: 'merge' }),
-        })
+    closeAcceptPopup()
+    fetchAllRepairs()
+    return
+  }
 
-        // อ่าน response body เสมอ (รองรับ text / json / html)
-        const rawText = await teamRes.text().catch(() => '')
-        let teamPayload = {}
-        try {
-          teamPayload = rawText ? JSON.parse(rawText) : {}
-        } catch (e) {
-          teamPayload = { message: rawText }
-        }
-
-        if (teamRes.ok) {
-          Swal.fire('สำเร็จ', teamPayload.message || 'มอบหมายทีมเรียบร้อย', 'success')
-          await fetchAllRepairs()
-          return
-        }
-
-        // ถ้าไม่ ok -> แสดงข้อความจาก backend (ถ้ามี) และ log รายละเอียด
-        console.warn('assign-repair-team failed:', teamRes.status, teamPayload)
-        const serverMsg = teamPayload.message || `มอบหมายทีมล้มเหลว (HTTP ${teamRes.status})`
-
-        // ถ้าต้องการ fallback แบบเงียบ ๆ ให้ใช้โค้ดด้านล่าง (แต่แนะนำให้ดูข้อผิดพลาดจาก server ก่อน)
-        // FALLBACK: พยายามมอบหมายหัวหน้าคนแรกแทน (assign-repair) — แต่ให้แสดงข้อความ server ก่อน
-        // ถ้า fallback จะทำ ให้ parse payload ของ fallback และ handle error/ok
-        const doFallback = true // เปลี่ยนเป็น false ถ้าไม่ต้องการ fallback อัตโนมัติ
-        if (!doFallback) {
-          Swal.fire('ไม่สำเร็จ', serverMsg, 'error')
-          return
-        }
-
-        // --- fallback: assign single (หัวหน้า) ---
-        const firstTech = technicianIds[0]
-        const fallbackRes = await fetch(`${API_BASE}/assign-repair`, {
-          method: 'POST',
-          headers: getAuthHeaders(),
-          body: JSON.stringify({ rf_code: code, technician_id: firstTech }),
-        })
-        const fbText = await fallbackRes.text().catch(() => '')
-        let fbPayload = {}
-        try {
-          fbPayload = fbText ? JSON.parse(fbText) : {}
-        } catch {
-          fbPayload = { message: fbText }
-        }
-
-        if (fallbackRes.ok) {
-          Swal.fire(
-            'สำเร็จ (บางส่วน)',
-            `มอบหมายหัวหน้าทีมเรียบร้อย — แต่การมอบหมายเป็นทีมเต็มรูปแบบล้มเหลว: ${teamPayload.message || ''}`,
-            'success',
-          )
-          await fetchAllRepairs()
-          return
-        } else {
-          // ทั้ง assign-repair-team และ fallback ล้มเหลว -> แสดง error รวมทั้งข้อความที่ได้จาก backend
-          const combinedMsg = `${serverMsg}${fbPayload.message ? '\nFallback: ' + fbPayload.message : ''}`
-          console.error('assign team failed + fallback failed', {
-            teamStatus: teamRes.status,
-            teamPayload,
-            fallbackStatus: fallbackRes.status,
-            fbPayload,
-          })
-          Swal.fire('มอบหมายไม่สำเร็จ', combinedMsg, 'error')
-          return
-        }
-      } catch (err) {
-        console.error('Error assigning team (exception):', err)
-        Swal.fire('เกิดข้อผิดพลาด', err.message || 'มอบหมายทีมไม่สำเร็จ', 'error')
-        return
-      }
+  // โหมดทำงานเป็นทีม
+  if (acceptMode.value === "team") {
+    if (selectedTeam.value.length === 0) {
+      alert("โปรดเลือกช่างอย่างน้อย 1 คน")
+      return
     }
-  } catch (err) {
-    console.error('Error in accept flow:', err)
-    Swal.fire('ไม่สำเร็จ', err.message || 'เกิดข้อผิดพลาด', 'error')
+
+    const res = await fetch(`${API_BASE}/assign-repair-team`, {
+      method: "POST",
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        rf_code: code,
+        technician_ids: selectedTeam.value,
+        mode: "merge",
+      }),
+    })
+
+    const payload = await res.json()
+
+    if (!res.ok) {
+      alert(payload.message || "มอบหมายทีมไม่สำเร็จ")
+      return
+    }
+
+    // ยืนยันรับงานหลังจาก assign ทีมแล้ว
+    await fetch(`${API_BASE}/technician/accept-job/${code}`, {
+      method: "PUT",
+      headers: getAuthHeaders(),
+    })
+
+    closeAcceptPopup()
+    fetchAllRepairs()
   }
 }
 
-/* มอบหมาย / fetchTechnicians / confirmAssign / handleChangeStatus .... */
-async function fetchTechnicians() {
-  try {
-    const res = await fetch(`${API_BASE}/technicians`, { headers: getAuthHeaders() })
-    if (!res.ok) throw new Error('ไม่สามารถโหลดรายชื่อช่างได้')
-    technicians.value = await res.json()
-  } catch (err) {
-    console.error('โหลดช่างไม่สำเร็จ:', err)
-    technicians.value = []
-  }
+/* --- Placeholder Functions for Missing Logic --- */
+// (ฟังก์ชันเหล่านี้จำเป็นต้องมีเพื่อให้ Template ทำงานได้ 
+// หากคุณมีโค้ดส่วนนี้อยู่แล้ว ให้ใช้ของเดิมของคุณแทนส่วนนี้)
+const filteredTechnicians = computed(() =>
+  technicians.value.filter((t) => {
+    const matchType = !selectedType.value || t.tt_name === selectedType.value
+    const matchSearch =
+      !searchTech.value ||
+      `${t.us_first_name} ${t.us_last_name}`.toLowerCase().includes(searchTech.value.toLowerCase())
+    return matchType && matchSearch
+  }),
+)
+
+function confirmAssign() {
+    // Logic ปุ่มยืนยันใน Popup (Mockup)
+    console.log('Confirm assign technician:', selectedTechnician.value)
+    closeAssignPopup()
 }
-/* คุณสามารถคัดเอาฟังก์ชันที่เหลือจากของเดิมมาใส่ได้ (ผมเว้นไว้เพื่อความกระชับ) */
+function closeAssignPopup() {
+    showAssignPopup.value = false;
+    selectedTechnician.value = null;
+    searchTech.value = '';
+    selectedType.value = '';
+}
+function handleChangeStatus(item) {
+   // Logic เปลี่ยนสถานะ (Mockup)
+   console.log('Change status requested', item)
+}
 
 onMounted(() => {
   fetchAllRepairs()
   document.addEventListener('click', closeDropdown)
 })
 onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
+
+const showAssignTypeFilter = ref(false)
+function selectAssignType(type) {
+  selectedType.value = type
+  showAssignTypeFilter.value = false
+}
+function toggleSelectTeam(id) {
+  if (selectedTeam.value.includes(id)) {
+    selectedTeam.value = selectedTeam.value.filter(t => t !== id)
+  } else {
+    selectedTeam.value.push(id)
+  }
+}
+
+async function fetchTechnicians() {
+  try {
+    const res = await fetch(`${API_BASE}/technicians`, { headers: getAuthHeaders() })
+    const typesRes = await fetch(`${API_BASE}/technician-types`)
+    technicians.value = await res.json()
+    technicianTypes.value = await typesRes.json()
+  } catch (err) {
+    console.error('❌ โหลดข้อมูลช่างไม่สำเร็จ:', err)
+    Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถโหลดรายชื่อช่างได้', 'error')
+  }
+}
+
+
+
 </script>
 
 <template>
-  <!-- 🧾 ตาราง + ฟิลเตอร์ อยู่ในการ์ดเดียวกัน -->
   <div class="p-8 mx-auto bg-white shadow-md rounded-xl max-w-7xl">
     <div class="flex items-center justify-between mb-4">
       <h1 class="text-xl font-bold text-back">รายงานการแจ้งซ่อม</h1>
@@ -405,7 +352,6 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
       <repairButtonComponent />
     </div>
 
-    <!-- 🔍 ฟิลเตอร์ (ย้ายจากด้านบน มาอยู่ใต้หัวข้อ) -->
     <div class="flex flex-wrap items-center gap-3 mb-6">
       <input
         v-model="searchQuery"
@@ -419,7 +365,6 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
         class="h-10 px-3 text-gray-700 bg-white border border-gray-300 rounded-lg"
       />
 
-      <!-- 🔸 ความเร่งด่วน -->
       <div class="relative">
         <button
           @click.stop="showUrgencyFilter = !showUrgencyFilter"
@@ -437,36 +382,20 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
           class="absolute z-10 w-48 p-3 mt-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-md shadow-lg"
         >
           <label class="flex items-center py-1">
-            <input
-              type="checkbox"
-              value="low"
-              v-model="selectedUrgencies"
-              class="w-4 h-4 text-blue-600"
-            />
+            <input type="checkbox" value="low" v-model="selectedUrgencies" class="w-4 h-4 text-blue-600" />
             <span class="ml-2">ไม่เร่งด่วน</span>
           </label>
           <label class="flex items-center py-1">
-            <input
-              type="checkbox"
-              value="medium"
-              v-model="selectedUrgencies"
-              class="w-4 h-4 text-blue-600"
-            />
+            <input type="checkbox" value="medium" v-model="selectedUrgencies" class="w-4 h-4 text-blue-600" />
             <span class="ml-2">เร่งด่วน</span>
           </label>
           <label class="flex items-center py-1">
-            <input
-              type="checkbox"
-              value="high"
-              v-model="selectedUrgencies"
-              class="w-4 h-4 text-blue-600"
-            />
+            <input type="checkbox" value="high" v-model="selectedUrgencies" class="w-4 h-4 text-blue-600" />
             <span class="ml-2">เร่งด่วนมาก</span>
           </label>
         </div>
       </div>
 
-      <!-- 🔸 สถานะ -->
       <div class="relative">
         <button
           @click.stop="showStatusFilter = !showStatusFilter"
@@ -484,36 +413,20 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
           class="absolute z-10 w-48 p-3 mt-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-md shadow-lg"
         >
           <label class="flex items-center py-1">
-            <input
-              type="checkbox"
-              value="pending"
-              v-model="selectedStatuses"
-              class="w-4 h-4 text-blue-600"
-            />
+            <input type="checkbox" value="pending" v-model="selectedStatuses" class="w-4 h-4 text-blue-600" />
             <span class="ml-2">รอดำเนินการ</span>
           </label>
           <label class="flex items-center py-1">
-            <input
-              type="checkbox"
-              value="in_progress"
-              v-model="selectedStatuses"
-              class="w-4 h-4 text-blue-600"
-            />
+            <input type="checkbox" value="in_progress" v-model="selectedStatuses" class="w-4 h-4 text-blue-600" />
             <span class="ml-2">กำลังดำเนินการ</span>
           </label>
           <label class="flex items-center py-1">
-            <input
-              type="checkbox"
-              value="done"
-              v-model="selectedStatuses"
-              class="w-4 h-4 text-blue-600"
-            />
+            <input type="checkbox" value="done" v-model="selectedStatuses" class="w-4 h-4 text-blue-600" />
             <span class="ml-2">เสร็จสิ้น</span>
           </label>
         </div>
       </div>
 
-      <!-- ปุ่มล้าง -->
       <transition name="fade">
         <button
           v-if="selectedStatuses.length || selectedUrgencies.length || searchQuery"
@@ -525,7 +438,6 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
       </transition>
     </div>
 
-    <!-- 🧾 ตาราง -->
     <TableComponent
       :columns="['วันที่', 'หมายเลขใบแจ้งซ่อม', 'สถานที่', 'ความเร่งด่วน', 'สถานะงาน', 'การจัดการ']"
       :rows="rowsForTable"
@@ -538,15 +450,12 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
     />
   </div>
 
-  <!-- 🧑‍🔧 Popup มอบหมายงาน -->
   <div
     v-if="showAssignPopup"
     class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40"
   >
     <div class="relative w-full max-w-lg p-6 bg-white shadow-lg rounded-xl">
       <h2 class="mb-4 text-xl font-semibold text-blue-700">มอบหมายงานให้ผู้รับผิดชอบหลัก</h2>
-
-      <!-- ปุ่มปิด -->
       <button
         @click="closeAssignPopup"
         class="absolute text-lg text-gray-500 top-4 right-4 hover:text-gray-700"
@@ -554,7 +463,6 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
         ✕
       </button>
 
-      <!-- 🔧 ประเภทช่าง -->
       <select
         v-model="selectedType"
         class="w-full px-3 py-2 mb-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 focus:outline-none"
@@ -565,7 +473,6 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
         </option>
       </select>
 
-      <!-- 🔍 ช่องค้นหา -->
       <input
         v-model="searchTech"
         type="text"
@@ -573,7 +480,6 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
         class="w-full px-3 py-2 mb-4 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 focus:outline-none"
       />
 
-      <!-- รายชื่อช่าง -->
       <div class="space-y-2 overflow-y-auto max-h-60">
         <div
           v-for="tech in filteredTechnicians"
@@ -582,19 +488,18 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
           @click="selectedTechnician = tech.us_id"
         >
           <div class="flex flex-col text-sm">
-            <p class="font-medium text-gray-800">
+            <p class="font-medium text-gray-900 text-base">
               {{ tech.prefix_name || '' }}{{ tech.us_first_name }} {{ tech.us_last_name }}
             </p>
-            <p class="text-gray-600">ประเภท: {{ tech.tt_name || '-' }}</p>
-            <p class="text-gray-600">โทร: {{ tech.us_phone || '-' }}</p>
-            <p class="text-gray-600">หน่วยงาน: {{ tech.us_department || '-' }}</p>
+            <p class="text-gray-700 text-sm">ประเภท: {{ tech.tt_name || '-' }}</p>
+            <p class="text-gray-700 text-sm">โทร: {{ tech.us_phone || '-' }}</p>
           </div>
           <input
             type="radio"
             name="selectedTech"
             :value="tech.us_id"
             v-model.number="selectedTechnician"
-            class="w-5 h-5 mt-2 cursor-pointer accent-blue-600"
+            class="w-5 h-5 mt-5 cursor-pointer border-2 border-[#1E48D1] accent-[#1E48D1]"
           />
         </div>
 
@@ -603,7 +508,6 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
         </p>
       </div>
 
-      <!-- ปุ่มล่าง -->
       <div class="flex justify-end gap-3 mt-6">
         <button
           @click="closeAssignPopup"
@@ -621,6 +525,141 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
       </div>
     </div>
   </div>
+  <!-- ===========================
+     📌 Popup รับงานแบบ Custom
+     =========================== -->
+     <!-- Popup รับงาน -->
+  <div
+    v-if="showAcceptPopup"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40"
+  >
+    <div class="bg-white rounded-lg shadow-lg w-full max-w-xl p-8 relative">
+      <h2 class="text-lg sm:text-xl font-bold text-black mb-6">รับงาน / มอบหมายทีม</h2>
+    
+      <button
+        @click="closeAcceptPopup"
+        class="absolute text-lg text-gray-500 top-4 right-4 hover:text-gray-700"
+      >
+        ✕
+      </button>
+    
+      <!-- โหมดรับงาน -->
+      <div class="mb-4 flex gap-6">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="radio" value="alone" v-model="acceptMode" />
+          ทำงานคนเดียว
+        </label>
+      
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="radio" value="team" v-model="acceptMode" />
+          ทำงานเป็นทีม
+        </label>
+      </div>
+    
+      <!-- TEAM MODE -->
+      <div v-if="acceptMode === 'team'">
+        <div class="flex flex-col sm:flex-row gap-3 mb-4">
+        
+          <!-- Dropdown ประเภทช่าง -->
+          <div class="relative w-full sm:w-1/2">
+            <button
+              @click.stop="showAssignTypeFilter = !showAssignTypeFilter"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none flex justify-between items-center bg-white text-gray-700 h-10"
+            >
+              <span class="truncate">{{ selectedType || 'ประเภทช่างทั้งหมด' }}</span>
+              <img
+                src="/icon/sidebar/chevron-down-icon.svg"
+                class="w-4 h-4 opacity-70 transition-transform duration-200 flex-shrink-0"
+                :class="{ 'rotate-180': showAssignTypeFilter }"
+              />
+            </button>
+          
+            <div
+              v-if="showAssignTypeFilter"
+              class="absolute z-10 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto mt-1"
+            >
+              <div
+                @click="selectAssignType('')"
+                class="px-4 py-2 cursor-pointer hover:bg-gray-100 text-gray-700 text-sm"
+                :class="{ 'bg-blue-50 text-blue-700': selectedType === '' }"
+              >
+                ประเภทช่างทั้งหมด
+              </div>
+            
+              <div
+                v-for="type in technicianTypes"
+                :key="type.tt_id"
+                @click="selectAssignType(type.tt_name)"
+                class="px-4 py-2 cursor-pointer hover:bg-gray-100 text-gray-700 text-sm"
+                :class="{ 'bg-blue-50 text-blue-700': selectedType === type.tt_name }"
+              >
+                {{ type.tt_name }}
+              </div>
+            </div>
+          </div>
+        
+          <!-- Search -->
+          <div class="w-full sm:w-1/2">
+            <input
+              v-model="searchTech"
+              type="text"
+              placeholder="ค้นหา"
+              class="w-full px-3 py-2 text-gray-700 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 focus:outline-none h-10"
+            />
+          </div>
+        </div>
+      
+        <!-- รายชื่อช่าง -->
+        <div class="space-y-2 overflow-y-auto max-h-60">
+          <div
+            v-for="tech in filteredTechnicians"
+            :key="tech.us_id"
+            class="flex items-start justify-between p-3 transition border rounded-lg cursor-pointer hover:bg-gray-50"
+            @click="toggleSelectTeam(tech.us_id)"
+          >
+            <div class="flex flex-col text-sm">
+              <p class="font-medium text-gray-900 text-base">
+                {{ tech.prefix_name || '' }}{{ tech.us_first_name }} {{ tech.us_last_name }}
+              </p>
+              <p class="text-gray-700 text-sm">ประเภท: {{ tech.tt_name || '-' }}</p>
+              <p class="text-gray-700 text-sm">โทร: {{ tech.us_phone || '-' }}</p>
+            </div>
+          
+            <input
+              type="checkbox"
+              :value="tech.us_id"
+              v-model="selectedTeam"
+              class="w-5 h-5 mt-5 cursor-pointer border-2 border-[#1E48D1] accent-[#1E48D1]"
+            />
+          </div>
+        
+          <p v-if="filteredTechnicians.length === 0" class="py-4 text-center text-gray-500">
+            — ไม่พบช่าง —
+          </p>
+        </div>
+      </div>
+    
+      <!-- ปุ่ม -->
+      <div class="flex justify-end gap-3 mt-6">
+        <button
+          @click="closeAcceptPopup"
+          class="px-5 py-2 font-medium text-gray-700 transition bg-gray-200 rounded-md hover:bg-gray-300"
+        >
+          ยกเลิก
+        </button>
+        <button
+          @click="confirmAccept"
+          class="px-5 py-2 font-medium text-white transition bg-[#1E48D1] rounded-md hover:bg-blue-900"
+        >
+          ยืนยัน
+        </button>
+      </div>
+    
+    </div>
+  </div>
+
+
+
 </template>
 
 <style scoped>
