@@ -768,55 +768,50 @@ module.exports = function RepairFormRoutes(db) {
 
   // --- ช่างกดรับงาน (Start Job) ---
   router.put("/technician/accept-job/:code", authMiddleware, (req, res) => {
-  const { code } = req.params;
-  const technicianId = req.user.us_id || req.user.id;
+    const { code } = req.params;
 
-  if (!technicianId) {
-    return res.status(401).json({ message: "ไม่พบข้อมูลผู้ใช้งาน" });
-  }
+    const technicianId = req.user.us_id || req.user.id;
 
-  const sqlCheck = `
-    SELECT ra.ra_id
-    FROM repair_form rf
-    JOIN repair_assignment ra ON rf.rf_id = ra.ra_rf_id
-    WHERE rf.rf_code = ?
-  `;
+    if (!technicianId) {
+      return res.status(401).json({ message: "ไม่พบข้อมูลผู้ใช้งาน" });
+    }
 
-  db.query(sqlCheck, [code], (err, rows) => {
-    if (err) return res.status(500).json({ message: "error check assignment" });
-
-    const isSingle = rows.length === 1; // งานเดี่ยวหรือไม่
-
-    // ---- UPDATE status ----
     const sql = `
-      UPDATE repair_form rf
-      JOIN repair_assignment ra ON rf.rf_id = ra.ra_rf_id
-      SET 
-        rf.rf_user_status = 'in_progress',
-        rf.rf_in_process_at = NOW(),
-        rf.rf_update_at = NOW(),
-        ra.ra_is_lead = ${isSingle ? 1 : 0}
-      WHERE rf.rf_code = ? 
-        AND ra.ra_us_id = ?
-        AND rf.rf_user_status = 'pending'
-    `;
+  UPDATE repair_form rf
+  JOIN repair_assignment ra ON rf.rf_id = ra.ra_rf_id
+  SET 
+    rf.rf_user_status = 'in_progress',
+    rf.rf_in_process_at = NOW(),
+    rf.rf_update_at = NOW(),
+    ra.ra_is_lead = 1,
+    ra.ra_accepted_at = NOW()
+  WHERE rf.rf_code = ?
+    AND ra.ra_us_id = ?
+    AND rf.rf_user_status = 'pending'
+`;
 
     db.query(sql, [code, technicianId], (err, result) => {
       if (err) {
         console.error("Error accepting job:", err);
-        return res.status(500).json({ message: "เกิดข้อผิดพลาด ไม่สามารถรับงานได้" });
+        return res
+          .status(500)
+          .json({ message: "เกิดข้อผิดพลาด ไม่สามารถรับงานได้" });
       }
 
       if (result.affectedRows === 0) {
         return res.status(400).json({
-          message: "ไม่สามารถรับงานได้ (สถานะผิด หรือไม่ได้ถูกมอบหมาย)",
+          message:
+            "ไม่สามารถรับงานได้ (คุณอาจไม่ใช่ผู้รับผิดชอบงานนี้ หรือสถานะงานเปลี่ยนไปแล้ว)",
         });
       }
 
-      res.json({ message: "รับงานแล้ว", isLead: isSingle ? 1 : 0 });
+      res.json({
+        message: "รับงานเรียบร้อยแล้ว สถานะเปลี่ยนเป็นกำลังดำเนินการ",
+        rf_code: code,
+      });
     });
   });
-});
+
 
 
   // GET /technician/repairs  -> ดึงเฉพาะงานที่มอบหมายให้ช่างที่ล็อกอิน

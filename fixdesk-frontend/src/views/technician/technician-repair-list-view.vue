@@ -224,61 +224,174 @@ function closeAcceptPopup() {
   showAcceptPopup.value = false
 }
 
-async function confirmAccept() {
-  const code = currentAcceptCode.value
-
-  // โหมดทำงานคนเดียว
-  if (acceptMode.value === "alone") {
-    const res = await fetch(`${API_BASE}/technician/accept-job/${code}`, {
-      method: "PUT",
+async function checkAssignmentCount(rf_code) {
+  try {
+    // คาดหวังว่ามี endpoint /repair-assignment/count?rf_code=XXX ที่คืน { count: N }
+    const res = await fetch(`${API_BASE}/repair-assignment/count?rf_code=${encodeURIComponent(rf_code)}`, {
       headers: getAuthHeaders(),
     })
-
-    const payload = await res.json()
     if (!res.ok) {
-      alert(payload.message || "ไม่สามารถรับงานได้")
-      return
+      // ถ้าไม่มี endpoint นี้ backend อาจคืน 404 -> ให้ fallback เป็น null
+      return null
+    }
+    const payload = await res.json()
+    return Number(payload.count || 0)
+  } catch (err) {
+    console.warn('checkAssignmentCount error:', err)
+    return null
+  }
+}
+
+/**
+ * พยายามเซ็ต ra_is_lead = 1 สำหรับ assignment ที่เป็นของผู้ใช้ปัจจุบัน
+ * จะลองหลายวิธี (เรียก endpoint เฉพาะ, หรือส่ง body ไปที่ accept-job)
+ * คืนค่า true ถ้าสำเร็จ หรือ false ถ้าล้มเหลว
+ */
+async function setLeadForAssignment(rf_code) {
+  try {
+    // 1) ถ้ามี endpoint /repair-assignment/set-lead ให้เรียกแบบ POST
+    const res1 = await fetch(`${API_BASE}/repair-assignment/set-lead`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ rf_code }),
+    })
+    if (res1.ok) return true
+    // ถ้า server ตอบ 404/405/ไม่รองรับ ให้ fallback ไปวิธีถัดไป
+  } catch (err) {
+    console.warn('setLeadForAssignment (method 1) failed:', err)
+  }
+
+  try {
+    // 2) บาง backend อาจรองรับการส่ง flag ใน accept-job endpoint
+    // ส่ง body { set_lead: true } ด้วยแบบ PUT
+    const res2 = await fetch(`${API_BASE}/technician/accept-job/${encodeURIComponent(rf_code)}?set_lead=1`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ set_lead: true }),
+    })
+    if (res2.ok) return true
+  } catch (err) {
+    console.warn('setLeadForAssignment (method 2) failed:', err)
+  }
+
+  try {
+    // 3) ถ้าไม่มี endpoint ใด ๆ เลย — ลองเรียก endpoint มอบหมายทีม (assign-repair-team)
+    // โดยส่ง mode 'solo' เพื่อให้ backend อัปเดต ra_is_lead (ถ้ามี logic นั้น)
+    const res3 = await fetch(`${API_BASE}/assign-repair-team`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        rf_code,
+        technician_ids: [], // server อาจใช้ rf_code + current user token
+        mode: 'solo',
+      }),
+    })
+    if (res3.ok) return true
+  } catch (err) {
+    console.warn('setLeadForAssignment (method 3) failed:', err)
+  }
+
+  // ทุกวิธีล้มเหลว
+  return false
+}
+
+
+async function confirmAccept() {
+  const code = currentAcceptCode.value
+  if (!code) {
+    alert('ไม่พบรหัสใบงาน')
+    return
+  }
+
+  // โหมดทำงานคนเดียว
+  if (acceptMode.value === 'alone') {
+    try {
+      // 1) เรียก accept-job ตามปกติ
+      const res = await fetch(`${API_BASE}/technician/accept-job/${encodeURIComponent(code)}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+      })
+
+      const payload = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        alert(payload.message || 'ไม่สามารถรับงานได้')
+        return
+      }
+
+      // 2) ตรวจจำนวน assignment ว่าเป็นงานเดี่ยวหรือไม่
+      const count = await checkAssignmentCount(code)
+
+      // ถ้าทราบว่ามีแค่ 1 คน => พยายามเซ็ต lead
+      if (count === 1) {
+        const okLead = await setLeadForAssignment(code)
+        if (!okLead) {
+          // ไม่สำเร็จในการเซ็ต lead — แจ้ง log / user แต่ไม่ขวางการใช้งาน
+          console.warn('Failed to mark ra_is_lead for solo assignment', code)
+          // ถ้าต้องการแจ้ง user ให้รู้:
+          // Swal.fire('สังเกต', 'ตั้งค่าผู้รับผิดชอบหลักในระบบไม่สำเร็จ โปรดแจ้งผู้ดูแลระบบ', 'warning')
+        }
+      } else if (count === null) {
+        // ไม่สามารถตรวจสอบจำนวนได้ — พยายามเซ็ต lead เฉพาะกรณีที่ backend รับ flag
+        // (ปลอดภัยที่จะลอง)
+        await setLeadForAssignment(code) // ignore result
+      }
+
+      closeAcceptPopup()
+      fetchAllRepairs()
+    } catch (err) {
+      console.error('Error accepting job (alone):', err)
+      alert('เกิดข้อผิดพลาด ขณะรับงาน')
     }
 
-    closeAcceptPopup()
-    fetchAllRepairs()
     return
   }
 
   // โหมดทำงานเป็นทีม
-  if (acceptMode.value === "team") {
-    if (selectedTeam.value.length === 0) {
-      alert("โปรดเลือกช่างอย่างน้อย 1 คน")
+  if (acceptMode.value === 'team') {
+    if (!selectedTeam.value || selectedTeam.value.length === 0) {
+      alert('โปรดเลือกช่างอย่างน้อย 1 คน')
       return
     }
 
-    const res = await fetch(`${API_BASE}/assign-repair-team`, {
-      method: "POST",
-      headers: getAuthHeaders(),
-      body: JSON.stringify({
-        rf_code: code,
-        technician_ids: selectedTeam.value,
-        mode: "merge",
-      }),
-    })
+    try {
+      const res = await fetch(`${API_BASE}/assign-repair-team`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          rf_code: code,
+          technician_ids: selectedTeam.value,
+          mode: 'merge',
+        }),
+      })
 
-    const payload = await res.json()
+      const payload = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        alert(payload.message || 'มอบหมายทีมไม่สำเร็จ')
+        return
+      }
 
-    if (!res.ok) {
-      alert(payload.message || "มอบหมายทีมไม่สำเร็จ")
-      return
+      // หลัง assign ทีมแล้ว ให้เรียก accept-job เพื่อเปลี่ยนสถานะเป็น in_progress
+      const res2 = await fetch(`${API_BASE}/technician/accept-job/${encodeURIComponent(code)}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+      })
+
+      if (!res2.ok) {
+        const p2 = await res2.json().catch(() => ({}))
+        alert(p2.message || 'รับงานหลังมอบหมายทีมไม่สำเร็จ')
+        return
+      }
+
+      // team mode โดยปกติจะไม่เซ็ต lead ให้ทุกคน — ถ้าต้องการแยก leader ให้เรียก setLeadForAssignment หากต้องการ
+      closeAcceptPopup()
+      fetchAllRepairs()
+    } catch (err) {
+      console.error('Error accepting job (team):', err)
+      alert('เกิดข้อผิดพลาด ขณะมอบหมายทีม/รับงาน')
     }
-
-    // ยืนยันรับงานหลังจาก assign ทีมแล้ว
-    await fetch(`${API_BASE}/technician/accept-job/${code}`, {
-      method: "PUT",
-      headers: getAuthHeaders(),
-    })
-
-    closeAcceptPopup()
-    fetchAllRepairs()
   }
 }
+
 
 /* --- Placeholder Functions for Missing Logic --- */
 // (ฟังก์ชันเหล่านี้จำเป็นต้องมีเพื่อให้ Template ทำงานได้ 
