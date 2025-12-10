@@ -604,7 +604,9 @@ module.exports = function RepairFormRoutes(db) {
 
   // --- ปรับ /assign-repair (มอบหมายช่างเดี่ยว) ---
   router.post("/assign-repair", authMiddleware, (req, res) => {
-    const { rf_code, technician_id, is_lead } = req.body;
+    // เพราะถ้า Admin มอบหมายเอง แสดงว่าตั้งใจให้คนนี้เป็นคนรับผิดชอบหลัก
+    const { rf_code, technician_id, is_lead = true } = req.body;
+
     if (!rf_code || !technician_id) {
       return res.status(400).json({
         message: "ข้อมูลไม่ครบถ้วน (rf_code และ technician_id จำเป็นต้องมี)",
@@ -615,6 +617,11 @@ module.exports = function RepairFormRoutes(db) {
     if (!Number.isFinite(techId)) {
       return res.status(400).json({ message: "technician_id ต้องเป็นตัวเลข" });
     }
+
+    // กำหนด isLeadFlag: ถ้า is_lead เป็น true หรือ 1 ให้เป็น 1, ถ้าไม่ใช่ให้เป็น 0
+    // (แก้ไขจากโค้ดเดิมที่ถ้าไม่ส่งมาจะเป็น 0)
+    const isLeadFlag =
+      is_lead === true || is_lead === "1" || is_lead === 1 ? 1 : 0;
 
     // 1) ตรวจสอบว่า user ที่ส่งมาเป็นช่างจริง (role = 2)
     db.query(
@@ -668,9 +675,9 @@ module.exports = function RepairFormRoutes(db) {
                 }
 
                 if (existRes && existRes.length > 0) {
-                  // ถ้ามีอยู่แล้ว — แต่ถ้า is_lead = true ให้เปลี่ยน flag เป็น lead
-                  if (is_lead) {
-                    // set all to 0, then set this to 1
+                  // ถ้ามีอยู่แล้ว และเราต้องการให้เขาเป็น Lead (ซึ่ง default เป็น 1 อยู่แล้ว)
+                  if (isLeadFlag === 1) {
+                    // เคลียร์ Lead คนเก่าก่อน (Set 0 ทั้งหมดใน Job นี้)
                     db.query(
                       "UPDATE repair_assignment SET ra_is_lead = 0 WHERE ra_rf_id = ?",
                       [rfId],
@@ -682,6 +689,7 @@ module.exports = function RepairFormRoutes(db) {
                             error: clearErr.message,
                           });
                         }
+                        // Set คนนี้เป็น Lead (1)
                         db.query(
                           "UPDATE repair_assignment SET ra_is_lead = 1 WHERE ra_rf_id = ? AND ra_us_id = ?",
                           [rfId, techId],
@@ -709,9 +717,9 @@ module.exports = function RepairFormRoutes(db) {
                   return;
                 }
 
-                // 4) ถ้ายังไม่ถูกมอบหมาย ให้ insert แถวใหม่ (ra_is_lead ตาม is_lead)
+                // 4) ถ้ายังไม่ถูกมอบหมาย ให้ insert แถวใหม่
                 const now = new Date();
-                const isLeadFlag = is_lead ? 1 : 0;
+
                 db.query(
                   "INSERT INTO repair_assignment (ra_rf_id, ra_us_id, ra_is_lead, ra_assigned_at) VALUES (?, ?, ?, ?)",
                   [rfId, techId, isLeadFlag, now],
@@ -731,27 +739,25 @@ module.exports = function RepairFormRoutes(db) {
                         [rfId, techId],
                         (clearErr2) => {
                           if (clearErr2) {
-                            console.error(
-                              "Error clearing other lead flags:",
+                            console.warn(
+                              "Error clearing other leads",
                               clearErr2
                             );
-                            // ไม่ใช่ fatal — ส่ง success แต่ log ข้อผิดพลาด
-                            return res.status(200).json({
-                              message:
-                                "มอบหมายช่างสำเร็จ แต่เกิดปัญหาในการยกเลิกสถานะหัวหน้าเก่า",
-                              warning: clearErr2.message,
-                            });
                           }
+                          // อัปเดตสถานะงานหลักเป็น in_progress ด้วย เพื่อความสมบูรณ์ (Optional)
+                          /* db.query("UPDATE repair_form SET rf_user_status = 'in_progress' WHERE rf_id = ?", [rfId]);
+                           */
+
                           return res.json({
                             message: "มอบหมายช่างสำเร็จ",
                             assigned_to: techId,
-                            is_lead: Boolean(isLeadFlag),
+                            is_lead: true,
                           });
                         }
                       );
                     } else {
                       return res.json({
-                        message: "มอบหมายช่างสำเร็จ",
+                        message: "มอบหมายช่างสำเร็จ (ลูกทีม)",
                         assigned_to: techId,
                         is_lead: false,
                       });
@@ -811,8 +817,6 @@ module.exports = function RepairFormRoutes(db) {
       });
     });
   });
-
-
 
   // GET /technician/repairs  -> ดึงเฉพาะงานที่มอบหมายให้ช่างที่ล็อกอิน
   router.get("/technician/repairs", authMiddleware, (req, res) => {
