@@ -15,10 +15,11 @@ const props = defineProps({
     default: 3,
   },
   // mode:
-  //  - "full"       : edit/delete
-  //  - "assign"     : มอบหมายงาน
+  //  - "full"       : edit/delete (ซ่อนคอลัมน์ที่ 1)
+  //  - "assign"     : มอบหมายงาน (ซ่อนคอลัมน์ที่ 1)
   //  - "technician" : 3 ปุ่ม รับงาน / เปลี่ยนสถานะ / เสร็จสิ้น
-  //  - "stock"
+  //  - "stock"      : แสดงทุกคอลัมน์
+  //  - "location"   : สำหรับจัดการสถานที่ (แสดงทุกคอลัมน์ + ปุ่มเหมือน full)
 
   mode: {
     type: String,
@@ -29,7 +30,16 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  idColumnIndex: {
+    // เพิ่ม prop ใหม่
+    type: Number,
+    default: 1,
+  },
 })
+
+function getRowId(row) {
+  return row[props.idColumnIndex] || null
+}
 
 const isPendingStatus = (row) => typeof row[5] === 'string' && row[5].includes('รอดำเนินการ')
 
@@ -77,7 +87,7 @@ function isRowAssigned(row) {
           <th
             v-for="(col, i) in props.columns"
             :key="i"
-            v-show="props.mode === 'stock' ? true : i !== 1"
+            v-show="props.mode === 'stock' || props.mode === 'location' ? true : i !== 1"
             class="px-3 py-2 sm:px-6 sm:py-3 text-center"
           >
             {{ col }}
@@ -102,7 +112,7 @@ function isRowAssigned(row) {
 
             <!-- คอลัมน์อื่น -->
             <td
-              v-else-if="props.mode === 'stock' ? true : ci !== 1"
+              v-else-if="props.mode === 'stock' || props.mode === 'location' ? true : ci !== 1"
               class="px-3 py-2 sm:px-6 sm:py-4 text-center"
             >
               <!-- คอลัมน์ action -->
@@ -178,12 +188,12 @@ function isRowAssigned(row) {
                   </div>
                 </template>
 
-                <!-- โหมด full -->
-                <template v-else-if="props.mode === 'full'">
+                <!-- โหมด full และ location -->
+                <template v-if="props.mode === 'full' || props.mode === 'location'">
                   <div
                     class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center bg-yellow-400 hover:bg-yellow-500 text-white rounded-md transition cursor-pointer"
                     title="แก้ไข"
-                    @click="$emit('edit', row[1])"
+                    @click="$emit('edit', getRowId(row))"
                   >
                     <img src="/icon/edit-icon.svg" alt="edit" class="w-5 h-5" />
                   </div>
@@ -191,12 +201,11 @@ function isRowAssigned(row) {
                   <div
                     class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center bg-red-500 hover:bg-red-600 text-white rounded-md transition cursor-pointer"
                     title="ลบ"
-                    @click="$emit('delete', row[1])"
+                    @click="$emit('delete', getRowId(row))"
                   >
                     <img src="/icon/bin-icon.svg" alt="delete" class="w-5 h-5" />
                   </div>
                 </template>
-
                 <!-- โหมด assign -->
                 <template v-else-if="props.mode === 'assign'">
                   <button
