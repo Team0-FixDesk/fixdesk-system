@@ -12,7 +12,7 @@ const getAuthHeaders = () => {
   return { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
 }
 
-const columns = ['ชื่อเต็ม', 'ชื่อผู้ใช้', 'บทบาท', 'หน่วยงาน', 'ตำแหน่ง', 'ตัวดำเนินการ']
+const columns = ['ชื่อเต็ม', 'ชื่อผู้ใช้', 'หน่วยงาน', 'บทบาท', 'ตำแหน่ง', 'ตัวดำเนินการ']
 const rows = ref([])
 const searchQuery = ref('')
 const selectedRoles = ref([])
@@ -35,8 +35,8 @@ async function fetchUsers() {
       fullNameTh: `${user.us_first_name_th || ''} ${user.us_last_name_th || ''}`.trim(),
       fullNameEn: `${user.us_first_name_en || ''} ${user.us_last_name_en || ''}`.trim(),
       username: user.us_user_name || '-',
-      role: user.role_name || '-', // จาก DB
       department: user.us_department || '-',
+      role: user.role_name || '-', // จาก DB
       technicianType: user.technician_type || '-', // จาก DB
       raw: user,
     }))
@@ -814,8 +814,8 @@ async function handleDeleteTechType(item) {
             filteredRows.map((u) => [
               u.fullNameTh,
               u.username,
-              u.role,
               u.department,
+              u.role,
               u.technicianType,
               'actions',
             ])
