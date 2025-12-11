@@ -13,9 +13,9 @@ const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
 /* --- คอลัมน์ตาราง --- */
 const columns = [
   'วันที่',
-  'ใบแจ้งซ่อม',
-  'หมายเลขครุภัณฑ์',
-  'หน่วยงาน',
+  'หมายเลขแจ้งซ่อม',
+  'ประเภทงาน',
+  'สถานที่',
   'ความเร่งด่วน',
   'สถานะงาน',
   'ตัวดำเนินการ',
@@ -85,7 +85,7 @@ async function loadMyRepairs() {
           urgencyBadge = `<span class='inline-flex justify-center items-center w-36 h-8 rounded-full bg-green-100 text-green-600 font-semibold'>ไม่เร่งด่วน</span>`
           break
       }
-
+      const location = repair.building_name ? `อาคาร ${repair.building_name}` : ''
       // สร้าง badge สำหรับสถานะงาน (HTML string)
       const statusBadge = (() => {
         switch (repair.rf_user_status) {
@@ -102,9 +102,9 @@ async function loadMyRepairs() {
 
       return [
         new Date(repair.rf_create_at).toLocaleDateString('th-TH'),
-        repair.rf_code,
-        repair.rf_prop_number || '-',
-        repair.department_name || '-',
+        repair.rf_code || '-',
+        repair.tt_name || '-',
+        location || '-',
         urgencyBadge,
         statusBadge,
         'actions',

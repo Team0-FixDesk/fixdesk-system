@@ -273,8 +273,8 @@ const goToDetail = (code) => router.push(`/main/repair-detail/${code}`)
             <tr class="border-b text-gray-600">
               <th class="py-2 px-3 text-left">วันที่</th>
               <th class="px-3 text-left">หมายเลขแจ้งซ่อม</th>
-              <th class="px-3 text-left">หมายเลขครุภัณฑ์</th>
-              <th class="px-3 text-left">หน่วยงาน</th>
+              <th class="px-3 text-left">ประเภทงาน</th>
+              <th class="px-3 text-left">สถานที่</th>
               <th class="px-3 text-center w-32">ความเร่งด่วน</th>
               <th class="px-3 text-center w-32">สถานะงาน</th>
             </tr>
@@ -295,8 +295,8 @@ const goToDetail = (code) => router.push(`/main/repair-detail/${code}`)
                 {{ formatDateTH(item.rf_create_at) }}
               </td>
               <td class="px-3">{{ item.rf_code }}</td>
-              <td class="px-3">{{ item.rf_prop_number || '-' }}</td>
-              <td class="px-3">{{ item.department_name || '-' }}</td>
+              <td class="px-3">{{ item.tt_name || '-' }}</td>
+              <td class="px-3">{{ item.building_name ? `อาคาร ${item.building_name}` : '-' }}</td>
 
               <td class="px-3 text-center">
                 <span
