@@ -213,6 +213,54 @@ module.exports = function TechnicianRoutes(db) {
     });
   });
 
+  // ดึงประวัติใบงานที่เสร็จสิ้น
+  router.get('/technician/history', authMiddleware, (req, res) => {
+    const techId = req.user && req.user.us_id;
+    console.debug('GET /technician/history - requested by user id=', techId);
+    if (!techId) return res.status(401).json({ message: 'ต้องแนบโทเคนที่ถูกต้อง' });
+
+    const query = `
+      SELECT
+        rf.rf_id,
+        rf.rf_code,
+        rf.rf_prop_number,
+        rf.rf_problem,
+        rf.rf_create_at,
+        rf.rf_user_status,
+        COALESCE(rf.rf_urgency, 'medium') AS rf_urgency,
+        u.us_first_name_th AS us_first_name,
+        u.us_last_name_th AS us_last_name,
+        u.us_department AS department_name,
+        tt.tt_name,
+        tech.us_first_name_th AS tech_first_name,
+        tech.us_last_name_th AS tech_last_name,
+        ra.ra_us_id AS assigned_tech_id,
+        b.bd_name AS building_name,
+        f.fl_name AS floor_name,
+        r.room_name AS room_name
+      FROM repair_form rf
+      JOIN repair_assignment ra ON rf.rf_id = ra.ra_rf_id
+      LEFT JOIN user u ON rf.rf_us_id = u.us_id
+      LEFT JOIN technician_type tt ON rf.rf_tt_id = tt.tt_id
+      LEFT JOIN user tech ON ra.ra_us_id = tech.us_id
+      LEFT JOIN room r ON rf.rf_room_id = r.room_id
+      LEFT JOIN floor f ON r.room_fl_id = f.fl_id
+      LEFT JOIN building b ON f.fl_bd_id = b.bd_id
+      WHERE ra.ra_us_id = ?
+        AND (rf.rf_user_status = 'done')
+      ORDER BY rf.rf_create_at DESC
+    `;
+
+    db.query(query, [techId], (err, results) => {
+      if (err) {
+        console.error('Error fetching technician completed history:', err);
+        return res.status(500).json({ message: 'ดึงประวัติใบงานไม่สำเร็จ', error: err.message });
+      }
+      res.json(results);
+    });
+  });
+
+
   // ดึงรายการใบเบิกของผู้ใช้งานที่ล็อกอิน)
   router.get("/technician/my-stock-forms", authMiddleware, (req, res) => {
     const techId = req.user && req.user.us_id;
