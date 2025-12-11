@@ -7,20 +7,17 @@ const fs = require("fs");
 module.exports = function RepairFormRoutes(db) {
   const router = express.Router();
 
-  // Module อัพโหลดไฟล์Multer File Upload Configuration
-  // สร้างโฟลเดอร์ uploads
+  // --- ส่วน Upload File (เหมือนเดิม ไม่ต้องแก้) ---
   const repairUploadPath = path.join(__dirname, "..", "uploads", "repair");
   if (!fs.existsSync(repairUploadPath)) {
     fs.mkdirSync(repairUploadPath, { recursive: true });
   }
 
-  // กำหนด storage สำหรับ multer
   const storage = multer.diskStorage({
     destination: (req, file, callback) => {
       callback(null, repairUploadPath);
     },
     filename: (req, file, callback) => {
-      // สร้างชื่อไฟล์: RF_YYYYMMDD_HHMMSS_random.ext
       const dateTimeStamp = new Date()
         .toISOString()
         .replace(/[:.-]/g, "")
@@ -34,7 +31,6 @@ module.exports = function RepairFormRoutes(db) {
     },
   });
 
-  // กำหนด file filter
   const fileFilter = (req, file, callback) => {
     const allowedTypes = /jpeg|jpg|png|gif|webp|mp4|avi|mov|wmv/;
     const extname = allowedTypes.test(
@@ -52,23 +48,17 @@ module.exports = function RepairFormRoutes(db) {
     }
   };
 
-  // สร้าง multer instance
   const upload = multer({
     storage: storage,
-    limits: {
-      fileSize: 50 * 1024 * 1024, // 50MB limit
-      files: 5, // ไม่เกิน 5 ไฟล์
-    },
+    limits: { fileSize: 50 * 1024 * 1024, files: 5 },
     fileFilter: fileFilter,
   });
 
-  // อัพโหลดไฟล์สำหรับใบแจ้งซ่อม
   router.post("/upload-repair-files", upload.array("files", 5), (req, res) => {
     try {
       if (!req.files || req.files.length === 0) {
         return res.status(400).json({ message: "กรุณาเลือกไฟล์สำหรับอัพโหลด" });
       }
-      // สร้าง array ของ file paths
       const filePaths = req.files.map(
         (file) => `/uploads/repair/${file.filename}`
       );
@@ -81,7 +71,7 @@ module.exports = function RepairFormRoutes(db) {
           size: file.size,
           mimetype: file.mimetype,
         })),
-        filePaths: filePaths, // สำหรับเก็บใน database
+        filePaths: filePaths,
       });
     } catch (error) {
       console.error("Error uploading files:", error);
@@ -91,7 +81,6 @@ module.exports = function RepairFormRoutes(db) {
     }
   });
 
-  // ลบไฟล์
   router.delete("/delete-file/:filename", (req, res) => {
     const { filename } = req.params;
     const filePath = path.join(repairUploadPath, filename);
@@ -103,6 +92,8 @@ module.exports = function RepairFormRoutes(db) {
       res.json({ message: "ลบไฟล์สำเร็จ" });
     });
   });
+
+  // --- จบส่วน Upload ---
 
   // สร้างใบแจ้งซ่อมพร้อมอัพโหลดไฟล์
   router.post(
@@ -124,7 +115,7 @@ module.exports = function RepairFormRoutes(db) {
           .status(400)
           .json({ message: "ข้อมูลไม่ครบ กรุณากรอกให้ครบทุกช่อง" });
       }
-      // สร้างรหัสใบแจ้งซ่อม
+
       const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, "");
       const countQuery = `
         SELECT COUNT(*) AS count FROM repair_form
@@ -150,8 +141,8 @@ module.exports = function RepairFormRoutes(db) {
           INSERT INTO repair_form
             (rf_code, rf_us_id, rf_tt_id, rf_room_id, rf_prop_number,
             rf_problem, rf_detail, rf_phone, rf_urgency, rf_image,
-            rf_user_status, rf_tech_status, rf_create_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'working', NOW())
+            rf_user_status, rf_create_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())
           `;
 
         db.query(
@@ -207,14 +198,14 @@ module.exports = function RepairFormRoutes(db) {
         issue_description,
         urgency,
         phone_number,
-        existing_files, // ไฟล์เดิมที่ต้องการเก็บไว้
+        existing_files,
       } = req.body;
       if (!repair_type_id || !room_id || !problem_detail) {
         return res
           .status(400)
           .json({ message: "ข้อมูลไม่ครบ กรุณากรอกให้ครบทุกช่อง" });
       }
-      // รวมไฟล์เดิมกับไฟล์ใหม่
+
       const existingFilePaths = existing_files
         ? JSON.parse(existing_files)
         : [];
@@ -278,7 +269,7 @@ module.exports = function RepairFormRoutes(db) {
     }
   );
 
-  // สร้างแบบฟอร์มแจ้งซ่อม
+  // สร้างแบบฟอร์มแจ้งซ่อม (JSON only)
   router.post("/repair-requests", express.json(), (req, res) => {
     const {
       us_id,
@@ -296,7 +287,7 @@ module.exports = function RepairFormRoutes(db) {
         .status(400)
         .json({ message: "ข้อมูลไม่ครบ กรุณากรอกให้ครบทุกช่อง" });
     }
-    // สร้างรหัสตามวันที่ เช่น RF20251024-001
+
     const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, "");
     const countQuery = `
       SELECT COUNT(*) AS count FROM repair_form
@@ -310,17 +301,16 @@ module.exports = function RepairFormRoutes(db) {
       }
 
       const todayCount = results[0].count + 1;
-      const runningNumber = String(todayCount).padStart(3, "0"); // เช่น 001
+      const runningNumber = String(todayCount).padStart(3, "0");
       const rfCode = `RF${datePart}${runningNumber}`;
-      // แปลง file_paths เป็น JSON string สำหรับเก็บใน database
       const imageData = file_paths ? JSON.stringify(file_paths) : null;
 
       const insertQuery = `
         INSERT INTO repair_form
         (rf_code, rf_us_id, rf_tt_id, rf_room_id, rf_prop_number,
         rf_problem, rf_detail, rf_phone, rf_urgency, rf_image,
-        rf_user_status, rf_tech_status, rf_create_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'working', NOW())
+        rf_user_status, rf_create_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())
         `;
 
       db.query(
@@ -335,7 +325,7 @@ module.exports = function RepairFormRoutes(db) {
           issue_description,
           phone_number,
           urgency,
-          imageData, // เก็บ file paths เป็น JSON
+          imageData,
         ],
         (err2, results2) => {
           if (err2) {
@@ -352,8 +342,8 @@ module.exports = function RepairFormRoutes(db) {
     });
   });
 
-  // ดึงรายการแจ้งซ่อมทั้งหมด
   router.get("/admin/repairs", authMiddleware, (req, res) => {
+    // แก้ SQL: เพิ่ม ra.ra_us_id AS rf_assigned_tech_id เพื่อส่ง ID ช่างกลับไป
     const query = `
       SELECT
         rf.rf_id,
@@ -366,11 +356,14 @@ module.exports = function RepairFormRoutes(db) {
         u.us_department AS department_name,
         tt.tt_name,
         tech.us_first_name_th AS tech_first_name,
-        tech.us_last_name_th AS tech_last_name
+        tech.us_last_name_th AS tech_last_name,
+        ra.ra_us_id AS rf_assigned_tech_id   -- <--- เพิ่มบรรทัดนี้ครับ
       FROM repair_form rf
       LEFT JOIN user u ON rf.rf_us_id = u.us_id
       LEFT JOIN technician_type tt ON rf.rf_tt_id = tt.tt_id
-      LEFT JOIN user tech ON rf.rf_assigned_tech_id = tech.us_id
+      -- เชื่อมตารางมอบหมายงาน (เอาเฉพาะหัวหน้าทีม)
+      LEFT JOIN repair_assignment ra ON rf.rf_id = ra.ra_rf_id AND ra.ra_is_lead = 1
+      LEFT JOIN user tech ON ra.ra_us_id = tech.us_id
       ORDER BY rf.rf_create_at DESC
     `;
 
@@ -386,7 +379,7 @@ module.exports = function RepairFormRoutes(db) {
     });
   });
 
-  // ดึงรายการแจ้งซ่อมตาม id
+  // ดึงรายการแจ้งซ่อมตาม user id (My Repairs) - ไม่ต้องแก้ SQL เพราะดึงแค่ status ไม่ได้ดึงชื่อช่าง
   router.get("/my-repairs/:userId", (req, res) => {
     const { userId } = req.params;
     const query = `
@@ -419,7 +412,6 @@ module.exports = function RepairFormRoutes(db) {
     });
   });
 
-  // ลบรายการแจ้งซ่อมตาม id
   router.delete("/my-repairs/:code", authMiddleware, (req, res) => {
     const { code } = req.params;
     console.log("ลบฟอร์ม code =", code);
@@ -434,10 +426,6 @@ module.exports = function RepairFormRoutes(db) {
         return res.status(500).json({ message: "เกิดข้อผิดพลาดในระบบ" });
       }
       if (result.affectedRows === 0) {
-        console.warn(
-          "ไม่สามารถลบใบแจ้งซ่อมนี้ได้ (ไม่อยู่ในสถานะรอดำเนินการ):",
-          code
-        );
         return res.status(400).json({
           message:
             "ไม่สามารถลบใบแจ้งซ่อมนี้ได้ เนื่องจากรายการอยู่ระหว่างดำเนินการหรือเสร็จสิ้นแล้ว",
@@ -448,10 +436,10 @@ module.exports = function RepairFormRoutes(db) {
     });
   });
 
-  // ดึงรายละเอียดใบแจ้งซ่อมตาม code/รหัสใบแจ้งซ่อม
   router.get("/repair-requests/:code", (req, res) => {
     const { code } = req.params;
 
+    // แก้ SQL: Join repair_assignment เพื่อหาหัวหน้า
     const sql = `
       SELECT
         rf.rf_code,
@@ -463,7 +451,6 @@ module.exports = function RepairFormRoutes(db) {
         rf.rf_in_process_at,
         rf.rf_done_at,
         rf.rf_user_status,
-        rf.rf_tech_status,
         rf.rf_prop_number,
         rf.rf_image,
   
@@ -482,7 +469,7 @@ module.exports = function RepairFormRoutes(db) {
         u.us_phone AS reporter_phone,
         u.us_department AS reporter_department,
   
-        -- ผู้รับผิดชอบงานหลัก (ช่าง)
+        -- ผู้รับผิดชอบงานหลัก (หัวหน้าทีม)
         tech.us_id AS main_technician_id,
         CONCAT(tn_tech.ttn_title_th, tech.us_first_name_th, ' ', tech.us_last_name_th) AS main_technician_name,
         tt_tech.tt_name AS main_technician_position
@@ -497,8 +484,9 @@ module.exports = function RepairFormRoutes(db) {
       LEFT JOIN user u ON rf.rf_us_id = u.us_id
       LEFT JOIN title_name tn ON u.us_ttn_id = tn.ttn_id
   
-      -- ผู้รับผิดชอบงานหลัก (ช่างที่ถูก assign)
-      LEFT JOIN user tech ON rf.rf_assigned_tech_id = tech.us_id
+      -- เชื่อมตารางมอบหมายงาน (เฉพาะหัวหน้า)
+      LEFT JOIN repair_assignment ra ON rf.rf_id = ra.ra_rf_id AND ra.ra_is_lead = 1
+      LEFT JOIN user tech ON ra.ra_us_id = tech.us_id
       LEFT JOIN title_name tn_tech ON tech.us_ttn_id = tn_tech.ttn_id
       LEFT JOIN technician_type tt_tech ON tech.us_tt_id = tt_tech.tt_id
   
@@ -522,14 +510,12 @@ module.exports = function RepairFormRoutes(db) {
         rf_problem: r.rf_problem || "-",
         rf_urgency: r.rf_urgency || "medium",
         rf_user_status: r.rf_user_status || "-",
-        rf_tech_status: r.rf_tech_status || "-",
         rf_phone: r.rf_phone || "-",
         rf_create_at: r.rf_create_at || "-",
         rf_in_process_at: r.rf_in_process_at || null,
         rf_done_at: r.rf_done_at || null,
         rf_prop_number: r.rf_prop_number || "-",
-        rf_image: r.rf_image ? JSON.parse(r.rf_image) : null, // Parse JSON เป็น array
-        // id + name สถานที่/ประเภท
+        rf_image: r.rf_image ? JSON.parse(r.rf_image) : null,
         repair_type_id: r.repair_type_id || null,
         repair_type_name: r.repair_type_name || "-",
         building_id: r.building_id || null,
@@ -538,20 +524,17 @@ module.exports = function RepairFormRoutes(db) {
         floor_name: r.floor_name || "-",
         room_id: r.room_id || null,
         room_name: r.room_name || "-",
-        // ผู้แจ้ง
         reporter: {
           name: r.reporter_name || "-",
           phone: r.reporter_phone || "-",
           department: r.reporter_department || "-",
         },
-        // ผู้รับผิดชอบงานหลัก (สำหรับหน้า detail)
         main_technician: r.main_technician_name || "-",
         tech_position: r.main_technician_position || "-",
       });
     });
   });
 
-  // แก้ไขรายละเอียดใบแจ้งซ่อมตาม code/รหัสใบแจ้งซ่อม
   router.put("/repair-requests/:code", (req, res) => {
     const { code } = req.params;
     const {
@@ -563,14 +546,13 @@ module.exports = function RepairFormRoutes(db) {
       issue_description,
       urgency,
       phone_number,
-      file_paths, // เพิ่มรองรับการอัพเดตไฟล์
+      file_paths,
     } = req.body;
     if (!repair_type_id || !room_id || !problem_detail) {
       return res
         .status(400)
         .json({ message: "ข้อมูลไม่ครบ กรุณากรอกให้ครบทุกช่อง" });
     }
-    // จัดการไฟล์ที่อัพเดต
     const imageData = file_paths ? JSON.stringify(file_paths) : null;
 
     const sql = `
@@ -620,65 +602,462 @@ module.exports = function RepairFormRoutes(db) {
     });
   });
 
-  // มอบหมายงานให้ช่าง
+  // --- ปรับ /assign-repair (มอบหมายช่างเดี่ยว) ---
   router.post("/assign-repair", authMiddleware, (req, res) => {
-    const { rf_code, technician_id } = req.body;
-    if (!rf_code || !technician_id) {
-      return res.status(400).json({ message: "ข้อมูลไม่ครบถ้วน" });
-    }
-    // ตรวจสอบว่าช่างมีอยู่จริงและเป็น role 'Technician'
-    const techQuery = `
-    SELECT u.us_tt_id, u.us_role_id, r.role_name
-    FROM user u
-    LEFT JOIN role r ON u.us_role_id = r.role_id
-    WHERE u.us_id = ?
-    `;
-    db.query(techQuery, [technician_id], (err, results) => {
-      if (err) {
-        console.error("Error checking tech:", err);
-        return res.status(500).json({ message: "ตรวจสอบข้อมูลช่างล้มเหลว" });
-      }
-      if (!results.length) {
-        return res.status(404).json({ message: "ไม่พบช่างที่เลือก" });
-      }
-      const tech = results[0];
-      if (tech.us_role_id !== 2) {
-        return res.status(400).json({ message: "ผู้ใช้นี้ไม่ใช่ช่าง" });
-      }
-      const techTypeId = tech.us_tt_id;
-      // อัปเดตรายการแจ้งซ่อมโดยใช้ rf_code
-      const updateQuery = `
-    UPDATE repair_form
-    SET 
-      rf_tt_id = ?,
-      rf_assigned_tech_id = ?,
-      rf_user_status = 'in_progress',
-      rf_in_process_at = IF(rf_in_process_at IS NULL, NOW(), rf_in_process_at),
-      rf_update_at = NOW()
-    WHERE rf_code = ?
-      AND rf_user_status = 'pending'
-      `;
+    // เพราะถ้า Admin มอบหมายเอง แสดงว่าตั้งใจให้คนนี้เป็นคนรับผิดชอบหลัก
+    const { rf_code, technician_id, is_lead = true } = req.body;
 
-      db.query(
-        updateQuery,
-        [techTypeId, technician_id, rf_code],
-        (err2, result) => {
-          if (err2) {
-            console.error("Error updating repair_form:", err2);
-            return res.status(500).json({ message: "มอบหมายงานไม่สำเร็จ" });
-          }
-          if (result.affectedRows === 0) {
-            return res
-              .status(404)
-              .json({ message: "ไม่พบรายการหรือมอบหมายแล้ว" });
-          }
-          console.log(
-            `มอบหมายใบแจ้งซ่อม ${rf_code} ให้ช่าง ID ${technician_id}`
-          );
-          res.json({ message: "มอบหมายงานสำเร็จ" });
+    if (!rf_code || !technician_id) {
+      return res.status(400).json({
+        message: "ข้อมูลไม่ครบถ้วน (rf_code และ technician_id จำเป็นต้องมี)",
+      });
+    }
+
+    const techId = Number(technician_id);
+    if (!Number.isFinite(techId)) {
+      return res.status(400).json({ message: "technician_id ต้องเป็นตัวเลข" });
+    }
+
+    // กำหนด isLeadFlag: ถ้า is_lead เป็น true หรือ 1 ให้เป็น 1, ถ้าไม่ใช่ให้เป็น 0
+    // (แก้ไขจากโค้ดเดิมที่ถ้าไม่ส่งมาจะเป็น 0)
+    const isLeadFlag =
+      is_lead === true || is_lead === "1" || is_lead === 1 ? 1 : 0;
+
+    // 1) ตรวจสอบว่า user ที่ส่งมาเป็นช่างจริง (role = 2)
+    db.query(
+      "SELECT us_id, us_role_id FROM user WHERE us_id = ?",
+      [techId],
+      (uErr, uRes) => {
+        if (uErr) {
+          console.error("Error checking technician:", uErr);
+          return res
+            .status(500)
+            .json({ message: "ตรวจสอบข้อมูลช่างล้มเหลว", error: uErr.message });
         }
-      );
+        if (!uRes || uRes.length === 0) {
+          return res.status(404).json({ message: "ไม่พบช่างที่เลือก" });
+        }
+        if (Number(uRes[0].us_role_id) !== 2) {
+          return res.status(400).json({ message: "ผู้ใช้นี้ไม่ใช่ช่าง" });
+        }
+
+        // 2) หา rf_id จาก rf_code
+        db.query(
+          "SELECT rf_id FROM repair_form WHERE rf_code = ?",
+          [rf_code],
+          (rfErr, rfRes) => {
+            if (rfErr) {
+              console.error("Error finding repair:", rfErr);
+              return res.status(500).json({
+                message: "ค้นหาใบแจ้งซ่อมล้มเหลว",
+                error: rfErr.message,
+              });
+            }
+            if (!rfRes || rfRes.length === 0) {
+              return res.status(404).json({ message: "ไม่พบใบแจ้งซ่อม" });
+            }
+            const rfId = rfRes[0].rf_id;
+
+            // 3) ตรวจสอบว่าช่างนี้ถูกมอบหมายไปแล้วหรือยัง
+            db.query(
+              "SELECT ra_id FROM repair_assignment WHERE ra_rf_id = ? AND ra_us_id = ?",
+              [rfId, techId],
+              (existErr, existRes) => {
+                if (existErr) {
+                  console.error(
+                    "Error checking existing assignment:",
+                    existErr
+                  );
+                  return res.status(500).json({
+                    message: "ตรวจสอบการมอบหมายล้มเหลว",
+                    error: existErr.message,
+                  });
+                }
+
+                if (existRes && existRes.length > 0) {
+                  // ถ้ามีอยู่แล้ว และเราต้องการให้เขาเป็น Lead (ซึ่ง default เป็น 1 อยู่แล้ว)
+                  if (isLeadFlag === 1) {
+                    // เคลียร์ Lead คนเก่าก่อน (Set 0 ทั้งหมดใน Job นี้)
+                    db.query(
+                      "UPDATE repair_assignment SET ra_is_lead = 0 WHERE ra_rf_id = ?",
+                      [rfId],
+                      (clearErr) => {
+                        if (clearErr) {
+                          console.error("Error clearing lead flags:", clearErr);
+                          return res.status(500).json({
+                            message: "ตั้งค่าสถานะหัวหน้าไม่สำเร็จ",
+                            error: clearErr.message,
+                          });
+                        }
+                        // Set คนนี้เป็น Lead (1)
+                        db.query(
+                          "UPDATE repair_assignment SET ra_is_lead = 1 WHERE ra_rf_id = ? AND ra_us_id = ?",
+                          [rfId, techId],
+                          (setErr) => {
+                            if (setErr) {
+                              console.error("Error setting lead:", setErr);
+                              return res.status(500).json({
+                                message: "กำหนดหัวหน้าไม่สำเร็จ",
+                                error: setErr.message,
+                              });
+                            }
+                            return res.json({
+                              message:
+                                "ช่างถูกมอบหมายแล้ว (อัปเดตเป็นหัวหน้าเรียบร้อย)",
+                            });
+                          }
+                        );
+                      }
+                    );
+                  } else {
+                    return res
+                      .status(200)
+                      .json({ message: "ช่างนี้มอบหมายแล้วอยู่ในทีม" });
+                  }
+                  return;
+                }
+
+                // 4) ถ้ายังไม่ถูกมอบหมาย ให้ insert แถวใหม่
+                const now = new Date();
+
+                db.query(
+                  "INSERT INTO repair_assignment (ra_rf_id, ra_us_id, ra_is_lead, ra_assigned_at) VALUES (?, ?, ?, ?)",
+                  [rfId, techId, isLeadFlag, now],
+                  (insErr) => {
+                    if (insErr) {
+                      console.error("Error inserting assignment:", insErr);
+                      return res.status(500).json({
+                        message: "มอบหมายงานไม่สำเร็จ",
+                        error: insErr.message,
+                      });
+                    }
+
+                    // ถ้าเป็น lead ต้องเคลียร์ flag ของคนอื่นด้วย (เพื่อให้มีหัวหน้าเพียงคนเดียว)
+                    if (isLeadFlag === 1) {
+                      db.query(
+                        "UPDATE repair_assignment SET ra_is_lead = 0 WHERE ra_rf_id = ? AND ra_us_id <> ?",
+                        [rfId, techId],
+                        (clearErr2) => {
+                          if (clearErr2) {
+                            console.warn(
+                              "Error clearing other leads",
+                              clearErr2
+                            );
+                          }
+                          // อัปเดตสถานะงานหลักเป็น in_progress ด้วย เพื่อความสมบูรณ์ (Optional)
+                          /* db.query("UPDATE repair_form SET rf_user_status = 'in_progress' WHERE rf_id = ?", [rfId]);
+                           */
+
+                          return res.json({
+                            message: "มอบหมายช่างสำเร็จ",
+                            assigned_to: techId,
+                            is_lead: true,
+                          });
+                        }
+                      );
+                    } else {
+                      return res.json({
+                        message: "มอบหมายช่างสำเร็จ (ลูกทีม)",
+                        assigned_to: techId,
+                        is_lead: false,
+                      });
+                    }
+                  }
+                );
+              }
+            );
+          }
+        );
+      }
+    );
+  });
+
+  // --- ช่างกดรับงาน (Start Job) ---
+  router.put("/technician/accept-job/:code", authMiddleware, (req, res) => {
+    const { code } = req.params;
+
+    const technicianId = req.user.us_id || req.user.id;
+
+    if (!technicianId) {
+      return res.status(401).json({ message: "ไม่พบข้อมูลผู้ใช้งาน" });
+    }
+
+    const sql = `
+  UPDATE repair_form rf
+  JOIN repair_assignment ra ON rf.rf_id = ra.ra_rf_id
+  SET 
+    rf.rf_user_status = 'in_progress',
+    rf.rf_in_process_at = NOW(),
+    rf.rf_update_at = NOW(),
+    ra.ra_is_lead = 1,
+    ra.ra_accepted_at = NOW()
+  WHERE rf.rf_code = ?
+    AND ra.ra_us_id = ?
+    AND rf.rf_user_status = 'pending'
+`;
+
+    db.query(sql, [code, technicianId], (err, result) => {
+      if (err) {
+        console.error("Error accepting job:", err);
+        return res
+          .status(500)
+          .json({ message: "เกิดข้อผิดพลาด ไม่สามารถรับงานได้" });
+      }
+
+      if (result.affectedRows === 0) {
+        return res.status(400).json({
+          message:
+            "ไม่สามารถรับงานได้ (คุณอาจไม่ใช่ผู้รับผิดชอบงานนี้ หรือสถานะงานเปลี่ยนไปแล้ว)",
+        });
+      }
+
+      res.json({
+        message: "รับงานเรียบร้อยแล้ว สถานะเปลี่ยนเป็นกำลังดำเนินการ",
+        rf_code: code,
+      });
     });
+  });
+
+  // GET /technician/repairs  -> ดึงเฉพาะงานที่มอบหมายให้ช่างที่ล็อกอิน
+  router.get("/technician/repairs", authMiddleware, (req, res) => {
+    // ตรวจสอบว่าตัว authMiddleware เก็บ user id ไว้ที่ไหน (ตัวอย่างนี้ใช้ req.user.us_id)
+    const technicianId = req.user && (req.user.us_id || req.user.id);
+    if (!technicianId) {
+      return res.status(401).json({ message: "ไม่พบข้อมูลผู้ใช้งาน" });
+    }
+
+    const query = `
+    SELECT
+  rf.rf_id,
+  rf.rf_code,
+  rf.rf_create_at,
+  rf.rf_user_status,
+  COALESCE(rf.rf_urgency, 'medium') AS rf_urgency,
+  u.us_first_name_th AS us_first_name,
+  u.us_last_name_th AS us_last_name,
+  u.us_department AS department_name,
+  tt.tt_name,
+  r.room_name,
+  f.fl_name,
+  b.bd_name,
+  ra.ra_id,
+  ra.ra_is_lead,
+  ra.ra_assigned_at,
+  ra.ra_accepted_at
+FROM repair_form rf
+INNER JOIN repair_assignment ra ON rf.rf_id = ra.ra_rf_id
+LEFT JOIN user u ON rf.rf_us_id = u.us_id
+LEFT JOIN technician_type tt ON rf.rf_tt_id = tt.tt_id
+LEFT JOIN room r ON rf.rf_room_id = r.room_id
+LEFT JOIN floor f ON r.room_fl_id = f.fl_id
+LEFT JOIN building b ON f.fl_bd_id = b.bd_id
+WHERE ra.ra_us_id = ?
+ORDER BY rf.rf_create_at DESC
+
+  `;
+
+    db.query(query, [technicianId], (err, results) => {
+      if (err) {
+        console.error("Error fetching technician repairs:", err);
+        return res.status(500).json({
+          message: "ดึงข้อมูลรายการแจ้งซ่อมที่มอบหมายไม่สำเร็จ",
+          error: err.message,
+        });
+      }
+      res.json(results);
+    });
+  });
+
+  // POST /assign-repair-team
+  // --- Replace the existing /assign-repair-team handler with this block ---
+  router.post("/assign-repair-team", authMiddleware, (req, res) => {
+    const { rf_code, technician_ids, lead_id } = req.body;
+
+    if (
+      !rf_code ||
+      !Array.isArray(technician_ids) ||
+      technician_ids.length === 0
+    ) {
+      return res.status(400).json({
+        message:
+          "ข้อมูลไม่ครบ: ต้องระบุ rf_code และ technician_ids อย่างน้อย 1 คน",
+      });
+    }
+
+    // sanitize numeric ids
+    const techIds = technician_ids
+      .map((id) => Number(id))
+      .filter((n) => Number.isFinite(n));
+    if (techIds.length === 0) {
+      return res
+        .status(400)
+        .json({ message: "technician_ids ต้องเป็น array ของตัวเลข" });
+    }
+
+    const leadId = lead_id ? Number(lead_id) : techIds[0];
+    if (!techIds.includes(leadId)) {
+      return res
+        .status(400)
+        .json({ message: "lead_id ต้องเป็นหนึ่งใน technician_ids" });
+    }
+
+    // helper: obtain a connection in a way that works for pool or single connection
+    const isPool = typeof db.getConnection === "function";
+    function obtainConnection(cb) {
+      if (isPool) {
+        db.getConnection((err, conn) => {
+          if (err) return cb(err);
+          cb(null, conn);
+        });
+      } else {
+        // db is a single connection instance (use it directly)
+        cb(null, db);
+      }
+    }
+    function releaseIfPool(conn) {
+      if (isPool && conn && typeof conn.release === "function") {
+        try {
+          conn.release();
+        } catch (e) {
+          /* ignore release errors */
+        }
+      }
+    }
+
+    obtainConnection((connErr, conn) => {
+      if (connErr) {
+        console.error("DB connection error (assign-repair-team):", connErr);
+        return res.status(500).json({ message: "เชื่อมต่อฐานข้อมูลไม่สำเร็จ" });
+      }
+
+      // begin transaction
+      conn.beginTransaction((txErr) => {
+        if (txErr) {
+          releaseIfPool(conn);
+          console.error("Begin transaction error:", txErr);
+          return res
+            .status(500)
+            .json({ message: "เริ่ม transaction ไม่สำเร็จ" });
+        }
+
+        // 1) lock/select rf_id
+        const rfQuery =
+          "SELECT rf_id FROM repair_form WHERE rf_code = ? FOR UPDATE";
+        conn.query(rfQuery, [rf_code], (qrErr, qrRes) => {
+          if (qrErr) {
+            console.error("Query rf_id error:", qrErr);
+            return conn.rollback(() => {
+              releaseIfPool(conn);
+              return res
+                .status(500)
+                .json({ message: "ค้นหาใบแจ้งซ่อมไม่สำเร็จ" });
+            });
+          }
+          if (!qrRes || qrRes.length === 0) {
+            return conn.rollback(() => {
+              releaseIfPool(conn);
+              return res.status(404).json({ message: "ไม่พบใบแจ้งซ่อมนี้" });
+            });
+          }
+
+          const rfId = qrRes[0].rf_id;
+
+          // 2) ตรวจสอบว่า technician ทุกคนมี role = 2 (ช่าง)
+          const placeholders = techIds.map(() => "?").join(",");
+          const techCheckSql = `SELECT us_id, us_role_id FROM user WHERE us_id IN (${placeholders})`;
+          conn.query(techCheckSql, techIds, (tcErr, tcRes) => {
+            if (tcErr) {
+              console.error("Error checking technicians:", tcErr);
+              return conn.rollback(() => {
+                releaseIfPool(conn);
+                return res.status(500).json({ message: "ตรวจสอบช่างล้มเหลว" });
+              });
+            }
+
+            if (!tcRes || tcRes.length !== techIds.length) {
+              const foundIds = (tcRes || []).map((r) => r.us_id);
+              const missing = techIds.filter((id) => !foundIds.includes(id));
+              return conn.rollback(() => {
+                releaseIfPool(conn);
+                return res
+                  .status(404)
+                  .json({ message: `ไม่พบช่างบางคน: ${missing.join(", ")}` });
+              });
+            }
+
+            const nonTech = tcRes
+              .filter((r) => Number(r.us_role_id) !== 2)
+              .map((r) => r.us_id);
+            if (nonTech.length > 0) {
+              return conn.rollback(() => {
+                releaseIfPool(conn);
+                return res.status(400).json({
+                  message: `ผู้ใช้งานต่อไปนี้ไม่ใช่ช่าง: ${nonTech.join(", ")}`,
+                });
+              });
+            }
+
+            // 3) Delete old assignments for this rf_id
+            const deleteSql =
+              "DELETE FROM repair_assignment WHERE ra_rf_id = ?";
+            conn.query(deleteSql, [rfId], (delErr) => {
+              if (delErr) {
+                console.error("Error deleting old assignments:", delErr);
+                return conn.rollback(() => {
+                  releaseIfPool(conn);
+                  return res
+                    .status(500)
+                    .json({ message: "ล้างรายการมอบหมายเก่าไม่สำเร็จ" });
+                });
+              }
+
+              // 4) Insert new assignments
+              const insertSql =
+                "INSERT INTO repair_assignment (ra_rf_id, ra_us_id, ra_is_lead, ra_assigned_at) VALUES ?";
+              const now = new Date();
+              const values = techIds.map((tid) => [
+                rfId,
+                tid,
+                tid === leadId ? 1 : 0,
+                now,
+              ]);
+
+              conn.query(insertSql, [values], (insErr) => {
+                if (insErr) {
+                  console.error("Error inserting assignments:", insErr);
+                  return conn.rollback(() => {
+                    releaseIfPool(conn);
+                    return res
+                      .status(500)
+                      .json({ message: "บันทึกการมอบหมายไม่สำเร็จ" });
+                  });
+                }
+
+                // commit
+                conn.commit((cmErr) => {
+                  if (cmErr) {
+                    console.error("Commit error:", cmErr);
+                    return conn.rollback(() => {
+                      releaseIfPool(conn);
+                      return res
+                        .status(500)
+                        .json({ message: "บันทึกไม่สำเร็จ (commit)" });
+                    });
+                  }
+
+                  releaseIfPool(conn);
+                  return res.json({
+                    message: "มอบหมายเป็นทีมสำเร็จ",
+                    assigned_count: techIds.length,
+                    lead_id: leadId,
+                  });
+                }); // end commit
+              }); // end insert
+            }); // end delete
+          }); // end tech check
+        }); // end rf query
+      }); // end beginTransaction
+    }); // end obtainConnection
   });
 
   return router;

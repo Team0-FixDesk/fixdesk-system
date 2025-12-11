@@ -8,31 +8,41 @@ module.exports = function UserRoutes(db) {
   // เรียกบัญชีผู้ใช้แบบทั้งหมด
   router.get("/users", authMiddleware, (req, res) => {
     const query = `
-      SELECT
-        u.us_id,
-        u.us_user_name,
-        u.us_ttn_id,
-        tn.ttn_title_th AS title_name,
-        u.us_first_name_th,
-        u.us_last_name_th,
-        u.us_first_name_en,
-        u.us_last_name_en,
-        u.us_phone,
-        u.us_department,
-        u.us_role_id,
-        r.role_name,
-        u.us_tt_id,
-        t.tt_name AS technician_type,
-        CONCAT(tn.ttn_title_th, '', u.us_first_name_th, ' ', u.us_last_name_th) AS full_name
-      FROM user u
-      LEFT JOIN role r ON u.us_role_id = r.role_id
-      LEFT JOIN technician_type t ON u.us_tt_id = t.tt_id
-      LEFT JOIN title_name tn ON u.us_ttn_id = tn.ttn_id
-      ORDER BY u.us_id ASC
-      `;
+    SELECT
+      u.us_id,
+      u.us_user_name,
+      u.us_ttn_id,
+      tn.ttn_title_th AS title_name,
+      u.us_first_name_th,
+      u.us_last_name_th,
+      u.us_first_name_en,
+      u.us_last_name_en,
+      u.us_phone,
+      u.us_department,
+      u.us_role_id,
+      r.role_name,
+      u.us_tt_id,
+      t.tt_name AS technician_type,
+      CONCAT(tn.ttn_title_th, '', u.us_first_name_th, ' ', u.us_last_name_th) AS full_name,
+      -- จำนวนใบแจ้งซ่อมที่ผู้ใช้เป็นผู้แจ้ง
+      (SELECT COUNT(*) FROM repair_form rf WHERE rf.rf_us_id = u.us_id) AS repair_count,
+      -- จำนวน assignment ที่ผู้ใช้เป็นผู้รับ (ช่าง)
+      (SELECT COUNT(*) FROM repair_assignment ra WHERE ra.ra_us_id = u.us_id) AS assignment_count,
+      -- flag ว่ามีการใช้งานเกี่ยวข้องหรือไม่ (ใช้ใน frontend เพื่อ disable ปุ่มลบ)
+      CASE WHEN
+        (SELECT COUNT(*) FROM repair_form rf WHERE rf.rf_us_id = u.us_id) +
+        (SELECT COUNT(*) FROM repair_assignment ra WHERE ra.ra_us_id = u.us_id) > 0
+      THEN 1 ELSE 0 END AS has_repairs
+    FROM user u
+    LEFT JOIN role r ON u.us_role_id = r.role_id
+    LEFT JOIN technician_type t ON u.us_tt_id = t.tt_id
+    LEFT JOIN title_name tn ON u.us_ttn_id = tn.ttn_id
+    ORDER BY u.us_id ASC
+  `;
 
     db.query(query, (err, results) => {
       if (err) {
+        console.error("Error fetching users:", err);
         return res.status(500).json({
           message: "ดึงข้อมูลผู้ใช้ไม่สำเร็จ",
           error: err.message,
@@ -189,7 +199,7 @@ module.exports = function UserRoutes(db) {
         )
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
-      
+
       const params = [
         us_user_name,
         hashedPassword,
@@ -269,17 +279,22 @@ module.exports = function UserRoutes(db) {
     });
   });
 
-  // ลบบัญชีผู้ใช้อิง id
+  // ----------------------------------------------------------------------
+  // [จุดแก้ไข] ลบบัญชีผู้ใช้อิง id
+  // ----------------------------------------------------------------------
   router.delete("/users/:id", authMiddleware, (req, res) => {
     const id = Number(req.params.id);
     if (!Number.isFinite(id))
       return res.status(400).json({ message: "id ไม่ถูกต้อง" });
-    // เช็คว่า user คนนี้ถูกใช้ใน repair_form ไหม
+
+    // แก้ SQL: เช็คว่าเป็น "ผู้แจ้ง" (rf_us_id) หรือ "ช่างที่รับงาน" (ra_us_id ใน repair_assignment)
     const checkSql = `
-      SELECT COUNT(*) AS count
-      FROM repair_form
-      WHERE rf_us_id = ? OR rf_assigned_tech_id = ?
+      SELECT 
+        (SELECT COUNT(*) FROM repair_form WHERE rf_us_id = ?) + 
+        (SELECT COUNT(*) FROM repair_assignment WHERE ra_us_id = ?) 
+      AS count
     `;
+
     db.query(checkSql, [id, id], (err, results) => {
       if (err) {
         console.error("Error checking user usage:", err);
@@ -293,9 +308,10 @@ module.exports = function UserRoutes(db) {
         // กันการลบถ้ามีฟอร์มอยู่ในระบบ
         return res.status(400).json({
           message:
-            "ไม่สามารถลบบัญชีผู้ใช้นี้ได้ เนื่องจากมีใบแจ้งซ่อมที่เชื่อมโยงอยู่ในระบบ",
+            "ไม่สามารถลบบัญชีผู้ใช้นี้ได้ เนื่องจากมีใบแจ้งซ่อมหรือการมอบหมายงานที่เชื่อมโยงอยู่ในระบบ",
         });
       }
+
       // ถ้าไม่ถูกใช้งานที่ไหน ค่อยลบจริง
       db.query("DELETE FROM user WHERE us_id = ?", [id], (err2, result) => {
         if (err2) {
@@ -311,8 +327,9 @@ module.exports = function UserRoutes(db) {
       });
     });
   });
+  // ----------------------------------------------------------------------
 
-  // แก้ไขข้อมูลผู้ใช้
+  // แก้ไขข้อมูลผู้ใช้ (ส่วนตัว)
   router.put("/edit-personal/:id", async (req, res) => {
     const { id } = req.params;
     const {

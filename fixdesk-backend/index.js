@@ -33,17 +33,20 @@ const UserRoutes = require("./src/user");
 const TechnicianRoutes = require("./src/technician");
 const LocationRoutes = require("./src/location");
 const RepairFormRoutes = require("./src/repairform");
+const StockRoutes = require("./src/stock");
 
 const userRoutes = UserRoutes(db);
 const technicianRoutes = TechnicianRoutes(db);
 const locationRoutes = LocationRoutes(db);
 const repairFormRoutes = RepairFormRoutes(db);
+const stockRoutes = StockRoutes(db);
 
 app.use(userRoutes);
 app.use(technicianRoutes);
 app.use(locationRoutes);
 app.use(repairFormRoutes);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.use(stockRoutes);
 
 // LOGIN (with bcrypt)
 app.post("/auth/login", (req, res) => {
