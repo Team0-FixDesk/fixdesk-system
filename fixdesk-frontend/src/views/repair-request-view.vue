@@ -348,8 +348,10 @@ async function handleSubmit() {
       title: 'ส่งแบบฟอร์มสำเร็จ!',
       text: 'ระบบได้บันทึกใบแจ้งซ่อมของคุณเรียบร้อยแล้ว',
       icon: 'success',
-      confirmButtonText: 'กลับไปหน้ารายการของฉัน',
-      confirmButtonColor: '#1E48D1',
+      showConfirmButton:false,
+      timer: 1500,
+      timerProgressBar: true,
+       allowOutsideClick: false
     })
 
     router.push('/main/my-list')
@@ -360,11 +362,29 @@ async function handleSubmit() {
       title: 'เกิดข้อผิดพลาด!',
       text: 'ไม่สามารถส่งแบบฟอร์มได้ กรุณาลองใหม่อีกครั้ง',
       icon: 'error',
-      confirmButtonText: 'ตกลง',
-      confirmButtonColor: '#e53e3e',
+      showConfirmButton:false,
+      timer: 1500,
+      timerProgressBar: true,
+       allowOutsideClick: false
     })
   } finally {
     isSubmitting.value = false
+  }
+}
+
+async function handleCancel() {
+  const confirm = await Swal.fire({
+    title: 'ยกเลิกการแจ้งซ่อม?',
+    text: 'ข้อมูลที่กรอกจะไม่ถูกบันทึก',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'ยกเลิกแจ้งซ่อม',
+    cancelButtonText: 'กลับไปแก้ไข',
+    confirmButtonColor: '#e53e3e',
+    cancelButtonColor: '#6b7280',
+  })
+  if (confirm.isConfirmed) {
+    router.push('/main/my-list')
   }
 }
 
@@ -799,6 +819,15 @@ function validateField(field) {
 
         <!-- ปุ่มบันทึก -->
         <div class="flex justify-center sm:justify-end mt-8">
+           <!-- ปุ่มยกเลิก -->
+          <button
+            type="button"
+            :disabled="isSubmitting"
+            class="bg-gray-500 text-white px-6 py-2.5 sm:py-3 rounded-lg hover:bg-gray-600 transition disabled:opacity-50 mr-4"
+            @click="handleCancel"
+          >
+            ยกเลิก
+          </button>
           <button
             type="button"
             :disabled="isSubmitting"
