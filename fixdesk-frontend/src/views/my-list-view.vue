@@ -234,10 +234,24 @@ async function deleteRepair(repairCode) {
     if (!res.ok) throw new Error(data.message || 'ลบไม่สำเร็จ')
 
     rows.value = rows.value.filter((r) => r[1] !== repairCode)
-    Sweetalert.fire('สำเร็จ', 'ลบรายการเรียบร้อยแล้ว', 'success')
+    Sweetalert.fire({
+      title: 'ลบสำเร็จ',
+      text: `ลบใบแจ้งซ่อมหมายเลข ${repairCode} เรียบร้อยแล้ว`,
+      icon: 'success',
+      showConfirmButton: false,
+      timer: 1500,
+      timerProgressBar: true,
+    })
   } catch (err) {
     console.error('ลบไม่สำเร็จ:', err)
-    Sweetalert.fire('เกิดข้อผิดพลาด', err.message, 'error')
+    Sweetalert.fire({
+      title: 'เกิดข้อผิดพลาด',
+      text: err.message || 'ลบไม่สำเร็จ',
+      icon: 'error',
+      showConfirmButton: false,
+      timer: 1500,
+      timerProgressBar: true,
+    })
   }
 }
 </script>
