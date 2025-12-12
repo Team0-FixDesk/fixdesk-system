@@ -9,11 +9,8 @@ import { jwtDecode } from 'jwt-decode'
 const router = useRouter()
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
 const technicians = ref([])
-const acceptMode = ref("alone")
+const acceptMode = ref('alone')
 
-// -----------------------------
-// 🔹 เก็บข้อมูล user จาก token
-// -----------------------------
 const tokenData = ref(null)
 
 function loadTokenData() {
@@ -55,17 +52,51 @@ const rawRows = computed(() =>
   })),
 )
 
+// ฟังก์ชันช่วยตัดคำภาษาไทย (แสดงประมาณ 8 คำ)
+function truncateThaiText(text, wordLimit = 5) {
+  if (!text || text === '-') return '-'
+
+  const fullText = String(text) // แปลงเป็น string เพื่อความชัวร์
+
+  try {
+    // ใช้ Intl.Segmenter สำหรับตัดคำภาษาไทย
+    const segmenter = new Intl.Segmenter('th', { granularity: 'word' })
+    const segments = [...segmenter.segment(fullText)]
+
+    if (segments.length > wordLimit) {
+      // ตัดเอาแค่ 8 คำแรก + ...
+      const shortText = segments
+        .slice(0, wordLimit)
+        .map((s) => s.segment)
+        .join('')
+      // ส่งกลับเป็น HTML เพื่อให้เอาเมาส์ชี้แล้วเห็นข้อความเต็ม (Tooltip)
+      return `<span title="${fullText}" class="cursor-help">${shortText}...</span>`
+    }
+  } catch (err) {
+    // Fallback: กรณี Browser เก่ามาก ไม่รองรับ Intl ให้ตัดตามจำนวนตัวอักษรแทน (ประมาณ 40 ตัว)
+    if (fullText.length > 40) {
+      return `<span title="${fullText}" class="cursor-help">${fullText.substring(0, 40)}...</span>`
+    }
+  }
+
+  return fullText
+}
+
 /* rowsForTable */
 const rowsForTable = computed(() =>
   rowsData.value.map((r) => {
-    const urgencyBadge =
-      {
-        low: `<span class="inline-flex items-center justify-center h-8 font-medium text-green-600 bg-green-100 rounded-full w-28">ไม่เร่งด่วน</span>`,
-        medium: `<span class="inline-flex items-center justify-center h-8 font-medium text-yellow-600 bg-yellow-100 rounded-full w-28">เร่งด่วน</span>`,
-        high: `<span class="inline-flex items-center justify-center h-8 font-medium text-red-600 bg-red-100 rounded-full w-28">เร่งด่วนมาก</span>`,
-      }[String(r.rf_urgency || '').toLowerCase()] ||
-      `<span class="inline-flex items-center justify-center h-8 font-medium rounded-full w-28">-</span>`
+    // เตรียมข้อมูล
+    const dateStr = r.rf_create_at ? new Date(r.rf_create_at).toLocaleDateString('th-TH') : '-'
+    const reporterName = `${r.us_first_name || ''} ${r.us_last_name || ''}`.trim() || '-'
+    const department = r.department_name || '-'
+    const problem = truncateThaiText(r.rf_problem || '-', 5)
+    const parts = []
+    if (r.bd_name) parts.push(r.bd_name)
+    if (r.fl_name) parts.push(r.fl_name)
+    if (r.room_name) parts.push(r.room_name)
+    const placeText = parts.join(' / ') || '-'
 
+    // Logic Badge สถานะ (เหมือนเดิม)
     const statusBadge =
       {
         pending: `<span class="inline-flex items-center justify-center h-8 font-medium rounded-full w-28 bg-amber-100 text-amber-700">รอดำเนินการ</span>`,
@@ -75,26 +106,19 @@ const rowsForTable = computed(() =>
       }[String(r.rf_user_status || '').toLowerCase()] ||
       `<span class="inline-flex items-center justify-center h-8 font-medium rounded-full w-28">-</span>`
 
-    const parts = []
-    if (r.bd_name || r.building_name) parts.push(r.bd_name || r.building_name)
-    if (r.fl_name || r.floor_name) parts.push(r.fl_name || r.floor_name)
-    if (r.room_name) parts.push(r.room_name)
-    if (parts.length === 0 && r.tt_name) parts.push(r.tt_name)
-    const placeText = parts.join('/') || '-'
-
-    const dateStr = r.rf_create_at ? new Date(r.rf_create_at).toLocaleDateString('th-TH') : '-'
-
+    // Return Array ตามลำดับใหม่ (10 ช่อง)
     return [
-      dateStr,
-      r.rf_code || '-',
-      placeText,
-      urgencyBadge,
-      statusBadge,
-      'actions',
+      dateStr, // 0. วันที่
+      r.rf_code, // 1. รหัสใบแจ้ง
+      reporterName, // 2. ผู้แจ้ง
+      department, // 3. หน่วยงาน
+      problem, // 4. เรื่องที่แจ้ง
+      placeText, // 6. สถานที่
+      statusBadge, // 7. สถานะ
+      'actions', // 8. ตัวดำเนินการ
     ]
   }),
 )
-
 
 /* filter / UI state */
 const searchQuery = ref('')
@@ -104,12 +128,9 @@ const showStatusFilter = ref(false)
 const showUrgencyFilter = ref(false)
 const selectedDate = ref('')
 
-/* ===============================
- * 📌 STATE สำหรับการรับงาน
- * =============================== */
-const currentAcceptCode = ref(null)      // เก็บ rf_code ปัจจุบันที่กดรับ
-const showAcceptPopup = ref(false)       // ควบคุม popup รับงาน
-const selectedTeam = ref([])             // รายชื่อช่างในทีม (team mode)
+const currentAcceptCode = ref(null) // เก็บ rf_code ปัจจุบันที่กดรับ
+const showAcceptPopup = ref(false) // ควบคุม popup รับงาน
+const selectedTeam = ref([]) // รายชื่อช่างในทีม (team mode)
 
 /* ป๊อปอัพมอบหมายงาน */
 const showAssignPopup = ref(false)
@@ -152,65 +173,6 @@ async function fetchAllRepairs() {
   }
 }
 
-/* ===============================
- * 🔍 FILTER
- * =============================== */
-const filteredRows = computed(() => {
-  const q = (searchQuery.value || '').toLowerCase()
-  const selUrg = selectedUrgencies.value || []
-  const selSta = selectedStatuses.value || []
-
-  return rowsData.value
-    .filter((r) => {
-      const code = String(r.rf_code || '').toLowerCase()
-      const place = String(r.room_name || r.fl_name || r.bd_name || r.tt_name || '').toLowerCase()
-      const type = String(r.tt_name || '').toLowerCase()
-      const matchSearch = !q || code.includes(q) || place.includes(q) || type.includes(q)
-      const matchUrgency = selUrg.length === 0 || selUrg.includes(String(r.rf_urgency || '').toLowerCase())
-      const matchStatus = selSta.length === 0 || selSta.includes(String(r.rf_user_status || '').toLowerCase())
-      const matchDate = !selectedDate.value || (r.rf_create_at && new Date(r.rf_create_at).toLocaleDateString('th-TH') === new Date(selectedDate.value).toLocaleDateString('th-TH'))
-      return matchSearch && matchUrgency && matchStatus && matchDate
-    })
-    .map((r) => {
-      // แปลงเป็น row สำหรับ TableComponent
-      const urgencyBadge =
-        {
-          low: `<span class="inline-flex items-center justify-center h-8 font-medium text-green-600 bg-green-100 rounded-full w-28">ไม่เร่งด่วน</span>`,
-          medium: `<span class="inline-flex items-center justify-center h-8 font-medium text-yellow-600 bg-yellow-100 rounded-full w-28">เร่งด่วน</span>`,
-          high: `<span class="inline-flex items-center justify-center h-8 font-medium text-red-600 bg-red-100 rounded-full w-28">เร่งด่วนมาก</span>`,
-        }[String(r.rf_urgency || '').toLowerCase()] ||
-        `<span class="inline-flex items-center justify-center h-8 font-medium rounded-full w-28">-</span>`
-
-      const statusBadge =
-        {
-          pending: `<span class="inline-flex items-center justify-center h-8 font-medium rounded-full w-28 bg-amber-100 text-amber-700">รอดำเนินการ</span>`,
-          in_progress: `<span class="inline-flex items-center justify-center h-8 font-medium text-blue-700 bg-blue-100 rounded-full w-28">กำลังดำเนินการ</span>`,
-          done: `<span class="inline-flex items-center justify-center h-8 font-medium text-green-700 bg-green-100 rounded-full w-28">เสร็จสิ้น</span>`,
-          cancel: `<span class="inline-flex items-center justify-center h-8 font-medium text-gray-700 bg-gray-100 rounded-full w-28">ยกเลิก</span>`,
-        }[String(r.rf_user_status || '').toLowerCase()] ||
-        `<span class="inline-flex items-center justify-center h-8 font-medium rounded-full w-28">-</span>`
-
-      const parts = []
-      if (r.bd_name || r.building_name) parts.push(r.bd_name || r.building_name)
-      if (r.fl_name || r.floor_name) parts.push(r.fl_name || r.floor_name)
-      if (r.room_name) parts.push(r.room_name)
-      if (parts.length === 0 && r.tt_name) parts.push(r.tt_name)
-      const placeText = parts.join('/') || '-'
-
-      const dateStr = r.rf_create_at ? new Date(r.rf_create_at).toLocaleDateString('th-TH') : '-'
-
-      return [
-        dateStr,
-        r.rf_code || '-',
-        placeText,
-        urgencyBadge,
-        statusBadge,
-        'actions',
-      ]
-    })
-})
-
-
 function clearFilters() {
   selectedStatuses.value = []
   selectedUrgencies.value = []
@@ -225,15 +187,12 @@ function closeDropdown(e) {
   }
 }
 
-/* ===============================
- * 🧭 ACTION BUTTONS
- * =============================== */
 const goToDetail = (code) => router.push(`/main/repair-detail/${code}`)
 
 async function handleAccept(code) {
   await fetchTechnicians()
   currentAcceptCode.value = code
-  acceptMode.value = "team" // หรือ 'alone' ขึ้นกับปุ่มที่กด
+  acceptMode.value = 'team' // หรือ 'alone' ขึ้นกับปุ่มที่กด
   showAcceptPopup.value = true
 }
 
@@ -244,9 +203,12 @@ function closeAcceptPopup() {
 async function checkAssignmentCount(rf_code) {
   try {
     // คาดหวังว่ามี endpoint /repair-assignment/count?rf_code=XXX ที่คืน { count: N }
-    const res = await fetch(`${API_BASE}/repair-assignment/count?rf_code=${encodeURIComponent(rf_code)}`, {
-      headers: getAuthHeaders(),
-    })
+    const res = await fetch(
+      `${API_BASE}/repair-assignment/count?rf_code=${encodeURIComponent(rf_code)}`,
+      {
+        headers: getAuthHeaders(),
+      },
+    )
     if (!res.ok) {
       // ถ้าไม่มี endpoint นี้ backend อาจคืน 404 -> ให้ fallback เป็น null
       return null
@@ -281,11 +243,14 @@ async function setLeadForAssignment(rf_code) {
   try {
     // 2) บาง backend อาจรองรับการส่ง flag ใน accept-job endpoint
     // ส่ง body { set_lead: true } ด้วยแบบ PUT
-    const res2 = await fetch(`${API_BASE}/technician/accept-job/${encodeURIComponent(rf_code)}?set_lead=1`, {
-      method: 'PUT',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({ set_lead: true }),
-    })
+    const res2 = await fetch(
+      `${API_BASE}/technician/accept-job/${encodeURIComponent(rf_code)}?set_lead=1`,
+      {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ set_lead: true }),
+      },
+    )
     if (res2.ok) return true
   } catch (err) {
     console.warn('setLeadForAssignment (method 2) failed:', err)
@@ -311,7 +276,6 @@ async function setLeadForAssignment(rf_code) {
   // ทุกวิธีล้มเหลว
   return false
 }
-
 
 async function confirmAccept() {
   const code = currentAcceptCode.value
@@ -372,14 +336,14 @@ async function confirmAccept() {
 
     try {
       const res = await fetch(`${API_BASE}/assign-repair-team`, {
-  method: 'POST',
-  headers: getAuthHeaders(),
-  body: JSON.stringify({
-    rf_code: code,
-    technician_ids: selectedTeam.value, // ต้องมีตัวเอง
-    mode: 'merge',
-  }),
-})
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          rf_code: code,
+          technician_ids: selectedTeam.value, // ต้องมีตัวเอง
+          mode: 'merge',
+        }),
+      })
 
       const payload = await res.json().catch(() => ({}))
       if (!res.ok) {
@@ -409,9 +373,8 @@ async function confirmAccept() {
   }
 }
 
-
 /* --- Placeholder Functions for Missing Logic --- */
-// (ฟังก์ชันเหล่านี้จำเป็นต้องมีเพื่อให้ Template ทำงานได้ 
+// (ฟังก์ชันเหล่านี้จำเป็นต้องมีเพื่อให้ Template ทำงานได้
 // หากคุณมีโค้ดส่วนนี้อยู่แล้ว ให้ใช้ของเดิมของคุณแทนส่วนนี้)
 /* กรองรายชื่อช่างตามประเภทและชื่อ */
 const filteredTechnicians = computed(() =>
@@ -425,24 +388,23 @@ const filteredTechnicians = computed(() =>
       `${t.us_first_name} ${t.us_last_name}`.toLowerCase().includes(searchTech.value.toLowerCase())
 
     return matchType && matchSearch
-  })
+  }),
 )
 
-
 function confirmAssign() {
-    // Logic ปุ่มยืนยันใน Popup (Mockup)
-    console.log('Confirm assign technician:', selectedTechnician.value)
-    closeAssignPopup()
+  // Logic ปุ่มยืนยันใน Popup (Mockup)
+  console.log('Confirm assign technician:', selectedTechnician.value)
+  closeAssignPopup()
 }
 function closeAssignPopup() {
-    showAssignPopup.value = false;
-    selectedTechnician.value = null;
-    searchTech.value = '';
-    selectedType.value = '';
+  showAssignPopup.value = false
+  selectedTechnician.value = null
+  searchTech.value = ''
+  selectedType.value = ''
 }
 function handleChangeStatus(item) {
-   // Logic เปลี่ยนสถานะ (Mockup)
-   console.log('Change status requested', item)
+  // Logic เปลี่ยนสถานะ (Mockup)
+  console.log('Change status requested', item)
 }
 
 onMounted(() => {
@@ -458,7 +420,7 @@ function selectAssignType(type) {
 }
 function toggleSelectTeam(id) {
   if (selectedTeam.value.includes(id)) {
-    selectedTeam.value = selectedTeam.value.filter(t => t !== id)
+    selectedTeam.value = selectedTeam.value.filter((t) => t !== id)
   } else {
     selectedTeam.value.push(id)
   }
@@ -479,7 +441,7 @@ async function fetchTechnicians() {
     technicianTypes.value = await typesRes.json()
 
     // Auto-select ตัวเอง + ซ่อน
-    technicians.value = techs.filter(t => t.us_id !== currentUserId)
+    technicians.value = techs.filter((t) => t.us_id !== currentUserId)
     // ตัวเองถูก auto-add
     selectedTeam.value = [currentUserId]
   } catch (err) {
@@ -488,17 +450,13 @@ async function fetchTechnicians() {
   }
 }
 
-
 // ดึง user id ของช่างคนปัจจุบัน
-const me = technicians.value.find(t => t.us_id === tokenData.value?.us_id)
+const me = technicians.value.find((t) => t.us_id === tokenData.value?.us_id)
 
 // auto select ตัวเอง
 if (me) {
   selectedTeam.value = [me.us_id]
 }
-
-
-
 </script>
 
 <template>
@@ -539,15 +497,30 @@ if (me) {
           class="absolute z-10 w-48 p-3 mt-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-md shadow-lg"
         >
           <label class="flex items-center py-1">
-            <input type="checkbox" value="low" v-model="selectedUrgencies" class="w-4 h-4 text-blue-600" />
+            <input
+              type="checkbox"
+              value="low"
+              v-model="selectedUrgencies"
+              class="w-4 h-4 text-blue-600"
+            />
             <span class="ml-2">ไม่เร่งด่วน</span>
           </label>
           <label class="flex items-center py-1">
-            <input type="checkbox" value="medium" v-model="selectedUrgencies" class="w-4 h-4 text-blue-600" />
+            <input
+              type="checkbox"
+              value="medium"
+              v-model="selectedUrgencies"
+              class="w-4 h-4 text-blue-600"
+            />
             <span class="ml-2">เร่งด่วน</span>
           </label>
           <label class="flex items-center py-1">
-            <input type="checkbox" value="high" v-model="selectedUrgencies" class="w-4 h-4 text-blue-600" />
+            <input
+              type="checkbox"
+              value="high"
+              v-model="selectedUrgencies"
+              class="w-4 h-4 text-blue-600"
+            />
             <span class="ml-2">เร่งด่วนมาก</span>
           </label>
         </div>
@@ -570,15 +543,30 @@ if (me) {
           class="absolute z-10 w-48 p-3 mt-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-md shadow-lg"
         >
           <label class="flex items-center py-1">
-            <input type="checkbox" value="pending" v-model="selectedStatuses" class="w-4 h-4 text-blue-600" />
+            <input
+              type="checkbox"
+              value="pending"
+              v-model="selectedStatuses"
+              class="w-4 h-4 text-blue-600"
+            />
             <span class="ml-2">รอดำเนินการ</span>
           </label>
           <label class="flex items-center py-1">
-            <input type="checkbox" value="in_progress" v-model="selectedStatuses" class="w-4 h-4 text-blue-600" />
+            <input
+              type="checkbox"
+              value="in_progress"
+              v-model="selectedStatuses"
+              class="w-4 h-4 text-blue-600"
+            />
             <span class="ml-2">กำลังดำเนินการ</span>
           </label>
           <label class="flex items-center py-1">
-            <input type="checkbox" value="done" v-model="selectedStatuses" class="w-4 h-4 text-blue-600" />
+            <input
+              type="checkbox"
+              value="done"
+              v-model="selectedStatuses"
+              class="w-4 h-4 text-blue-600"
+            />
             <span class="ml-2">เสร็จสิ้น</span>
           </label>
         </div>
@@ -596,7 +584,16 @@ if (me) {
     </div>
 
     <TableComponent
-      :columns="['วันที่', 'หมายเลขใบแจ้งซ่อม', 'สถานที่', 'ความเร่งด่วน', 'สถานะงาน', 'การจัดการ']"
+      :columns="[
+        'วันที่',
+        'รหัสใบแจ้ง',
+        'ผู้แจ้ง',
+        'หน่วยงาน',
+        'เรื่องที่แจ้ง',
+        'สถานที่',
+        'สถานะ',
+        'ตัวดำเนินการ',
+      ]"
       :rows="rowsForTable"
       :rawRows="rawRows"
       :perPage="10"
@@ -682,41 +679,38 @@ if (me) {
       </div>
     </div>
   </div>
-  <!-- ===========================
-     📌 Popup รับงานแบบ Custom
-     =========================== -->
-     <!-- Popup รับงาน -->
+
+  <!-- Popup รับงาน -->
   <div
     v-if="showAcceptPopup"
     class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40"
   >
     <div class="bg-white rounded-lg shadow-lg w-full max-w-xl p-8 relative">
       <h2 class="text-lg sm:text-xl font-bold text-black mb-6">รับงาน / มอบหมายทีม</h2>
-    
+
       <button
         @click="closeAcceptPopup"
         class="absolute text-lg text-gray-500 top-4 right-4 hover:text-gray-700"
       >
         ✕
       </button>
-    
+
       <!-- โหมดรับงาน -->
       <div class="mb-4 flex gap-6">
         <label class="flex items-center gap-2 cursor-pointer">
           <input type="radio" value="alone" v-model="acceptMode" />
           ทำงานคนเดียว
         </label>
-      
+
         <label class="flex items-center gap-2 cursor-pointer">
           <input type="radio" value="team" v-model="acceptMode" />
           ทำงานเป็นทีม
         </label>
       </div>
-    
+
       <!-- TEAM MODE -->
       <div v-if="acceptMode === 'team'">
         <div class="flex flex-col sm:flex-row gap-3 mb-4">
-        
           <!-- Dropdown ประเภทช่าง -->
           <div class="relative w-full sm:w-1/2">
             <button
@@ -730,7 +724,7 @@ if (me) {
                 :class="{ 'rotate-180': showAssignTypeFilter }"
               />
             </button>
-          
+
             <div
               v-if="showAssignTypeFilter"
               class="absolute z-10 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto mt-1"
@@ -742,7 +736,7 @@ if (me) {
               >
                 ประเภทช่างทั้งหมด
               </div>
-            
+
               <div
                 v-for="type in technicianTypes"
                 :key="type.tt_id"
@@ -754,7 +748,7 @@ if (me) {
               </div>
             </div>
           </div>
-        
+
           <!-- Search -->
           <div class="w-full sm:w-1/2">
             <input
@@ -765,7 +759,7 @@ if (me) {
             />
           </div>
         </div>
-      
+
         <!-- รายชื่อช่าง -->
         <div class="space-y-2 overflow-y-auto max-h-60">
           <div
@@ -781,7 +775,7 @@ if (me) {
               <p class="text-gray-700 text-sm">ประเภท: {{ tech.tt_name || '-' }}</p>
               <p class="text-gray-700 text-sm">โทร: {{ tech.us_phone || '-' }}</p>
             </div>
-          
+
             <input
               type="checkbox"
               :value="tech.us_id"
@@ -789,13 +783,13 @@ if (me) {
               class="w-5 h-5 mt-5 cursor-pointer border-2 border-[#1E48D1] accent-[#1E48D1]"
             />
           </div>
-        
+
           <p v-if="filteredTechnicians.length === 0" class="py-4 text-center text-gray-500">
             — ไม่พบช่าง —
           </p>
         </div>
       </div>
-    
+
       <!-- ปุ่ม -->
       <div class="flex justify-end gap-3 mt-6">
         <button
@@ -811,12 +805,8 @@ if (me) {
           ยืนยัน
         </button>
       </div>
-    
     </div>
   </div>
-
-
-
 </template>
 
 <style scoped>
