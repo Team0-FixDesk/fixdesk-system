@@ -411,7 +411,7 @@ async function confirmAccept() {
 
 
 /* --- Placeholder Functions for Missing Logic --- */
-// (ฟังก์ชันเหล่านี้จำเป็นต้องมีเพื่อให้ Template ทำงานได้ 
+// (ฟังก์ชันเหล่านี้จำเป็นต้องมีเพื่อให้ Template ทำงานได้
 // หากคุณมีโค้ดส่วนนี้อยู่แล้ว ให้ใช้ของเดิมของคุณแทนส่วนนี้)
 /* กรองรายชื่อช่างตามประเภทและชื่อ */
 const filteredTechnicians = computed(() =>
@@ -692,31 +692,31 @@ if (me) {
   >
     <div class="bg-white rounded-lg shadow-lg w-full max-w-xl p-8 relative">
       <h2 class="text-lg sm:text-xl font-bold text-black mb-6">รับงาน / มอบหมายทีม</h2>
-    
+
       <button
         @click="closeAcceptPopup"
         class="absolute text-lg text-gray-500 top-4 right-4 hover:text-gray-700"
       >
         ✕
       </button>
-    
+
       <!-- โหมดรับงาน -->
       <div class="mb-4 flex gap-6">
         <label class="flex items-center gap-2 cursor-pointer">
           <input type="radio" value="alone" v-model="acceptMode" />
           ทำงานคนเดียว
         </label>
-      
+
         <label class="flex items-center gap-2 cursor-pointer">
           <input type="radio" value="team" v-model="acceptMode" />
           ทำงานเป็นทีม
         </label>
       </div>
-    
+
       <!-- TEAM MODE -->
       <div v-if="acceptMode === 'team'">
         <div class="flex flex-col sm:flex-row gap-3 mb-4">
-        
+
           <!-- Dropdown ประเภทช่าง -->
           <div class="relative w-full sm:w-1/2">
             <button
@@ -730,7 +730,7 @@ if (me) {
                 :class="{ 'rotate-180': showAssignTypeFilter }"
               />
             </button>
-          
+
             <div
               v-if="showAssignTypeFilter"
               class="absolute z-10 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto mt-1"
@@ -742,7 +742,7 @@ if (me) {
               >
                 ประเภทช่างทั้งหมด
               </div>
-            
+
               <div
                 v-for="type in technicianTypes"
                 :key="type.tt_id"
@@ -754,7 +754,7 @@ if (me) {
               </div>
             </div>
           </div>
-        
+
           <!-- Search -->
           <div class="w-full sm:w-1/2">
             <input
@@ -765,7 +765,7 @@ if (me) {
             />
           </div>
         </div>
-      
+
         <!-- รายชื่อช่าง -->
         <div class="space-y-2 overflow-y-auto max-h-60">
           <div
@@ -781,7 +781,7 @@ if (me) {
               <p class="text-gray-700 text-sm">ประเภท: {{ tech.tt_name || '-' }}</p>
               <p class="text-gray-700 text-sm">โทร: {{ tech.us_phone || '-' }}</p>
             </div>
-          
+
             <input
               type="checkbox"
               :value="tech.us_id"
@@ -789,13 +789,13 @@ if (me) {
               class="w-5 h-5 mt-5 cursor-pointer border-2 border-[#1E48D1] accent-[#1E48D1]"
             />
           </div>
-        
+
           <p v-if="filteredTechnicians.length === 0" class="py-4 text-center text-gray-500">
             — ไม่พบช่าง —
           </p>
         </div>
       </div>
-    
+
       <!-- ปุ่ม -->
       <div class="flex justify-end gap-3 mt-6">
         <button
@@ -811,7 +811,7 @@ if (me) {
           ยืนยัน
         </button>
       </div>
-    
+
     </div>
   </div>
 

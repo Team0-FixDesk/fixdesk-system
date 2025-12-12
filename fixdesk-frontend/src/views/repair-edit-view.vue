@@ -138,13 +138,21 @@ function handleDrop(event) {
 function processFiles(files) {
   // เช็คจำนวนไฟล์
   if (formData.value.uploadedFiles.length + files.length > maxFiles) {
-    Swal.fire({
+    // Toast notification
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 2000,
+      timerProgressBar: true
+    })
+    Toast.fire({
       title: 'ไฟล์เกินกำหนด',
       text: `สามารถอัพโหลดได้สูงสุด ${maxFiles} ไฟล์`,
       icon: 'warning',
-      showConfirmButton: false,
-      timer: 1500,
-      timerProgressBar: true,
+      background: '#fef3c7',
+      color: '#92400e'
     })
     return
   }
@@ -164,13 +172,21 @@ function processFiles(files) {
   const invalidFiles = files.filter((file) => !allowedTypes.includes(file.type))
 
   if (invalidFiles.length > 0) {
-    Swal.fire({
+    // Toast notification
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 2500,
+      timerProgressBar: true
+    })
+    Toast.fire({
       title: 'ประเภทไฟล์ไม่ถูกต้อง',
       text: 'รองรับเฉพาะไฟล์รูปภาพ (jpg, png, gif, webp) และวิดีโอ (mp4, avi, mov, wmv)',
       icon: 'error',
-      showConfirmButton: false,
-      timer: 1500,
-      timerProgressBar: true,
+      background: '#fee2e2',
+      color: '#dc2626'
     })
     return
   }
@@ -179,13 +195,21 @@ function processFiles(files) {
   const maxSize = 50 * 1024 * 1024
   const oversizedFiles = files.filter((file) => file.size > maxSize)
   if (oversizedFiles.length > 0) {
-    Swal.fire({
-       title: 'ไฟล์ใหญ่เกินไป',
+    // Toast notification
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 2000,
+      timerProgressBar: true
+    })
+    Toast.fire({
+      title: 'ไฟล์ใหญ่เกินไป',
       text: 'ขนาดไฟล์ต้องไม่เกิน 50MB',
       icon: 'error',
-      showConfirmButton: false,
-      timer: 1500,
-      timerProgressBar: true,
+      background: '#fee2e2',
+      color: '#dc2626'
     })
     return
   }
