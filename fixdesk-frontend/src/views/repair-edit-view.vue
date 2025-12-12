@@ -138,11 +138,21 @@ function handleDrop(event) {
 function processFiles(files) {
   // เช็คจำนวนไฟล์
   if (formData.value.uploadedFiles.length + files.length > maxFiles) {
-    Swal.fire({
+    // Toast notification
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 2000,
+      timerProgressBar: true
+    })
+    Toast.fire({
       title: 'ไฟล์เกินกำหนด',
       text: `สามารถอัพโหลดได้สูงสุด ${maxFiles} ไฟล์`,
       icon: 'warning',
-      confirmButtonText: 'ตกลง',
+      background: '#fef3c7',
+      color: '#92400e'
     })
     return
   }
@@ -162,11 +172,21 @@ function processFiles(files) {
   const invalidFiles = files.filter((file) => !allowedTypes.includes(file.type))
 
   if (invalidFiles.length > 0) {
-    Swal.fire({
+    // Toast notification
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 2500,
+      timerProgressBar: true
+    })
+    Toast.fire({
       title: 'ประเภทไฟล์ไม่ถูกต้อง',
       text: 'รองรับเฉพาะไฟล์รูปภาพ (jpg, png, gif, webp) และวิดีโอ (mp4, avi, mov, wmv)',
       icon: 'error',
-      confirmButtonText: 'ตกลง',
+      background: '#fee2e2',
+      color: '#dc2626'
     })
     return
   }
@@ -175,11 +195,21 @@ function processFiles(files) {
   const maxSize = 50 * 1024 * 1024
   const oversizedFiles = files.filter((file) => file.size > maxSize)
   if (oversizedFiles.length > 0) {
-    Swal.fire({
+    // Toast notification
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 2000,
+      timerProgressBar: true
+    })
+    Toast.fire({
       title: 'ไฟล์ใหญ่เกินไป',
       text: 'ขนาดไฟล์ต้องไม่เกิน 50MB',
       icon: 'error',
-      confirmButtonText: 'ตกลง',
+      background: '#fee2e2',
+      color: '#dc2626'
     })
     return
   }
@@ -420,21 +450,28 @@ function validateField(field) {
 
 // Submit Logic
 async function handleSubmit() {
+  // เช็กช่อง * อื่น ๆ
+  if (!validateForm()) {
+    Swal.fire({
+      title: 'ข้อมูลไม่ครบถ้วน',
+      text: 'กรุณากรอกข้อมูลให้ครบถ้วนตามที่กำหนด',
+      icon: 'warning',
+      showConfirmButton: false,
+      timer: 1500,
+      timerProgressBar: true,
+    })
+    return
+  }
   // เช็กความเร่งด่วนก่อน
   if (!formData.value.urgency) {
     await Swal.fire({
       title: 'ยังไม่ได้เลือกความเร่งด่วน',
-      text: 'กรุณาเลือกระดับความเร่งด่วนก่อนบันทึกข้อมูล',
+      text: 'กรุณาเลือกระดับความเร่งด่วนก่อนส่งแบบฟอร์ม',
       icon: 'warning',
-      confirmButtonText: 'ตกลง',
-      confirmButtonColor: '#f59e0b',
+      showConfirmButton: false,
+      timer: 1500,
+      timerProgressBar: true,
     })
-    return
-  }
-
-  // เช็กช่อง * อื่น ๆ
-  if (!validateForm()) {
-    Swal.fire('ข้อมูลไม่ครบถ้วน', 'กรุณาตรวจสอบช่องที่มีเครื่องหมาย *', 'error')
     return
   }
 
@@ -498,8 +535,10 @@ async function handleSubmit() {
       title: 'บันทึกการแก้ไขสำเร็จ!',
       text: `ระบบได้อัปเดตข้อมูลใบแจ้งซ่อม ${repairCode} เรียบร้อยแล้ว`,
       icon: 'success',
-      confirmButtonText: 'กลับไปหน้ารายการของฉัน',
-      confirmButtonColor: '#1E48D1',
+      showConfirmButton: false,
+      timer: 1500,
+      timerProgressBar: true,
+      allowOutsideClick: false
     })
 
     router.push('/main/my-list')
@@ -510,11 +549,28 @@ async function handleSubmit() {
       title: 'เกิดข้อผิดพลาด!',
       text: 'ไม่สามารถบันทึกการแก้ไขได้ กรุณาลองใหม่อีกครั้ง',
       icon: 'error',
-      confirmButtonText: 'ตกลง',
-      confirmButtonColor: '#e53e3e',
+      showConfirmButton: false,
+      timer: 1500,
+      timerProgressBar: true,
+      allowOutsideClick: false
     })
   } finally {
     isSubmitting.value = false
+  }
+}
+async function handleCancel() {
+  const confirm = await Swal.fire({
+    title: 'ยกเลิกการแก้ไขข้อมูล?',
+    text: 'ข้อมูลที่กรอกจะไม่ถูกบันทึก',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'ยกเลิกการแก้ไข',
+    cancelButtonText: 'กลับไปแก้ไข',
+    confirmButtonColor: '#e53e3e',
+    cancelButtonColor: '#6b7280',
+  })
+  if (confirm.isConfirmed) {
+    router.push('/main/my-list')
   }
 }
 </script>
@@ -865,6 +921,15 @@ async function handleSubmit() {
 
         <!-- ปุ่มบันทึก -->
         <div class="flex justify-center sm:justify-end mt-8">
+          <button
+            type="button"
+            :disabled="isSubmitting"
+            class="bg-gray-400 text-white px-6 py-2.5 sm:py-3 rounded-lg hover:bg-gray-500 transition disabled:opacity-50 mr-4"
+            @click="handleCancel"
+          >
+            ยกเลิกการแก้ไข
+          </button>
+
           <button
             type="button"
             :disabled="isSubmitting"

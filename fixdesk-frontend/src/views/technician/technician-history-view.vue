@@ -165,7 +165,25 @@ async function fetchAllRepairs() {
     })
   } catch (err) {
     console.error('โหลดข้อมูลไม่สำเร็จ:', err)
-    Swal.fire('เกิดข้อผิดพลาด', err.message, 'error')
+    // Toast notification
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true
+    })
+    Toast.fire({
+      title: 'เกิดข้อผิดพลาด',
+      text: err.message,
+      icon: 'error',
+      background: '#fee2e2',
+      color: '#dc2626'
+    })
+
+    // Normal Alert (commented for reference)
+    // Swal.fire('เกิดข้อผิดพลาด', err.message, 'error')
   }
 }
 
