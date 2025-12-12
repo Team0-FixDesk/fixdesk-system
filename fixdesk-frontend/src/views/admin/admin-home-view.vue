@@ -102,8 +102,8 @@ const rowsForTable = computed(() =>
       r.date || '-', // วันที่
       r.ticketId || '-', // ใบแจ้งซ่อม
       r.requesterName || '-', // ชื่อผู้แจ้ง
-      r.type || '-', // ประเภท
       r.department || '-', // หน่วยงาน
+      r.type || '-', // ประเภท
       urgencyHtml, // ความเร่งด่วน (HTML badge)
       statusHtml, // สถานะงาน (HTML badge)
       'actions', // ปุ่มรายละเอียด / edit / delete (TableComponent จะเรนเดอร์)
@@ -242,10 +242,10 @@ onMounted(() => {
       <TableComponent
         :columns="[
           'วันที่',
-          'ใบแจ้งซ่อม',
+          'หมายเลขแจ้งซ่อม',
           'ชื่อผู้แจ้ง',
-          'ประเภท',
           'หน่วยงาน',
+          'ประเภท',
           'ความเร่งด่วน',
           'สถานะงาน',
           'รายละเอียด',

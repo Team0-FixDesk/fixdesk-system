@@ -17,10 +17,10 @@ const getAuthHeaders = () => {
 
 const columns = [
   'วันที่',
-  'ใบแจ้งซ่อม',
+  'หมายเลขแจ้งซ่อม',
   'ชื่อผู้แจ้ง',
-  'ประเภท',
   'หน่วยงาน',
+  'ประเภท',
   'ความเร่งด่วน',
   'สถานะงาน',
   'การดำเนินการ',
@@ -75,13 +75,13 @@ async function fetchAllRepairs() {
       const isAssigned = !!r.rf_assigned_tech_id
 
       return {
-        date: createdAt,
-        code: r.rf_code,
-        requester: `${r.us_first_name} ${r.us_last_name}`,
-        department: r.department_name || '-',
-        type: r.tt_name || '-',
-        urgencyKey: r.rf_urgency,
-        statusKey: r.rf_user_status,
+        date: createdAt, //วันที่ (Date object)
+        code: r.rf_code, //หมายเลขแจ้งซ่อม
+        requester: `${r.us_first_name} ${r.us_last_name}`,  //ชื่อผู้แจ้ง
+        department: r.department_name || '-', //หน่วยงาน
+        type: r.tt_name || '-', //ประเภท
+        urgencyKey: r.rf_urgency, // ความเร่งด่วน (key)
+        statusKey: r.rf_user_status, // สถานะงาน (key)
         assigned: isAssigned,
         dateDisplay: createdAt.toLocaleDateString('th-TH'),
         urgencyBadge,
@@ -99,31 +99,44 @@ const filteredRows = computed(() => {
   const q = searchQuery.value.toLowerCase()
   const selectedDateObj = selectedDate.value ? new Date(selectedDate.value) : null
 
-  return rows.value
-    .filter((r) => {
-      const matchSearch =
-        r.code.toLowerCase().includes(q) ||
-        r.requester.toLowerCase().includes(q) ||
-        r.type.toLowerCase().includes(q)
+  // กรองข้อมูลตามเงื่อนไข
+  const filtered = rows.value.filter((r) => {
+    const matchSearch =
+      r.code.toLowerCase().includes(q) ||
+      r.requester.toLowerCase().includes(q) ||
+      r.type.toLowerCase().includes(q) ||
+      r.department.toLowerCase().includes(q)
 
-      const matchUrgency =
-        selectedUrgencies.value.length === 0 || selectedUrgencies.value.includes(r.urgencyKey)
-      const matchStatus =
-        selectedStatuses.value.length === 0 || selectedStatuses.value.includes(r.statusKey)
-      const matchDate = !selectedDateObj || r.date.toDateString() === selectedDateObj.toDateString()
+    const matchUrgency =
+      selectedUrgencies.value.length === 0 || selectedUrgencies.value.includes(r.urgencyKey)
+    const matchStatus =
+      selectedStatuses.value.length === 0 || selectedStatuses.value.includes(r.statusKey)
+    const matchDate = !selectedDateObj || r.date.toDateString() === selectedDateObj.toDateString()
 
-      return matchSearch && matchUrgency && matchStatus && matchDate
-    })
-    .map((r) => [
-      r.dateDisplay,
-      r.code,
-      r.requester,
-      r.type,
-      r.department,
-      r.urgencyBadge,
-      r.statusBadge,
-      'actions',
-    ])
+    return matchSearch && matchUrgency && matchStatus && matchDate
+  })
+
+  // เรียงลำดับ: 1) ยังไม่มอบหมายขึ้นด้านบน 2) เรียงตามวันที่เก่าก่อน
+  const sorted = filtered.sort((a, b) => {
+    // ตรวจสอบการมอบหมาย (ยังไม่มอบหมาย ขึ้นบน)
+    if (!a.assigned && b.assigned) return -1 // a ไม่มอบหมาย ขึ้นบน
+    if (a.assigned && !b.assigned) return 1  // b ไม่มอบหมาย ขึ้นบน
+    
+    // ถ้าสถานะการมอบหมายเท่ากัน เรียงตามวันที่เก่าก่อน
+    return a.date - b.date
+  })
+
+  // แปลงเป็นรูปแบบที่ TableComponent ต้องการ
+  return sorted.map((r) => [
+    r.dateDisplay,
+    r.code,
+    r.requester,
+    r.department,
+    r.type,
+    r.urgencyBadge,
+    r.statusBadge,
+    'actions',
+  ])
 })
 
 // Functions for Filters
