@@ -266,19 +266,45 @@ const confirmAddItem = async () => {
 
     if (!res.ok) throw new Error(responseData.message || 'บันทึกข้อมูลไม่สำเร็จ')
 
-    Swal.fire({
-      icon: 'success',
+    // Toast notification
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 2500,
+      timerProgressBar: true,
+      didOpen: (toast) => {
+        toast.addEventListener('mouseenter', Swal.stopTimer)
+        toast.addEventListener('mouseleave', Swal.resumeTimer)
+      }
+    })
+    Toast.fire({
       title: 'สำเร็จ!',
       text: 'บันทึกรายการสำเร็จ!',
+      icon: 'success',
+      background: '#f0f9ff',
+      color: '#1e3a8a'
     })
 
     closeAddModal()
   } catch (error) {
     console.error('Error adding item:', error)
-    Swal.fire({
-      icon: 'error',
+    // Toast notification
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true
+    })
+    Toast.fire({
       title: 'ผิดพลาด!',
       text: error.message || 'เกิดข้อผิดพลาดในการบันทึกรายการ',
+      icon: 'error',
+      background: '#fee2e2',
+      color: '#dc2626'
     })
   }
 }
