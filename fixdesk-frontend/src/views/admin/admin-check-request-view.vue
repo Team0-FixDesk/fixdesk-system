@@ -91,7 +91,25 @@ async function fetchAllRepairs() {
     })
   } catch (err) {
     console.error('โหลดข้อมูลไม่สำเร็จ:', err)
-    Swal.fire('เกิดข้อผิดพลาด', err.message, 'error')
+    // Toast notification
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true
+    })
+    Toast.fire({
+      title: 'เกิดข้อผิดพลาด',
+      text: err.message,
+      icon: 'error',
+      background: '#fee2e2',
+      color: '#dc2626'
+    })
+
+    // Normal Alert (commented for session-related errors)
+    // Swal.fire('เกิดข้อผิดพลาด', err.message, 'error')
   }
 }
 
@@ -169,7 +187,6 @@ function closeDropdown(e) {
     showUrgencyFilter.value = false
   }
 }
-
 // ACTION BUTTONS
 const goToDetail = (code) =>
   router.push({
@@ -178,6 +195,19 @@ const goToDetail = (code) =>
   })
 
 async function handleAssign(code) {
+  // เปลี่ยนเป็น Toast แทน Timer Alert
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true,
+      didOpen: (toast) => {
+        toast.addEventListener('mouseenter', Swal.stopTimer)
+        toast.addEventListener('mouseleave', Swal.resumeTimer)
+      }
+    })
   const result = await Swal.fire({
     title: 'มอบหมายงาน',
     text: `ต้องการมอบหมายใบแจ้งซ่อม ${code} หรือไม่?`,
@@ -187,7 +217,13 @@ async function handleAssign(code) {
     cancelButtonText: 'ยกเลิก',
   })
   if (result.isConfirmed) {
-    Swal.fire('สำเร็จ', 'มอบหมายงานเรียบร้อยแล้ว', 'success')
+    Toast.fire({
+      title: 'สำเร็จ',
+      text: 'มอบหมายงานเรียบร้อยแล้ว',
+      icon: 'success',
+      background: '#f0f9ff',
+      color: '#1e3a8a'
+    })
   }
 }
 

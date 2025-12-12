@@ -217,11 +217,21 @@ async function fetchAllDataAlternative() {
     }
   } catch (err) {
     console.error('Error fetching location data:', err)
-    Swal.fire({
-      icon: 'error',
+    // Toast notification
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true
+    })
+    Toast.fire({
       title: 'เกิดข้อผิดพลาด',
       text: 'ไม่สามารถโหลดข้อมูลสถานที่ได้',
-      confirmButtonColor: '#EF4444',
+      icon: 'error',
+      background: '#fee2e2',
+      color: '#dc2626'
     })
   }
 }
@@ -569,22 +579,44 @@ async function confirmDelete(username) {
       throw new Error(data.message || 'ลบไม่สำเร็จ')
     }
 
-    await Swal.fire({
-      icon: 'success',
+    // Toast notification
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 2500,
+      timerProgressBar: true,
+      didOpen: (toast) => {
+        toast.addEventListener('mouseenter', Swal.stopTimer)
+        toast.addEventListener('mouseleave', Swal.resumeTimer)
+      }
+    })
+    Toast.fire({
       title: 'สำเร็จ!',
       text: 'ลบห้องเรียบร้อยแล้ว',
-      confirmButtonColor: '#1E48D1',
-      timer: 1500,
-      showConfirmButton: false,
+      icon: 'success',
+      background: '#f0f9ff',
+      color: '#1e3a8a'
     })
 
     await refreshData()
   } catch (err) {
-    await Swal.fire({
-      icon: 'error',
+    // Toast notification
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true
+    })
+    Toast.fire({
       title: 'เกิดข้อผิดพลาด',
       text: err.message || 'เกิดข้อผิดพลาดในการลบข้อมูล',
-      confirmButtonColor: '#EF4444',
+      icon: 'error',
+      background: '#fee2e2',
+      color: '#dc2626'
     })
   }
 }

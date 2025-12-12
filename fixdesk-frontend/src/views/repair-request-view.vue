@@ -124,13 +124,21 @@ function handleDrop(event) {
 function processFiles(files) {
   // เช็คจำนวนไฟล์
   if (formData.value.uploadedFiles.length + files.length > maxFiles) {
-    Swal.fire({
+    // Toast notification
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 2000,
+      timerProgressBar: true
+    })
+    Toast.fire({
       title: 'ไฟล์เกินกำหนด',
       text: `สามารถอัพโหลดได้สูงสุด ${maxFiles} ไฟล์`,
       icon: 'warning',
-      showConfirmButton: false,
-      timer: 1500,
-      timerProgressBar: true,
+      background: '#fef3c7',
+      color: '#92400e'
     })
     return
   }
@@ -150,13 +158,21 @@ function processFiles(files) {
   const invalidFiles = files.filter((file) => !allowedTypes.includes(file.type))
 
   if (invalidFiles.length > 0) {
-    Swal.fire({
+    // Toast notification
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 2500,
+      timerProgressBar: true
+    })
+    Toast.fire({
       title: 'ประเภทไฟล์ไม่ถูกต้อง',
       text: 'รองรับเฉพาะไฟล์รูปภาพ (jpg, png, gif, webp) และวิดีโอ (mp4, avi, mov, wmv)',
       icon: 'error',
-      showConfirmButton: false,
-      timer: 1500,
-      timerProgressBar: true,
+      background: '#fee2e2',
+      color: '#dc2626'
     })
     return
   }
@@ -165,13 +181,21 @@ function processFiles(files) {
   const maxSize = 50 * 1024 * 1024
   const oversizedFiles = files.filter((file) => file.size > maxSize)
   if (oversizedFiles.length > 0) {
-    Swal.fire({
+    // Toast notification
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 2000,
+      timerProgressBar: true
+    })
+    Toast.fire({
       title: 'ไฟล์ใหญ่เกินไป',
       text: 'ขนาดไฟล์ต้องไม่เกิน 50MB',
       icon: 'error',
-      showConfirmButton: false,
-      timer: 1500,
-      timerProgressBar: true,
+      background: '#fee2e2',
+      color: '#dc2626'
     })
     return
   }
@@ -265,25 +289,41 @@ onMounted(() => {
 async function handleSubmit() {
   // เช็กฟิลด์อื่น ๆ ตามปกติ
   if (!validateForm()) {
-    Swal.fire({
+    // Toast notification
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 2500,
+      timerProgressBar: true
+    })
+    Toast.fire({
       title: 'ข้อมูลไม่ครบถ้วน',
       text: 'กรุณากรอกข้อมูลให้ครบถ้วนตามที่กำหนด',
       icon: 'warning',
-      showConfirmButton: false,
-      timer: 1500,
-      timerProgressBar: true,
+      background: '#fef3c7',
+      color: '#92400e'
     })
     return
   }
   // เช็กความเร่งด่วน
   if (!formData.value.urgency) {
-    await Swal.fire({
+    // Toast notification
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 2500,
+      timerProgressBar: true
+    })
+    Toast.fire({
       title: 'ยังไม่ได้เลือกความเร่งด่วน',
       text: 'กรุณาเลือกระดับความเร่งด่วนก่อนส่งแบบฟอร์ม',
       icon: 'warning',
-      showConfirmButton: false,
-      timer: 1500,
-      timerProgressBar: true,
+      background: '#fef3c7',
+      color: '#92400e'
     })
     return
   }
@@ -358,84 +398,50 @@ async function handleSubmit() {
     if (!res.ok) throw new Error(data.message || 'บันทึกข้อมูลไม่สำเร็จ')
 
     Swal.close()
-    await Swal.fire({
+
+    // Toast notification
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 2500,
+      timerProgressBar: true,
+      didOpen: (toast) => {
+        toast.addEventListener('mouseenter', Swal.stopTimer)
+        toast.addEventListener('mouseleave', Swal.resumeTimer)
+      }
+    })
+    Toast.fire({
       title: 'ส่งแบบฟอร์มสำเร็จ!',
       text: 'ระบบได้บันทึกใบแจ้งซ่อมของคุณเรียบร้อยแล้ว',
       icon: 'success',
-      showConfirmButton:false,
-      timer: 1500,
-      timerProgressBar: true,
-      allowOutsideClick: false
+      background: '#f0f9ff',
+      color: '#1e3a8a'
     })
 
     router.push('/main/my-list')
   } catch (err) {
     console.error('บันทึกไม่สำเร็จ:', err)
     Swal.close()
-    Swal.fire({
-      title: 'เกิดข้อผิดพลาด!',
-      text: 'ไม่สามารถส่งแบบฟอร์มได้ กรุณาลองใหม่อีกครั้ง',
-      icon: 'error',
-      showConfirmButton:false,
-      timer: 1500,
-      timerProgressBar: true,
-      allowOutsideClick: false
-    })
-  }
-  /*
-      // เปลี่ยนเป็น Toast แทน Timer Alert
+
+    // Toast notification
     const Toast = Swal.mixin({
       toast: true,
       position: 'top-end',
       animation: false,
       showConfirmButton: false,
       timer: 3000,
-      timerProgressBar: true,
-      didOpen: (toast) => {
-        toast.addEventListener('mouseenter', Swal.stopTimer)
-        toast.addEventListener('mouseleave', Swal.resumeTimer)
-      }
+      timerProgressBar: true
     })
-
     Toast.fire({
-      icon: 'success',
-      title: 'ส่งแบบฟอร์มสำเร็จ!',
-      text: 'ระบบได้บันทึกใบแจ้งซ่อมของคุณเรียบร้อยแล้ว',
-      background: '#f0f9ff',
-      color: '#0c4a6e'
-    })
-
-    // Redirect หลัง 1.5 วินาที (เร็วกว่า toast หายไป)
-    setTimeout(() => {
-      router.push('/main/my-list')
-    }, 1500)
-
-  } catch (err) {
-    console.error('บันทึกไม่สำเร็จ:', err)
-    Swal.close()
-
-    // Error Toast
-    const ErrorToast = Swal.mixin({
-      toast: true,
-      position: 'top-end',
-      animation: false,
-      showConfirmButton: false,
-      timer: 4000, // นานกว่าเล็กน้อยสำหรับ error
-      timerProgressBar: true,
-      didOpen: (toast) => {
-        toast.addEventListener('mouseenter', Swal.stopTimer)
-        toast.addEventListener('mouseleave', Swal.resumeTimer)
-      }
-    })
-
-    ErrorToast.fire({
-      icon: 'error',
       title: 'เกิดข้อผิดพลาด!',
       text: 'ไม่สามารถส่งแบบฟอร์มได้ กรุณาลองใหม่อีกครั้ง',
-      background: '#fef2f2',
-      color: '#991b1b'
+      icon: 'error',
+      background: '#fee2e2',
+      color: '#dc2626'
     })
-  }*/finally {
+  }finally {
     isSubmitting.value = false
   }
 }
