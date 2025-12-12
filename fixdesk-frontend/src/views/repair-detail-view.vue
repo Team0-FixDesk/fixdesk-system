@@ -1,7 +1,10 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import RepairStatusTimeline from '@/components/status-timeline-component.vue'
+import assignJobModalComponent from '@/components/assign-job-modal-component.vue'
+import AcceptJobModalComponent from '@/components/accept-job-madal-component.vue'
+import Swal from 'sweetalert2'
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
 const route = useRoute()
@@ -11,6 +14,80 @@ const repair = ref(null)
 const isLoading = ref(true)
 const isError = ref(false)
 const repairCode = route.params.code
+const canAssign = ref(false)
+const canAccept = ref(false) // เพิ่มตัวแปรเช็คสิทธิ์ช่าง
+
+const showAssignPopup = ref(false)
+const showAcceptPopup = ref(false)
+
+function openActionPopup() {
+  const status = repair.value?.rf_user_status
+
+  if (status === 'pending') {
+    // 1. ถ้ารอรับงาน -> เปิด Modal รับงาน
+    showAcceptPopup.value = true
+  } else if (status === 'in_progress') {
+    // 2. ถ้ากำลังทำ -> เปิด Modal เปลี่ยนสถานะ (หรือ Action อื่น)
+    handleChangeStatus()
+  }
+}
+
+function handleChangeStatus() {
+  Swal.fire({
+    title: 'เปลี่ยนสถานะ',
+    text: 'คุณต้องการเปลี่ยนสถานะเป็น "เสร็จสิ้น" หรือไม่?',
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'ใช่, เสร็จสิ้น',
+    cancelButtonText: 'ยกเลิก',
+  }).then(async (result) => {
+    if (result.isConfirmed) {
+      // ยิง API เปลี่ยนสถานะเป็น done (ตัวอย่าง)
+      try {
+        const res = await fetch(`${API_BASE}/technician/jobs/${repairCode}/status`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' }, // + Token header
+          body: JSON.stringify({ status: 'done' }),
+        })
+        if (res.ok) {
+          Swal.fire('สำเร็จ', 'อัปเดตสถานะเรียบร้อย', 'success')
+          fetchRepairDetail()
+        }
+      } catch (e) {
+        console.error(e)
+      }
+    }
+  })
+}
+
+function handleAcceptSuccess() {
+  fetchRepairDetail() // โหลดข้อมูลใหม่ สถานะจะเปลี่ยนเป็น in_progress
+  showAcceptPopup.value = false
+}
+
+const isAssigned = computed(() => {
+  const r = repair.value
+  if (!r) return false
+
+  // 1. เช็คจาก ID ช่าง: ต้องมีค่า และ ต้องมากกว่า 0 (เผื่อ Database ส่งมาเป็น 0 หรือ "0")
+  if (r.rf_assigned_tech_id && Number(r.rf_assigned_tech_id) > 0) return true
+
+  // 2. เช็คจาก Flag assigned
+  if (r.assigned === true || r.assigned === 1) return true
+
+  // 3. เช็คจากชื่อช่าง: ต้องมีค่า และ ต้องไม่ใช่เครื่องหมายขีด "-"
+  if (r.main_technician && r.main_technician !== '-') return true
+
+  return false
+})
+
+function openAssignPopup() {
+  showAssignPopup.value = true
+}
+
+function handleAssignSuccess() {
+  fetchRepairDetail() // โหลดข้อมูลใหม่เพื่ออัปเดตสถานะ
+}
 
 function goBack() {
   if (window.history.length > 1) {
@@ -230,7 +307,19 @@ function buildTimelineFromRepair(repairData) {
 }
 
 // เรียกใช้งานเมื่อโหลดหน้า
-onMounted(fetchRepairDetail)
+onMounted(() => {
+  const state = history.state
+  if (state) {
+    if (state.fromAdmin) canAssign.value = true
+    if (state.fromTechnician) canAccept.value = true // เพิ่มเงื่อนไขนี้ (ต้องส่งจากหน้า List มาด้วย)
+  }
+  // เช็คว่ามีตั๋ว "fromAdmin" แนบมาใน history state หรือไม่
+  if (history.state && history.state.fromAdmin) {
+    canAssign.value = true
+  }
+
+  fetchRepairDetail()
+})
 </script>
 
 <template>
@@ -277,16 +366,18 @@ onMounted(fetchRepairDetail)
           </div>
 
           <!-- ขวา (Badge สถานะ / ความเร่งด่วน / ประเภท) -->
-          <div
-            class="flex flex-nowrap gap-2 sm:gap-3 justify-start md:justify-end items-center text-xs sm:text-sm"
-          >
-            <span v-html="getUserStatusBadge(repair?.rf_user_status)"></span>
-            <span v-html="getUrgencyBadge(repair?.rf_urgency)"></span>
-            <span
-              class="inline-flex justify-center items-center px-4 py-1.5 rounded-full bg-gray-100 text-gray-600 font-medium whitespace-nowrap"
+          <div class="flex flex-col items-start md:items-end gap-3">
+            <div
+              class="flex flex-wrap gap-2 sm:gap-3 justify-start md:justify-end items-center text-xs sm:text-sm"
             >
-              ประเภท: {{ repair?.repair_type_name || '-' }}
-            </span>
+              <span v-html="getUserStatusBadge(repair?.rf_user_status)"></span>
+              <span v-html="getUrgencyBadge(repair?.rf_urgency)"></span>
+              <span
+                class="inline-flex justify-center items-center px-4 py-1.5 rounded-full bg-gray-100 text-gray-600 font-medium whitespace-nowrap"
+              >
+                ประเภท: {{ repair?.repair_type_name || '-' }}
+              </span>
+            </div>
           </div>
         </div>
         <div>
@@ -529,6 +620,32 @@ onMounted(fetchRepairDetail)
             <div class="border-b border-gray-300 pb-2 mb-4 flex items-center gap-2">
               <img src="/icon/time-icon.svg" class="w-8 h-8" />
               <h2 class="text-base sm:text-lg font-semibold text-gray-800">สถานะการดำเนินงาน</h2>
+
+              <button
+                v-if="canAssign && repair?.rf_user_status !== 'done'"
+                :disabled="isAssigned"
+                @click="openAssignPopup"
+                :class="[
+                  'px-3 py-2 text-sm font-medium rounded-lg shadow-sm transition flex items-center gap-2 ml-auto',
+                  isAssigned
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    : 'bg-green-600 hover:bg-green-700 text-white',
+                ]"
+              >
+                {{ isAssigned ? 'มอบหมายแล้ว' : 'มอบหมายงาน' }}
+              </button>
+              <button
+                v-if="canAccept && repair?.rf_user_status !== 'done'"
+                @click="openActionPopup"
+                :class="[
+                  'px-3 py-2 text-sm font-medium rounded-lg shadow-sm transition flex items-center gap-2 ml-auto text-white',
+                  repair?.rf_user_status === 'pending'
+                    ? 'bg-teal-700 hover:bg-teal-900 px-7' /* สีฟ้ารับงาน */
+                    : 'bg-amber-500 hover:bg-amber-600' /* สีเหลืองเปลี่ยนสถานะ */,
+                ]"
+              >
+                {{ repair?.rf_user_status === 'pending' ? 'รับงาน' : 'เปลี่ยนสถานะ' }}
+              </button>
             </div>
 
             <RepairStatusTimeline :timeline-steps="repair?.timeline || []" />
@@ -603,4 +720,17 @@ onMounted(fetchRepairDetail)
       </div>
     </div>
   </div>
+  <assignJobModalComponent
+    v-if="showAssignPopup"
+    :repairId="repairCode"
+    @close="showAssignPopup = false"
+    @success="handleAssignSuccess"
+  />
+  <AcceptJobModalComponent
+    v-if="showAcceptPopup"
+    :repairCode="repairCode"
+    :currentUserId="null"
+    @close="showAcceptPopup = false"
+    @success="handleAcceptSuccess"
+  />
 </template>
