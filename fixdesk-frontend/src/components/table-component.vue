@@ -199,8 +199,8 @@ function canEditUser(row) {
           <th
             v-for="(col, i) in props.columns"
             :key="i"
-            v-show="props.mode === 'stock' || props.mode === 'location' ? true : i !== 1"
-            class="px-3 py-2 sm:px-6 sm:py-3 text-center"
+            v-show="props.mode === 'stock' || props.mode === 'location' || props.mode === 'user' || props.mode === 'admin' || props.mode === 'assign' || props.mode === 'technician' ? true : i !== 1"
+            class="px-3 py-2 sm:px-3 sm:py-3 text-center"
           >
             {{ col }}
           </th>
@@ -224,161 +224,153 @@ function canEditUser(row) {
             <!-- คอลัมน์อื่น -->
             <td
               v-else-if="
-                props.mode === 'location' ? ci !== 0 : props.mode === 'stock' ? true : ci !== 1
+                props.mode === 'location' ? ci !== 0 : props.mode === 'stock' || props.mode === 'user' || props.mode === 'admin' || props.mode === 'assign' || props.mode === 'technician' ? true : ci !== 1
               "
-              class="px-3 py-2 sm:px-6 sm:py-4 text-center"
+              class="px-3 py-2 sm:px-4 sm:py-4 text-center"
             >
               <!-- คอลัมน์ action -->
               <div v-if="cell === 'actions'" class="flex justify-center gap-2">
                 <!-- ดูรายละเอียด (แสดงเสมอ) -->
                 <div
-                  class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center bg-[#1E48D1] hover:bg-[#163A9B] text-white rounded-lg transition cursor-pointer"
+                  class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center bg-[#1E48D1] hover:bg-[#163A9B] text-white rounded-lg transition cursor-pointer flex-none"
                   title="ดูรายละเอียด"
                   @click="$emit('detail', getRowId(row))"
                 >
                   <img src="/icon/info-icon.svg" alt="info" class="w-5 h-5" />
                 </div>
 
-                <!-- หากแถวถูกมอบหมายแล้ว AND ไม่ใช่หัวหน้า -> แสดงเฉพาะ detail เท่านั้น -->
-                <template v-if="isRowAssigned(row) && !isRowLeader(row)">
-                  <!-- nothing more here (detail already shown) -->
-                </template>
-
-                <!-- ถ้ายังไม่ถูกมอบหมาย หรือเป็นหัวหน้า -> แสดงชุดปุ่มตามโหมด -->
-                <template v-else>
-                  <!-- โหมด technician -->
-                  <template v-if="props.mode === 'technician'">
-                    <template v-if="getRowStatus(row) === 'pending'">
-                      <button
-                        class="px-4 py-2 text-xs font-medium text-white bg-[#005a9a] rounded-lg shadow-md hover:shadow-lg transition"
-                        @click="$emit('accept', getRowId(row))"
-                      >
-                        รับงาน
-                      </button>
-                    </template>
-
-                    <template v-else-if="getRowStatus(row) !== 'done'">
-                      <button
-                        class="px-4 py-2 text-xs font-medium text-white bg-[#FBC02D] rounded-lg shadow-md hover:shadow-lg transition"
-                        @click="$emit('change-status', getRowId(row))"
-                      >
-                        เปลี่ยนสถานะ
-                      </button>
-                    </template>
-
-                    <template v-else>
-                      <span
-                        class="px-4 py-2 text-xs font-medium text-gray-400 bg-gray-100 rounded-lg cursor-default"
-                      >
-                        เสร็จสิ้น
-                      </span>
-                    </template>
+                <!-- โหมด technician -->
+                <template v-if="props.mode === 'technician'">
+                  <template v-if="getRowStatus(row) === 'pending'">
+                    <button
+                      class="px-7 py-2 text-xs font-medium text-white bg-teal-700 hover:bg-teal-900 rounded-lg hover:transition flex-none"
+                      @click="$emit('accept', getRowId(row))"
+                    >
+                      รับงาน
+                    </button>
                   </template>
 
-                  <!-- โหมด user (แก้ไข/ลบ) -->
-                  <template v-else-if="props.mode === 'user'">
-                    <!-- ถ้ามีฟอร์มค้าง ให้แสดงปุ่ม disabled และ tooltip อธิบาย -->
-                    <template v-if="rowHasActiveRepairs(row)">
+                  <template v-else-if="getRowStatus(row) !== 'done'">
+                    <button
+                      class="px-3 py-2 text-xs font-medium text-white bg-amber-500 hover:bg-amber-600 rounded-lg hover:shadow-lg transition flex-none"
+                      @click="$emit('change-status', getRowId(row))"
+                    >
+                      เปลี่ยนสถานะ
+                    </button>
+                  </template>
+
+                  <template v-else>
+                    <span
+                      class="px-6 py-2 text-xs font-medium text-gray-400 bg-gray-100 rounded-lg cursor-default flex-none"
+                    >
+                      เสร็จสิ้น
+                    </span>
+                  </template>
+                </template>
+
+                <!-- โหมด user (แก้ไข/ลบ) -->
+                <template v-else-if="props.mode === 'user'">
+                  <!-- ถ้ามีฟอร์มค้าง ให้แสดงปุ่ม disabled และ tooltip อธิบาย -->
+                  <template v-if="rowHasActiveRepairs(row)">
+                    <div
+                      :class="[baseIconClass, 'bg-gray-300 text-gray-400 cursor-not-allowed']"
+                      :title="'บัญชีนี้มีใบแจ้งซ่อมหรือการมอบหมายงานที่เชื่อมโยงอยู่ จึงไม่สามารถแก้ไขได้'"
+                    >
+                      <img src="/icon/edit-icon.svg" alt="edit" class="w-5 h-5 opacity-70" />
+                    </div>
+
+                    <div
+                      :class="[baseIconClass, 'bg-gray-300 text-gray-400 cursor-not-allowed']"
+                      :title="'บัญชีนี้มีใบแจ้งซ่อมหรือการมอบหมายงานที่เชื่อมโยงอยู่ จึงไม่สามารถลบได้'"
+                    >
+                      <img src="/icon/bin-icon.svg" alt="delete" class="w-5 h-5 opacity-70" />
+                    </div>
+                  </template>
+
+                  <!-- ถ้าไม่มีฟอร์มค้าง ให้ทำงานได้ตามปกติแต่ต้องเช็คสถานะด้วย -->
+                  <template v-else>
+                    <!-- ถ้าสถานะไม่ใช่ pending ให้ disabled (สีเทา + tooltip) -->
+                    <template v-if="!isPendingStatus(row)">
                       <div
                         :class="[baseIconClass, 'bg-gray-300 text-gray-400 cursor-not-allowed']"
-                        :title="'บัญชีนี้มีใบแจ้งซ่อมหรือการมอบหมายงานที่เชื่อมโยงอยู่ จึงไม่สามารถแก้ไขได้'"
+                        :title="'ไม่สามารถแก้ไขได้ (สถานะไม่ใช่รอดำเนินการ)'"
                       >
                         <img src="/icon/edit-icon.svg" alt="edit" class="w-5 h-5 opacity-70" />
                       </div>
 
                       <div
                         :class="[baseIconClass, 'bg-gray-300 text-gray-400 cursor-not-allowed']"
-                        :title="'บัญชีนี้มีใบแจ้งซ่อมหรือการมอบหมายงานที่เชื่อมโยงอยู่ จึงไม่สามารถลบได้'"
+                        :title="'ไม่สามารถลบได้ (สถานะไม่ใช่รอดำเนินการ)'"
                       >
                         <img src="/icon/bin-icon.svg" alt="delete" class="w-5 h-5 opacity-70" />
                       </div>
                     </template>
 
-                    <!-- ถ้าไม่มีฟอร์มค้าง ให้ทำงานได้ตามปกติแต่ต้องเช็คสถานะด้วย -->
+                    <!-- สถานะเป็น pending และไม่มีฟอร์มค้าง -> ปกติ -->
                     <template v-else>
-                      <!-- ถ้าสถานะไม่ใช่ pending ให้ disabled (สีเทา + tooltip) -->
-                      <template v-if="!isPendingStatus(row)">
-                        <div
-                          :class="[baseIconClass, 'bg-gray-300 text-gray-400 cursor-not-allowed']"
-                          :title="'ไม่สามารถแก้ไขได้ (สถานะไม่ใช่รอดำเนินการ)'"
-                        >
-                          <img src="/icon/edit-icon.svg" alt="edit" class="w-5 h-5 opacity-70" />
-                        </div>
+                      <div
+                        :class="[
+                          baseIconClass,
+                          canEditUser(row)
+                            ? 'bg-yellow-400 hover:bg-yellow-500 text-white cursor-pointer'
+                            : 'bg-gray-300 text-gray-400 cursor-not-allowed',
+                        ]"
+                        :title="canEditUser(row) ? 'แก้ไข' : 'ไม่สามารถแก้ไขได้'"
+                        @click="canEditUser(row) && $emit('edit', getRowId(row))"
+                      >
+                        <img src="/icon/edit-icon.svg" alt="edit" class="w-5 h-5 opacity-90" />
+                      </div>
 
-                        <div
-                          :class="[baseIconClass, 'bg-gray-300 text-gray-400 cursor-not-allowed']"
-                          :title="'ไม่สามารถลบได้ (สถานะไม่ใช่รอดำเนินการ)'"
-                        >
-                          <img src="/icon/bin-icon.svg" alt="delete" class="w-5 h-5 opacity-70" />
-                        </div>
-                      </template>
-
-                      <!-- สถานะเป็น pending และไม่มีฟอร์มค้าง -> ปกติ -->
-                      <template v-else>
-                        <div
-                          :class="[
-                            baseIconClass,
-                            canEditUser(row)
-                              ? 'bg-yellow-400 hover:bg-yellow-500 text-white cursor-pointer'
-                              : 'bg-gray-300 text-gray-400 cursor-not-allowed',
-                          ]"
-                          :title="canEditUser(row) ? 'แก้ไข' : 'ไม่สามารถแก้ไขได้'"
-                          @click="canEditUser(row) && $emit('edit', getRowId(row))"
-                        >
-                          <img src="/icon/edit-icon.svg" alt="edit" class="w-5 h-5 opacity-90" />
-                        </div>
-
-                        <div
-                          :class="[
-                            baseIconClass,
-                            canEditUser(row)
-                              ? 'bg-red-500 hover:bg-red-600 text-white cursor-pointer'
-                              : 'bg-gray-300 text-gray-400 cursor-not-allowed',
-                          ]"
-                          :title="canEditUser(row) ? 'ลบ' : 'ไม่สามารถลบได้'"
-                          @click="canEditUser(row) && $emit('delete', getRowId(row))"
-                        >
-                          <img src="/icon/bin-icon.svg" alt="delete" class="w-5 h-5 opacity-90" />
-                        </div>
-                      </template>
+                      <div
+                        :class="[
+                          baseIconClass,
+                          canEditUser(row)
+                            ? 'bg-red-500 hover:bg-red-600 text-white cursor-pointer'
+                            : 'bg-gray-300 text-gray-400 cursor-not-allowed',
+                        ]"
+                        :title="canEditUser(row) ? 'ลบ' : 'ไม่สามารถลบได้'"
+                        @click="canEditUser(row) && $emit('delete', getRowId(row))"
+                      >
+                        <img src="/icon/bin-icon.svg" alt="delete" class="w-5 h-5 opacity-90" />
+                      </div>
                     </template>
                   </template>
+                </template>
 
-                  <!-- โหมด assign (มอบหมาย) -->
-                  <template v-else-if="props.mode === 'assign'">
-                    <button
-                      :class="[
-                        assignBaseClass,
-                        isRowAssigned(row)
-                          ? 'bg-gray-300 text-gray-400 cursor-not-allowed'
-                          : 'bg-green-600 hover:bg-green-700 text-white cursor-pointer',
-                      ]"
-                      :title="isRowAssigned(row) ? 'มอบหมายแล้ว' : 'มอบหมายงาน'"
-                      :disabled="isRowAssigned(row)"
-                      @click="!isRowAssigned(row) && $emit('assign', getRowId(row))"
-                    >
-                      <img src="/icon/arrow-right.svg" alt="assign" class="w-5 h-5" />
-                    </button>
-                  </template>
+                <!-- โหมด assign (มอบหมาย) -->
+                <template v-else-if="props.mode === 'assign'">
+                  <button
+                    :class="[
+                      assignBaseClass,
+                      isRowAssigned(row)
+                        ? 'bg-gray-300 text-gray-400 cursor-not-allowed'
+                        : 'bg-green-600 hover:bg-green-700 text-white cursor-pointer',
+                    ]"
+                    :title="isRowAssigned(row) ? 'มอบหมายแล้ว' : 'มอบหมายงาน'"
+                    :disabled="isRowAssigned(row)"
+                    @click="!isRowAssigned(row) && $emit('assign', getRowId(row))"
+                  >
+                    <img src="/icon/arrow-right.svg" alt="assign" class="w-5 h-5" />
+                  </button>
+                </template>
 
-                  <!-- โหมด full และ location -->
-                  <template v-else-if="props.mode === 'full' || props.mode === 'location'">
-                    <div
-                      class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center bg-yellow-400 hover:bg-yellow-500 text-white rounded-md transition cursor-pointer"
-                      title="แก้ไข"
-                      @click="$emit('edit', getRowId(row))"
-                    >
-                      <img src="/icon/edit-icon.svg" alt="edit" class="w-5 h-5" />
-                    </div>
+                <!-- โหมด full และ location -->
+                <template v-else-if="props.mode === 'full' || props.mode === 'location'">
+                  <div
+                    class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center bg-yellow-400 hover:bg-yellow-500 text-white rounded-md transition cursor-pointer"
+                    title="แก้ไข"
+                    @click="$emit('edit', getRowId(row))"
+                  >
+                    <img src="/icon/edit-icon.svg" alt="edit" class="w-5 h-5" />
+                  </div>
 
-                    <div
-                      class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center bg-red-500 hover:bg-red-600 text-white rounded-md transition cursor-pointer"
-                      title="ลบ"
-                      @click="$emit('delete', getRowId(row))"
-                    >
-                      <img src="/icon/bin-icon.svg" alt="delete" class="w-5 h-5" />
-                    </div>
-                  </template>
+                  <div
+                    class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center bg-red-500 hover:bg-red-600 text-white rounded-md transition cursor-pointer"
+                    title="ลบ"
+                    @click="$emit('delete', getRowId(row))"
+                  >
+                    <img src="/icon/bin-icon.svg" alt="delete" class="w-5 h-5" />
+                  </div>
                 </template>
               </div>
 

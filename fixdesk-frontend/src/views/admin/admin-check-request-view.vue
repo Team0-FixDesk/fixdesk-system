@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import TableComponent from '@/components/table-component.vue'
+import assignJobModalComponent from '@/components/assign-job-modal-component.vue'
 import Swal from 'sweetalert2'
 
 const router = useRouter()
@@ -17,10 +18,10 @@ const getAuthHeaders = () => {
 
 const columns = [
   'วันที่',
-  'ใบแจ้งซ่อม',
+  'หมายเลขแจ้งซ่อม',
   'ชื่อผู้แจ้ง',
-  'ประเภท',
   'หน่วยงาน',
+  'ประเภท',
   'ความเร่งด่วน',
   'สถานะงาน',
   'การดำเนินการ',
@@ -75,13 +76,13 @@ async function fetchAllRepairs() {
       const isAssigned = !!r.rf_assigned_tech_id
 
       return {
-        date: createdAt,
-        code: r.rf_code,
-        requester: `${r.us_first_name} ${r.us_last_name}`,
-        department: r.department_name || '-',
-        type: r.tt_name || '-',
-        urgencyKey: r.rf_urgency,
-        statusKey: r.rf_user_status,
+        date: createdAt, //วันที่ (Date object)
+        code: r.rf_code, //หมายเลขแจ้งซ่อม
+        requester: `${r.us_first_name} ${r.us_last_name}`, //ชื่อผู้แจ้ง
+        department: r.department_name || '-', //หน่วยงาน
+        type: r.tt_name || '-', //ประเภท
+        urgencyKey: r.rf_urgency, // ความเร่งด่วน (key)
+        statusKey: r.rf_user_status, // สถานะงาน (key)
         assigned: isAssigned,
         dateDisplay: createdAt.toLocaleDateString('th-TH'),
         urgencyBadge,
@@ -90,7 +91,25 @@ async function fetchAllRepairs() {
     })
   } catch (err) {
     console.error('โหลดข้อมูลไม่สำเร็จ:', err)
-    Swal.fire('เกิดข้อผิดพลาด', err.message, 'error')
+    // Toast notification
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true
+    })
+    Toast.fire({
+      title: 'เกิดข้อผิดพลาด',
+      text: err.message,
+      icon: 'error',
+      background: '#fee2e2',
+      color: '#dc2626'
+    })
+
+    // Normal Alert (commented for session-related errors)
+    // Swal.fire('เกิดข้อผิดพลาด', err.message, 'error')
   }
 }
 
@@ -99,31 +118,44 @@ const filteredRows = computed(() => {
   const q = searchQuery.value.toLowerCase()
   const selectedDateObj = selectedDate.value ? new Date(selectedDate.value) : null
 
-  return rows.value
-    .filter((r) => {
-      const matchSearch =
-        r.code.toLowerCase().includes(q) ||
-        r.requester.toLowerCase().includes(q) ||
-        r.type.toLowerCase().includes(q)
+  // กรองข้อมูลตามเงื่อนไข
+  const filtered = rows.value.filter((r) => {
+    const matchSearch =
+      r.code.toLowerCase().includes(q) ||
+      r.requester.toLowerCase().includes(q) ||
+      r.type.toLowerCase().includes(q) ||
+      r.department.toLowerCase().includes(q)
 
-      const matchUrgency =
-        selectedUrgencies.value.length === 0 || selectedUrgencies.value.includes(r.urgencyKey)
-      const matchStatus =
-        selectedStatuses.value.length === 0 || selectedStatuses.value.includes(r.statusKey)
-      const matchDate = !selectedDateObj || r.date.toDateString() === selectedDateObj.toDateString()
+    const matchUrgency =
+      selectedUrgencies.value.length === 0 || selectedUrgencies.value.includes(r.urgencyKey)
+    const matchStatus =
+      selectedStatuses.value.length === 0 || selectedStatuses.value.includes(r.statusKey)
+    const matchDate = !selectedDateObj || r.date.toDateString() === selectedDateObj.toDateString()
 
-      return matchSearch && matchUrgency && matchStatus && matchDate
-    })
-    .map((r) => [
-      r.dateDisplay,
-      r.code,
-      r.requester,
-      r.type,
-      r.department,
-      r.urgencyBadge,
-      r.statusBadge,
-      'actions',
-    ])
+    return matchSearch && matchUrgency && matchStatus && matchDate
+  })
+
+  // เรียงลำดับ: 1) ยังไม่มอบหมายขึ้นด้านบน 2) เรียงตามวันที่เก่าก่อน
+  const sorted = filtered.sort((a, b) => {
+    // ตรวจสอบการมอบหมาย (ยังไม่มอบหมาย ขึ้นบน)
+    if (!a.assigned && b.assigned) return -1 // a ไม่มอบหมาย ขึ้นบน
+    if (a.assigned && !b.assigned) return 1 // b ไม่มอบหมาย ขึ้นบน
+
+    // ถ้าสถานะการมอบหมายเท่ากัน เรียงตามวันที่เก่าก่อน
+    return a.date - b.date
+  })
+
+  // แปลงเป็นรูปแบบที่ TableComponent ต้องการ
+  return sorted.map((r) => [
+    r.dateDisplay,
+    r.code,
+    r.requester,
+    r.department,
+    r.type,
+    r.urgencyBadge,
+    r.statusBadge,
+    'actions',
+  ])
 })
 
 // Functions for Filters
@@ -141,17 +173,6 @@ function toggleUrgencyFilter() {
   }
 }
 
-// Toggle สำหรับ Filter ใน Popup
-function toggleAssignTypeFilter() {
-  showAssignTypeFilter.value = !showAssignTypeFilter.value
-}
-
-// เลือกประเภทช่างใน Popup
-function selectAssignType(typeName) {
-  selectedType.value = typeName
-  showAssignTypeFilter.value = false
-}
-
 function clearFilters() {
   selectedStatuses.value = []
   selectedUrgencies.value = []
@@ -164,14 +185,29 @@ function closeDropdown(e) {
   if (!e.target.closest('.relative')) {
     showStatusFilter.value = false
     showUrgencyFilter.value = false
-    showAssignTypeFilter.value = false // ปิดตัวใน Popup ด้วย
   }
 }
-
 // ACTION BUTTONS
-const goToDetail = (code) => router.push(`/main/repair-detail/${code}`)
+const goToDetail = (code) =>
+  router.push({
+    path: `/main/repair-detail/${code}`,
+    state: { fromAdmin: true }, 
+  })
 
 async function handleAssign(code) {
+  // เปลี่ยนเป็น Toast แทน Timer Alert
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true,
+      didOpen: (toast) => {
+        toast.addEventListener('mouseenter', Swal.stopTimer)
+        toast.addEventListener('mouseleave', Swal.resumeTimer)
+      }
+    })
   const result = await Swal.fire({
     title: 'มอบหมายงาน',
     text: `ต้องการมอบหมายใบแจ้งซ่อม ${code} หรือไม่?`,
@@ -181,116 +217,27 @@ async function handleAssign(code) {
     cancelButtonText: 'ยกเลิก',
   })
   if (result.isConfirmed) {
-    Swal.fire('สำเร็จ', 'มอบหมายงานเรียบร้อยแล้ว', 'success')
+    Toast.fire({
+      title: 'สำเร็จ',
+      text: 'มอบหมายงานเรียบร้อยแล้ว',
+      icon: 'success',
+      background: '#f0f9ff',
+      color: '#1e3a8a'
+    })
   }
 }
 
 // Popup มอบหมายงาน
 const showAssignPopup = ref(false)
-const technicians = ref([])
-const technicianTypes = ref([])
-const selectedType = ref('')
-const searchTech = ref('')
-const selectedTechnician = ref(null)
 const selectedRepairId = ref(null)
-const loadingAssign = ref(false)
-const showAssignTypeFilter = ref(false) // ตัวแปรควบคุม Dropdown ใน Popup
 
 /* เปิด popup */
 function openAssignPopup(repairId) {
   selectedRepairId.value = repairId
   showAssignPopup.value = true
-  // Reset filter
-  selectedType.value = ''
-  searchTech.value = ''
-  showAssignTypeFilter.value = false
-  fetchTechnicians()
 }
-
-/* ปิด popup */
-function closeAssignPopup() {
-  showAssignPopup.value = false
-  selectedTechnician.value = null
-  selectedType.value = ''
-  searchTech.value = ''
-  showAssignTypeFilter.value = false
-}
-
-/* ดึงข้อมูลช่างทั้งหมด */
-async function fetchTechnicians() {
-  try {
-    const res = await fetch(`${API_BASE}/technicians`, { headers: getAuthHeaders() })
-    const typesRes = await fetch(`${API_BASE}/technician-types`)
-    technicians.value = await res.json()
-    technicianTypes.value = await typesRes.json()
-  } catch (err) {
-    console.error('❌ โหลดข้อมูลช่างไม่สำเร็จ:', err)
-    Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถโหลดรายชื่อช่างได้', 'error')
-  }
-}
-
-/* กรองรายชื่อช่างตามประเภทและคำค้น */
-const filteredTechnicians = computed(() =>
-  technicians.value.filter((t) => {
-    const matchType = !selectedType.value || t.tt_name === selectedType.value
-    const matchSearch =
-      !searchTech.value ||
-      `${t.us_first_name} ${t.us_last_name}`.toLowerCase().includes(searchTech.value.toLowerCase())
-    return matchType && matchSearch
-  }),
-)
-
-/* ยืนยันมอบหมาย */
-async function confirmAssign() {
-  if (!selectedTechnician.value) {
-    Swal.fire('กรุณาเลือกช่าง', '', 'warning')
-    return
-  }
-
-  loadingAssign.value = true
-  try {
-    const res = await fetch(`${API_BASE}/assign-repair`, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({
-        rf_code: selectedRepairId.value,
-        technician_id: selectedTechnician.value,
-      }),
-    })
-
-    const resBody = await res.json()
-
-    // เคส backend บอกว่ามอบหมายแล้ว
-    if (!res.ok) {
-      const msg = resBody.message || 'มอบหมายงานไม่สำเร็จ'
-      if (msg.includes('มอบหมายแล้ว') || msg.includes('ถูกมอบหมายแล้ว')) {
-        const target = rows.value.find((r) => r.code === selectedRepairId.value)
-        if (target) {
-          target.assigned = true
-          rows.value = [...rows.value]
-        }
-        Swal.fire('แจ้งเตือน', msg, 'info')
-        closeAssignPopup()
-        return
-      }
-      throw new Error(msg)
-    }
-
-    await fetchAllRepairs()
-
-    const target = rows.value.find((r) => r.code === selectedRepairId.value)
-    if (target) {
-      target.assigned = true
-    }
-    rows.value = [...rows.value]
-
-    Swal.fire('สำเร็จ', 'มอบหมายงานเรียบร้อยแล้ว', 'success')
-    closeAssignPopup()
-  } catch (err) {
-    Swal.fire('เกิดข้อผิดพลาด', err.message, 'error')
-  } finally {
-    loadingAssign.value = false
-  }
+function handleAssignSuccess() {
+  fetchAllRepairs() // รีโหลดตาราง
 }
 
 onMounted(() => {
@@ -425,112 +372,12 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
       @assign="openAssignPopup"
     />
   </div>
-
-  <div
+  <assignJobModalComponent
     v-if="showAssignPopup"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40"
-  >
-    <div class="bg-white rounded-lg shadow-lg w-full max-w-xl p-8 relative">
-      <h2 class="text-lg sm:text-xl font-bold text-black mb-6">มอบหมายงานให้ผู้รับผิดชอบหลัก</h2>
-      <button
-        @click="closeAssignPopup"
-        class="absolute text-lg text-gray-500 top-4 right-4 hover:text-gray-700"
-      >
-        ✕
-      </button>
-
-      <div class="flex flex-col sm:flex-row gap-3 mb-4">
-        <div class="relative w-full sm:w-1/2">
-          <button
-            @click.stop="toggleAssignTypeFilter"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none flex justify-between items-center bg-white text-gray-700 h-10"
-          >
-            <span class="truncate">{{ selectedType || 'ประเภทช่างทั้งหมด' }}</span>
-            <img
-              src="/icon/sidebar/chevron-down-icon.svg"
-              class="w-4 h-4 opacity-70 transition-transform duration-200 flex-shrink-0"
-              :class="{ 'rotate-180': showAssignTypeFilter }"
-            />
-          </button>
-
-          <div
-            v-if="showAssignTypeFilter"
-            class="absolute z-10 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto mt-1"
-          >
-            <div
-              @click="selectAssignType('')"
-              class="px-4 py-2 cursor-pointer hover:bg-gray-100 text-gray-700 text-sm"
-              :class="{ 'bg-blue-50 text-blue-700': selectedType === '' }"
-            >
-              ประเภทช่างทั้งหมด
-            </div>
-            <div
-              v-for="type in technicianTypes"
-              :key="type.tt_id"
-              @click="selectAssignType(type.tt_name)"
-              class="px-4 py-2 cursor-pointer hover:bg-gray-100 text-gray-700 text-sm"
-              :class="{ 'bg-blue-50 text-blue-700': selectedType === type.tt_name }"
-            >
-              {{ type.tt_name }}
-            </div>
-          </div>
-        </div>
-
-        <div class="w-full sm:w-1/2">
-          <input
-            v-model="searchTech"
-            type="text"
-            placeholder="ค้นหา"
-            class="w-full px-3 py-2 text-gray-700 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 focus:outline-none h-10"
-          />
-        </div>
-      </div>
-
-      <div class="space-y-2 overflow-y-auto max-h-60">
-        <div
-          v-for="tech in filteredTechnicians"
-          :key="tech.us_id"
-          class="flex items-start justify-between p-3 transition border rounded-lg cursor-pointer hover:bg-gray-50"
-          @click="selectedTechnician = tech.us_id"
-        >
-          <div class="flex flex-col text-sm">
-            <p class="font-medium text-gray-900 text-base">
-              {{ tech.prefix_name || '' }}{{ tech.us_first_name }} {{ tech.us_last_name }}
-            </p>
-            <p class="text-gray-700 text-sm">ประเภท: {{ tech.tt_name || '-' }}</p>
-            <p class="text-gray-700 text-sm">โทร: {{ tech.us_phone || '-' }}</p>
-          </div>
-          <input
-            type="radio"
-            name="selectedTech"
-            :value="tech.us_id"
-            v-model.number="selectedTechnician"
-            class="w-5 h-5 mt-5 cursor-pointer border-2 border-[#1E48D1] accent-[#1E48D1]"
-          />
-        </div>
-
-        <p v-if="filteredTechnicians.length === 0" class="py-4 text-center text-gray-500">
-          — ไม่พบช่าง —
-        </p>
-      </div>
-
-      <div class="flex justify-end gap-3 mt-6">
-        <button
-          @click="closeAssignPopup"
-          class="px-5 py-2 font-medium text-gray-700 transition bg-gray-200 rounded-md hover:bg-gray-300"
-        >
-          ยกเลิก
-        </button>
-        <button
-          @click="confirmAssign"
-          :disabled="!selectedTechnician || loadingAssign"
-          class="px-5 py-2 font-medium text-white transition bg-[#1E48D1] rounded-md hover:bg-blue-900 disabled:opacity-50"
-        >
-          {{ loadingAssign ? 'กำลังมอบหมาย...' : 'ยืนยัน' }}
-        </button>
-      </div>
-    </div>
-  </div>
+    :repairId="selectedRepairId"
+    @close="showAssignPopup = false"
+    @success="handleAssignSuccess"
+  />
 </template>
 
 <style scoped>
