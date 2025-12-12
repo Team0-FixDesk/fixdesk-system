@@ -171,7 +171,11 @@ function closeDropdown(e) {
 }
 
 // ACTION BUTTONS
-const goToDetail = (code) => router.push(`/main/repair-detail/${code}`)
+const goToDetail = (code) =>
+  router.push({
+    path: `/main/repair-detail/${code}`,
+    state: { fromAdmin: true }, 
+  })
 
 async function handleAssign(code) {
   const result = await Swal.fire({
