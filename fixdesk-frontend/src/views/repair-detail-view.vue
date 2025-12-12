@@ -3,6 +3,8 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import RepairStatusTimeline from '@/components/status-timeline-component.vue'
 import assignJobModalComponent from '@/components/assign-job-modal-component.vue'
+import AcceptJobModalComponent from '@/components/accept-job-madal-component.vue'
+import Swal from 'sweetalert2'
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
 const route = useRoute()
@@ -13,8 +15,55 @@ const isLoading = ref(true)
 const isError = ref(false)
 const repairCode = route.params.code
 const canAssign = ref(false)
+const canAccept = ref(false) // เพิ่มตัวแปรเช็คสิทธิ์ช่าง
 
 const showAssignPopup = ref(false)
+const showAcceptPopup = ref(false)
+
+function openActionPopup() {
+  const status = repair.value?.rf_user_status
+
+  if (status === 'pending') {
+    // 1. ถ้ารอรับงาน -> เปิด Modal รับงาน
+    showAcceptPopup.value = true
+  } else if (status === 'in_progress') {
+    // 2. ถ้ากำลังทำ -> เปิด Modal เปลี่ยนสถานะ (หรือ Action อื่น)
+    handleChangeStatus()
+  }
+}
+
+function handleChangeStatus() {
+  Swal.fire({
+    title: 'เปลี่ยนสถานะ',
+    text: 'คุณต้องการเปลี่ยนสถานะเป็น "เสร็จสิ้น" หรือไม่?',
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'ใช่, เสร็จสิ้น',
+    cancelButtonText: 'ยกเลิก',
+  }).then(async (result) => {
+    if (result.isConfirmed) {
+      // ยิง API เปลี่ยนสถานะเป็น done (ตัวอย่าง)
+      try {
+        const res = await fetch(`${API_BASE}/technician/jobs/${repairCode}/status`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' }, // + Token header
+          body: JSON.stringify({ status: 'done' }),
+        })
+        if (res.ok) {
+          Swal.fire('สำเร็จ', 'อัปเดตสถานะเรียบร้อย', 'success')
+          fetchRepairDetail()
+        }
+      } catch (e) {
+        console.error(e)
+      }
+    }
+  })
+}
+
+function handleAcceptSuccess() {
+  fetchRepairDetail() // โหลดข้อมูลใหม่ สถานะจะเปลี่ยนเป็น in_progress
+  showAcceptPopup.value = false
+}
 
 const isAssigned = computed(() => {
   const r = repair.value
@@ -259,6 +308,11 @@ function buildTimelineFromRepair(repairData) {
 
 // เรียกใช้งานเมื่อโหลดหน้า
 onMounted(() => {
+  const state = history.state
+  if (state) {
+    if (state.fromAdmin) canAssign.value = true
+    if (state.fromTechnician) canAccept.value = true // เพิ่มเงื่อนไขนี้ (ต้องส่งจากหน้า List มาด้วย)
+  }
   // เช็คว่ามีตั๋ว "fromAdmin" แนบมาใน history state หรือไม่
   if (history.state && history.state.fromAdmin) {
     canAssign.value = true
@@ -580,6 +634,18 @@ onMounted(() => {
               >
                 {{ isAssigned ? 'มอบหมายแล้ว' : 'มอบหมายงาน' }}
               </button>
+              <button
+                v-if="canAccept && repair?.rf_user_status !== 'done'"
+                @click="openActionPopup"
+                :class="[
+                  'px-3 py-2 text-sm font-medium rounded-lg shadow-sm transition flex items-center gap-2 ml-auto text-white',
+                  repair?.rf_user_status === 'pending'
+                    ? 'bg-teal-700 hover:bg-teal-900 px-7' /* สีฟ้ารับงาน */
+                    : 'bg-amber-500 hover:bg-amber-600' /* สีเหลืองเปลี่ยนสถานะ */,
+                ]"
+              >
+                {{ repair?.rf_user_status === 'pending' ? 'รับงาน' : 'เปลี่ยนสถานะ' }}
+              </button>
             </div>
 
             <RepairStatusTimeline :timeline-steps="repair?.timeline || []" />
@@ -659,5 +725,12 @@ onMounted(() => {
     :repairId="repairCode"
     @close="showAssignPopup = false"
     @success="handleAssignSuccess"
+  />
+  <AcceptJobModalComponent
+    v-if="showAcceptPopup"
+    :repairCode="repairCode"
+    :currentUserId="null"
+    @close="showAcceptPopup = false"
+    @success="handleAcceptSuccess"
   />
 </template>

@@ -243,7 +243,7 @@ function canEditUser(row) {
                 <template v-if="props.mode === 'technician'">
                   <template v-if="getRowStatus(row) === 'pending'">
                     <button
-                      class="px-7 py-2 text-xs font-medium text-white bg-[#005a9a] rounded-lg hover:transition flex-none"
+                      class="px-7 py-2 text-xs font-medium text-white bg-teal-700 hover:bg-teal-900 rounded-lg hover:transition flex-none"
                       @click="$emit('accept', getRowId(row))"
                     >
                       รับงาน
@@ -252,7 +252,7 @@ function canEditUser(row) {
 
                   <template v-else-if="getRowStatus(row) !== 'done'">
                     <button
-                      class="px-3 py-2 text-xs font-medium text-white bg-[#FBC02D] rounded-lg hover:shadow-lg transition flex-none"
+                      class="px-3 py-2 text-xs font-medium text-white bg-amber-500 hover:bg-amber-600 rounded-lg hover:shadow-lg transition flex-none"
                       @click="$emit('change-status', getRowId(row))"
                     >
                       เปลี่ยนสถานะ
