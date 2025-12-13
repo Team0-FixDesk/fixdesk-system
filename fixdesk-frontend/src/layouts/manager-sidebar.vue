@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue'
-import SidebarProfile from '@/components/sidebar-profile.vue'
+import SidebarProfile from '@/components/sidebar-profile-component.vue'
 
 // สถานะเปิด/ปิด sidebar
 const isOpen = ref(false)
@@ -13,7 +13,6 @@ const menus = [
   { icon: '/icon/sidebar/dashboard-icon.svg', label: 'หน้าสรุปผล', path: '/main/manager-report' },
   { icon: '/icon/sidebar/report-icon.svg', label: 'สร้างรายงาน', path: '/main/manager-summary' },
 ]
-
 </script>
 
 <template>
@@ -33,7 +32,6 @@ const menus = [
         FIXDESK
       </span>
     </div>
-
     <!-- เมนูหลัก -->
     <nav class="flex flex-col gap-3 mt-6 px-2 flex-1">
       <RouterLink
@@ -45,7 +43,6 @@ const menus = [
         <div class="flex items-center justify-center w-12 h-12 shrink-0">
           <img :src="menu.icon" :alt="menu.label" class="w-6 h-6" />
         </div>
-
         <span
           class="text-lg font-medium whitespace-nowrap transition-all duration-300"
           :class="isOpen ? 'opacity-100 visible ml-2' : 'opacity-0 invisible ml-0'"
