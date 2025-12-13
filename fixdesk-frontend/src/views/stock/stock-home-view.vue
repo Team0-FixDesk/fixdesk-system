@@ -17,9 +17,9 @@
 
 
     <!-- Stats cards -->
-    <div class="flex flex-wrap justify-center gap-6 mb-8">
+    <div class="flex flex-wrap justify-center gap-6 mb-6">
       <!-- Card 1 -->
-      <div class="bg-white rounded-lg border p-6 w-60">
+      <div class="bg-white rounded-lg border p-6 w-[20%]">
         <div class="text-center">
           <h2 class="text-2xl font-bold text-blue-600">{{ itemsCount }} รายการ</h2>
           <p class="text-gray-600 text-sm">จำนวนรายการ</p>
@@ -27,7 +27,7 @@
       </div>
 
       <!-- Card 2 -->
-      <div class="bg-white rounded-lg border p-6 w-60">
+      <div class="bg-white rounded-lg border p-6 w-[20%]">
         <div class="text-center">
           <h2 class="text-2xl font-bold text-orange-500">{{ itemsNew }} รายการ</h2>
           <p class="text-gray-600 text-sm">ของเข้าใหม่วันนี้</p>
@@ -35,7 +35,7 @@
       </div>
 
       <!-- Card 3 -->
-      <div class="bg-white rounded-lg border p-6 w-60">
+      <div class="bg-white rounded-lg border p-6 w-[20%]">
         <div class="text-center">
           <h2 class="text-2xl font-bold text-green-600">{{ itemRequestWaiting }} รายการ</h2>
           <p class="text-gray-600 text-sm">คำขอเบิกรออนุมัติ</p>
@@ -43,7 +43,7 @@
       </div>
 
       <!-- Card 4 -->
-      <div class="bg-white rounded-lg border p-6 w-60">
+      <div class="bg-white rounded-lg border p-6 w-[20%]">
         <div class="text-center">
           <h2 class="text-2xl font-bold text-red-600">{{ itemRequestDeclined }} รายการ</h2>
           <p class="text-gray-600 text-sm">คำขอเบิกไม่อนุมัติ</p>
@@ -89,8 +89,8 @@
           <!-- Requests (x5)-->
           <span class="inline-block px-3 py-1 rounded-full" style="background-color:#D9EFFF; color:#0072C3; font-size:0.875rem; font-weight:500;">{{ Req_ID || "REQ-0000-000" }}</span>
           <p class="text-gray-600 text-sm text-xl"><b>{{ problem || "[หัวข้อปัญหา]" }}</b></p>
-          <p class="text-[16px] text-[#A1A1A1]">เบิก {{ attempt || "[ครั้งที่เบิก]" }} • {{ us_id || "[ชื่อผู้เบิก]"}}</p>
-          <p class="text-[16px] text-[#A1A1A1]">ขอเมื่อ {{ cate || "00/00/0000" }} {{ time || "00:00:00"}}</p>
+          <p class="text-[16px] text-[#A1A1A1]">เบิก {{ attempt || "[ครั้งที่เบิก]" }} • {{ us_name || "[ชื่อผู้เบิก]"}}</p>
+          <p class="text-[16px] text-[#A1A1A1]">ขอเมื่อ {{ date || "00/00/0000" }} {{ time || "00:00:00"}}</p>
         </div>
       </div>
     </div>
