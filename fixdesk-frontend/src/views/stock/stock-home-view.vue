@@ -52,6 +52,7 @@
     </div>
 
     <!-- Bar Charts Box -->
+     <!-- Don't touch yet? -->
     <div class="flex gap-4">
       <div class="bg-white rounded-xl border pt-4 px-6 flex-1">
         <div class="flex justify-between items-center">
@@ -109,13 +110,60 @@
 </style>
 
 <script setup>
+import { ref, onMounted } from 'vue'
 
-const itemsCount = 1
-const itemsNew = 2
-const itemRequestWaiting = 3
-const itemRequestDeclined = 4
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
+
+// Pull With Auth
+function getAuthHeaders() {
+  const token = localStorage.getItem('token') || sessionStorage.getItem('token')
+  return {
+    Authorization: `Bearer ${token}`,
+  }
+}
+
+// For Display
+const itemsCount = ref(0)
+const itemsNew = ref(0)
+const itemRequestWaiting = ref(0)
+const itemRequestDeclined = ref(0)
 
 defineOptions({ name: 'StockHomeView' })
+
+async function fetchCounts() {
+  // Try-Catch Error
+  try {
+    const res = await fetch(`${API_BASE}/show-stock`, { headers: getAuthHeaders() })
+    if (res.ok) {
+      const products = await res.json()
+      if (Array.isArray(products)) {
+        itemsCount.value = products.length
+
+        const today = new Date().toISOString().slice(0, 10)
+        itemsNew.value = products.filter((p) => p.pd_updated_at && p.pd_updated_at.slice(0, 10) === today).length
+      }
+    }
+  } catch (err) {
+    console.error('เกิดข้อผิดพลาดในการแสดงข้อมูล:', err)
+  }
+
+  try {
+    const res2 = await fetch(`${API_BASE}/technician/my-stock-forms`, { headers: getAuthHeaders() })
+    if (res2.ok) {
+      const forms = await res2.json()
+      if (Array.isArray(forms)) {
+        itemRequestWaiting.value = forms.filter((f) => f.sf_status === 'waiting').length
+        itemRequestDeclined.value = forms.filter((f) => f.sf_status === 'rejected').length
+      }
+    }
+  } catch (err) {
+    console.error('เกิดข้อผิดพลาดในการแสดงข้อมูล:', err)
+  }
+}
+
+onMounted(() => {
+  fetchCounts()
+})
 </script>
 
 <script>
