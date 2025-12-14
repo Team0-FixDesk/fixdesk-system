@@ -8,6 +8,7 @@ import MainLayout from '../layouts/main-layout.vue'
 // SHARED
 import RepairRequestView from '../views/repair-request-view.vue'
 import MyListView from '../views/my-list-view.vue'
+import CreateReportView from '../views/create-report-view.vue'
 
 // USER
 import UserHomeView from '../views/user/user-home-view.vue'
@@ -117,6 +118,11 @@ const router = createRouter({
           path: 'my-list',
           component: MyListView,
           meta: { role: ['User', 'Admin', 'Technician', 'Manager', 'Stock'] },
+        },
+        {
+          path: 'create-report',
+          component: CreateReportView,
+          meta: { role: ['Admin', 'Technician', 'Manager'] },
         },
         {
           path: 'repair-detail/:code',
