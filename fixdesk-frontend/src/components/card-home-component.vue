@@ -1,10 +1,11 @@
 <template>
   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-    
-    <div 
-      v-for="(item, index) in items" 
-      :key="index" 
-      class="bg-white rounded-lg shadow p-6"
+
+    <div
+      v-for="(item, index) in items"
+      :key="index"
+      @click="$emit('click', item)"
+      class="bg-white rounded-lg shadow p-6 cursor-pointer"
     >
       <div class="text-center">
         <h2 class="text-2xl font-bold" :class="item.colorClass">
@@ -26,4 +27,6 @@ defineProps({
     default: () => []
   }
 })
+
+defineEmits(['click'])
 </script>
