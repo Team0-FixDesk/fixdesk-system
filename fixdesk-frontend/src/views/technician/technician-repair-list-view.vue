@@ -148,7 +148,22 @@ async function fetchAllRepairs() {
     rowsData.value = Array.isArray(data) ? data : []
   } catch (err) {
     console.error('❌ โหลดข้อมูลไม่สำเร็จ:', err)
-    Swal.fire('เกิดข้อผิดพลาด', err.message || 'โหลดข้อมูลไม่สำเร็จ', 'error')
+    // Toast notification
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true
+    })
+    Toast.fire({
+      title: 'เกิดข้อผิดพลาด',
+      text: err.message || 'โหลดข้อมูลไม่สำเร็จ',
+      icon: 'error',
+      background: '#fee2e2',
+      color: '#dc2626'
+    })
   }
 }
 
@@ -316,7 +331,21 @@ async function setLeadForAssignment(rf_code) {
 async function confirmAccept() {
   const code = currentAcceptCode.value
   if (!code) {
-    alert('ไม่พบรหัสใบงาน')
+    // Toast notification
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 2500,
+      timerProgressBar: true
+    })
+    Toast.fire({
+      title: 'ไม่พบรหัสใบงาน',
+      icon: 'warning',
+      background: '#fef3c7',
+      color: '#92400e'
+    })
     return
   }
 
@@ -331,7 +360,21 @@ async function confirmAccept() {
 
       const payload = await res.json().catch(() => ({}))
       if (!res.ok) {
-        alert(payload.message || 'ไม่สามารถรับงานได้')
+        // Toast notification
+        const Toast = Swal.mixin({
+          toast: true,
+          position: 'top-end',
+          animation: false,
+          showConfirmButton: false,
+          timer: 3000,
+          timerProgressBar: true
+        })
+        Toast.fire({
+          title: payload.message || 'ไม่สามารถรับงานได้',
+          icon: 'error',
+          background: '#fee2e2',
+          color: '#dc2626'
+        })
         return
       }
 
@@ -353,11 +396,47 @@ async function confirmAccept() {
         await setLeadForAssignment(code) // ignore result
       }
 
+      // Success toast notification
+      const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        animation: false,
+        showConfirmButton: false,
+        timer: 2500,
+        timerProgressBar: true,
+        didOpen: (toast) => {
+          toast.addEventListener('mouseenter', Swal.stopTimer)
+          toast.addEventListener('mouseleave', Swal.resumeTimer)
+        }
+      })
+      Toast.fire({
+        title: 'รับงานสำเร็จ!',
+        text: 'คุณได้รับงานเรียบร้อยแล้ว',
+        icon: 'success',
+        background: '#f0f9ff',
+        color: '#1e3a8a'
+      })
+
       closeAcceptPopup()
       fetchAllRepairs()
     } catch (err) {
       console.error('Error accepting job (alone):', err)
-      alert('เกิดข้อผิดพลาด ขณะรับงาน')
+      // Toast notification
+      const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        animation: false,
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true
+      })
+      Toast.fire({
+        title: 'เกิดข้อผิดพลาด',
+        text: 'ขณะรับงาน',
+        icon: 'error',
+        background: '#fee2e2',
+        color: '#dc2626'
+      })
     }
 
     return
@@ -366,7 +445,21 @@ async function confirmAccept() {
   // โหมดทำงานเป็นทีม
   if (acceptMode.value === 'team') {
     if (!selectedTeam.value || selectedTeam.value.length === 0) {
-      alert('โปรดเลือกช่างอย่างน้อย 1 คน')
+      // Toast notification
+      const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        animation: false,
+        showConfirmButton: false,
+        timer: 2500,
+        timerProgressBar: true
+      })
+      Toast.fire({
+        title: 'โปรดเลือกช่างอย่างน้อย 1 คน',
+        icon: 'warning',
+        background: '#fef3c7',
+        color: '#92400e'
+      })
       return
     }
 
@@ -383,7 +476,21 @@ async function confirmAccept() {
 
       const payload = await res.json().catch(() => ({}))
       if (!res.ok) {
-        alert(payload.message || 'มอบหมายทีมไม่สำเร็จ')
+        // Toast notification
+        const Toast = Swal.mixin({
+          toast: true,
+          position: 'top-end',
+          animation: false,
+          showConfirmButton: false,
+          timer: 3000,
+          timerProgressBar: true
+        })
+        Toast.fire({
+          title: payload.message || 'มอบหมายทีมไม่สำเร็จ',
+          icon: 'error',
+          background: '#fee2e2',
+          color: '#dc2626'
+        })
         return
       }
 
@@ -395,16 +502,66 @@ async function confirmAccept() {
 
       if (!res2.ok) {
         const p2 = await res2.json().catch(() => ({}))
-        alert(p2.message || 'รับงานหลังมอบหมายทีมไม่สำเร็จ')
+        // Toast notification
+        const Toast = Swal.mixin({
+          toast: true,
+          position: 'top-end',
+          animation: false,
+          showConfirmButton: false,
+          timer: 3000,
+          timerProgressBar: true
+        })
+        Toast.fire({
+          title: p2.message || 'รับงานหลังมอบหมายทีมไม่สำเร็จ',
+          icon: 'error',
+          background: '#fee2e2',
+          color: '#dc2626'
+        })
         return
       }
+
+      // Success toast notification
+      const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        animation: false,
+        showConfirmButton: false,
+        timer: 2500,
+        timerProgressBar: true,
+        didOpen: (toast) => {
+          toast.addEventListener('mouseenter', Swal.stopTimer)
+          toast.addEventListener('mouseleave', Swal.resumeTimer)
+        }
+      })
+      Toast.fire({
+        title: 'มอบหมายทีมสำเร็จ!',
+        text: 'รับงานและมอบหมายทีมเรียบร้อยแล้ว',
+        icon: 'success',
+        background: '#f0f9ff',
+        color: '#1e3a8a'
+      })
 
       // team mode โดยปกติจะไม่เซ็ต lead ให้ทุกคน — ถ้าต้องการแยก leader ให้เรียก setLeadForAssignment หากต้องการ
       closeAcceptPopup()
       fetchAllRepairs()
     } catch (err) {
       console.error('Error accepting job (team):', err)
-      alert('เกิดข้อผิดพลาด ขณะมอบหมายทีม/รับงาน')
+      // Toast notification
+      const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        animation: false,
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true
+      })
+      Toast.fire({
+        title: 'เกิดข้อผิดพลาด',
+        text: 'ขณะมอบหมายทีม/รับงาน',
+        icon: 'error',
+        background: '#fee2e2',
+        color: '#dc2626'
+      })
     }
   }
 }
@@ -484,7 +641,22 @@ async function fetchTechnicians() {
     selectedTeam.value = [currentUserId]
   } catch (err) {
     console.error('❌ โหลดข้อมูลช่างไม่สำเร็จ:', err)
-    Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถโหลดรายชื่อช่างได้', 'error')
+    // Toast notification
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true
+    })
+    Toast.fire({
+      title: 'เกิดข้อผิดพลาด',
+      text: 'ไม่สามารถโหลดรายชื่อช่างได้',
+      icon: 'error',
+      background: '#fee2e2',
+      color: '#dc2626'
+    })
   }
 }
 

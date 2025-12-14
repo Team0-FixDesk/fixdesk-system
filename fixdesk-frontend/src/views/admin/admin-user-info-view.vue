@@ -59,7 +59,22 @@ async function fetchUsers() {
     roleFilterOptions.value = Array.from(roleSet)
   } catch (err) {
     console.error('โหลดข้อมูลไม่สำเร็จ:', err)
-    Sweetalert.fire('ผิดพลาด', 'ไม่สามารถโหลดข้อมูลผู้ใช้ได้', 'error')
+    // Toast notification
+    const Toast = Sweetalert.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true
+    })
+    Toast.fire({
+      title: 'ผิดพลาด',
+      text: 'ไม่สามารถโหลดข้อมูลผู้ใช้ได้',
+      icon: 'error',
+      background: '#fee2e2',
+      color: '#dc2626'
+    })
   }
 }
 
@@ -147,7 +162,22 @@ function openViewModal(username) {
     Object.assign(viewForm.value, row.raw)
     showViewModal.value = true
   } catch (err) {
-    Sweetalert.fire('ผิดพลาด', err.message, 'error')
+    // Toast notification
+    const Toast = Sweetalert.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true
+    })
+    Toast.fire({
+      title: 'ผิดพลาด',
+      text: err.message,
+      icon: 'error',
+      background: '#fee2e2',
+      color: '#dc2626'
+    })
   }
 }
 
@@ -206,11 +236,28 @@ async function confirmAddUser() {
     const data = await res.json()
     if (!res.ok) throw new Error(data.message || 'เพิ่มผู้ใช้ไม่สำเร็จ')
 
-    Sweetalert.fire('สำเร็จ', 'เพิ่มผู้ใช้เรียบร้อยแล้ว', 'success')
+    const toast = Sweetalert.mixin({
+      toast: true,
+      position: 'top-end',
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true,
+    })
+    toast.fire({
+      icon: 'success',
+      title: 'เพิ่มผู้ใช้เรียบร้อยแล้ว',
+      background: '#f0f9ff',
+      color: '#1e3a8a'
+    })
     showAddModal.value = false
     await fetchUsers()
   } catch (err) {
-    Sweetalert.fire('ผิดพลาด', err.message, 'error')
+    toast.fire({
+      icon: 'error',
+      title: err.message || 'ไม่สามารถเพิ่มผู้ใช้ได้',
+      background: '#fee2e2',
+      color: '#dc2626'
+    })
   }
 }
 
@@ -237,7 +284,22 @@ function openEditModal(username) {
     Object.assign(editForm.value, row.raw)
     showEditModal.value = true
   } catch (err) {
-    Sweetalert.fire('ผิดพลาด', err.message, 'error')
+    // Toast notification
+    const Toast = Sweetalert.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true
+    })
+    Toast.fire({
+      title: 'ผิดพลาด',
+      text: err.message,
+      icon: 'error',
+      background: '#fee2e2',
+      color: '#dc2626'
+    })
   }
 }
 
@@ -271,11 +333,28 @@ async function confirmEditUser() {
     const data = await res.json()
     if (!res.ok) throw new Error(data.message || 'อัปเดตไม่สำเร็จ')
 
-    Sweetalert.fire('สำเร็จ', 'แก้ไขข้อมูลผู้ใช้เรียบร้อยแล้ว', 'success')
+    const toast = Sweetalert.mixin({
+      toast: true,
+      position: 'top-end',
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true,
+    })
+    toast.fire({
+      icon: 'success',
+      title: 'แก้ไขข้อมูลผู้ใช้เรียบร้อยแล้ว',
+      background: '#f0f9ff',
+      color: '#1e3a8a'
+    })
     showEditModal.value = false
     await fetchUsers()
   } catch (err) {
-    Sweetalert.fire('ผิดพลาด', err.message, 'error')
+    toast.fire({
+      icon: 'error',
+      title: err.message || 'ไม่สามารถแก้ไขข้อมูลผู้ใช้ได้',
+      background: '#fee2e2',
+      color: '#dc2626'
+    })
   }
 }
 
@@ -326,10 +405,27 @@ async function confirmDelete(username) {
     if (!res.ok) {
       throw new Error(message || `ลบไม่สำเร็จ (HTTP ${res.status})`)
     }
-    Sweetalert.fire('สำเร็จ', 'ลบผู้ใช้เรียบร้อยแล้ว', 'success')
+    const toast = Sweetalert.mixin({
+      toast: true,
+      position: 'top-end',
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true,
+    })
+    toast.fire({
+      icon: 'success',
+      title: 'ลบผู้ใช้เรียบร้อยแล้ว',
+      background: '#f0f9ff',
+      color: '#1e3a8a'
+    })
     await fetchUsers()
   } catch (err) {
-    Sweetalert.fire('ผิดพลาด', err.message || 'ไม่สามารถลบผู้ใช้ได้', 'error')
+    toast.fire({
+      icon: 'error',
+      title: err.message || 'ไม่สามารถลบผู้ใช้ได้',
+      background: '#fee2e2',
+      color: '#dc2626'
+    })
   }
 }
 
@@ -595,7 +691,22 @@ async function fetchMasterData() {
     }))
   } catch (err) {
     console.error('โหลดข้อมูล master data ไม่สำเร็จ:', err)
-    Sweetalert.fire('ผิดพลาด', 'ไม่สามารถโหลดข้อมูลคำนำหน้า/บทบาท/ประเภทช่างได้', 'error')
+    // Toast notification
+    const Toast = Sweetalert.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true
+    })
+    Toast.fire({
+      title: 'ผิดพลาด',
+      text: 'ไม่สามารถโหลดข้อมูลคำนำหน้า/บทบาท/ประเภทช่างได้',
+      icon: 'error',
+      background: '#fee2e2',
+      color: '#dc2626'
+    })
   }
 }
 
@@ -634,11 +745,45 @@ async function handleAddTechType() {
     const data = await res.json()
     if (!res.ok) throw new Error(data.message || 'เพิ่มตำแหน่งช่างไม่สำเร็จ')
 
-    await Sweetalert.fire('สำเร็จ', 'เพิ่มตำแหน่งช่างเรียบร้อยแล้ว', 'success')
+    // Toast notification
+    const Toast = Sweetalert.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 2500,
+      timerProgressBar: true,
+      didOpen: (toast) => {
+        toast.addEventListener('mouseenter', Sweetalert.stopTimer)
+        toast.addEventListener('mouseleave', Sweetalert.resumeTimer)
+      }
+    })
+    await Toast.fire({
+      title: 'สำเร็จ',
+      text: 'เพิ่มตำแหน่งช่างเรียบร้อยแล้ว',
+      icon: 'success',
+      background: '#f0f9ff',
+      color: '#1e3a8a'
+    })
     await fetchMasterData()
     await fetchUsers()
   } catch (err) {
-    Sweetalert.fire('ผิดพลาด', err.message || 'ไม่สามารถเพิ่มตำแหน่งช่างได้', 'error')
+    // Toast notification
+    const Toast = Sweetalert.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true
+    })
+    Toast.fire({
+      title: 'ผิดพลาด',
+      text: err.message || 'ไม่สามารถเพิ่มตำแหน่งช่างได้',
+      icon: 'error',
+      background: '#fee2e2',
+      color: '#dc2626'
+    })
   }
 }
 
@@ -667,11 +812,45 @@ async function handleEditTechType(item) {
     const data = await res.json()
     if (!res.ok) throw new Error(data.message || 'แก้ไขตำแหน่งช่างไม่สำเร็จ')
 
-    await Sweetalert.fire('สำเร็จ', 'แก้ไขตำแหน่งช่างเรียบร้อยแล้ว', 'success')
+    // Toast notification
+    const Toast = Sweetalert.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 2500,
+      timerProgressBar: true,
+      didOpen: (toast) => {
+        toast.addEventListener('mouseenter', Sweetalert.stopTimer)
+        toast.addEventListener('mouseleave', Sweetalert.resumeTimer)
+      }
+    })
+    await Toast.fire({
+      title: 'สำเร็จ',
+      text: 'แก้ไขตำแหน่งช่างเรียบร้อยแล้ว',
+      icon: 'success',
+      background: '#f0f9ff',
+      color: '#1e3a8a'
+    })
     await fetchMasterData()
     await fetchUsers()
   } catch (err) {
-    Sweetalert.fire('ผิดพลาด', err.message || 'ไม่สามารถแก้ไขตำแหน่งช่างได้', 'error')
+    // Toast notification
+    const Toast = Sweetalert.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true
+    })
+    Toast.fire({
+      title: 'ผิดพลาด',
+      text: err.message || 'ไม่สามารถแก้ไขตำแหน่งช่างได้',
+      icon: 'error',
+      background: '#fee2e2',
+      color: '#dc2626'
+    })
   }
 }
 
@@ -695,11 +874,45 @@ async function handleDeleteTechType(item) {
     const data = await res.json().catch(() => ({}))
     if (!res.ok) throw new Error(data.message || 'ลบตำแหน่งช่างไม่สำเร็จ')
 
-    await Sweetalert.fire('สำเร็จ', 'ลบตำแหน่งช่างเรียบร้อยแล้ว', 'success')
+    // Toast notification
+    const Toast = Sweetalert.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 2500,
+      timerProgressBar: true,
+      didOpen: (toast) => {
+        toast.addEventListener('mouseenter', Sweetalert.stopTimer)
+        toast.addEventListener('mouseleave', Sweetalert.resumeTimer)
+      }
+    })
+    await Toast.fire({
+      title: 'สำเร็จ',
+      text: 'ลบตำแหน่งช่างเรียบร้อยแล้ว',
+      icon: 'success',
+      background: '#f0f9ff',
+      color: '#1e3a8a'
+    })
     await fetchMasterData()
     await fetchUsers()
   } catch (err) {
-    Sweetalert.fire('ผิดพลาด', err.message || 'ไม่สามารถลบตำแหน่งช่างได้', 'error')
+    // Toast notification
+    const Toast = Sweetalert.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true
+    })
+    Toast.fire({
+      title: 'ผิดพลาด',
+      text: err.message || 'ไม่สามารถลบตำแหน่งช่างได้',
+      icon: 'error',
+      background: '#fee2e2',
+      color: '#dc2626'
+    })
   }
 }
 </script>

@@ -310,13 +310,20 @@ const filteredTechnicians = computed(() =>
 /* ยืนยันมอบหมาย */
 async function confirmAssign() {
   if (!selectedTechnician.value) {
-    Swal.fire({
+    // Toast notification
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 2000,
+      timerProgressBar: true
+    })
+    Toast.fire({
       title: 'กรุณาเลือกช่างผู้รับผิดชอบ',
       icon: 'warning',
-      showConfirmButton: false,
-      timer: 1500,
-      timerProgressBar: true,
-      allowOutsideClick: false,
+      background: '#fef3c7',
+      color: '#92400e'
     })
     return
   }
