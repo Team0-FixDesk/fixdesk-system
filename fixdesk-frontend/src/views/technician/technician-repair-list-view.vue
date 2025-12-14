@@ -301,16 +301,6 @@ async function fetchTechnicians() {
 }
 
 
-// ดึง user id ของช่างคนปัจจุบัน
-const me = technicians.value.find(t => t.us_id === tokenData.value?.us_id)
-
-// auto select ตัวเอง
-if (me) {
-  selectedTeam.value = [me.us_id]
-}
-
-
-
 </script>
 
 <template>
