@@ -199,7 +199,7 @@ function canEditUser(row) {
           <th
             v-for="(col, i) in props.columns"
             :key="i"
-            v-show="props.mode === 'stock' || props.mode === 'location' || props.mode === 'user' || props.mode === 'admin' || props.mode === 'assign' ? true : i !== 1"
+            v-show="props.mode === 'stock' || props.mode === 'location' || props.mode === 'user' || props.mode === 'admin' || props.mode === 'assign' || props.mode === 'technician' ? true : i !== 1"
             class="px-3 py-2 sm:px-3 sm:py-3 text-center"
           >
             {{ col }}
@@ -224,7 +224,7 @@ function canEditUser(row) {
             <!-- คอลัมน์อื่น -->
             <td
               v-else-if="
-                props.mode === 'location' ? ci !== 0 : props.mode === 'stock' || props.mode === 'user' || props.mode === 'admin' || props.mode === 'assign' ? true : ci !== 1
+                props.mode === 'location' ? ci !== 0 : props.mode === 'stock' || props.mode === 'user' || props.mode === 'admin' || props.mode === 'assign' || props.mode === 'technician' ? true : ci !== 1
               "
               class="px-3 py-2 sm:px-4 sm:py-4 text-center"
             >
@@ -232,7 +232,7 @@ function canEditUser(row) {
               <div v-if="cell === 'actions'" class="flex justify-center gap-2">
                 <!-- ดูรายละเอียด (แสดงเสมอ) -->
                 <div
-                  class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center bg-[#1E48D1] hover:bg-[#163A9B] text-white rounded-lg transition cursor-pointer"
+                  class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center bg-[#1E48D1] hover:bg-[#163A9B] text-white rounded-lg transition cursor-pointer flex-none"
                   title="ดูรายละเอียด"
                   @click="$emit('detail', getRowId(row))"
                 >
@@ -243,7 +243,7 @@ function canEditUser(row) {
                 <template v-if="props.mode === 'technician'">
                   <template v-if="getRowStatus(row) === 'pending'">
                     <button
-                      class="px-4 py-2 text-xs font-medium text-white bg-[#005a9a] rounded-lg shadow-md hover:shadow-lg transition"
+                      class="px-7 py-2 text-xs font-medium text-white bg-teal-700 hover:bg-teal-900 rounded-lg hover:transition flex-none"
                       @click="$emit('accept', getRowId(row))"
                     >
                       รับงาน
@@ -252,7 +252,7 @@ function canEditUser(row) {
 
                   <template v-else-if="getRowStatus(row) !== 'done'">
                     <button
-                      class="px-4 py-2 text-xs font-medium text-white bg-[#FBC02D] rounded-lg shadow-md hover:shadow-lg transition"
+                      class="px-3 py-2 text-xs font-medium text-white bg-amber-500 hover:bg-amber-600 rounded-lg hover:shadow-lg transition flex-none"
                       @click="$emit('change-status', getRowId(row))"
                     >
                       เปลี่ยนสถานะ
@@ -261,7 +261,7 @@ function canEditUser(row) {
 
                   <template v-else>
                     <span
-                      class="px-4 py-2 text-xs font-medium text-gray-400 bg-gray-100 rounded-lg cursor-default"
+                      class="px-6 py-2 text-xs font-medium text-gray-400 bg-gray-100 rounded-lg cursor-default flex-none"
                     >
                       เสร็จสิ้น
                     </span>
