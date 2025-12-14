@@ -1,11 +1,12 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router' // 1. เพิ่ม useRoute
 import TableComponent from '@/components/table-component.vue'
 import assignJobModalComponent from '@/components/assign-job-modal-component.vue'
 import Swal from 'sweetalert2'
 
 const router = useRouter()
+const route = useRoute()
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
 
 const getAuthHeaders = () => {
@@ -13,6 +14,35 @@ const getAuthHeaders = () => {
   return {
     'Content-Type': 'application/json',
     Authorization: `Bearer ${token}`,
+  }
+}
+
+function applyFilterFromUrl() {
+  const statusParam = route.query.status
+  if (!statusParam) return
+
+  // กรณีเป็นงานวันนี้ (today)
+  if (statusParam === 'today') {
+    // ตั้งค่า selectedDate เป็นวันปัจจุบัน (YYYY-MM-DD)
+    const today = new Date().toISOString().split('T')[0]
+    selectedDate.value = today
+  }
+  // กรณีสถานะอื่นๆ
+  else {
+    let targetStatus = ''
+
+    // แปลง key จาก Dashboard ให้ตรงกับ value ของ checkbox ในหน้านี้
+    if (statusParam === 'in_progress') targetStatus = 'in_progress'
+    else if (statusParam === 'completed_7days') targetStatus = 'done' // Dashboard ส่งมา completed_7days แต่ checkbox เราใช้ done
+    else if (statusParam === 'cancelled_7days') targetStatus = 'cancel' // หรือค่าที่ DB เก็บสำหรับยกเลิก
+    else if (statusParam === 'pending') targetStatus = 'pending'
+
+    if (targetStatus) {
+      selectedStatuses.value = [targetStatus]
+
+      // (Optional) เปิด Dropdown ให้เห็นว่าถูกเลือกอยู่
+      // showStatusFilter.value = true
+    }
   }
 }
 
@@ -191,7 +221,7 @@ function closeDropdown(e) {
 const goToDetail = (code) =>
   router.push({
     path: `/main/repair-detail/${code}`,
-    state: { fromAdmin: true }, 
+    state: { fromAdmin: true },
   })
 
 async function handleAssign(code) {
@@ -243,6 +273,7 @@ function handleAssignSuccess() {
 onMounted(() => {
   fetchAllRepairs()
   document.addEventListener('click', closeDropdown)
+  applyFilterFromUrl()
 })
 onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
 </script>
