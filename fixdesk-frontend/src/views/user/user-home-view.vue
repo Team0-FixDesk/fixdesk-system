@@ -1,7 +1,7 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import ThaiCalendar from '@/components/thai-calendar-component.vue'
+import TableComponent from '@/components/table-component.vue'
 import repairButton from '@/components/repair-button-component.vue'
 import RepairStatusTimeline from '@/components/status-timeline-component.vue'
 // นำเข้า Component Card
@@ -313,6 +313,69 @@ function buildTimelineFromRepair(repairData) {
   return timelineSteps
 }
 
+const getBadgeHtml = (text, type) => {
+  let colorClass = 'bg-gray-100 text-gray-600'
+
+  if (type === 'urgency') {
+    if (text === 'high') {
+      text = 'เร่งด่วนมาก'
+      colorClass = 'bg-red-100 text-red-600'
+    } else if (text === 'medium') {
+      text = 'เร่งด่วน'
+      colorClass = 'bg-amber-50 text-amber-500'
+    } else if (text === 'low') {
+      text = 'ไม่เร่งด่วน'
+      colorClass = 'bg-green-100 text-green-600'
+    }
+  } else if (type === 'status') {
+    if (text === 'pending') {
+      text = 'รอดำเนินการ'
+      colorClass = 'bg-amber-50 text-amber-500'
+    } else if (text === 'in_progress') {
+      text = 'กำลังดำเนินการ'
+      colorClass = 'bg-blue-100 text-blue-600'
+    } else if (text === 'done') {
+      text = 'ดำเนินการเสร็จสิ้น'
+      colorClass = 'bg-green-100 text-green-600'
+    } else {
+      text = 'ยกเลิก'
+      colorClass = 'bg-gray-100 text-gray-500'
+    }
+  }
+
+  return `<span class="inline-flex min-w-[80px] justify-center items-center px-3 py-1 rounded-full font-semibold ${colorClass}">${text}</span>`
+}
+
+// 2. Computed สำหรับ Rows ที่จะแสดง (แปลง recentRepairs ให้เป็น Array ของ Array)
+const tableRows = computed(() => {
+  return recentRepairs.value.map((item) => [
+    formatDateTH(item.rf_create_at),
+    item.rf_code,
+    item.tt_name || '-',
+    item.building_name ? `อาคาร ${item.building_name}` : '-',
+    getBadgeHtml(item.rf_urgency, 'urgency'),
+    getBadgeHtml(item.rf_user_status, 'status'),
+  ])
+})
+
+// 3. Computed สำหรับ Raw Rows (เพื่อให้ TableComponent รู้ ID เวลากด)
+const tableRawRows = computed(() => {
+  return recentRepairs.value.map((item) => ({
+    rf_code: item.rf_code, // [สำคัญ] ต้องมี field นี้เพื่อให้ TableComponent ส่ง ID กลับมาได้
+    // ... field อื่นๆ ถ้าจำเป็น
+  }))
+})
+
+/* --- [เพิ่มใหม่] Event Handler เมื่อกด Row --- */
+const onRowClick = (idOrItem) => {
+  // รับค่า ID (String) หรือ Object แล้วดึง ID
+  const code = typeof idOrItem === 'object' && idOrItem !== null ? idOrItem.rf_code : idOrItem
+
+  if (code) {
+    goToDetail(code) // เรียกฟังก์ชันเดิมที่มีอยู่แล้ว
+  }
+}
+
 onMounted(() => {
   fetchRepairStats()
   fetchUserProfile()
@@ -343,51 +406,22 @@ const goToDetail = (code) => router.push(`/main/repair-detail/${code}`)
           <p class="text-xs text-gray-500">ระบบแสดงข้อมูล 5 รายการล่าสุด</p>
         </div>
 
-        <table class="w-full text-xs">
-          <thead>
-            <tr class="border-b text-gray-600">
-              <th class="py-2 px-3 text-left">วันที่</th>
-              <th class="px-3 text-left">หมายเลขแจ้งซ่อม</th>
-              <th class="px-3 text-left">ประเภทงาน</th>
-              <th class="px-3 text-left">สถานที่</th>
-              <th class="px-3 text-center w-32">ความเร่งด่วน</th>
-              <th class="px-3 text-center w-32">สถานะงาน</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-if="!recentRepairs.length" class="text-center text-gray-400">
-              <td colspan="6" class="py-6">ยังไม่มีรายการแจ้งซ่อม</td>
-            </tr>
-
-            <tr
-              v-for="item in recentRepairs"
-              :key="item.rf_code"
-              class="border-b hover:bg-gray-50 cursor-pointer"
-              @click="goToDetail(item.rf_code)"
-            >
-              <td class="py-3 px-3">{{ formatDateTH(item.rf_create_at) }}</td>
-              <td class="px-3">{{ item.rf_code }}</td>
-              <td class="px-3">{{ item.tt_name || '-' }}</td>
-              <td class="px-3">{{ item.building_name ? `อาคาร ${item.building_name}` : '-' }}</td>
-              <td class="px-3 text-center">
-                <span
-                  class="inline-flex min-w-[80px] justify-center items-center px-3 py-1 rounded-full font-semibold"
-                  :class="getUrgencyClass(item.rf_urgency)"
-                >
-                  {{ getUrgencyLabel(item.rf_urgency) }}
-                </span>
-              </td>
-              <td class="px-3 text-center">
-                <span
-                  class="inline-flex min-w-[95px] justify-center items-center px-3 py-1 rounded-full font-semibold"
-                  :class="getStatusClass(item.rf_user_status)"
-                >
-                  {{ getStatusLabel(item.rf_user_status) }}
-                </span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <TableComponent
+          :columns="[
+            'วันที่',
+            'หมายเลขแจ้งซ่อม',
+            'ประเภทงาน',
+            'สถานที่',
+            'ความเร่งด่วน',
+            'สถานะงาน',
+          ]"
+          :rows="tableRows"
+          :rawRows="tableRawRows"
+          :perPage="5"
+          mode="view-only"
+          :idColumnIndex="1"
+          @detail="onRowClick"
+        />
       </div>
 
       <div class="col-span-4 bg-white rounded-xl border border-slate-200 shadow-sm p-5">
