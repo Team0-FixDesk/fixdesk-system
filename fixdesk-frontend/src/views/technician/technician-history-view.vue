@@ -8,54 +8,6 @@
         class="w-[260px] h-10 px-4 rounded-lg border border-gray-300 bg-white focus:ring-2 focus:ring-blue-500" />
       <input v-model="selectedDate" type="date"
         class="h-10 px-3 rounded-lg border border-gray-300 bg-white text-gray-700" />
-      <!-- สถานะ -->
-      <div class="relative">
-        <button @click.stop="showStatusFilter = !showStatusFilter"
-          class="flex items-center gap-1 border border-gray-300 rounded-lg px-4 py-2 bg-white text-gray-700">
-          สถานะ
-          <img src="/icon/sidebar/chevron-down-icon.svg" class="w-4 h-4 opacity-70"
-            :class="{ 'rotate-180': showStatusFilter }" />
-        </button>
-        <div v-if="showStatusFilter"
-          class="absolute mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg p-3 text-sm text-gray-700 z-10">
-          <label class="flex items-center py-1">
-            <input type="checkbox" value="pending" v-model="selectedStatuses" class="w-4 h-4 text-blue-600" />
-            <span class="ml-2">รอดำเนินการ</span>
-          </label>
-          <label class="flex items-center py-1">
-            <input type="checkbox" value="in_progress" v-model="selectedStatuses" class="w-4 h-4 text-blue-600" />
-            <span class="ml-2">กำลังดำเนินการ</span>
-          </label>
-          <label class="flex items-center py-1">
-            <input type="checkbox" value="done" v-model="selectedStatuses" class="w-4 h-4 text-blue-600" />
-            <span class="ml-2">เสร็จสิ้น</span>
-          </label>
-        </div>
-      </div>
-      <!-- ความเร่งด่วน -->
-      <div class="relative">
-        <button @click.stop="showUrgencyFilter = !showUrgencyFilter"
-          class="flex items-center gap-1 border border-gray-300 rounded-lg px-4 py-2 bg-white text-gray-700">
-          ความเร่งด่วน
-          <img src="/icon/sidebar/chevron-down-icon.svg" class="w-4 h-4 opacity-70"
-            :class="{ 'rotate-180': showUrgencyFilter }" />
-        </button>
-        <div v-if="showUrgencyFilter"
-          class="absolute mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg p-3 text-sm text-gray-700 z-10">
-          <label class="flex items-center py-1">
-            <input type="checkbox" value="low" v-model="selectedUrgencies" class="w-4 h-4 text-blue-600" />
-            <span class="ml-2">ไม่เร่งด่วน</span>
-          </label>
-          <label class="flex items-center py-1">
-            <input type="checkbox" value="medium" v-model="selectedUrgencies" class="w-4 h-4 text-blue-600" />
-            <span class="ml-2">เร่งด่วน</span>
-          </label>
-          <label class="flex items-center py-1">
-            <input type="checkbox" value="high" v-model="selectedUrgencies" class="w-4 h-4 text-blue-600" />
-            <span class="ml-2">เร่งด่วนมาก</span>
-          </label>
-        </div>
-      </div>
       <!-- ปุ่มล้าง -->
       <transition name="fade">
         <button v-if="selectedStatuses.length || selectedUrgencies.length || searchQuery" @click="clearFilters"
@@ -90,14 +42,13 @@ const getAuthHeaders = () => {
 
 const columns = [
   'วันที่',
-  'หมายเลขแจ้งซ่อม',
-  'หัวข้อแจ้งซ่อม',
+  'รหัสใบแจ้ง',
+  'ผู้แจ้ง',
   'หน่วยงาน',
+  'เรื่องที่แจ้ง',
   'สถานที่',
-  'ความเร่งด่วน',
-  'สถานะงาน',
-  'รายละเอียด',
-  'การจัดการ',
+  'สถานะ',
+  'ตัวดำเนินการ',
 ]
 
 const rows = ref([])
@@ -151,15 +102,19 @@ async function fetchAllRepairs() {
         // raw
         date: createdAt,
         code: r.rf_code || '-',
-        problemTopic: r.rf_problem || '-',
+        problemTopic: truncateThaiText(r.rf_problem || '-', 5),
         department: r.department_name || '-',
         type: r.tt_name || '-',
         location: `${r.building_name || ''} ${r.floor_name || ''} ${r.room_name || ''}`.trim() || '-',
-        urgencyKey: r.rf_urgency,      // 'low' | 'medium' | 'high'
-        statusKey: r.rf_user_status,   // 'pending' | 'in_progress' | 'done'
+        statusKey: r.rf_user_status,
+        requester: (() => {
+          const first = r.us_first_name || ''
+          const last = r.us_last_name || ''
+          const full = `${first} ${last}`.trim()
+          return full || (r.rf_requester || '-')
+        })(),
         // for display
         dateDisplay: createdAt.toLocaleDateString('th-TH'),
-        urgencyBadge,
         statusBadge,
       }
     })
@@ -182,6 +137,36 @@ async function fetchAllRepairs() {
       color: '#dc2626'
     })
   }
+}
+
+// ฟังก์ชันช่วยตัดคำภาษาไทย (แสดงประมาณ 8 คำ)
+function truncateThaiText(text, wordLimit = 5) {
+  if (!text || text === '-') return '-'
+
+  const fullText = String(text) // แปลงเป็น string เพื่อความชัวร์
+
+  try {
+    // ใช้ Intl.Segmenter สำหรับตัดคำภาษาไทย
+    const segmenter = new Intl.Segmenter('th', { granularity: 'word' })
+    const segments = [...segmenter.segment(fullText)]
+
+    if (segments.length > wordLimit) {
+      // ตัดเอาแค่ 8 คำแรก + ...
+      const shortText = segments
+        .slice(0, wordLimit)
+        .map((s) => s.segment)
+        .join('')
+      // ส่งกลับเป็น HTML เพื่อให้เอาเมาส์ชี้แล้วเห็นข้อความเต็ม (Tooltip)
+      return `<span title="${fullText}" class="cursor-help">${shortText}...</span>`
+    }
+  } catch (err) {
+    // Fallback: กรณี Browser เก่ามาก ไม่รองรับ Intl ให้ตัดตามจำนวนตัวอักษรแทน (ประมาณ 40 ตัว)
+    if (fullText.length > 40) {
+      return `<span title="${fullText}" class="cursor-help">${fullText.substring(0, 40)}...</span>`
+    }
+  }
+
+  return fullText
 }
 
 // FILTER
@@ -233,14 +218,13 @@ const filteredRows = computed(() => {
 
         return [
           (r && r.dateDisplay) || '-', // วันที่
-          (r && r.code) || '-', // หมายเลขแจ้งซ่อม
-          (r && r.problemTopic) || '-', // ใบแจ้งซ่อม
-          (r && r.department) || '-', // ชื่อผู้แจ้ง
+          (r && r.code) || '-', // รหัสใบแจ้ง
+          (r && r.requester) || '-', // ผู้แจ้ง
+          (r && r.department) || '-', // หน่วยงาน
+          (r && r.problemTopic) || '-', // เรื่องที่แจ้ง
           (r && r.location) || '-', // สถานที่
-          (r && r.urgencyBadge) || '-', // ความเร่งด่วน
           (r && r.statusBadge) || '-', // สถานะงาน
           'actions', // การดำเนินการ
-          managementBadge, // การจัดการ
         ]
       })
   } catch (err) {
