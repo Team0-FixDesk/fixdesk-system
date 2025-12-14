@@ -231,11 +231,23 @@ function handleChangeStatus(item) {
 function handleAcceptSuccess() {
   showAcceptPopup.value = false
   fetchAllRepairs()
-  Swal.fire({
-    icon: 'success',
-    title: 'รับงานสำเร็จ',
+  const Toast = Swal.mixin({
+    toast: true,
+    position: 'top-end',
+    animation: false,
     showConfirmButton: false,
-    timer: 1500,
+    timer: 3000,
+    timerProgressBar: true,
+    didOpen: (toast) => {
+      toast.addEventListener('mouseenter', Swal.stopTimer)
+      toast.addEventListener('mouseleave', Swal.resumeTimer)
+    }
+  })
+  Toast.fire({
+    title: 'รับงานสำเร็จ',
+    icon: 'success',
+    background: '#f0f9ff',
+    color: '#1e3a8a'
   })
 }
 
