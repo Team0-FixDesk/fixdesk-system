@@ -181,9 +181,6 @@ async function fetchAllRepairs() {
       background: '#fee2e2',
       color: '#dc2626'
     })
-
-    // Normal Alert (commented for reference)
-    // Swal.fire('เกิดข้อผิดพลาด', err.message, 'error')
   }
 }
 

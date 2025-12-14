@@ -247,6 +247,70 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
+
+const showAssignTypeFilter = ref(false)
+function selectAssignType(type) {
+  selectedType.value = type
+  showAssignTypeFilter.value = false
+}
+function toggleSelectTeam(id) {
+  if (selectedTeam.value.includes(id)) {
+    selectedTeam.value = selectedTeam.value.filter(t => t !== id)
+  } else {
+    selectedTeam.value.push(id)
+  }
+}
+
+async function fetchTechnicians() {
+  try {
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token')
+    if (!token) throw new Error('ไม่พบ token')
+
+    const decoded = jwtDecode(token)
+    const currentUserId = decoded.us_id
+
+    const res = await fetch(`${API_BASE}/technicians`, { headers: getAuthHeaders() })
+    const typesRes = await fetch(`${API_BASE}/technician-types`)
+
+    const techs = await res.json()
+    technicianTypes.value = await typesRes.json()
+
+    // Auto-select ตัวเอง + ซ่อน
+    technicians.value = techs.filter(t => t.us_id !== currentUserId)
+    // ตัวเองถูก auto-add
+    selectedTeam.value = [currentUserId]
+  } catch (err) {
+    console.error('❌ โหลดข้อมูลช่างไม่สำเร็จ:', err)
+    // Toast notification
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true
+    })
+    Toast.fire({
+      title: 'เกิดข้อผิดพลาด',
+      text: 'ไม่สามารถโหลดรายชื่อช่างได้',
+      icon: 'error',
+      background: '#fee2e2',
+      color: '#dc2626'
+    })
+  }
+}
+
+
+// ดึง user id ของช่างคนปัจจุบัน
+const me = technicians.value.find(t => t.us_id === tokenData.value?.us_id)
+
+// auto select ตัวเอง
+if (me) {
+  selectedTeam.value = [me.us_id]
+}
+
+
+
 </script>
 
 <template>
