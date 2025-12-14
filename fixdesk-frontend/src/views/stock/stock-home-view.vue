@@ -54,7 +54,7 @@
     <!-- Bar Charts Box -->
      <!-- Don't touch yet? -->
     <div class="flex gap-4">
-      <div class="bg-white rounded-xl border pt-4 px-6 flex-1">
+      <div class="bg-white rounded-xl border pt-4 px-6 flex-[1.4]">
         <div class="flex justify-between items-center">
           <div>
             <h1 class="text-2xl font-bold text-gray-800">ภาพรวมสต็อก (กราฟ)</h1>
@@ -80,7 +80,7 @@
       </div>
 
       <!-- Recent Requests (x5) Box -->
-      <div class="bg-white rounded-xl border pt-4 px-6 flex-2">
+      <div class="bg-white rounded-xl border pt-4 px-6 flex-[1]">
         <div>
           <h1 class="text-2xl font-bold text-gray-800">คำขอเบิก (รออนุมัติ)</h1>
           <p class="text-gray-600">รายการของที่เบิก (5 รายการล่าสุด)</p>
@@ -99,15 +99,6 @@
     <!-- End Page -->
   </div>
 </template>
-
-<style>
-.flex-1 {
-  flex: 1.4;
-}
-.flex-2 {
-  flex: 1;
-}
-</style>
 
 <script setup>
 import { ref, onMounted } from 'vue'
@@ -131,7 +122,7 @@ const itemRequestDeclined = ref(0)
 defineOptions({ name: 'StockHomeView' })
 
 async function fetchCounts() {
-  // Try-Catch Error
+  // Try-Catch Update Auth +Error
   try {
     const res = await fetch(`${API_BASE}/show-stock`, { headers: getAuthHeaders() })
     if (res.ok) {
@@ -144,7 +135,7 @@ async function fetchCounts() {
       }
     }
   } catch (err) {
-    console.error('เกิดข้อผิดพลาดในการแสดงข้อมูล:', err)
+    console.error('เกิดข้อผิดพลาดในการค้นหาข้อมูล:', err)
   }
 
   try {
@@ -157,7 +148,7 @@ async function fetchCounts() {
       }
     }
   } catch (err) {
-    console.error('เกิดข้อผิดพลาดในการแสดงข้อมูล:', err)
+    console.error('เกิดข้อผิดพลาดในการค้นหาข้อมูล:', err)
   }
 }
 
