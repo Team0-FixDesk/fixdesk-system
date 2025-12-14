@@ -171,5 +171,126 @@ module.exports = function StockRoutes(db) {
       res.json(results);
     });
   });
+
+  // ลบรายการ
+  router.delete("/delete-stock/:id", authMiddleware, (req, res) => {
+    const { id } = req.params;
+
+    // 1. หาไฟล์รูปก่อนลบ (ถ้ามี)
+    const findQuery = "SELECT pd_upload_image FROM products WHERE pd_id = ?";
+
+    db.query(findQuery, [id], (err, results) => {
+      if (err) {
+        console.error("Error finding product:", err);
+        return res.status(500).json({ message: "เกิดข้อผิดพลาด" });
+      }
+
+      if (results.length === 0) {
+        return res.status(404).json({ message: "ไม่พบรายการสินค้า" });
+      }
+
+      const imageName = results[0].pd_upload_image;
+
+      // 2. ลบข้อมูลใน DB
+      const deleteQuery = "DELETE FROM products WHERE pd_id = ?";
+      db.query(deleteQuery, [id], (err) => {
+        if (err) {
+          console.error("Error deleting product:", err);
+          return res.status(500).json({ message: "ลบข้อมูลไม่สำเร็จ" });
+        }
+
+        // 3. ลบไฟล์รูป (ถ้ามี)
+        if (imageName) {
+          const imagePath = path.join(__dirname, "..", "uploads", imageName);
+          if (fs.existsSync(imagePath)) {
+            fs.unlinkSync(imagePath);
+          }
+        }
+
+        res.json({ message: "ลบสินค้าเรียบร้อย" });
+      });
+    });
+  });
+
+  // แก้ไขรายการ
+  router.put("/update-stock/:id", authMiddleware, upload.single("pd_upload_image"),
+    (req, res) => {
+      const {
+        pd_asset_code,
+        pd_name,
+        pd_detail,
+        pd_category_id,
+        pd_quantity,
+        pd_unit_id,
+      } = req.body
+
+      const pd_id = req.params.id
+
+      // log ช่วย debug
+      console.log("UPDATE BODY:", req.body)
+      console.log("UPDATE FILE:", req.file)
+
+      // หา unit id จากชื่อ
+      db.query(
+        "SELECT units_id FROM units WHERE units_name = ?",
+        [pd_unit_id],
+        (err, unitResult) => {
+          if (err) return res.status(500).json({ message: err.message })
+
+          if (!unitResult || unitResult.length === 0) {
+            return res.status(400).json({
+              message: `ไม่พบหน่วยนับ '${pd_unit_id}'`,
+            })
+          }
+
+          const unitId = unitResult[0].units_id
+
+          // ถ้ามีอัปโหลดรูปใหม่ → ใช้รูปใหม่
+          const newImage = req.file ? req.file.filename : null
+
+          // UPDATE
+          const sql = `
+            UPDATE products SET
+              pd_asset_code = ?,
+              pd_name = ?,
+              pd_detail = ?,
+              pd_category_id = ?,
+              pd_quantity = ?,
+              pd_unit_id = ?,
+              ${newImage ? "pd_upload_image = ?," : ""}
+              pd_updated_at = NOW()
+            WHERE pd_id = ?
+          `
+
+          const params = [
+            pd_asset_code,
+            pd_name,
+            pd_detail,
+            pd_category_id,
+            pd_quantity,
+            unitId,
+          ]
+
+          if (newImage) params.push(newImage)
+          params.push(pd_id)
+
+          db.query(sql, params, (err, result) => {
+            if (err) {
+              console.error("UPDATE ERROR:", err)
+              return res.status(500).json({ message: err.message })
+            }
+
+            if (result.affectedRows === 0) {
+              return res.status(404).json({ message: "ไม่พบรายการสินค้า" })
+            }
+
+            res.json({ message: "แก้ไขสำเร็จ" })
+          })
+        }
+      )
+    });
   return router;
 };
+
+
+

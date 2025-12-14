@@ -1,571 +1,337 @@
-<template>
-  <body>
-    <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-8xl">
-      <!-- Header -->
-      <div class="mb-6">
-        <h1 class="text-2xl font-bold text-gray-800">
-          สวัสดีคุณ ช่างธนภัทร
-        </h1>
-        <p class="text-sm text-gray-600 mt-1">
-          วันนี้มีงานใหม่เข้ามา ดูภาพรวมและเริ่มงานได้จากที่นี่
-        </p>
-      </div>
-
-      <!-- Cards -->
-      <div class="grid grid-cols-1 gap-4 md:grid-cols-4 py-3">
-        <!-- การ์ด: จำนวนงานใหม่ -->
-        <div class="rounded-xl border border-gray-200 bg-white px-6 py-4 shadow-sm">
-          <p class="text-sm text-gray-500">จำนวนงานใหม่</p>
-          <h2 class="text-2xl font-bold text-blue-600">{{ todayTasksCount }} งาน</h2>
-          <div class="mt-4 h-px w-full bg-gray-100"></div>
-          <p class="mt-3 text-xs text-[#0077FF] cursor-pointer hover:underline">
-            +1 ตั้งแต่เมื่อวาน
-          </p>
-        </div>
-
-        <!-- การ์ด: กำลังดำเนินการ -->
-        <div class="rounded-xl border border-gray-200 bg-white px-6 py-4 shadow-sm">
-          <p class="text-sm text-gray-500">กำลังดำเนินการ</p>
-          <h2 class="text-2xl font-bold text-orange-500">{{ inProgressTasksCount }} งาน</h2>
-          <div class="mt-4 h-px w-full bg-gray-100"></div>
-          <p class="mt-3 text-xs text-orange-500 cursor-pointer hover:underline">2 งานใกล้กำหนด</p>
-        </div>
-
-        <!-- การ์ด: เสร็จสิ้น (วันนี้) -->
-        <div class="rounded-xl border border-gray-200 bg-white px-6 py-4 shadow-sm">
-          <p class="text-sm text-gray-500">เสร็จสิ้น (วันนี้)</p>
-          <h2 class="text-2xl font-bold text-green-600">{{ completedTasksCount }} งาน</h2>
-          <div class="mt-4 h-px w-full bg-gray-100"></div>
-          <p class="mt-3 text-xs text-green-500 cursor-pointer hover:underline">
-            ดีมาก! ทำต่อเนื่อง
-          </p>
-        </div>
-
-        <!-- การ์ด: ยกเลิก (วันนี้) -->
-        <div class="rounded-xl border border-gray-200 bg-white px-6 py-4 shadow-sm">
-          <p class="text-sm text-gray-500">ยกเลิก (วันนี้)</p>
-          <h2 class="text-2xl font-bold text-red-600">{{ cancelledTasksCount }} งาน</h2>
-          <div class="mt-4 h-px w-full bg-gray-100"></div>
-          <p class="mt-3 text-xs text-red-500 cursor-pointer hover:underline">
-            เนื่องจากซ่อมไม่ได้
-          </p>
-        </div>
-      </div>
-
-      <!-- ตารางงาน -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 py-3">
-        <!-- การ์ดซ้าย: ตาราง -->
-        <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 lg:col-span-2">
-          <h2 class="text-2xl font-bold text-gray-900">งานที่ได้รับมอบหมายใหม่</h2>
-          <p class="text-gray-500 -mt-1 mb-4">ระบบแสดงข้อมูล 5 รายการล่าสุด</p>
-          <table class="min-w-full border-separate border-spacing-y-2">
-            <thead>
-              <tr class="text-left text-sm font-semibold text-gray-600">
-                <th class="py-3 px-4">หมายเลขแจ้งซ่อม</th>
-                <th class="py-3 px-4">หัวข้อแจ้งซ่อม</th>
-                <th class="py-3 px-4">หน่วยงาน</th>
-                <th class="py-3 px-4">สถานที่</th>
-                <th class="py-3 px-4">ความเร่งด่วน</th>
-                <th class="py-3 px-4">สถานะงาน</th>
-              </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
-              <!-- แสดงข้อมูลในหน้าปัจจุบัน -->
-              <tr
-                v-for="request in paginatedRequests"
-                :key="request.ticketId"
-                class="hover:bg-gray-50"
-              >
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {{ request.ticketId }}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {{ request.problemTopic }}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {{ request.department }}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {{ request.location }}
-                </td>
-                <!-- ส่วนแสดงความเร่งด่วน -->
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <span
-                    :class="getUrgencyClass(request.urgencyRaw)"
-                    class="inline-flex w-28 justify-center items-center px-3 py-1 text-xs font-medium rounded-full"
-                  >
-                    {{ request.urgency }}
-                  </span>
-                </td>
-                <!-- ส่วนแสดงสถานะ -->
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <span
-                    :class="getStatusClass(request.statusRaw)"
-                    class="inline-flex w-28 justify-center items-center px-3 py-1 text-xs font-medium rounded-full"
-                  >
-                    {{ request.status }}
-                  </span>
-                </td>
-              </tr>
-              <!-- แสดงข้อความเมื่อไม่มีข้อมูล -->
-              <tr v-if="paginatedRequests.length === 0" key="no-data">
-                <td colspan="9" class="px-6 py-8 text-center text-gray-500">
-                  ไม่พบข้อมูลรายการแจ้งซ่อม
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <!-- การ์ดขวา: โดนัท -->
-        <div class="bg-white rounded-3xl border border-gray-200 shadow-sm p-6">
-          <h2 class="text-xl font-bold text-gray-800 mb-4">สัดส่วนสถานะปัจจุบัน</h2>
-
-          <div class="grid grid-cols-2 gap-x-4 gap-y-2 mb-6">
-            <div class="flex items-center">
-              <span class="w-4 h-4 rounded mr-2" style="background-color: #1d4ed8"></span>
-              <span class="text-sm text-gray-700">งานทั้งหมดในวันนี้</span>
-            </div>
-
-            <div class="flex items-center">
-              <span class="w-4 h-4 rounded mr-2" style="background-color: #f97316"></span>
-              <span class="text-sm text-gray-700">กำลังดำเนินการ</span>
-            </div>
-
-            <div class="flex items-center">
-              <span class="w-4 h-4 rounded mr-2" style="background-color: #16a34a"></span>
-              <span class="text-sm text-gray-700">เสร็จสิ้น (7 วัน)</span>
-            </div>
-
-            <div class="flex items-center">
-              <span class="w-4 h-4 rounded mr-2" style="background-color: #dc2626"></span>
-              <span class="text-sm text-gray-700">ยกเลิก (7 วัน)</span>
-            </div>
-          </div>
-
-          <div class="relative w-48 h-48 mx-auto">
-            <div class="w-full h-full rounded-full" :style="donutChart"></div>
-
-            <div
-              class="absolute top-1/2 left-1/2 w-32 h-32 bg-white rounded-full -translate-x-1/2 -translate-y-1/2"
-            ></div>
-          </div>
-        </div>
-      </div>
-      <!-- ตารางรายการของที่เบิก -->
-      <div class="bg-white shadow-lg rounded-xl p-6">
-        <div class="mb-6">
-          <h2 class="text-2xl font-bold text-gray-900">รายการของที่เบิก</h2>
-          <p class="text-sm text-gray-500">ระบบแสดงข้อมูล 5 รายการล่าสุด</p>
-        </div>
-
-        <div class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
-              <tr>
-                <th
-                  scope="col"
-                  class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  หมายเลขแจ้งซ่อม
-                </th>
-                <th
-                  scope="col"
-                  class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  รหัสการเบิกของ
-                </th>
-                <th
-                  scope="col"
-                  class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  หน่วยงาน
-                </th>
-                <th
-                  scope="col"
-                  class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  สถานที่
-                </th>
-                <th
-                  scope="col"
-                  class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  ความเร่งด่วน
-                </th>
-                <th
-                  scope="col"
-                  class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  สถานะงาน
-                </th>
-                <th
-                  scope="col"
-                  class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  รายละเอียด
-                </th>
-              </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
-              <tr
-                v-for="item in paginatedStockForms"
-                :key="item.withdrawCode"
-                class="hover:bg-gray-50"
-              >
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {{ item.relatedRfCode }}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {{ item.withdrawCode }}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {{ item.department }}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {{ item.location }}
-                </td>
-                <!-- ส่วนแสดงความเร่งด่วน -->
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <span
-                    :class="getUrgencyClass(item.urgencyRaw)"
-                    class="inline-flex w-28 justify-center items-center px-3 py-1 text-xs font-medium rounded-full"
-                  >
-                    {{ item.urgency }}
-                  </span>
-                </td>
-                <!-- ส่วนแสดงสถานะ -->
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <span
-                    :class="getStockStatusClass(item.statusRaw)"
-                    class="inline-flex w-28 justify-center items-center px-3 py-1 text-xs font-medium rounded-full"
-                  >
-                    {{ item.status }}
-                  </span>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <button
-                    class="px-4 py-1 text-sm text-blue-600 font-medium border border-blue-600 rounded-full hover:bg-blue-50 transition-colors"
-                  >
-                    รายละเอียด
-                  </button>
-                </td>
-              </tr>
-              <tr v-if="paginatedStockForms.length === 0" key="no-data-stock">
-                <td colspan="9" class="px-6 py-8 text-center text-gray-500">ไม่พบข้อมูลใบขอเบิก</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </body>
-</template>
-
 <script setup>
 defineOptions({ name: 'TechnicianHomeView' })
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import CardHomeComponent from '@/components/card-home-component.vue'
 import TableComponent from '@/components/table-component.vue'
-const router = useRouter()
+import { jwtDecode } from 'jwt-decode' // ตรวจสอบว่ามีบรรทัดนี้
 
+const router = useRouter()
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
 
-// ตัวแปรสำหรับเก็บข้อมูลจาก API
+// --- State ---
 const repairRequests = ref([])
+const stockForms = ref([])
 const loading = ref(false)
-const error = ref(null)
+const loadingStock = ref(false)
+const technicianName = ref('เจ้าหน้าที่')
 
-// แสดง 5 รายการล่าสุด
-const itemsPerPage = 5
-
-// คืนค่ารายการล่าสุด (เรียงลดหลั่นตามวันที่) และ slice ให้เหลือแค่ 5 รายการ
-const paginatedRequests = computed(() => {
-  // ถ้าไม่มีข้อมูล ให้คืน array ว่าง
-  if (!repairRequests.value || !repairRequests.value.length) return []
-  // คัดลอกและเรียงลดหลั่นตาม rawDate (ISO) จากมากไปน้อย แล้วตัดแค่ itemsPerPage แรก
-  return [...repairRequests.value]
-    .sort((a, b) => new Date(b.rawDate) - new Date(a.rawDate))
-    .slice(0, itemsPerPage)
-})
-
-// ฟังก์ชันสำหรับดึงใบงานแจ้งซ่อมจาก API
-const fetchRepairRequests = async () => {
-  loading.value = true
-  error.value = null
+const fetchUserProfile = async () => {
+  const token = localStorage.getItem('token') || sessionStorage.getItem('token')
+  if (!token) return
 
   try {
-    const token = localStorage.getItem('token') || sessionStorage.getItem('token')
-    console.debug('TechnicianHome: API_BASE=', API_BASE)
-    console.debug(
-      'TechnicianHome: token present=',
-      !!token,
-      token ? `${token.slice(0, 10)}... len=${token.length}` : '',
-    )
-    if (!token) {
-      throw new Error('ไม่พบ token การเข้าสู่ระบบ')
-    }
+    const decoded = jwtDecode(token)
+    const userId = decoded.us_id // หรือ field id ใน token ของคุณ
 
-    const response = await fetch(`${API_BASE}/technician/repairs`, {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
+    const res = await fetch(`${API_BASE}/users/${userId}`, {
+      headers: { Authorization: `Bearer ${token}` },
     })
 
-    if (!response.ok) {
-      let bodyText = ''
-      try {
-        bodyText = await response.text()
-      } catch (e) {
-        bodyText = '<unable to read body>'
+    if (res.ok) {
+      const userData = await res.json()
+      if (userData.us_first_name_th) {
+        technicianName.value =
+          `${userData.us_first_name_th} ${userData.us_last_name_th || ''}`.trim()
       }
-      console.error('Fetch /technician/repairs failed', response.status, bodyText)
-      throw new Error(`เกิดข้อผิดพลาดในการดึงข้อมูล (${response.status})`)
     }
-
-    const data = await response.json()
-    console.debug(
-      'Fetched technician repairs count:',
-      Array.isArray(data) ? data.length : typeof data,
-    )
-
-    // แปลงข้อมูลจาก API ให้ตรงกับรูปแบบที่ template ต้องการ
-    repairRequests.value = data.map((item) => ({
-      // เก็บ rawDate เพื่อใช้เรียงลำดับได้อย่างถูกต้อง
-      ticketId: item.rf_code,
-      problemTopic: item.rf_problem || '-',
-      department: item.department_name || '-',
-      rawDate: item.rf_created_at,
-      location:
-        `${item.building_name || ''} ${item.floor_name || ''} ${item.room_name || ''}`.trim(),
-      // เก็บทั้งค่าดิบและข้อความแปลแล้ว
-      urgencyRaw: item.rf_urgency,
-      urgency: mapUrgency(item.rf_urgency),
-      statusRaw: item.rf_user_status,
-      status: mapStatus(item.rf_user_status),
-      technicianName:
-        item.tech_first_name && item.tech_last_name
-          ? `${item.tech_first_name} ${item.tech_last_name}`
-          : 'ยังไม่มอบหมาย',
-    }))
   } catch (err) {
-    console.error('Error fetching repair requests:', err)
-    error.value = err.message
-  } finally {
-    loading.value = false
+    console.error('โหลดข้อมูลผู้ใช้ไม่สำเร็จ', err)
   }
 }
-// ฟังก์ชันสำหรับดึงข้อมูลใบขอเบิก (stock forms) จาก API
-const stockForms = ref([])
-const loadingStock = ref(false)
-const errorStock = ref(null)
 
-const paginatedStockForms = computed(() => {
-  if (!stockForms.value || !stockForms.value.length) return []
-  return [...stockForms.value]
+const sortedRepairs = computed(() => {
+  return [...repairRequests.value]
     .sort((a, b) => new Date(b.rawDate) - new Date(a.rawDate))
-    .slice(0, itemsPerPage)
+    .slice(0, 5)
 })
 
-const mapStockStatus = (status) => {
-  const map = {
-    waiting: 'รอดำเนินการ',
-    approved: 'อนุมัติ',
-    rejected: 'ปฏิเสธ',
-    completed: 'เสร็จสิ้น',
+const repairTableRows = computed(() => {
+  return sortedRepairs.value.map((r) => [
+    r.rf_code,
+    r.rf_problem || '-',
+    r.department_name || '-',
+    `${r.building_name || ''} ${r.room_name || ''}`,
+    getBadgeHtml(r.urgency, 'urgency'),
+    getBadgeHtml(r.status, 'status'),
+  ])
+})
+
+// [เพิ่มใหม่] ส่งตัวนี้ไปให้ TableComponent (ผ่าน prop rawRows)
+const repairTableRaw = computed(() => {
+  return sortedRepairs.value.map((r) => ({
+    ticketId: r.rf_code, // หรือ id ที่คุณใช้เป็น key ในการเปิดหน้า detail
+    // ... อาจจะใส่ property อื่นๆ เผื่อไว้ก็ได้
+  }))
+})
+
+// 2. Stock Table (เพิ่ม stockTableRaw)
+const sortedStocks = computed(() => {
+  return [...stockForms.value].sort((a, b) => new Date(b.rawDate) - new Date(a.rawDate)).slice(0, 5)
+})
+
+const stockTableRows = computed(() => {
+  return sortedStocks.value.map((s) => [
+    s.related_rf_code || '-',
+    s.sf_code,
+    s.requester_department || '-',
+    getBadgeHtml(s.urgency, 'urgency'),
+    getBadgeHtml(s.status, 'status'),
+    `<button class="text-blue-600 hover:underline">รายละเอียด</button>`,
+  ])
+})
+
+// [เพิ่มใหม่]
+const stockTableRaw = computed(() => {
+  return sortedStocks.value.map((s) => ({
+    withdrawCode: s.sf_code,
+    // ...
+  }))
+})
+
+// --- [เพิ่มใหม่] Event Handler สำหรับคลิก Row ---
+const onRepairRowClick = (item) => {
+  const id = typeof item === 'object' && item !== null ? item.ticketId : item
+
+  if (id) {
+    router.push(`/main/repair-detail/${id}`)
+  } else {
+    console.warn('Invalid ID clicked:', item)
   }
-  return map[status] || status || '-'
 }
 
-const getStockStatusClass = (statusRaw) => {
-  switch (statusRaw) {
-    case 'waiting':
-      return 'bg-amber-50 text-amber-600'
-    case 'approved':
-      return 'bg-green-100 text-green-600'
-    case 'rejected':
-      return 'bg-red-100 text-red-700'
-    case 'completed':
-      return 'bg-gray-100 text-gray-600'
-    default:
-      return 'bg-gray-100 text-gray-600'
+const onStockRowClick = (item) => {
+  const id = (typeof item === 'object' && item !== null) ? item.withdrawCode : item;
+  if (id) {
+    // router.push(`/main/stock-detail/${id}`)
+    console.log('Open stock detail:', id)
+  }
+}
+
+// --- Helper Functions ---
+const mapUrgency = (u) =>
+  ({ high: 'เร่งด่วนมาก', medium: 'เร่งด่วน', low: 'ไม่เร่งด่วน' })[u] || 'เร่งด่วน'
+const mapStatus = (s) =>
+  ({ pending: 'รอดำเนินการ', in_progress: 'กำลังดำเนินการ', done: 'เสร็จสิ้น', cancel: 'ยกเลิก' })[
+    s
+  ] || 'รอดำเนินการ'
+const mapStockStatus = (s) =>
+  ({ waiting: 'รอดำเนินการ', approved: 'อนุมัติ', rejected: 'ปฏิเสธ', completed: 'เสร็จสิ้น' })[
+    s
+  ] || '-'
+
+// Function to generate HTML badge string for TableComponent
+const getBadgeHtml = (text, type) => {
+  let colorClass = 'bg-gray-100 text-gray-600'
+
+  if (type === 'urgency') {
+    if (text === 'เร่งด่วนมาก') colorClass = 'bg-red-100 text-red-700'
+    else if (text === 'เร่งด่วน') colorClass = 'bg-amber-100 text-amber-700'
+    else colorClass = 'bg-green-100 text-green-700'
+  } else if (type === 'status') {
+    if (text === 'รอดำเนินการ' || text === 'waiting') colorClass = 'bg-amber-100 text-amber-700'
+    else if (text === 'กำลังดำเนินการ') colorClass = 'bg-blue-100 text-blue-700'
+    else if (text === 'เสร็จสิ้น' || text === 'อนุมัติ') colorClass = 'bg-green-100 text-green-700'
+    else if (text === 'ยกเลิก' || text === 'ปฏิเสธ') colorClass = 'bg-red-100 text-red-700'
+  }
+
+  return `<span class="inline-flex items-center justify-center h-8 font-medium rounded-full w-28 ${colorClass}">${text}</span>`
+}
+
+// --- Fetch Data Functions ---
+const fetchRepairRequests = async () => {
+  loading.value = true
+  try {
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token')
+    if (!token) return
+
+    const res = await fetch(`${API_BASE}/technician/repairs`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (!res.ok) throw new Error('Fetch failed')
+
+    const data = await res.json()
+    repairRequests.value = data.map((item) => ({
+      ...item,
+      rawDate: item.rf_create_at, // เก็บ raw date เพื่อ sort
+      status: mapStatus(item.rf_user_status),
+      urgency: mapUrgency(item.rf_urgency),
+    }))
+  } catch (err) {
+    console.error(err)
+  } finally {
+    loading.value = false
   }
 }
 
 const fetchStockForms = async () => {
   loadingStock.value = true
-  errorStock.value = null
-
   try {
     const token = localStorage.getItem('token') || sessionStorage.getItem('token')
-    if (!token) throw new Error('ไม่พบ token การเข้าสู่ระบบ')
+    if (!token) return
 
     let res = await fetch(`${API_BASE}/my-stock-forms`, {
-      method: 'GET',
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      headers: { Authorization: `Bearer ${token}` },
     })
-
-    // ถ้า route สำหรับผู้ใช้งานไม่มี ให้ลอง /stock-forms (admin)
     if (!res.ok && res.status === 404) {
       res = await fetch(`${API_BASE}/stock-forms`, {
-        method: 'GET',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        headers: { Authorization: `Bearer ${token}` },
       })
     }
 
-    if (!res.ok) {
-      let bodyText = ''
-      try {
-        bodyText = await res.text()
-      } catch (e) {
-        bodyText = '<unable to read body>'
-      }
-      console.error('Fetch stock forms failed', res.status, bodyText)
-      throw new Error(`เกิดข้อผิดพลาดในการดึงข้อมูลใบขอเบิก (${res.status})`)
-    }
+    if (!res.ok) throw new Error('Fetch stock failed')
 
     const data = await res.json()
-    // แปลงข้อมูลเป็นรูปแบบที่ใช้ใน template
     stockForms.value = data.map((item) => ({
-      withdrawCode: item.sf_code,
-      relatedRfCode: item.related_rf_code || '-',
-      department: item.requester_department || item.requester_department || '-',
+      ...item,
       rawDate: item.sf_create_at,
-      location:
-        `${item.building_name || ''} ${item.floor_name || ''} ${item.room_name || ''}`.trim(),
-      urgencyRaw: item.sf_urgency,
-      urgency: mapUrgency(item.sf_urgency),
-      statusRaw: item.sf_status,
       status: mapStockStatus(item.sf_status),
+      urgency: mapUrgency(item.sf_urgency),
     }))
-
-    console.debug(
-      'Fetched stock forms count:',
-      Array.isArray(stockForms.value) ? stockForms.value.length : typeof stockForms.value,
-    )
   } catch (err) {
-    console.error('Error fetching stock forms:', err)
-    errorStock.value = err.message
+    console.error(err)
   } finally {
     loadingStock.value = false
   }
 }
-// ฟังก์ชันสำหรับแปลงค่าความเร่งด่วน
-const mapUrgency = (urgency) => {
-  const urgencyMap = {
-    high: 'เร่งด่วนมาก',
-    medium: 'เร่งด่วน',
-    low: 'ไม่เร่งด่วน',
-  }
-  return urgencyMap[urgency] || 'เร่งด่วน'
-}
 
-// ฟังก์ชันสำหรับแปลงสถานะ
-const mapStatus = (status) => {
-  const statusMap = {
-    pending: 'รอดำเนินการ',
-    in_progress: 'กำลังดำเนินการ',
-    completed: 'เสร็จสิ้น',
-    cancelled: 'ยกเลิก',
-  }
-  return statusMap[status] || 'รอดำเนินการ'
-}
+// --- Stats for Cards ---
+const isToday = (d) => new Date(d).toDateString() === new Date().toDateString()
+const statItems = computed(() => [
+  {
+    value: repairRequests.value.filter((r) => isToday(r.rawDate)).length,
+    label: 'งานมอบหมายใหม่ (วันนี้)',
+    colorClass: 'text-blue-600',
+    filterStatus: 'today',
+  },
+  {
+    value: repairRequests.value.filter((r) => r.rf_user_status === 'in_progress').length,
+    label: 'กำลังดำเนินการ',
+    colorClass: 'text-orange-500',
+    filterStatus: 'in_progress',
+  },
+  {
+    value: repairRequests.value.filter((r) => r.rf_user_status === 'done').length,
+    label: 'เสร็จสิ้น (ทั้งหมด)',
+    colorClass: 'text-green-600',
+    filterStatus: 'done',
+  },
+  {
+    value: repairRequests.value.filter((r) => r.rf_user_status === 'cancel').length,
+    label: 'ยกเลิก',
+    colorClass: 'text-red-600',
+    filterStatus: 'cancel',
+  },
+])
 
-// ฟังก์ชันช่วยแปลงเป็น classes สำหรับ badge
-const getUrgencyClass = (urgencyRaw) => {
-  switch (urgencyRaw) {
-    case 'high':
-      return 'bg-red-100 text-red-700'
-    case 'medium':
-      return 'bg-amber-50 text-amber-600'
-    case 'low':
-      return 'bg-green-100 text-green-700'
-    default:
-      return 'bg-gray-100 text-gray-600'
-  }
-}
-
-const getStatusClass = (statusRaw) => {
-  switch (statusRaw) {
-    case 'pending':
-      return 'bg-amber-50 text-amber-600'
-    case 'in_progress':
-      return 'bg-blue-100 text-blue-600'
-    case 'done':
-    case 'completed':
-      return 'bg-green-100 text-green-600'
-    case 'cancelled':
-      return 'bg-gray-100 text-gray-600'
-    default:
-      return 'bg-gray-100 text-gray-600'
-  }
-}
-
-// ฟังก์ชันช่วยเหลือสำหรับการเปรียบเทียบวันที่
-const isToday = (dateString) => {
-  const today = new Date()
-  const date = new Date(dateString)
-  return date.toDateString() === today.toDateString()
-}
-
-const isWithinLastSevenDays = (dateString) => {
-  const today = new Date()
-  const date = new Date(dateString)
-  const diffTime = Math.abs(today - date)
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-  return diffDays <= 7
-}
-
-// คำนวณจำนวนงานตามเงื่อนไขต่างๆ
-const todayTasksCount = computed(() => {
-  return repairRequests.value.filter((request) => isToday(request.date)).length
-})
-
-const inProgressTasksCount = computed(() => {
-  return repairRequests.value.filter((request) => request.status === 'กำลังดำเนินการ').length
-})
-
-const completedTasksCount = computed(() => {
-  return repairRequests.value.filter(
-    (request) => request.status === 'เสร็จสิ้น' && isWithinLastSevenDays(request.date),
-  ).length
-})
-
-const cancelledTasksCount = computed(() => {
-  return repairRequests.value.filter(
-    (request) => request.status === 'ยกเลิก' && isWithinLastSevenDays(request.date),
-  ).length
-})
-
-// สร้างสไตล์สำหรับโดนัทแบบไดนามิก ตามสัดส่วนของแต่ละสถานะ (สีกำหนดลำดับ: เขียว, ส้ม, แดง, น้ำเงิน)
+// --- Chart Data ---
 const donutChart = computed(() => {
-  const total = Math.max(1, todayTasksCount.value) // ป้องกันหารด้วย 0
+  const total = repairRequests.value.length || 1
+  const done = repairRequests.value.filter((r) => r.rf_user_status === 'done').length
+  const prog = repairRequests.value.filter((r) => r.rf_user_status === 'in_progress').length
+  const cancel = repairRequests.value.filter((r) => r.rf_user_status === 'cancel').length
 
-  const greenPct = Math.round((completedTasksCount.value / total) * 100)
-  const orangePct = Math.round((inProgressTasksCount.value / total) * 100)
-  const redPct = Math.round((cancelledTasksCount.value / total) * 100)
-
-  // ให้ส่วนที่เหลือเป็นสีน้ำเงิน (งานทั้งหมด - (เสร็จสิ้น + กำลังดำเนินการ + ยกเลิก))
-  const used = greenPct + orangePct + redPct
-  const bluePct = Math.max(0, 100 - used)
-
-  // คำนวณตำแหน่งสิ้นสุดของแต่ละส่วนแบบสะสม
-  const greenEnd = greenPct
-  const orangeEnd = greenEnd + orangePct
-  const redEnd = orangeEnd + redPct
-
-  const gradient = `conic-gradient(#16a34a 0% ${greenEnd}%, #f97316 ${greenEnd}% ${orangeEnd}%, #dc2626 ${orangeEnd}% ${redEnd}%, #1d4ed8 ${redEnd}% 100%)`
+  const p1 = Math.round((done / total) * 100)
+  const p2 = p1 + Math.round((prog / total) * 100)
+  const p3 = p2 + Math.round((cancel / total) * 100)
 
   return {
-    backgroundImage: gradient,
+    backgroundImage: `conic-gradient(#16a34a 0% ${p1}%, #f97316 ${p1}% ${p2}%, #dc2626 ${p2}% ${p3}%, #1d4ed8 ${p3}% 100%)`,
   }
 })
 
-// ดึงข้อมูลเมื่อคอมโพเนนท์ mount
+// --- Actions ---
+const onCardClick = (item) =>
+  router.push({ path: '/main/technician-repair-list', query: { status: item.filterStatus } })
+
 onMounted(() => {
   fetchRepairRequests()
   fetchStockForms()
+  fetchUserProfile()
 })
 </script>
+
+<template>
+  <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-8xl">
+    <div class="mb-6">
+      <h1 class="text-2xl font-bold text-gray-800">{{ technicianName }}</h1>
+      <p class="text-sm text-gray-600 mt-1">
+        ตรวจสอบสถานะงานซ่อมและจัดการรายการเบิกจ่ายวัสดุอุปกรณ์
+      </p>
+    </div>
+
+    <div class="mt-4 mb-8">
+      <CardHomeComponent :items="statItems" @click="onCardClick" />
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+      <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 lg:col-span-2">
+        <div class="flex justify-between items-center mb-4">
+          <div>
+            <h2 class="text-xl font-bold text-gray-900">งานที่ได้รับมอบหมายล่าสุด</h2>
+            <p class="text-sm text-gray-500">5 รายการล่าสุด</p>
+          </div>
+          <button
+            @click="router.push('/main/technician-repair-list')"
+            class="text-sm text-blue-600 hover:underline"
+          >
+            ดูทั้งหมด
+          </button>
+        </div>
+
+        <TableComponent
+          :columns="['เลขใบงาน', 'หัวข้อ', 'หน่วยงาน', 'สถานที่', 'ความเร่งด่วน', 'สถานะ']"
+          :rows="repairTableRows"
+          :rawRows="repairTableRaw"
+          :perPage="5"
+          mode="view-only"
+          :idColumnIndex="0"  @detail="(id) => onRepairRowClick(id)"
+        />
+      </div>
+
+      <div
+        class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 flex flex-col justify-center items-center"
+      >
+        <h2 class="text-lg font-bold text-gray-800 mb-6 self-start">สัดส่วนงานทั้งหมด</h2>
+        <div class="relative w-48 h-48">
+          <div class="w-full h-full rounded-full" :style="donutChart"></div>
+          <div
+            class="absolute top-1/2 left-1/2 w-32 h-32 bg-white rounded-full -translate-x-1/2 -translate-y-1/2 flex items-center justify-center"
+          >
+            <span class="text-gray-400 text-xs">ภาพรวม</span>
+          </div>
+        </div>
+        <div class="mt-6 grid grid-cols-2 gap-x-4 gap-y-2 text-xs w-full">
+          <div class="flex items-center">
+            <span class="w-3 h-3 rounded bg-green-600 mr-2"></span>เสร็จสิ้น
+          </div>
+          <div class="flex items-center">
+            <span class="w-3 h-3 rounded bg-orange-500 mr-2"></span>กำลังทำ
+          </div>
+          <div class="flex items-center">
+            <span class="w-3 h-3 rounded bg-red-600 mr-2"></span>ยกเลิก
+          </div>
+          <div class="flex items-center">
+            <span class="w-3 h-3 rounded bg-blue-700 mr-2"></span>อื่นๆ
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+      <div class="mb-4">
+        <h2 class="text-xl font-bold text-gray-900">รายการเบิกของล่าสุด</h2>
+        <p class="text-sm text-gray-500">5 รายการล่าสุด</p>
+      </div>
+
+      <TableComponent
+        :columns="['อ้างอิงใบงาน', 'รหัสใบเบิก', 'หน่วยงาน', 'ความเร่งด่วน', 'สถานะ', 'จัดการ']"
+        :rows="stockTableRows"
+        :rawRows="stockTableRaw"
+        :perPage="5"
+        mode="view-only"
+        @detail="(item) => onStockRowClick(item)"
+      />
+    </div>
+  </div>
+</template>

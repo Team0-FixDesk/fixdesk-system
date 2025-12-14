@@ -199,7 +199,16 @@ function canEditUser(row) {
           <th
             v-for="(col, i) in props.columns"
             :key="i"
-            v-show="props.mode === 'stock' || props.mode === 'location' || props.mode === 'user' || props.mode === 'admin' || props.mode === 'assign' || props.mode === 'technician' ? true : i !== 1"
+            v-show="
+              props.mode === 'stock' ||
+              props.mode === 'location' ||
+              props.mode === 'user' ||
+              props.mode === 'admin' ||
+              props.mode === 'assign' ||
+              props.mode === 'technician'
+                ? true
+                : i !== 1
+            "
             class="px-3 py-2 sm:px-3 sm:py-3 text-center"
           >
             {{ col }}
@@ -211,7 +220,8 @@ function canEditUser(row) {
         <tr
           v-for="(row, ri) in paginatedRows"
           :key="ri"
-          class="bg-white border-b border-[#E9E9E9] hover:bg-gray-50"
+          class="bg-white border-b border-[#E9E9E9] hover:bg-gray-50 cursor-pointer"
+          @click="$emit('detail', getRowId(row))"
         >
           <template v-for="(cell, ci) in row" :key="ci">
             <th
@@ -224,7 +234,15 @@ function canEditUser(row) {
             <!-- คอลัมน์อื่น -->
             <td
               v-else-if="
-                props.mode === 'location' ? ci !== 0 : props.mode === 'stock' || props.mode === 'user' || props.mode === 'admin' || props.mode === 'assign' || props.mode === 'technician' ? true : ci !== 1
+                props.mode === 'location'
+                  ? ci !== 0
+                  : props.mode === 'stock' ||
+                      props.mode === 'user' ||
+                      props.mode === 'admin' ||
+                      props.mode === 'assign' ||
+                      props.mode === 'technician'
+                    ? true
+                    : ci !== 1
               "
               class="px-3 py-2 sm:px-4 sm:py-4 text-center"
             >
@@ -234,7 +252,7 @@ function canEditUser(row) {
                 <div
                   class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center bg-[#1E48D1] hover:bg-[#163A9B] text-white rounded-lg transition cursor-pointer flex-none"
                   title="ดูรายละเอียด"
-                  @click="$emit('detail', getRowId(row))"
+                  @click.stop="$emit('detail', getRowId(row))"
                 >
                   <img src="/icon/info-icon.svg" alt="info" class="w-5 h-5" />
                 </div>
@@ -244,7 +262,7 @@ function canEditUser(row) {
                   <template v-if="getRowStatus(row) === 'pending'">
                     <button
                       class="px-7 py-2 text-xs font-medium text-white bg-teal-700 hover:bg-teal-900 rounded-lg hover:transition flex-none"
-                      @click="$emit('accept', getRowId(row))"
+                      @click.stop="$emit('accept', getRowId(row))"
                     >
                       รับงาน
                     </button>
@@ -253,7 +271,7 @@ function canEditUser(row) {
                   <template v-else-if="getRowStatus(row) !== 'done'">
                     <button
                       class="px-3 py-2 text-xs font-medium text-white bg-amber-500 hover:bg-amber-600 rounded-lg hover:shadow-lg transition flex-none"
-                      @click="$emit('change-status', getRowId(row))"
+                      @click.stop="$emit('change-status', getRowId(row))"
                     >
                       เปลี่ยนสถานะ
                     </button>
@@ -316,7 +334,7 @@ function canEditUser(row) {
                             : 'bg-gray-300 text-gray-400 cursor-not-allowed',
                         ]"
                         :title="canEditUser(row) ? 'แก้ไข' : 'ไม่สามารถแก้ไขได้'"
-                        @click="canEditUser(row) && $emit('edit', getRowId(row))"
+                        @click.stop="canEditUser(row) && $emit('edit', getRowId(row))"
                       >
                         <img src="/icon/edit-icon.svg" alt="edit" class="w-5 h-5 opacity-90" />
                       </div>
@@ -329,7 +347,7 @@ function canEditUser(row) {
                             : 'bg-gray-300 text-gray-400 cursor-not-allowed',
                         ]"
                         :title="canEditUser(row) ? 'ลบ' : 'ไม่สามารถลบได้'"
-                        @click="canEditUser(row) && $emit('delete', getRowId(row))"
+                        @click.stop="canEditUser(row) && $emit('delete', getRowId(row))"
                       >
                         <img src="/icon/bin-icon.svg" alt="delete" class="w-5 h-5 opacity-90" />
                       </div>
@@ -348,7 +366,7 @@ function canEditUser(row) {
                     ]"
                     :title="isRowAssigned(row) ? 'มอบหมายแล้ว' : 'มอบหมายงาน'"
                     :disabled="isRowAssigned(row)"
-                    @click="!isRowAssigned(row) && $emit('assign', getRowId(row))"
+                    @click.stop="!isRowAssigned(row) && $emit('assign', getRowId(row))"
                   >
                     <img src="/icon/arrow-right.svg" alt="assign" class="w-5 h-5" />
                   </button>
@@ -359,7 +377,7 @@ function canEditUser(row) {
                   <div
                     class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center bg-yellow-400 hover:bg-yellow-500 text-white rounded-md transition cursor-pointer"
                     title="แก้ไข"
-                    @click="$emit('edit', getRowId(row))"
+                    @click.stop="$emit('edit', getRowId(row))"
                   >
                     <img src="/icon/edit-icon.svg" alt="edit" class="w-5 h-5" />
                   </div>
@@ -367,7 +385,7 @@ function canEditUser(row) {
                   <div
                     class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center bg-red-500 hover:bg-red-600 text-white rounded-md transition cursor-pointer"
                     title="ลบ"
-                    @click="$emit('delete', getRowId(row))"
+                    @click.stop="$emit('delete', getRowId(row))"
                   >
                     <img src="/icon/bin-icon.svg" alt="delete" class="w-5 h-5" />
                   </div>

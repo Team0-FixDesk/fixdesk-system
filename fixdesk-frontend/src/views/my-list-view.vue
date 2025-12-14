@@ -2,12 +2,12 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import TableComponent from '@/components/table-component.vue'
 import RepairButton from '@/components/repair-button-component.vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import Sweetalert from 'sweetalert2'
-
 defineOptions({ name: 'MyListView' })
 
 const router = useRouter()
+const route = useRoute()
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
 
 /* --- คอลัมน์ตาราง --- */
@@ -201,6 +201,19 @@ function handleOutsideClick(e) {
 onMounted(() => {
   loadMyRepairs()
   document.addEventListener('click', handleOutsideClick)
+
+  if (route.query.status) {
+    const status = route.query.status
+
+    // ตรวจสอบว่าเป็นค่าที่ถูกต้องหรือไม่ (pending, in_progress, done)
+    if (['pending', 'in_progress', 'done'].includes(status)) {
+      // เซ็ตค่าใส่ตัวกรองทันที
+      selectedStatusFilters.value = [status]
+
+      // (Optional) อาจจะเปิด Dropdown โชว์ด้วยเพื่อให้ User รู้ว่ามีการกรองอยู่
+      // statusFilterOpen.value = true
+    }
+  }
 })
 onBeforeUnmount(() => document.removeEventListener('click', handleOutsideClick))
 
@@ -234,23 +247,43 @@ async function deleteRepair(repairCode) {
     if (!res.ok) throw new Error(data.message || 'ลบไม่สำเร็จ')
 
     rows.value = rows.value.filter((r) => r[1] !== repairCode)
-    Sweetalert.fire({
+    // Toast notification
+    const Toast = Sweetalert.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 2500,
+      timerProgressBar: true,
+      didOpen: (toast) => {
+        toast.addEventListener('mouseenter', Sweetalert.stopTimer)
+        toast.addEventListener('mouseleave', Sweetalert.resumeTimer)
+      }
+    })
+    Toast.fire({
       title: 'ลบสำเร็จ',
       text: `ลบใบแจ้งซ่อมหมายเลข ${repairCode} เรียบร้อยแล้ว`,
       icon: 'success',
-      showConfirmButton: false,
-      timer: 1500,
-      timerProgressBar: true,
+      background: '#f0f9ff',
+      color: '#1e3a8a'
     })
   } catch (err) {
     console.error('ลบไม่สำเร็จ:', err)
-    Sweetalert.fire({
+    // Toast notification
+    const Toast = Sweetalert.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true
+    })
+    Toast.fire({
       title: 'เกิดข้อผิดพลาด',
       text: err.message || 'ลบไม่สำเร็จ',
       icon: 'error',
-      showConfirmButton: false,
-      timer: 1500,
-      timerProgressBar: true,
+      background: '#fee2e2',
+      color: '#dc2626'
     })
   }
 }

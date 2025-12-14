@@ -1,11 +1,12 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router' // 1. เพิ่ม useRoute
 import TableComponent from '@/components/table-component.vue'
 import assignJobModalComponent from '@/components/assign-job-modal-component.vue'
 import Swal from 'sweetalert2'
 
 const router = useRouter()
+const route = useRoute()
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
 
 const getAuthHeaders = () => {
@@ -13,6 +14,35 @@ const getAuthHeaders = () => {
   return {
     'Content-Type': 'application/json',
     Authorization: `Bearer ${token}`,
+  }
+}
+
+function applyFilterFromUrl() {
+  const statusParam = route.query.status
+  if (!statusParam) return
+
+  // กรณีเป็นงานวันนี้ (today)
+  if (statusParam === 'today') {
+    // ตั้งค่า selectedDate เป็นวันปัจจุบัน (YYYY-MM-DD)
+    const today = new Date().toISOString().split('T')[0]
+    selectedDate.value = today
+  }
+  // กรณีสถานะอื่นๆ
+  else {
+    let targetStatus = ''
+
+    // แปลง key จาก Dashboard ให้ตรงกับ value ของ checkbox ในหน้านี้
+    if (statusParam === 'in_progress') targetStatus = 'in_progress'
+    else if (statusParam === 'completed_7days') targetStatus = 'done' // Dashboard ส่งมา completed_7days แต่ checkbox เราใช้ done
+    else if (statusParam === 'cancelled_7days') targetStatus = 'cancel' // หรือค่าที่ DB เก็บสำหรับยกเลิก
+    else if (statusParam === 'pending') targetStatus = 'pending'
+
+    if (targetStatus) {
+      selectedStatuses.value = [targetStatus]
+
+      // (Optional) เปิด Dropdown ให้เห็นว่าถูกเลือกอยู่
+      // showStatusFilter.value = true
+    }
   }
 }
 
@@ -191,7 +221,7 @@ function closeDropdown(e) {
 const goToDetail = (code) =>
   router.push({
     path: `/main/repair-detail/${code}`,
-    state: { fromAdmin: true }, 
+    state: { fromAdmin: true },
   })
 
 async function handleAssign(code) {
@@ -235,14 +265,178 @@ const selectedRepairId = ref(null)
 function openAssignPopup(repairId) {
   selectedRepairId.value = repairId
   showAssignPopup.value = true
+  // Reset filter
+  selectedType.value = ''
+  searchTech.value = ''
+  showAssignTypeFilter.value = false
+  fetchTechnicians()
 }
-function handleAssignSuccess() {
-  fetchAllRepairs() // รีโหลดตาราง
+
+/* ปิด popup */
+function closeAssignPopup() {
+  showAssignPopup.value = false
+  selectedTechnician.value = null
+  selectedType.value = ''
+  searchTech.value = ''
+  showAssignTypeFilter.value = false
+}
+
+/* ดึงข้อมูลช่างทั้งหมด */
+async function fetchTechnicians() {
+  try {
+    const res = await fetch(`${API_BASE}/technicians`, { headers: getAuthHeaders() })
+    const typesRes = await fetch(`${API_BASE}/technician-types`)
+    technicians.value = await res.json()
+    technicianTypes.value = await typesRes.json()
+  } catch (err) {
+    console.error('❌ โหลดข้อมูลช่างไม่สำเร็จ:', err)
+    // Toast notification
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true
+    })
+    Toast.fire({
+      title: 'เกิดข้อผิดพลาด',
+      text: 'ไม่สามารถโหลดรายชื่อช่างได้',
+      icon: 'error',
+      background: '#fee2e2',
+      color: '#dc2626'
+    })
+
+    // Normal Alert (commented for reference)
+    // Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถโหลดรายชื่อช่างได้', 'error')
+  }
+}
+
+/* กรองรายชื่อช่างตามประเภทและคำค้น */
+const filteredTechnicians = computed(() =>
+  technicians.value.filter((t) => {
+    const matchType = !selectedType.value || t.tt_name === selectedType.value
+    const matchSearch =
+      !searchTech.value ||
+      `${t.us_first_name} ${t.us_last_name}`.toLowerCase().includes(searchTech.value.toLowerCase())
+    return matchType && matchSearch
+  }),
+)
+
+/* ยืนยันมอบหมาย */
+async function confirmAssign() {
+  if (!selectedTechnician.value) {
+    Swal.fire({
+      title: 'กรุณาเลือกช่างผู้รับผิดชอบ',
+      icon: 'warning',
+      showConfirmButton: false,
+      timer: 1500,
+      timerProgressBar: true,
+      allowOutsideClick: false,
+    })
+    return
+  }
+
+  loadingAssign.value = true
+  try {
+    const res = await fetch(`${API_BASE}/assign-repair`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        rf_code: selectedRepairId.value,
+        technician_id: selectedTechnician.value,
+      }),
+    })
+
+    const resBody = await res.json()
+
+    // เคส backend บอกว่ามอบหมายแล้ว
+    if (!res.ok) {
+      const msg = resBody.message || 'มอบหมายงานไม่สำเร็จ'
+      if (msg.includes('มอบหมายแล้ว') || msg.includes('ถูกมอบหมายแล้ว')) {
+        const target = rows.value.find((r) => r.code === selectedRepairId.value)
+        if (target) {
+          target.assigned = true
+          rows.value = [...rows.value]
+        }
+        // Toast notification
+        const Toast = Swal.mixin({
+          toast: true,
+          position: 'top-end',
+          animation: false,
+          showConfirmButton: false,
+          timer: 2500,
+          timerProgressBar: true
+        })
+        Toast.fire({
+          title: 'แจ้งเตือน',
+          text: msg,
+          icon: 'info',
+          background: '#e0f2fe',
+          color: '#0277bd'
+        })
+
+        // Normal Alert (commented for reference)
+        // Swal.fire('แจ้งเตือน', msg, 'info')
+        closeAssignPopup()
+        return
+      }
+      throw new Error(msg)
+    }
+
+    await fetchAllRepairs()
+
+    const target = rows.value.find((r) => r.code === selectedRepairId.value)
+    if (target) {
+      target.assigned = true
+    }
+    rows.value = [...rows.value]
+    // เปลี่ยนเป็น Toast แทน Timer Alert
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true,
+      didOpen: (toast) => {
+        toast.addEventListener('mouseenter', Swal.stopTimer)
+        toast.addEventListener('mouseleave', Swal.resumeTimer)
+      }
+    })
+    Toast.fire({
+      title: 'มอบหมายงานเรียบร้อยแล้ว',
+      icon: 'success',
+      background: '#f0f9ff',
+      color: '#1e3a8a'
+    })
+    closeAssignPopup()
+  } catch (err) {
+    // Toast notification
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true
+    })
+    Toast.fire({
+      title: 'เกิดข้อผิดพลาด',
+      text: err.message,
+      icon: 'error',
+      background: '#fee2e2',
+      color: '#dc2626'
+    })
+  } finally {
+    loadingAssign.value = false
+  }
 }
 
 onMounted(() => {
   fetchAllRepairs()
   document.addEventListener('click', closeDropdown)
+  applyFilterFromUrl()
 })
 onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
 </script>
