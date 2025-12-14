@@ -199,7 +199,16 @@ function canEditUser(row) {
           <th
             v-for="(col, i) in props.columns"
             :key="i"
-            v-show="props.mode === 'stock' || props.mode === 'location' || props.mode === 'user' || props.mode === 'admin' || props.mode === 'assign' || props.mode === 'technician' ? true : i !== 1"
+            v-show="
+              props.mode === 'stock' ||
+              props.mode === 'location' ||
+              props.mode === 'user' ||
+              props.mode === 'admin' ||
+              props.mode === 'assign' ||
+              props.mode === 'technician'
+                ? true
+                : i !== 1
+            "
             class="px-3 py-2 sm:px-3 sm:py-3 text-center"
           >
             {{ col }}
@@ -211,7 +220,8 @@ function canEditUser(row) {
         <tr
           v-for="(row, ri) in paginatedRows"
           :key="ri"
-          class="bg-white border-b border-[#E9E9E9] hover:bg-gray-50"
+          class="bg-white border-b border-[#E9E9E9] hover:bg-gray-50 cursor-pointer"
+          @click="$emit('detail', getRowId(row))"
         >
           <template v-for="(cell, ci) in row" :key="ci">
             <th
@@ -224,7 +234,15 @@ function canEditUser(row) {
             <!-- คอลัมน์อื่น -->
             <td
               v-else-if="
-                props.mode === 'location' ? ci !== 0 : props.mode === 'stock' || props.mode === 'user' || props.mode === 'admin' || props.mode === 'assign' || props.mode === 'technician' ? true : ci !== 1
+                props.mode === 'location'
+                  ? ci !== 0
+                  : props.mode === 'stock' ||
+                      props.mode === 'user' ||
+                      props.mode === 'admin' ||
+                      props.mode === 'assign' ||
+                      props.mode === 'technician'
+                    ? true
+                    : ci !== 1
               "
               class="px-3 py-2 sm:px-4 sm:py-4 text-center"
             >
