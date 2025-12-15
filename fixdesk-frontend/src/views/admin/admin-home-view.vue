@@ -187,24 +187,24 @@ const statItems = computed(() => [
   {
     value: todayTasksCount.value,
     label: 'งานทั้งหมดในวันนี้',
-    colorClass: 'text-blue-600',
+    colorClass: 'text-amber-500',
     filterKey: 'today',
   },
   {
     value: inProgressTasksCount.value,
     label: 'กำลังดำเนินการ',
-    colorClass: 'text-orange-500',
+    colorClass: 'text-blue-600',
     filterKey: 'in_progress',
   },
   {
     value: completedTasksCount.value,
-    label: 'เสร็จสิ้น (7 วัน)',
+    label: 'ดำเนินการเสร็จสิ้น (7 วัน)',
     colorClass: 'text-green-600',
     filterKey: 'completed_7days',
   },
   {
     value: cancelledTasksCount.value,
-    label: 'ยกเลิก (7 วัน)',
+    label: 'งานที่ยกเลิก (7 วัน)',
     colorClass: 'text-red-600',
     filterKey: 'cancelled_7days',
   },

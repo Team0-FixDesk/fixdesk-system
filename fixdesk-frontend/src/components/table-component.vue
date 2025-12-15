@@ -39,9 +39,11 @@ const props = defineProps({
     type: Number,
     default: 1,
   },
+  activeId: {
+    type: [String, Number],
+    default: null,
+  },
 })
-
-const emit = defineEmits(['detail', 'edit', 'delete', 'assign', 'accept', 'change-status'])
 
 function getRowId(row) {
   return row[props.idColumnIndex] || null
@@ -221,6 +223,7 @@ function canEditUser(row) {
           v-for="(row, ri) in paginatedRows"
           :key="ri"
           class="bg-white border-b border-[#E9E9E9] hover:bg-gray-50 cursor-pointer"
+          :class="{ '!bg-gray-50': row[idColumnIndex] == activeId }"
           @click="$emit('detail', getRowId(row))"
         >
           <template v-for="(cell, ci) in row" :key="ci">
