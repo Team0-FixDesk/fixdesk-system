@@ -5,7 +5,7 @@
       v-for="(item, index) in items"
       :key="index"
       @click="$emit('click', item)"
-      class="bg-white rounded-lg shadow p-6 cursor-pointer"
+      class="bg-white hover:bg-gray-50 rounded-lg shadow p-6 cursor-pointer"
     >
       <div class="text-center">
         <h2 class="text-2xl font-bold" :class="item.colorClass">
