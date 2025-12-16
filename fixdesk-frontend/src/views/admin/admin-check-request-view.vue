@@ -1,11 +1,12 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router' // 1. เพิ่ม useRoute
 import TableComponent from '@/components/table-component.vue'
 import assignJobModalComponent from '@/components/assign-job-modal-component.vue'
 import Swal from 'sweetalert2'
 
 const router = useRouter()
+const route = useRoute()
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
 
 const getAuthHeaders = () => {
@@ -13,6 +14,35 @@ const getAuthHeaders = () => {
   return {
     'Content-Type': 'application/json',
     Authorization: `Bearer ${token}`,
+  }
+}
+
+function applyFilterFromUrl() {
+  const statusParam = route.query.status
+  if (!statusParam) return
+
+  // กรณีเป็นงานวันนี้ (today)
+  if (statusParam === 'today') {
+    // ตั้งค่า selectedDate เป็นวันปัจจุบัน (YYYY-MM-DD)
+    const today = new Date().toISOString().split('T')[0]
+    selectedDate.value = today
+  }
+  // กรณีสถานะอื่นๆ
+  else {
+    let targetStatus = ''
+
+    // แปลง key จาก Dashboard ให้ตรงกับ value ของ checkbox ในหน้านี้
+    if (statusParam === 'in_progress') targetStatus = 'in_progress'
+    else if (statusParam === 'completed_7days') targetStatus = 'done' // Dashboard ส่งมา completed_7days แต่ checkbox เราใช้ done
+    else if (statusParam === 'cancelled_7days') targetStatus = 'cancel' // หรือค่าที่ DB เก็บสำหรับยกเลิก
+    else if (statusParam === 'pending') targetStatus = 'pending'
+
+    if (targetStatus) {
+      selectedStatuses.value = [targetStatus]
+
+      // (Optional) เปิด Dropdown ให้เห็นว่าถูกเลือกอยู่
+      // showStatusFilter.value = true
+    }
   }
 }
 
@@ -191,40 +221,14 @@ function closeDropdown(e) {
 const goToDetail = (code) =>
   router.push({
     path: `/main/repair-detail/${code}`,
-    state: { fromAdmin: true }, 
+    state: { fromAdmin: true },
   })
 
-async function handleAssign(code) {
-  // เปลี่ยนเป็น Toast แทน Timer Alert
-    const Toast = Swal.mixin({
-      toast: true,
-      position: 'top-end',
-      animation: false,
-      showConfirmButton: false,
-      timer: 3000,
-      timerProgressBar: true,
-      didOpen: (toast) => {
-        toast.addEventListener('mouseenter', Swal.stopTimer)
-        toast.addEventListener('mouseleave', Swal.resumeTimer)
-      }
-    })
-  const result = await Swal.fire({
-    title: 'มอบหมายงาน',
-    text: `ต้องการมอบหมายใบแจ้งซ่อม ${code} หรือไม่?`,
-    icon: 'question',
-    showCancelButton: true,
-    confirmButtonText: 'ยืนยัน',
-    cancelButtonText: 'ยกเลิก',
-  })
-  if (result.isConfirmed) {
-    Toast.fire({
-      title: 'สำเร็จ',
-      text: 'มอบหมายงานเรียบร้อยแล้ว',
-      icon: 'success',
-      background: '#f0f9ff',
-      color: '#1e3a8a'
-    })
-  }
+// Handle successful assignment from modal
+function handleAssignSuccess() {
+  // Refresh the repair list after successful assignment
+  fetchAllRepairs()
+  closeAssignPopup()
 }
 
 // Popup มอบหมายงาน
@@ -236,13 +240,17 @@ function openAssignPopup(repairId) {
   selectedRepairId.value = repairId
   showAssignPopup.value = true
 }
-function handleAssignSuccess() {
-  fetchAllRepairs() // รีโหลดตาราง
+
+/* ปิด popup */
+function closeAssignPopup() {
+  showAssignPopup.value = false
+  selectedRepairId.value = null
 }
 
 onMounted(() => {
   fetchAllRepairs()
   document.addEventListener('click', closeDropdown)
+  applyFilterFromUrl()
 })
 onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
 </script>
