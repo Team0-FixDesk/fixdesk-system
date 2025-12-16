@@ -214,10 +214,11 @@ module.exports = function TechnicianRoutes(db) {
   });
 
   // ดึงประวัติใบงานที่เสร็จสิ้น
-  router.get('/technician/history', authMiddleware, (req, res) => {
+  router.get("/technician/history", authMiddleware, (req, res) => {
     const techId = req.user && req.user.us_id;
-    console.debug('GET /technician/history - requested by user id=', techId);
-    if (!techId) return res.status(401).json({ message: 'ต้องแนบโทเคนที่ถูกต้อง' });
+    console.debug("GET /technician/history - requested by user id=", techId);
+    if (!techId)
+      return res.status(401).json({ message: "ต้องแนบโทเคนที่ถูกต้อง" });
 
     const query = `
       SELECT
@@ -253,13 +254,14 @@ module.exports = function TechnicianRoutes(db) {
 
     db.query(query, [techId], (err, results) => {
       if (err) {
-        console.error('Error fetching technician completed history:', err);
-        return res.status(500).json({ message: 'ดึงประวัติใบงานไม่สำเร็จ', error: err.message });
+        console.error("Error fetching technician completed history:", err);
+        return res
+          .status(500)
+          .json({ message: "ดึงประวัติใบงานไม่สำเร็จ", error: err.message });
       }
       res.json(results);
     });
   });
-
 
   // ดึงรายการใบเบิกของผู้ใช้งานที่ล็อกอิน)
   router.get("/technician/my-stock-forms", authMiddleware, (req, res) => {
@@ -304,6 +306,48 @@ module.exports = function TechnicianRoutes(db) {
       }
       res.json(results);
     });
+  });
+  router.put("/technician/close-job/:rf_code", authMiddleware, (req, res) => {
+    const techId = req.user?.us_id;
+    const { rf_code } = req.params;
+    const { tech_summary, tech_image_after } = req.body;
+
+    if (!techId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const query = `
+      UPDATE repair_form rf
+      JOIN repair_assignment ra ON rf.rf_id = ra.ra_rf_id
+      SET
+        rf.rf_user_status = 'done',
+        rf.rf_done_at = NOW(),
+        rf.rf_tech_summary = ?,
+        rf.rf_tech_image_after = ?
+      WHERE
+        rf.rf_code = ?
+        AND ra.ra_us_id = ?
+        AND rf.rf_user_status = 'in_progress'
+    `;
+
+    db.query(
+      query,
+      [tech_summary || null, tech_image_after || null, rf_code, techId],
+      (err, result) => {
+        if (err) {
+          console.error("❌ Close job error:", err);
+          return res.status(500).json({ message: "ปิดงานไม่สำเร็จ" });
+        }
+
+        if (result.affectedRows === 0) {
+          return res.status(400).json({
+            message: "ไม่พบงาน หรือสถานะไม่อยู่ในขั้นกำลังดำเนินการ",
+          });
+        }
+
+        res.json({ message: "ปิดงานสำเร็จ" });
+      }
+    );
   });
 
   return router;

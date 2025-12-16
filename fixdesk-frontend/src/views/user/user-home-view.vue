@@ -292,12 +292,12 @@ const getBadgeHtml = (text, type) => {
     }
   }
 
-  return `<span class="inline-flex min-w-[80px] justify-center items-center w-[120px] px-3 py-1 rounded-lg font-semibold ${colorClass}">${text}</span>`
+  return `<span class="inline-flex min-w-[80px] justify-center items-center w-[130px] px-1 py-1 rounded-lg font-semibold ${colorClass}">${text}</span>`
 }
 
 // 2. Computed สำหรับ Rows ที่จะแสดง (แปลง recentRepairs ให้เป็น Array ของ Array)
 const tableRows = computed(() => {
-  return recentRepairs.value.map((item) => [
+  return allMyRepairs.value.map((item) => [
     formatDateTH(item.rf_create_at),
     item.rf_code,
     item.tt_name || '-',
@@ -308,7 +308,7 @@ const tableRows = computed(() => {
 
 // 3. Computed สำหรับ Raw Rows (เพื่อให้ TableComponent รู้ ID เวลากด)
 const tableRawRows = computed(() => {
-  return recentRepairs.value.map((item) => ({
+  return allMyRepairs.value.map((item) => ({
     rf_code: item.rf_code,
   }))
 })
@@ -347,7 +347,7 @@ onMounted(() => {
       <div class="col-span-8 bg-white rounded-xl border border-slate-200 shadow-sm p-5">
         <div class="border-b border-slate-200 pb-2 mb-4">
           <h2 class="text-xl font-bold mb-1">รายการที่ฉันแจ้งซ่อม</h2>
-          <p class="text-xs text-gray-500">รายการแจ้งซ่อม 5 รายการล่าสุด</p>
+          <p class="text-xs text-gray-500">7 รายการแจ้งซ่อมล่าสุด (เรียงจากวันที่แจ้ง)</p>
         </div>
 
         <TableComponent
