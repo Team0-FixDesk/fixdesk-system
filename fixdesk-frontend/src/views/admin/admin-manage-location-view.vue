@@ -705,13 +705,25 @@ async function saveSingleLocation() {
 
     closeAddModal()
 
-    await Swal.fire({
+    // Toast notification
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 2000,
+      timerProgressBar: true,
+      didOpen: (toast) => {
+        toast.addEventListener('mouseenter', Swal.stopTimer)
+        toast.addEventListener('mouseleave', Swal.resumeTimer)
+      }
+    })
+    await Toast.fire({
       icon: 'success',
       title: 'สำเร็จ!',
       text: 'เพิ่มข้อมูลเรียบร้อยแล้ว',
-      confirmButtonColor: '#1E48D1',
-      timer: 1500,
-      showConfirmButton: false,
+      background: '#f0f9ff',
+      color: '#1e3a8a'
     })
 
     await refreshData()
@@ -811,13 +823,25 @@ async function bulkCreateLocation() {
 
     closeAddModal()
 
-    await Swal.fire({
+    // Toast notification
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 2000,
+      timerProgressBar: true,
+      didOpen: (toast) => {
+        toast.addEventListener('mouseenter', Swal.stopTimer)
+        toast.addEventListener('mouseleave', Swal.resumeTimer)
+      }
+    })
+    await Toast.fire({
       icon: 'success',
       title: 'สำเร็จ!',
       text: 'สร้างสถานที่เรียบร้อยแล้ว',
-      confirmButtonColor: '#1E48D1',
-      timer: 1500,
-      showConfirmButton: false,
+      background: '#f0f9ff',
+      color: '#1e3a8a'
     })
 
     await refreshData()
@@ -874,13 +898,25 @@ async function saveEditLocation() {
 
     closeEditModal()
 
-    await Swal.fire({
+    // Toast notification
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 2000,
+      timerProgressBar: true,
+      didOpen: (toast) => {
+        toast.addEventListener('mouseenter', Swal.stopTimer)
+        toast.addEventListener('mouseleave', Swal.resumeTimer)
+      }
+    })
+    await Toast.fire({
       icon: 'success',
       title: 'สำเร็จ!',
       text: 'แก้ไขข้อมูลห้องเรียบร้อยแล้ว',
-      confirmButtonColor: '#1E48D1',
-      timer: 1500,
-      showConfirmButton: false,
+      background: '#f0f9ff',
+      color: '#1e3a8a'
     })
 
     await refreshData()

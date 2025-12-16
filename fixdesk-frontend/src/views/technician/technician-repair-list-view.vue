@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import TableComponent from '@/components/table-component.vue'
 import repairButtonComponent from '@/components/repair-button-component.vue'
 import acceptJobMadalComponent from '@/components/accept-job-madal-component.vue'
@@ -8,10 +8,22 @@ import Swal from 'sweetalert2'
 import { jwtDecode } from 'jwt-decode'
 
 const router = useRouter()
+const route = useRoute()
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
 
 const currentAcceptCode = ref(null)
 const showAcceptPopup = ref(false)
+
+/* --- State สำหรับ Filter --- */
+const searchQuery = ref('')
+const selectedStatuses = ref([])
+const selectedUrgencies = ref([])
+const showStatusFilter = ref(false)
+const showUrgencyFilter = ref(false)
+const selectedDate = ref('')
+
+// เก็บข้อมูลดิบจาก backend (array of objects)
+const rowsData = ref([])
 
 const tokenData = ref(null)
 function loadTokenData() {
@@ -25,7 +37,6 @@ function loadTokenData() {
     }
   }
 }
-loadTokenData()
 
 /* Helper สำหรับแนบ Token */
 const getAuthHeaders = () => {
@@ -36,12 +47,68 @@ const getAuthHeaders = () => {
   }
 }
 
-// เก็บข้อมูลดิบจาก backend (array of objects)
-const rowsData = ref([])
+/* --- [1] ฟังก์ชันรับค่า Filter จาก URL --- */
+function applyFilterFromUrl() {
+  const statusParam = route.query.status
+  if (!statusParam) return
 
-/* สร้าง rawRows และ rowsForTable เป็น computed จาก rowsData */
+  // กรองตามวันที่ (Today)
+  if (statusParam === 'today') {
+    const today = new Date().toISOString().split('T')[0]
+    selectedDate.value = today
+  }
+  // กรองตามสถานะ
+  else {
+    let targetStatus = ''
+    if (statusParam === 'in_progress') targetStatus = 'in_progress'
+    else if (statusParam === 'done') targetStatus = 'done'
+    else if (statusParam === 'cancel') targetStatus = 'cancel'
+    else if (statusParam === 'pending') targetStatus = 'pending'
+
+    if (targetStatus) {
+      selectedStatuses.value = [targetStatus]
+    }
+  }
+}
+
+/* --- [2] Computed สำหรับกรองข้อมูล (หัวใจสำคัญ) --- */
+const filteredRowsData = computed(() => {
+  const q = searchQuery.value.toLowerCase()
+  const dateFilter = selectedDate.value
+
+  return rowsData.value.filter((r) => {
+    // 1. กรองคำค้นหา
+    const code = String(r.rf_code || '').toLowerCase()
+    const problem = String(r.rf_problem || '').toLowerCase()
+    const dept = String(r.department_name || '').toLowerCase()
+    const matchSearch = code.includes(q) || problem.includes(q) || dept.includes(q)
+
+    // 2. กรองวันที่
+    let matchDate = true
+    if (dateFilter) {
+      const rowDate = r.rf_create_at ? new Date(r.rf_create_at).toISOString().split('T')[0] : ''
+      matchDate = rowDate === dateFilter
+    }
+
+    // 3. กรองสถานะ
+    let matchStatus = true
+    if (selectedStatuses.value.length > 0) {
+      matchStatus = selectedStatuses.value.includes(r.rf_user_status)
+    }
+
+    // 4. กรองความเร่งด่วน
+    let matchUrgency = true
+    if (selectedUrgencies.value.length > 0) {
+      matchUrgency = selectedUrgencies.value.includes(r.rf_urgency)
+    }
+
+    return matchSearch && matchDate && matchStatus && matchUrgency
+  })
+})
+
+/* --- [3] สร้าง rawRows และ rowsForTable จาก "ข้อมูลที่กรองแล้ว" --- */
 const rawRows = computed(() =>
-  rowsData.value.map((r) => ({
+  filteredRowsData.value.map((r) => ({
     rf_code: r.rf_code,
     code: r.rf_code,
     rf_user_status: r.rf_user_status,
@@ -54,40 +121,29 @@ const rawRows = computed(() =>
   })),
 )
 
-// ฟังก์ชันช่วยตัดคำภาษาไทย (แสดงประมาณ 8 คำ)
+// ฟังก์ชันช่วยตัดคำภาษาไทย
 function truncateThaiText(text, wordLimit = 5) {
   if (!text || text === '-') return '-'
-
-  const fullText = String(text) // แปลงเป็น string เพื่อความชัวร์
-
+  const fullText = String(text)
   try {
-    // ใช้ Intl.Segmenter สำหรับตัดคำภาษาไทย
     const segmenter = new Intl.Segmenter('th', { granularity: 'word' })
     const segments = [...segmenter.segment(fullText)]
-
     if (segments.length > wordLimit) {
-      // ตัดเอาแค่ 8 คำแรก + ...
       const shortText = segments
         .slice(0, wordLimit)
         .map((s) => s.segment)
         .join('')
-      // ส่งกลับเป็น HTML เพื่อให้เอาเมาส์ชี้แล้วเห็นข้อความเต็ม (Tooltip)
       return `<span title="${fullText}" class="cursor-help">${shortText}...</span>`
     }
   } catch (err) {
-    // Fallback: กรณี Browser เก่ามาก ไม่รองรับ Intl ให้ตัดตามจำนวนตัวอักษรแทน (ประมาณ 40 ตัว)
-    if (fullText.length > 40) {
+    if (fullText.length > 40)
       return `<span title="${fullText}" class="cursor-help">${fullText.substring(0, 40)}...</span>`
-    }
   }
-
   return fullText
 }
 
-/* rowsForTable */
 const rowsForTable = computed(() =>
-  rowsData.value.map((r) => {
-    // เตรียมข้อมูล
+  filteredRowsData.value.map((r) => {
     const dateStr = r.rf_create_at ? new Date(r.rf_create_at).toLocaleDateString('th-TH') : '-'
     const reporterName = `${r.us_first_name || ''} ${r.us_last_name || ''}`.trim() || '-'
     const department = r.department_name || '-'
@@ -98,7 +154,6 @@ const rowsForTable = computed(() =>
     if (r.room_name) parts.push(r.room_name)
     const placeText = parts.join(' / ') || '-'
 
-    // Logic Badge สถานะ (เหมือนเดิม)
     const statusBadge =
       {
         pending: `<span class="inline-flex items-center justify-center h-8 font-medium rounded-full w-28 bg-amber-100 text-amber-700">รอดำเนินการ</span>`,
@@ -108,29 +163,20 @@ const rowsForTable = computed(() =>
       }[String(r.rf_user_status || '').toLowerCase()] ||
       `<span class="inline-flex items-center justify-center h-8 font-medium rounded-full w-28">-</span>`
 
-    // Return Array ตามลำดับใหม่ (10 ช่อง)
     return [
-      dateStr, // 0. วันที่
-      r.rf_code, // 1. รหัสใบแจ้ง
-      reporterName, // 2. ผู้แจ้ง
-      department, // 3. หน่วยงาน
-      problem, // 4. เรื่องที่แจ้ง
-      placeText, // 6. สถานที่
-      statusBadge, // 7. สถานะ
-      'actions', // 8. ตัวดำเนินการ
+      dateStr, // 0
+      r.rf_code, // 1
+      reporterName, // 2
+      department, // 3
+      problem, // 4
+      placeText, // 5 (แก้ไข index ตาม component)
+      statusBadge, // 6
+      'actions', // 7
     ]
   }),
 )
 
-/* filter / UI state */
-const searchQuery = ref('')
-const selectedStatuses = ref([])
-const selectedUrgencies = ref([])
-const showStatusFilter = ref(false)
-const showUrgencyFilter = ref(false)
-const selectedDate = ref('')
-
-//ดึงข้อมูลรายการแจ้งซ่อมทั้งหมด
+/* --- [4] Fetch Function (ลบส่วนที่ซ้ำออก) --- */
 async function fetchAllRepairs() {
   try {
     const token = localStorage.getItem('token') || sessionStorage.getItem('token')
@@ -159,13 +205,6 @@ async function fetchAllRepairs() {
     console.error('❌ โหลดข้อมูลไม่สำเร็จ:', err)
     Swal.fire('เกิดข้อผิดพลาด', err.message || 'โหลดข้อมูลไม่สำเร็จ', 'error')
   }
-  try {
-    const res = await fetch(`${API_BASE}/technician/repairs`, { headers: getAuthHeaders() })
-    if (!res.ok) throw new Error()
-    rowsData.value = await res.json()
-  } catch (err) {
-    console.error(err)
-  }
 }
 
 function clearFilters() {
@@ -190,31 +229,70 @@ function handleAccept(code) {
   showAcceptPopup.value = true
 }
 
-function handleChangeStatus(item) {
-  // Logic เปลี่ยนสถานะ (Mockup)
-  console.log('Change status requested', item)
+async function handleCloseJob(item) {
+  const result = await Swal.fire({
+    title: 'ปิดงานซ่อม',
+    text: `คุณต้องการปิดงาน ${item.rf_code} ใช่หรือไม่`,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'ปิดงาน',
+    cancelButtonText: 'ยกเลิก',
+    confirmButtonColor: '#16a34a',
+  })
+
+  if (!result.isConfirmed) return
+
+  try {
+    const res = await fetch(
+      `${API_BASE}/technician/close-job/${encodeURIComponent(item.rf_code)}`, // ✅ เปลี่ยน URL
+      {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+      }
+    )
+
+    const payload = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      throw new Error(payload.message || 'ปิดงานไม่สำเร็จ')
+    }
+
+    Swal.fire('สำเร็จ', 'ปิดงานเรียบร้อยแล้ว', 'success')
+    fetchAllRepairs()
+  } catch (err) {
+    Swal.fire('ผิดพลาด', err.message || 'ไม่สามารถปิดงานได้', 'error')
+  }
 }
 
 function handleAcceptSuccess() {
-  // 1. ปิด Modal
   showAcceptPopup.value = false
-
-  // 2. โหลดข้อมูลใหม่ทันที (สถานะจะเปลี่ยนจาก pending -> in_progress)
   fetchAllRepairs()
-
-  // (Optional) แสดง Alert แจ้งเตือนความสำเร็จ
-  Swal.fire({
-    icon: 'success',
-    title: 'รับงานสำเร็จ',
+  const Toast = Swal.mixin({
+    toast: true,
+    position: 'top-end',
+    animation: false,
     showConfirmButton: false,
-    timer: 1500,
+    timer: 3000,
+    timerProgressBar: true,
+    didOpen: (toast) => {
+      toast.addEventListener('mouseenter', Swal.stopTimer)
+      toast.addEventListener('mouseleave', Swal.resumeTimer)
+    },
+  })
+  Toast.fire({
+    title: 'รับงานสำเร็จ',
+    icon: 'success',
+    background: '#f0f9ff',
+    color: '#1e3a8a',
   })
 }
 
 onMounted(() => {
+  loadTokenData()
   fetchAllRepairs()
   document.addEventListener('click', closeDropdown)
+  applyFilterFromUrl() // เรียกใช้ function ดึงค่าจาก URL
 })
+
 onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
 </script>
 
@@ -222,7 +300,6 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
   <div class="p-8 mx-auto bg-white shadow-md rounded-xl max-w-7xl">
     <div class="flex items-center justify-between mb-4">
       <h1 class="text-xl font-bold text-back">รายงานการแจ้งซ่อม</h1>
-
       <repairButtonComponent />
     </div>
 
@@ -255,33 +332,30 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
           v-if="showUrgencyFilter"
           class="absolute z-10 w-48 p-3 mt-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-md shadow-lg"
         >
-          <label class="flex items-center py-1">
-            <input
+          <label class="flex items-center py-1"
+            ><input
               type="checkbox"
               value="low"
               v-model="selectedUrgencies"
               class="w-4 h-4 text-blue-600"
-            />
-            <span class="ml-2">ไม่เร่งด่วน</span>
-          </label>
-          <label class="flex items-center py-1">
-            <input
+            /><span class="ml-2">ไม่เร่งด่วน</span></label
+          >
+          <label class="flex items-center py-1"
+            ><input
               type="checkbox"
               value="medium"
               v-model="selectedUrgencies"
               class="w-4 h-4 text-blue-600"
-            />
-            <span class="ml-2">เร่งด่วน</span>
-          </label>
-          <label class="flex items-center py-1">
-            <input
+            /><span class="ml-2">เร่งด่วน</span></label
+          >
+          <label class="flex items-center py-1"
+            ><input
               type="checkbox"
               value="high"
               v-model="selectedUrgencies"
               class="w-4 h-4 text-blue-600"
-            />
-            <span class="ml-2">เร่งด่วนมาก</span>
-          </label>
+            /><span class="ml-2">เร่งด่วนมาก</span></label
+          >
         </div>
       </div>
 
@@ -301,33 +375,30 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
           v-if="showStatusFilter"
           class="absolute z-10 w-48 p-3 mt-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-md shadow-lg"
         >
-          <label class="flex items-center py-1">
-            <input
+          <label class="flex items-center py-1"
+            ><input
               type="checkbox"
               value="pending"
               v-model="selectedStatuses"
               class="w-4 h-4 text-blue-600"
-            />
-            <span class="ml-2">รอดำเนินการ</span>
-          </label>
-          <label class="flex items-center py-1">
-            <input
+            /><span class="ml-2">รอดำเนินการ</span></label
+          >
+          <label class="flex items-center py-1"
+            ><input
               type="checkbox"
               value="in_progress"
               v-model="selectedStatuses"
               class="w-4 h-4 text-blue-600"
-            />
-            <span class="ml-2">กำลังดำเนินการ</span>
-          </label>
-          <label class="flex items-center py-1">
-            <input
+            /><span class="ml-2">กำลังดำเนินการ</span></label
+          >
+          <label class="flex items-center py-1"
+            ><input
               type="checkbox"
               value="done"
               v-model="selectedStatuses"
               class="w-4 h-4 text-blue-600"
-            />
-            <span class="ml-2">เสร็จสิ้น</span>
-          </label>
+            /><span class="ml-2">เสร็จสิ้น</span></label
+          >
         </div>
       </div>
 
@@ -359,9 +430,10 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
       mode="technician"
       @detail="goToDetail"
       @accept="handleAccept"
-      @change-status="handleChangeStatus"
+      @close-job="handleCloseJob"
     />
   </div>
+
   <acceptJobMadalComponent
     v-if="showAcceptPopup"
     :repairCode="currentAcceptCode"

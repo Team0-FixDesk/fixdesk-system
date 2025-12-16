@@ -452,25 +452,41 @@ function validateField(field) {
 async function handleSubmit() {
   // เช็กช่อง * อื่น ๆ
   if (!validateForm()) {
-    Swal.fire({
+    // Toast notification
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 2500,
+      timerProgressBar: true
+    })
+    Toast.fire({
       title: 'ข้อมูลไม่ครบถ้วน',
       text: 'กรุณากรอกข้อมูลให้ครบถ้วนตามที่กำหนด',
       icon: 'warning',
-      showConfirmButton: false,
-      timer: 1500,
-      timerProgressBar: true,
+      background: '#fef3c7',
+      color: '#92400e'
     })
     return
   }
   // เช็กความเร่งด่วนก่อน
   if (!formData.value.urgency) {
-    await Swal.fire({
+    // Toast notification
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 2500,
+      timerProgressBar: true
+    })
+    Toast.fire({
       title: 'ยังไม่ได้เลือกความเร่งด่วน',
       text: 'กรุณาเลือกระดับความเร่งด่วนก่อนส่งแบบฟอร์ม',
       icon: 'warning',
-      showConfirmButton: false,
-      timer: 1500,
-      timerProgressBar: true,
+      background: '#fef3c7',
+      color: '#92400e'
     })
     return
   }
@@ -531,28 +547,46 @@ async function handleSubmit() {
     if (!res.ok) throw new Error(data.message || 'บันทึกข้อมูลไม่สำเร็จ')
 
     Swal.close()
-    await Swal.fire({
-      title: 'บันทึกการแก้ไขสำเร็จ!',
-      text: `ระบบได้อัปเดตข้อมูลใบแจ้งซ่อม ${repairCode} เรียบร้อยแล้ว`,
-      icon: 'success',
+    // Toast notification
+    const toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
       showConfirmButton: false,
-      timer: 1500,
+      timer: 2500,
       timerProgressBar: true,
-      allowOutsideClick: false
+      didOpen: (toast) => {
+        toast.addEventListener('mouseenter', Swal.stopTimer)
+        toast.addEventListener('mouseleave', Swal.resumeTimer)
+      }
+    })
+    toast.fire({
+      title: 'บันทึกสำเร็จ!',
+      text: 'แก้ไขใบแจ้งซ่อมเรียบร้อยแล้ว',
+      icon: 'success',
+      background: '#D1FAE5',
+      color: '#065F46'
     })
 
     router.push('/main/my-list')
   } catch (err) {
     console.error('บันทึกไม่สำเร็จ:', err)
     Swal.close()
-    Swal.fire({
-      title: 'เกิดข้อผิดพลาด!',
-      text: 'ไม่สามารถบันทึกการแก้ไขได้ กรุณาลองใหม่อีกครั้ง',
-      icon: 'error',
+    // Toast notification for error
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
       showConfirmButton: false,
-      timer: 1500,
-      timerProgressBar: true,
-      allowOutsideClick: false
+      timer: 3000,
+      timerProgressBar: true
+    })
+    Toast.fire({
+      title: 'บันทึกไม่สำเร็จ',
+      text: err.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล',
+      icon: 'error',
+      background: '#fee2e2',
+      color: '#dc2626'
     })
   } finally {
     isSubmitting.value = false
