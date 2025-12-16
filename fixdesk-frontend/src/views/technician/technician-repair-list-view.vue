@@ -76,7 +76,7 @@ const filteredRowsData = computed(() => {
   const q = searchQuery.value.toLowerCase()
   const dateFilter = selectedDate.value
 
-  return rowsData.value.filter(r => {
+  return rowsData.value.filter((r) => {
     // 1. กรองคำค้นหา
     const code = String(r.rf_code || '').toLowerCase()
     const problem = String(r.rf_problem || '').toLowerCase()
@@ -129,11 +129,15 @@ function truncateThaiText(text, wordLimit = 5) {
     const segmenter = new Intl.Segmenter('th', { granularity: 'word' })
     const segments = [...segmenter.segment(fullText)]
     if (segments.length > wordLimit) {
-      const shortText = segments.slice(0, wordLimit).map((s) => s.segment).join('')
+      const shortText = segments
+        .slice(0, wordLimit)
+        .map((s) => s.segment)
+        .join('')
       return `<span title="${fullText}" class="cursor-help">${shortText}...</span>`
     }
   } catch (err) {
-    if (fullText.length > 40) return `<span title="${fullText}" class="cursor-help">${fullText.substring(0, 40)}...</span>`
+    if (fullText.length > 40)
+      return `<span title="${fullText}" class="cursor-help">${fullText.substring(0, 40)}...</span>`
   }
   return fullText
 }
@@ -150,12 +154,14 @@ const rowsForTable = computed(() =>
     if (r.room_name) parts.push(r.room_name)
     const placeText = parts.join(' / ') || '-'
 
-    const statusBadge = {
-      pending: `<span class="inline-flex items-center justify-center h-8 font-medium rounded-full w-28 bg-amber-100 text-amber-700">รอดำเนินการ</span>`,
-      in_progress: `<span class="inline-flex items-center justify-center h-8 font-medium text-blue-700 bg-blue-100 rounded-full w-28">กำลังดำเนินการ</span>`,
-      done: `<span class="inline-flex items-center justify-center h-8 font-medium text-green-700 bg-green-100 rounded-full w-28">เสร็จสิ้น</span>`,
-      cancel: `<span class="inline-flex items-center justify-center h-8 font-medium text-gray-700 bg-gray-100 rounded-full w-28">ยกเลิก</span>`,
-    }[String(r.rf_user_status || '').toLowerCase()] || `<span class="inline-flex items-center justify-center h-8 font-medium rounded-full w-28">-</span>`
+    const statusBadge =
+      {
+        pending: `<span class="inline-flex items-center justify-center h-8 font-medium rounded-full w-28 bg-amber-100 text-amber-700">รอดำเนินการ</span>`,
+        in_progress: `<span class="inline-flex items-center justify-center h-8 font-medium text-blue-700 bg-blue-100 rounded-full w-28">กำลังดำเนินการ</span>`,
+        done: `<span class="inline-flex items-center justify-center h-8 font-medium text-green-700 bg-green-100 rounded-full w-28">เสร็จสิ้น</span>`,
+        cancel: `<span class="inline-flex items-center justify-center h-8 font-medium text-gray-700 bg-gray-100 rounded-full w-28">ยกเลิก</span>`,
+      }[String(r.rf_user_status || '').toLowerCase()] ||
+      `<span class="inline-flex items-center justify-center h-8 font-medium rounded-full w-28">-</span>`
 
     return [
       dateStr, // 0
@@ -195,7 +201,6 @@ async function fetchAllRepairs() {
 
     const data = await res.json()
     rowsData.value = Array.isArray(data) ? data : []
-
   } catch (err) {
     console.error('❌ โหลดข้อมูลไม่สำเร็จ:', err)
     Swal.fire('เกิดข้อผิดพลาด', err.message || 'โหลดข้อมูลไม่สำเร็จ', 'error')
@@ -224,8 +229,38 @@ function handleAccept(code) {
   showAcceptPopup.value = true
 }
 
-function handleChangeStatus(item) {
-  console.log('Change status requested', item)
+async function handleCloseJob(item) {
+  const result = await Swal.fire({
+    title: 'ปิดงานซ่อม',
+    text: `คุณต้องการปิดงาน ${item.rf_code} ใช่หรือไม่`,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'ปิดงาน',
+    cancelButtonText: 'ยกเลิก',
+    confirmButtonColor: '#16a34a',
+  })
+
+  if (!result.isConfirmed) return
+
+  try {
+    const res = await fetch(
+      `${API_BASE}/technician/close-job/${encodeURIComponent(item.rf_code)}`, // ✅ เปลี่ยน URL
+      {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+      }
+    )
+
+    const payload = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      throw new Error(payload.message || 'ปิดงานไม่สำเร็จ')
+    }
+
+    Swal.fire('สำเร็จ', 'ปิดงานเรียบร้อยแล้ว', 'success')
+    fetchAllRepairs()
+  } catch (err) {
+    Swal.fire('ผิดพลาด', err.message || 'ไม่สามารถปิดงานได้', 'error')
+  }
 }
 
 function handleAcceptSuccess() {
@@ -241,13 +276,13 @@ function handleAcceptSuccess() {
     didOpen: (toast) => {
       toast.addEventListener('mouseenter', Swal.stopTimer)
       toast.addEventListener('mouseleave', Swal.resumeTimer)
-    }
+    },
   })
   Toast.fire({
     title: 'รับงานสำเร็จ',
     icon: 'success',
     background: '#f0f9ff',
-    color: '#1e3a8a'
+    color: '#1e3a8a',
   })
 }
 
@@ -259,60 +294,6 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
-
-const showAssignTypeFilter = ref(false)
-function selectAssignType(type) {
-  selectedType.value = type
-  showAssignTypeFilter.value = false
-}
-function toggleSelectTeam(id) {
-  if (selectedTeam.value.includes(id)) {
-    selectedTeam.value = selectedTeam.value.filter(t => t !== id)
-  } else {
-    selectedTeam.value.push(id)
-  }
-}
-
-async function fetchTechnicians() {
-  try {
-    const token = localStorage.getItem('token') || sessionStorage.getItem('token')
-    if (!token) throw new Error('ไม่พบ token')
-
-    const decoded = jwtDecode(token)
-    const currentUserId = decoded.us_id
-
-    const res = await fetch(`${API_BASE}/technicians`, { headers: getAuthHeaders() })
-    const typesRes = await fetch(`${API_BASE}/technician-types`)
-
-    const techs = await res.json()
-    technicianTypes.value = await typesRes.json()
-
-    // Auto-select ตัวเอง + ซ่อน
-    technicians.value = techs.filter(t => t.us_id !== currentUserId)
-    // ตัวเองถูก auto-add
-    selectedTeam.value = [currentUserId]
-  } catch (err) {
-    console.error('❌ โหลดข้อมูลช่างไม่สำเร็จ:', err)
-    // Toast notification
-    const Toast = Swal.mixin({
-      toast: true,
-      position: 'top-end',
-      animation: false,
-      showConfirmButton: false,
-      timer: 3000,
-      timerProgressBar: true
-    })
-    Toast.fire({
-      title: 'เกิดข้อผิดพลาด',
-      text: 'ไม่สามารถโหลดรายชื่อช่างได้',
-      icon: 'error',
-      background: '#fee2e2',
-      color: '#dc2626'
-    })
-  }
-}
-
-
 </script>
 
 <template>
@@ -341,12 +322,40 @@ async function fetchTechnicians() {
           class="flex items-center gap-1 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg"
         >
           ความเร่งด่วน
-          <img src="/icon/sidebar/chevron-down-icon.svg" class="w-4 h-4 opacity-70" :class="{ 'rotate-180': showUrgencyFilter }" />
+          <img
+            src="/icon/sidebar/chevron-down-icon.svg"
+            class="w-4 h-4 opacity-70"
+            :class="{ 'rotate-180': showUrgencyFilter }"
+          />
         </button>
-        <div v-if="showUrgencyFilter" class="absolute z-10 w-48 p-3 mt-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-md shadow-lg">
-          <label class="flex items-center py-1"><input type="checkbox" value="low" v-model="selectedUrgencies" class="w-4 h-4 text-blue-600" /><span class="ml-2">ไม่เร่งด่วน</span></label>
-          <label class="flex items-center py-1"><input type="checkbox" value="medium" v-model="selectedUrgencies" class="w-4 h-4 text-blue-600" /><span class="ml-2">เร่งด่วน</span></label>
-          <label class="flex items-center py-1"><input type="checkbox" value="high" v-model="selectedUrgencies" class="w-4 h-4 text-blue-600" /><span class="ml-2">เร่งด่วนมาก</span></label>
+        <div
+          v-if="showUrgencyFilter"
+          class="absolute z-10 w-48 p-3 mt-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-md shadow-lg"
+        >
+          <label class="flex items-center py-1"
+            ><input
+              type="checkbox"
+              value="low"
+              v-model="selectedUrgencies"
+              class="w-4 h-4 text-blue-600"
+            /><span class="ml-2">ไม่เร่งด่วน</span></label
+          >
+          <label class="flex items-center py-1"
+            ><input
+              type="checkbox"
+              value="medium"
+              v-model="selectedUrgencies"
+              class="w-4 h-4 text-blue-600"
+            /><span class="ml-2">เร่งด่วน</span></label
+          >
+          <label class="flex items-center py-1"
+            ><input
+              type="checkbox"
+              value="high"
+              v-model="selectedUrgencies"
+              class="w-4 h-4 text-blue-600"
+            /><span class="ml-2">เร่งด่วนมาก</span></label
+          >
         </div>
       </div>
 
@@ -356,17 +365,49 @@ async function fetchTechnicians() {
           class="flex items-center gap-1 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg"
         >
           สถานะ
-          <img src="/icon/sidebar/chevron-down-icon.svg" class="w-4 h-4 opacity-70" :class="{ 'rotate-180': showStatusFilter }" />
+          <img
+            src="/icon/sidebar/chevron-down-icon.svg"
+            class="w-4 h-4 opacity-70"
+            :class="{ 'rotate-180': showStatusFilter }"
+          />
         </button>
-        <div v-if="showStatusFilter" class="absolute z-10 w-48 p-3 mt-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-md shadow-lg">
-          <label class="flex items-center py-1"><input type="checkbox" value="pending" v-model="selectedStatuses" class="w-4 h-4 text-blue-600" /><span class="ml-2">รอดำเนินการ</span></label>
-          <label class="flex items-center py-1"><input type="checkbox" value="in_progress" v-model="selectedStatuses" class="w-4 h-4 text-blue-600" /><span class="ml-2">กำลังดำเนินการ</span></label>
-          <label class="flex items-center py-1"><input type="checkbox" value="done" v-model="selectedStatuses" class="w-4 h-4 text-blue-600" /><span class="ml-2">เสร็จสิ้น</span></label>
+        <div
+          v-if="showStatusFilter"
+          class="absolute z-10 w-48 p-3 mt-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-md shadow-lg"
+        >
+          <label class="flex items-center py-1"
+            ><input
+              type="checkbox"
+              value="pending"
+              v-model="selectedStatuses"
+              class="w-4 h-4 text-blue-600"
+            /><span class="ml-2">รอดำเนินการ</span></label
+          >
+          <label class="flex items-center py-1"
+            ><input
+              type="checkbox"
+              value="in_progress"
+              v-model="selectedStatuses"
+              class="w-4 h-4 text-blue-600"
+            /><span class="ml-2">กำลังดำเนินการ</span></label
+          >
+          <label class="flex items-center py-1"
+            ><input
+              type="checkbox"
+              value="done"
+              v-model="selectedStatuses"
+              class="w-4 h-4 text-blue-600"
+            /><span class="ml-2">เสร็จสิ้น</span></label
+          >
         </div>
       </div>
 
       <transition name="fade">
-        <button v-if="selectedStatuses.length || selectedUrgencies.length || searchQuery" @click="clearFilters" class="text-sm font-medium text-blue-600 hover:text-blue-700">
+        <button
+          v-if="selectedStatuses.length || selectedUrgencies.length || searchQuery"
+          @click="clearFilters"
+          class="text-sm font-medium text-blue-600 hover:text-blue-700"
+        >
           ล้างตัวกรอง
         </button>
       </transition>
@@ -389,7 +430,7 @@ async function fetchTechnicians() {
       mode="technician"
       @detail="goToDetail"
       @accept="handleAccept"
-      @change-status="handleChangeStatus"
+      @close-job="handleCloseJob"
     />
   </div>
 
@@ -403,6 +444,12 @@ async function fetchTechnicians() {
 </template>
 
 <style scoped>
-.fade-enter-active, .fade-leave-active { transition: opacity 0.25s ease; }
-.fade-enter-from, .fade-leave-to { opacity: 0; }
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.25s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
 </style>
