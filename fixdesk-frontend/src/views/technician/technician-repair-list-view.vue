@@ -255,11 +255,33 @@ async function handleCloseJob(item) {
     if (!res.ok) {
       throw new Error(payload.message || 'ปิดงานไม่สำเร็จ')
     }
-
-    Swal.fire('สำเร็จ', 'ปิดงานเรียบร้อยแล้ว', 'success')
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true,
+      didOpen: (toast) => {
+        toast.addEventListener('mouseenter', Swal.stopTimer)
+        toast.addEventListener('mouseleave', Swal.resumeTimer)
+      },
+    })
+    Toast.fire({
+      title: 'ปิดงานสำเร็จ',
+      icon: 'success',
+      background: '#f0f9ff',
+      color: '#1e3a8a',
+    })
     fetchAllRepairs()
   } catch (err) {
-    Swal.fire('ผิดพลาด', err.message || 'ไม่สามารถปิดงานได้', 'error')
+    Toast.fire({
+      title: err.message || 'ปิดงานไม่สำเร็จ',
+      icon: 'error',
+      background: '#ffeded',
+      color: '#991b1b',
+    })
+    console.error('❌ ปิดงานไม่สำเร็จ:', err)
   }
 }
 
@@ -304,143 +326,70 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
     </div>
 
     <div class="flex flex-wrap items-center gap-3 mb-6">
-      <input
-        v-model="searchQuery"
-        type="text"
-        placeholder="ค้นหา"
-        class="w-[260px] h-10 px-4 rounded-lg border border-gray-300 bg-white focus:ring-2 focus:ring-blue-500"
-      />
-      <input
-        v-model="selectedDate"
-        type="date"
-        class="h-10 px-3 text-gray-700 bg-white border border-gray-300 rounded-lg"
-      />
+      <input v-model="searchQuery" type="text" placeholder="ค้นหา"
+        class="w-[260px] h-10 px-4 rounded-lg border border-gray-300 bg-white focus:ring-2 focus:ring-blue-500" />
+      <input v-model="selectedDate" type="date"
+        class="h-10 px-3 text-gray-700 bg-white border border-gray-300 rounded-lg" />
 
       <div class="relative">
-        <button
-          @click.stop="showUrgencyFilter = !showUrgencyFilter"
-          class="flex items-center gap-1 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg"
-        >
+        <button @click.stop="showUrgencyFilter = !showUrgencyFilter"
+          class="flex items-center gap-1 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg">
           ความเร่งด่วน
-          <img
-            src="/icon/sidebar/chevron-down-icon.svg"
-            class="w-4 h-4 opacity-70"
-            :class="{ 'rotate-180': showUrgencyFilter }"
-          />
+          <img src="/icon/sidebar/chevron-down-icon.svg" class="w-4 h-4 opacity-70"
+            :class="{ 'rotate-180': showUrgencyFilter }" />
         </button>
-        <div
-          v-if="showUrgencyFilter"
-          class="absolute z-10 w-48 p-3 mt-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-md shadow-lg"
-        >
-          <label class="flex items-center py-1"
-            ><input
-              type="checkbox"
-              value="low"
-              v-model="selectedUrgencies"
-              class="w-4 h-4 text-blue-600"
-            /><span class="ml-2">ไม่เร่งด่วน</span></label
-          >
-          <label class="flex items-center py-1"
-            ><input
-              type="checkbox"
-              value="medium"
-              v-model="selectedUrgencies"
-              class="w-4 h-4 text-blue-600"
-            /><span class="ml-2">เร่งด่วน</span></label
-          >
-          <label class="flex items-center py-1"
-            ><input
-              type="checkbox"
-              value="high"
-              v-model="selectedUrgencies"
-              class="w-4 h-4 text-blue-600"
-            /><span class="ml-2">เร่งด่วนมาก</span></label
-          >
+        <div v-if="showUrgencyFilter"
+          class="absolute z-10 w-48 p-3 mt-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-md shadow-lg">
+          <label class="flex items-center py-1"><input type="checkbox" value="low" v-model="selectedUrgencies"
+              class="w-4 h-4 text-blue-600" /><span class="ml-2">ไม่เร่งด่วน</span></label>
+          <label class="flex items-center py-1"><input type="checkbox" value="medium" v-model="selectedUrgencies"
+              class="w-4 h-4 text-blue-600" /><span class="ml-2">เร่งด่วน</span></label>
+          <label class="flex items-center py-1"><input type="checkbox" value="high" v-model="selectedUrgencies"
+              class="w-4 h-4 text-blue-600" /><span class="ml-2">เร่งด่วนมาก</span></label>
         </div>
       </div>
 
       <div class="relative">
-        <button
-          @click.stop="showStatusFilter = !showStatusFilter"
-          class="flex items-center gap-1 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg"
-        >
+        <button @click.stop="showStatusFilter = !showStatusFilter"
+          class="flex items-center gap-1 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg">
           สถานะ
-          <img
-            src="/icon/sidebar/chevron-down-icon.svg"
-            class="w-4 h-4 opacity-70"
-            :class="{ 'rotate-180': showStatusFilter }"
-          />
+          <img src="/icon/sidebar/chevron-down-icon.svg" class="w-4 h-4 opacity-70"
+            :class="{ 'rotate-180': showStatusFilter }" />
         </button>
-        <div
-          v-if="showStatusFilter"
-          class="absolute z-10 w-48 p-3 mt-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-md shadow-lg"
-        >
-          <label class="flex items-center py-1"
-            ><input
-              type="checkbox"
-              value="pending"
-              v-model="selectedStatuses"
-              class="w-4 h-4 text-blue-600"
-            /><span class="ml-2">รอดำเนินการ</span></label
-          >
-          <label class="flex items-center py-1"
-            ><input
-              type="checkbox"
-              value="in_progress"
-              v-model="selectedStatuses"
-              class="w-4 h-4 text-blue-600"
-            /><span class="ml-2">กำลังดำเนินการ</span></label
-          >
-          <label class="flex items-center py-1"
-            ><input
-              type="checkbox"
-              value="done"
-              v-model="selectedStatuses"
-              class="w-4 h-4 text-blue-600"
-            /><span class="ml-2">เสร็จสิ้น</span></label
-          >
+        <div v-if="showStatusFilter"
+          class="absolute z-10 w-48 p-3 mt-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-md shadow-lg">
+          <label class="flex items-center py-1"><input type="checkbox" value="pending" v-model="selectedStatuses"
+              class="w-4 h-4 text-blue-600" /><span class="ml-2">รอดำเนินการ</span></label>
+          <label class="flex items-center py-1"><input type="checkbox" value="in_progress" v-model="selectedStatuses"
+              class="w-4 h-4 text-blue-600" /><span class="ml-2">กำลังดำเนินการ</span></label>
+          <label class="flex items-center py-1"><input type="checkbox" value="done" v-model="selectedStatuses"
+              class="w-4 h-4 text-blue-600" /><span class="ml-2">เสร็จสิ้น</span></label>
         </div>
       </div>
 
       <transition name="fade">
-        <button
-          v-if="selectedStatuses.length || selectedUrgencies.length || searchQuery"
-          @click="clearFilters"
-          class="text-sm font-medium text-blue-600 hover:text-blue-700"
-        >
+        <button v-if="selectedStatuses.length || selectedUrgencies.length || searchQuery" @click="clearFilters"
+          class="text-sm font-medium text-blue-600 hover:text-blue-700">
           ล้างตัวกรอง
         </button>
       </transition>
     </div>
 
-    <TableComponent
-      :columns="[
-        'วันที่',
-        'รหัสใบแจ้ง',
-        'ผู้แจ้ง',
-        'หน่วยงาน',
-        'เรื่องที่แจ้ง',
-        'สถานที่',
-        'สถานะ',
-        'ตัวดำเนินการ',
-      ]"
-      :rows="rowsForTable"
-      :rawRows="rawRows"
-      :perPage="10"
-      mode="technician"
-      @detail="goToDetail"
-      @accept="handleAccept"
-      @close-job="handleCloseJob"
-    />
+    <TableComponent :columns="[
+      'วันที่',
+      'รหัสใบแจ้ง',
+      'ผู้แจ้ง',
+      'หน่วยงาน',
+      'เรื่องที่แจ้ง',
+      'สถานที่',
+      'สถานะ',
+      'ตัวดำเนินการ',
+    ]" :rows="rowsForTable" :rawRows="rawRows" :perPage="10" mode="technician" @detail="goToDetail"
+      @accept="handleAccept" @close-job="handleCloseJob" />
   </div>
 
-  <acceptJobMadalComponent
-    v-if="showAcceptPopup"
-    :repairCode="currentAcceptCode"
-    :currentUserId="tokenData?.us_id"
-    @close="showAcceptPopup = false"
-    @success="handleAcceptSuccess"
-  />
+  <acceptJobMadalComponent v-if="showAcceptPopup" :repairCode="currentAcceptCode" :currentUserId="tokenData?.us_id"
+    @close="showAcceptPopup = false" @success="handleAcceptSuccess" />
 </template>
 
 <style scoped>
@@ -448,6 +397,7 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
 .fade-leave-active {
   transition: opacity 0.25s ease;
 }
+
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
