@@ -76,7 +76,15 @@ const filteredRowsData = computed(() => {
   const q = searchQuery.value.toLowerCase()
   const dateFilter = selectedDate.value
 
-  return rowsData.value.filter((r) => {
+  // ลำดับความสำคัญของสถานะ: pending > in_progress > done > cancel
+  const statusPriority = {
+    pending: 1,
+    in_progress: 2,
+    done: 3,
+    cancel: 4,
+  }
+
+  const filtered = rowsData.value.filter((r) => {
     // 1. กรองคำค้นหา
     const code = String(r.rf_code || '').toLowerCase()
     const problem = String(r.rf_problem || '').toLowerCase()
@@ -103,6 +111,29 @@ const filteredRowsData = computed(() => {
     }
 
     return matchSearch && matchDate && matchStatus && matchUrgency
+  })
+
+  // เรียงลำดับ: 1) ตามสถานะ (pending > in_progress > done > cancel)
+  //            2) ภายในสถานะเดียวกัน เรียงตามวันที่หรือรหัสแจ้งซ่อมล่าสุดก่อน
+  return filtered.sort((a, b) => {
+    const priorityA = statusPriority[a.rf_user_status] || 99
+    const priorityB = statusPriority[b.rf_user_status] || 99
+
+    // เรียงตามสถานะก่อน
+    if (priorityA !== priorityB) {
+      return priorityA - priorityB
+    }
+
+    // ถ้าสถานะเดียวกัน เรียงตามวันที่ล่าสุดก่อน (desc)
+    const dateA = a.rf_create_at ? new Date(a.rf_create_at).getTime() : 0
+    const dateB = b.rf_create_at ? new Date(b.rf_create_at).getTime() : 0
+
+    if (dateA !== dateB) {
+      return dateB - dateA // ล่าสุดก่อน
+    }
+
+    // ถ้าวันที่เหมือนกัน เรียงตามรหัสแจ้งซ่อมล่าสุดก่อน (desc)
+    return String(b.rf_code || '').localeCompare(String(a.rf_code || ''))
   })
 })
 
