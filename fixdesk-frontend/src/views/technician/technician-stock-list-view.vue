@@ -18,8 +18,7 @@ const isLoading = ref(false)        // สถานะการโหลดข�
 // --- Filter Variables (ตัวแปรสำหรับระบบกรอง) ---
 const searchKeyword = ref('')           // คำค้นหา (ชื่อสินค้า หรือ รหัส)
 const isCategoryFilterVisible = ref(false) // สถานะเปิด/ปิด Dropdown หมวดหมู่
-const isCountFilterVisible = ref(false)    // สถานะเปิด/ปิด Dropdown จำนวน (UI Placeholder)
-const isUnitFilterVisible = ref(false)     // สถานะเปิด/ปิด Dropdown หน่วยนับ (UI Placeholder)
+const sortQuantity = ref(null)             // null = ไม่เรียง, 'asc' = น้อยไปมาก, 'desc' = มากไปน้อย
 const isStatusFilterVisible = ref(false)   // สถานะเปิด/ปิด Dropdown สถานะสินค้า
 const selectedCategories = ref([])      // รายการหมวดหมู่ที่ถูกติ๊กเลือก
 const selectedStatuses = ref([])        // รายการสถานะที่ถูกติ๊กเลือก (เช่น 'in_stock')
@@ -118,7 +117,7 @@ const fetchInventoryItems = async () => {
 
 // กรองรายการสินค้าตามเงื่อนไข (ค้นหา + หมวดหมู่ + สถานะ)
 const filteredStockItems = computed(() => {
-  return stockItems.value.filter(item => {
+  let result = stockItems.value.filter(item => {
     // 1. กรองตามคำค้นหา (ชื่อ หรือ รหัสครุภัณฑ์)
     const query = searchKeyword.value.toLowerCase()
     const matchesSearch = item.name.toLowerCase().includes(query) ||
@@ -135,7 +134,27 @@ const filteredStockItems = computed(() => {
     // ต้องตรงตามเงื่อนไขทั้งหมดถึงจะแสดงผล
     return matchesSearch && matchesCategory && matchesStatus
   })
+
+  // 4. เรียงลำดับตามจำนวนคงเหลือ (ถ้ามีการเลือก)
+  if (sortQuantity.value === 'asc') {
+    result = [...result].sort((a, b) => a.quantity - b.quantity)
+  } else if (sortQuantity.value === 'desc') {
+    result = [...result].sort((a, b) => b.quantity - a.quantity)
+  }
+
+  return result
 })
+
+// ฟังก์ชันสลับการเรียงลำดับ
+const toggleSortQuantity = () => {
+  if (sortQuantity.value === null) {
+    sortQuantity.value = 'desc' // มากไปน้อย
+  } else if (sortQuantity.value === 'desc') {
+    sortQuantity.value = 'asc' // น้อยไปมาก
+  } else {
+    sortQuantity.value = null // ไม่เรียง
+  }
+}
 
 // --- Lifecycle Hook (เริ่มทำงานเมื่อหน้าเว็บโหลดเสร็จ) ---
 onMounted(() => {
@@ -151,6 +170,31 @@ const cartBtn = ref(null)
 // ฟังก์ชันเพิ่มสินค้าลงตะกร้า + animation
 const addToCart = (product) => {
   const found = cartItems.value.find(i => i.id === product.id)
+  const currentQtyInCart = found ? found.qty : 0
+
+  // ตรวจสอบว่าจำนวนในตะกร้า + 1 เกินจำนวนคงเหลือหรือไม่
+  if (currentQtyInCart + 1 > product.quantity) {
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true,
+      animation: false,
+      didOpen: (toast) => {
+        toast.addEventListener('mouseenter', Swal.stopTimer)
+        toast.addEventListener('mouseleave', Swal.resumeTimer)
+      }
+    })
+    Toast.fire({
+      icon: 'warning',
+      title: `ไม่สามารถเพิ่มสินค้า "${product.name}" ได้`,
+      text: `เนื่องจากมีจำนวนคงเหลือ ${product.quantity} ${product.unit}`,
+      background: '#fef3c7',
+      color: '#92400e'
+    })
+    return
+  }
 
   if (found) {
     found.qty++
@@ -224,31 +268,20 @@ const bounceCart = () => {
             </div>
           </div>
 
-          <div class="relative">
-            <button @click.stop="isCountFilterVisible = !isCountFilterVisible"
-              class="flex items-center gap-1 border border-gray-300 rounded-lg px-4 py-2 bg-white text-gray-700 hover:bg-gray-50">
-              จำนวนคงเหลือ
-              <img src="/icon/sidebar/chevron-down-icon.svg" class="w-4 h-4 opacity-70 transition-transform"
-                :class="{ 'rotate-180': isCountFilterVisible }" />
-            </button>
-            <div v-if="isCountFilterVisible"
-              class="absolute left-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg p-3 z-20">
-              <div class="text-sm text-gray-400">ยังไม่เปิดใช้งาน</div>
-            </div>
-          </div>
-
-          <div class="relative">
-            <button @click.stop="isUnitFilterVisible = !isUnitFilterVisible"
-              class="flex items-center gap-1 border border-gray-300 rounded-lg px-4 py-2 bg-white text-gray-700 hover:bg-gray-50">
-              หน่วยนับ
-              <img src="/icon/sidebar/chevron-down-icon.svg" class="w-4 h-4 opacity-70 transition-transform"
-                :class="{ 'rotate-180': isUnitFilterVisible }" />
-            </button>
-            <div v-if="isUnitFilterVisible"
-              class="absolute left-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg p-3 z-20">
-              <div class="text-sm text-gray-400">ยังไม่เปิดใช้งาน</div>
-            </div>
-          </div>
+          <button @click="toggleSortQuantity"
+            class="flex items-center gap-1 border border-gray-300 rounded-lg px-4 py-2 bg-white text-gray-700 hover:bg-gray-50"
+            :class="{ 'bg-blue-50 border-blue-300 text-blue-700': sortQuantity !== null }">
+            จำนวนคงเหลือ
+            <svg v-if="sortQuantity === 'desc'" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+            <svg v-else-if="sortQuantity === 'asc'" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+            </svg>
+            <svg v-else xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+            </svg>
+          </button>
 
           <div class="relative">
             <button @click.stop="isStatusFilterVisible = !isStatusFilterVisible"
@@ -374,11 +407,13 @@ const bounceCart = () => {
             </span>
 
             <button
-              @click="item.qty++"
-              class="w-8 h-8 flex items-center justify-center border rounded-md hover:bg-gray-100"
+              @click="item.qty < item.quantity ? item.qty++ : null"
+              :disabled="item.qty >= item.quantity"
+              class="w-8 h-8 flex items-center justify-center border rounded-md hover:bg-gray-100 disabled:opacity-40"
             >
               +
             </button>
+            <span class="text-xs text-gray-400">(คงเหลือ {{ item.quantity }})</span>
           </div>
         </div>
 
