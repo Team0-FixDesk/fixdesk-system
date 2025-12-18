@@ -207,24 +207,26 @@ const statusPieOption = ref({
       color: '#6B7280',
     },
   },
-  series: [{
-    name: 'สถานะ',
-    type: 'pie',
-    radius: '70%',
-    center: ['50%', '45%'],
-    data: [
-      { value: 0, name: 'รอดำเนินการ', itemStyle: { color: '#F59E0B' } },
-      { value: 0, name: 'กำลังดำเนินการ', itemStyle: { color: '#EAB308' } },
-      { value: 0, name: 'เสร็จสิ้น', itemStyle: { color: '#10B981' } }
-    ],
-    emphasis: {
-      itemStyle: {
-        shadowBlur: 10,
-        shadowOffsetX: 0,
-        shadowColor: 'rgba(0, 0, 0, 0.5)'
-      }
-    }
-  }]
+  series: [
+    {
+      name: 'สถานะ',
+      type: 'pie',
+      radius: '70%',
+      center: ['50%', '45%'],
+      data: [
+        { value: 0, name: 'รอดำเนินการ', itemStyle: { color: '#F59E0B' } },
+        { value: 0, name: 'กำลังดำเนินการ', itemStyle: { color: '#EAB308' } },
+        { value: 0, name: 'เสร็จสิ้น', itemStyle: { color: '#10B981' } },
+      ],
+      emphasis: {
+        itemStyle: {
+          shadowBlur: 10,
+          shadowOffsetX: 0,
+          shadowColor: 'rgba(0, 0, 0, 0.5)',
+        },
+      },
+    },
+  ],
 })
 
 // Trend Line Chart
@@ -510,7 +512,7 @@ function processDashboardData(repairs, techTypes, previousYearRepairs = []) {
   // Update status pie chart
   statusPieOption.value.series[0].data = [
     { value: pendingRepairs, name: 'รอดำเนินการ', itemStyle: { color: '#F59E0B' } },
-    { value: inProgressRepairs, name: 'กำลังซ่อม', itemStyle: { color: '#EAB308' } },
+    { value: inProgressRepairs, name: 'กำลังดำเนินการ', itemStyle: { color: '#EAB308' } },
     { value: completedRepairs, name: 'เสร็จสิ้น', itemStyle: { color: '#10B981' } },
   ]
 
