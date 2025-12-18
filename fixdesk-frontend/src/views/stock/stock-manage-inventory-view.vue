@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import TableComponent from '@/components/table-component.vue'
 import { useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
@@ -48,7 +48,7 @@ const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
 
 // --- Dropdown หมวดหมู่ ---
 const typeOptions = ref([])
-const categoriesLoaded = ref(false) 
+const categoriesLoaded = ref(false)
 const categoryFilter = ref([])
 
 const fetchCategories = async () => {
@@ -59,10 +59,8 @@ const fetchCategories = async () => {
     if (!res.ok) throw new Error(`โหลดหมวดหมู่ไม่สำเร็จ (${res.status})`)
 
     const data = await res.json()
-    typeOptions.value = (data || []).map((cat) => ({
-      value: Number(cat.ct_id),
-      label: cat.ct_name,
-    }))
+    // ใช้ชื่อหมวดหมู่ (ct_name) โดยตรง
+    typeOptions.value = (data || []).map((cat) => cat.ct_name)
 
     categoriesLoaded.value = true
   } catch (err) {
@@ -71,10 +69,36 @@ const fetchCategories = async () => {
 }
 
 // --- Maps / Table Rows ---
-const filteredRows = ref([])
+const allRows = ref([])  // เก็บข้อมูลดิบทั้งหมด
 const assetToIdMap = ref({})
 const pdIdToCategoryIdMap = ref({})
 const pdIdToImageMap = ref({})
+const stockStatusMap = ref({})  // map: pdId -> 'in_stock' | 'low_stock' | 'out_of_stock'
+
+// --- Computed: Filtered Rows (กรองข้อมูลตามเงื่อนไข) ---
+const filteredRows = computed(() => {
+  return allRows.value.filter((row) => {
+    const pdId = row[0]
+    const assetCode = String(row[1] || '').toLowerCase()
+    const name = String(row[2] || '').toLowerCase()
+    const categoryName = row[3]
+    const query = searchQuery.value.toLowerCase()
+
+    // 1. กรองตามคำค้นหา (ชื่อ หรือ รหัสครุภัณฑ์)
+    const matchSearch = !query || name.includes(query) || assetCode.includes(query)
+
+    // 2. กรองตามหมวดหมู่ (ใช้ชื่อหมวดหมู่โดยตรง)
+    const matchCategory = selectedTypes.value.length === 0 ||
+      selectedTypes.value.includes(categoryName)
+
+    // 3. กรองตามสถานะ stock
+    const stockStatus = stockStatusMap.value[pdId]
+    const matchStatus = selectedStatuses.value.length === 0 ||
+      selectedStatuses.value.includes(stockStatus)
+
+    return matchSearch && matchCategory && matchStatus
+  })
+})
 
 async function fetchAllStock() {
   try {
@@ -102,10 +126,12 @@ async function fetchAllStock() {
     // reset maps
     pdIdToCategoryIdMap.value = {}
     pdIdToImageMap.value = {}
+    stockStatusMap.value = {}
 
-    filteredRows.value = (data || []).map((item) => {
+    allRows.value = (data || []).map((item) => {
       const pdId = item.pd_id != null ? String(item.pd_id) : '-'
       const assetCode = item.pd_asset_code ?? '-'
+      const quantity = item.pd_quantity ?? 0
 
       // map: pdId -> categoryId
       const categoryId =
@@ -117,18 +143,34 @@ async function fetchAllStock() {
       // map: pdId -> image filename (เก็บแยก ไม่โชว์บนตาราง)
       pdIdToImageMap.value[pdId] = item.pd_upload_image ?? null
 
+      // map: pdId -> stock status (สำหรับ filter) - คำนวณจากจำนวนสินค้า
+      let stockStatus = 'in_stock'
+      let stockStatusLabel = 'พร้อมใช้งาน'
+      if (quantity <= 0) {
+        stockStatus = 'out_of_stock'
+        stockStatusLabel = 'สินค้าหมด'
+      } else if (quantity < 10) {
+        stockStatus = 'low_stock'
+        stockStatusLabel = 'ใกล้หมด'
+      }
+      stockStatusMap.value[pdId] = stockStatus
+
       // rows สำหรับตาราง (ไม่มีชื่อไฟล์)
       return [
         pdId, // [0] PK
         assetCode, // [1]
         item.pd_name ?? '-', // [2]
         item.ct_name ?? '-', // [3]
-        item.pd_quantity ?? '-', // [4]
+        quantity, // [4]
         item.units_name ?? '-', // [5]
-        item.status === 'active' ? 'พร้อมใช้งาน' : 'ไม่พร้อมใช้งาน', // [6]
+        stockStatusLabel, // [6]
         'actions', // [7]
       ]
     })
+
+    // อัพเดท summary counts
+    itemsCount.value = allRows.value.length
+    itemRequestDeclined.value = Object.values(stockStatusMap.value).filter(s => s === 'low_stock' || s === 'out_of_stock').length
   } catch (error) {
     console.error('Error fetching stock data:', error)
     Swal.fire('ผิดพลาด', error.message || 'ไม่สามารถดึงข้อมูลสินค้าได้', 'error')
@@ -141,6 +183,11 @@ async function fetchAllStock() {
 onMounted(() => {
   fetchCategories()
   fetchAllStock()
+  document.addEventListener('click', closeDropdown)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', closeDropdown)
 })
 
 // --- Modal State ---
@@ -168,7 +215,7 @@ const addErrors = ref({})
 
 // --- Filter & Search ---
 const searchQuery = ref('')
-const selectedUrgencies = ref([])
+const selectedStatuses = ref([])  // 'in_stock' | 'low_stock' | 'out_of_stock'
 const selectedTypes = ref([])
 const itemsCount = ref(0)
 const itemsNew = ref(0)
@@ -178,6 +225,21 @@ const itemNewToday = ref(0)
 
 
 // --- Methods ---
+
+// Clear all filters
+const clearFilters = () => {
+  searchQuery.value = ''
+  selectedStatuses.value = []
+  selectedTypes.value = []
+}
+
+// Close dropdown when clicking outside
+const closeDropdown = (e) => {
+  if (!e.target.closest('.relative')) {
+    showStatusFilter.value = false
+    showTypeFilter.value = false
+  }
+}
 
 // 1. Reset & Close Modal
 const closeAddModal = () => {
@@ -423,13 +485,13 @@ const goToEdit = (valueFromTable) => {
   let row = null
 
   // กรณีส่งมาเป็น index
-  if (typeof valueFromTable === 'number' && filteredRows.value[valueFromTable]) {
-    row = filteredRows.value[valueFromTable]
+  if (typeof valueFromTable === 'number' && allRows.value[valueFromTable]) {
+    row = allRows.value[valueFromTable]
   }
 
   // กรณีส่งมาเป็น id หรือ asset_code
   if (!row) {
-    row = filteredRows.value.find(
+    row = allRows.value.find(
       (r) => r[0] === valueFromTable || r[1] === valueFromTable
     )
   }
@@ -444,8 +506,8 @@ const goToEdit = (valueFromTable) => {
   editForm.value = {
     name: row[2],
     asset_no: row[1],
-    ct_id: pdIdToCategoryIdMap.value[row[0]] !== null 
-           ? Number(pdIdToCategoryIdMap.value[row[0]]) 
+    ct_id: pdIdToCategoryIdMap.value[row[0]] !== null
+           ? Number(pdIdToCategoryIdMap.value[row[0]])
            : null,  // fallback เป็น null
     quantity: row[4],
     unit: row[5],
@@ -503,7 +565,7 @@ const confirmEditItem = async () => {
     if (!editForm.value.name) editErrors.value.name = 'กรุณากรอกชื่อรายการ'
     if (!editForm.value.quantity) editErrors.value.quantity = 'กรุณากรอกจำนวน'
     if (!editForm.value.unit) editErrors.value.unit = 'กรุณากรอกหน่วยนับ'
-    
+
     if (Object.keys(editErrors.value).length > 0) return
 
     const formData = new FormData()
@@ -606,7 +668,7 @@ const openEditModal = async (pdIdFromTable) => {
   await nextTick()
 
   const pdId = String(pdIdFromTable ?? '')
-  const row = filteredRows.value.find((r) => String(r[0]) === pdId)
+  const row = allRows.value.find((r) => String(r[0]) === pdId)
 
   if (!row) {
     Swal.fire('ผิดพลาด', 'ไม่พบข้อมูลสำหรับแก้ไข', 'error')
@@ -722,34 +784,34 @@ const openEditModal = async (pdIdFromTable) => {
               v-if="showStatusFilter"
               class="absolute mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg p-3 text-sm text-gray-700 z-10"
             >
-              <label class="flex items-center py-1 cursor-pointer">
+              <label class="flex items-center py-1 cursor-pointer hover:bg-gray-50">
                 <input
                   type="checkbox"
-                  value="low"
-                  v-model="selectedUrgencies"
-                  class="w-4 h-4 text-blue-600 rounded"
+                  value="in_stock"
+                  v-model="selectedStatuses"
+                  class="w-4 h-4 text-green-600 rounded"
                 />
-                <span class="ml-2">In Stock</span>
+                <span class="ml-2">พร้อมใช้งาน (In Stock)</span>
               </label>
 
-              <label class="flex items-center py-1 cursor-pointer">
+              <label class="flex items-center py-1 cursor-pointer hover:bg-gray-50">
                 <input
                   type="checkbox"
-                  value="medium"
-                  v-model="selectedUrgencies"
-                  class="w-4 h-4 text-blue-600 rounded"
+                  value="low_stock"
+                  v-model="selectedStatuses"
+                  class="w-4 h-4 text-orange-500 rounded"
                 />
-                <span class="ml-2">Low Stock</span>
+                <span class="ml-2">ใกล้หมด (Low Stock)</span>
               </label>
 
-              <label class="flex items-center py-1 cursor-pointer">
+              <label class="flex items-center py-1 cursor-pointer hover:bg-gray-50">
                 <input
                   type="checkbox"
-                  value="high"
-                  v-model="selectedUrgencies"
-                  class="w-4 h-4 text-blue-600 rounded"
+                  value="out_of_stock"
+                  v-model="selectedStatuses"
+                  class="w-4 h-4 text-red-600 rounded"
                 />
-                <span class="ml-2">Out of Stock</span>
+                <span class="ml-2">สินค้าหมด (Out of Stock)</span>
               </label>
             </div>
           </div>
@@ -769,19 +831,31 @@ const openEditModal = async (pdIdFromTable) => {
             </button>
             <div
               v-if="showTypeFilter"
-              class="absolute mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg p-3 text-sm text-gray-700 z-10"
+              class="absolute mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg p-3 text-sm text-gray-700 z-10 max-h-60 overflow-y-auto"
             >
-              <label v-for="opt in typeOptions" :key="opt.value" class="flex items-center py-1">
+              <div v-if="typeOptions.length === 0" class="text-gray-400 text-sm p-2">ไม่มีข้อมูล</div>
+              <label v-for="category in typeOptions" :key="category" class="flex items-center py-1 hover:bg-gray-50 cursor-pointer">
                 <input
                   type="checkbox"
-                  :value="opt.value"
+                  :value="category"
                   v-model="selectedTypes"
-                  class="w-4 h-4 text-blue-600 border-gray-300"
+                  class="w-4 h-4 text-blue-600 border-gray-300 rounded"
                 />
-                <span class="ml-2">{{ opt.label }}</span>
+                <span class="ml-2">{{ category }}</span>
               </label>
             </div>
           </div>
+
+          <!-- ปุ่มล้าง filter -->
+          <transition name="fade">
+            <button
+              v-if="searchQuery || selectedStatuses.length || selectedTypes.length"
+              @click="clearFilters"
+              class="text-sm font-medium text-blue-600 hover:text-blue-700"
+            >
+              ล้างตัวกรอง
+            </button>
+          </transition>
         </div>
       </div>
     </div>
@@ -1195,7 +1269,7 @@ const openEditModal = async (pdIdFromTable) => {
 
             <div class="flex flex-col flex-1 mb-6">
               <label class="block text-sm font-medium text-black mb-2">รูปภาพสินค้า</label>
-              
+
               <label
                 v-if="editFilePreview.length === 0 && !editForm.upload_image"
                 for="dropzone-file-edit"
@@ -1224,7 +1298,7 @@ const openEditModal = async (pdIdFromTable) => {
               <div v-else-if="editFilePreview.length === 0 && editForm.upload_image" class="mb-4">
                  <div class="relative w-full h-64 bg-gray-100 rounded-lg border border-gray-300 flex items-center justify-center overflow-hidden group">
                     <img :src="`${API_BASE}/uploads/${editForm.upload_image}`" class="h-full object-contain" alt="Current Image" />
-                    
+
                     <label for="dropzone-file-edit-replace" class="absolute inset-0 bg-black bg-opacity-50 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-white">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -1280,3 +1354,15 @@ const openEditModal = async (pdIdFromTable) => {
 
   </div>
 </template>
+
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.25s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+</style>
