@@ -2,7 +2,7 @@
 // ตั้งชื่อ Component ให้ Debug ง่ายขึ้น
 defineOptions({ name: 'TechnicianStockListView' })
 
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import ProductCardComponent from '@/components/product-card-component.vue'
 import Swal from 'sweetalert2'
@@ -174,6 +174,16 @@ onMounted(() => {
   fetchInventoryItems()   // โหลดรายการสินค้า
 })
 
+onBeforeUnmount(() => {
+  // เมื่อออกจากหน้านี้ ให้ลบรหัสใบแจ้งซ่อมที่เก็บไว้ใน sessionStorage
+  try {
+    sessionStorage.removeItem('selected_rf_code')
+  } catch (e) {
+    console.warn('Cannot remove selected_rf_code from sessionStorage', e)
+  }
+  selectedRepairCode.value = null
+})
+
 // --- CART STATE ---
 const cartItems = ref([])
 const isCartOpen = ref(false)
@@ -253,7 +263,7 @@ const confirmWithdraw = async () => {
     showCancelButton: true,
     confirmButtonText: 'ยืนยันการเบิก',
     cancelButtonText: 'ยกเลิก',
-    confirmButtonColor: '#0ea5a4',
+    confirmButtonColor: '#1E48D1',
     width: 600,
   })
 

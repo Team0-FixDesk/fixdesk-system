@@ -248,8 +248,8 @@ function canEditUser(row) {
             " class="px-3 py-2 sm:px-4 sm:py-4 text-center">
               <!-- คอลัมน์ action -->
               <div v-if="cell === 'actions'" class="flex justify-center gap-2">
-                <!-- ดูรายละเอียด (แสดงเสมอ) -->
-                <div
+                <!-- ดูรายละเอียด (ไม่แสดงในโหมด technician) -->
+                <div v-if="props.mode !== 'technician'"
                   class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center bg-[#1E48D1] hover:bg-[#163A9B] text-white rounded-lg transition cursor-pointer flex-none"
                   title="ดูรายละเอียด" @click.stop="$emit('detail', getRowId(row))">
                   <img src="/icon/info-icon.svg" alt="info" class="w-5 h-5" />
@@ -259,53 +259,63 @@ function canEditUser(row) {
                 <template v-if="props.mode === 'technician'">
                   <div class="relative" @click.stop>
                     <button @click.stop="toggleMenu(ri)"
-                      class="w-8 h-8 flex items-center justify-center bg-[#1E48D1] hover:bg-[#163A9B] text-white rounded-md"
-                      :title="'ตัวเลือกเ'">
+                      class="w-8 h-8 flex items-center justify-center bg-[#1E48D1] hover:bg-[#163A9B] text-white rounded-md transition"
+                      :title="'ตัวเลือกเพิ่มเติม'">
                       <!-- vertical kebab icon -->
-                      <img src="/icon/Kebab.svg" alt="" class="w-5 h-5">
+                      <img src="/icon/Kebab.svg" alt="menu" class="w-5 h-5">
                     </button>
 
                     <div v-if="openMenu === ri"
                       class="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-md shadow-lg z-20">
-                      <button
-                        class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center bg-[#1E48D1] hover:bg-[#163A9B] text-white rounded-lg transition cursor-pointer flex-none"
-                        @click.stop="() => { $emit('detail', getRowId(row)); closeMenu() }">
-                        <img src="/icon/info-icon.svg" alt="info" class="w-5 h-5" />
-                      </button>
 
-                      <template v-if="getRowStatus(row) === 'pending'">
+                      <!-- ปุ่มทั้งหมดอยู่ใน container เดียวกัน -->
+                      <div class="p-2 space-y-2">
+                        <!-- ปุ่มรายละเอียด -->
                         <button
-                          class="px-5 py-2 text-xs font-medium text-white bg-teal-700 hover:bg-teal-900 rounded-lg hover:transition flex-none"
-                          @click.stop="$emit('accept', getRowId(row))">
-                          รับงาน
+                          class="w-full px-4 py-2 flex items-center justify-center gap-2 text-sm font-medium text-white bg-[#1E48D1] hover:bg-[#163A9B] rounded-lg transition"
+                          @click.stop="() => { $emit('detail', getRowId(row)); closeMenu() }">
+                          <span>รายละเอียด</span>
                         </button>
-                      </template>
 
-                      <template v-else-if="getRowStatus(row) === 'in_progress'">
-                        <button class="px-5 py-2 text-xs font-medium text-white bg-green-600 rounded-lg"
-                          @click.stop="$emit('close-job', getRowMetaByCode(row))">
-                          ปิดงาน
-                        </button>
-                      </template>
+                        <!-- ปุ่มตามสถานะงาน -->
+                        <template v-if="getRowStatus(row) === 'pending'">
+                          <button
+                            class="w-full px-4 py-2 text-sm font-medium text-white bg-teal-700 hover:bg-teal-900 rounded-lg transition"
+                            @click.stop="() => { $emit('accept', getRowId(row)); closeMenu() }">
+                            รับงาน
+                          </button>
+                        </template>
 
-                      <template v-else-if="getRowStatus(row) !== 'done'">
+                        <template v-else-if="getRowStatus(row) === 'in_progress'">
+                          <button
+                            class="w-full px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition"
+                            @click.stop="() => { $emit('close-job', getRowMetaByCode(row)); closeMenu() }">
+                            ปิดงาน
+                          </button>
+                        </template>
+
+                        <template v-else-if="getRowStatus(row) !== 'done'">
+                          <button
+                            class="w-full px-4 py-2 text-sm font-medium text-white bg-amber-500 hover:bg-amber-600 rounded-lg transition"
+                            @click.stop="() => { $emit('change-status', getRowId(row)); closeMenu() }">
+                            เปลี่ยนสถานะ
+                          </button>
+                        </template>
+
+                        <template v-else>
+                          <div class="px-4 py-2 text-sm text-center text-gray-500">
+                            เสร็จสิ้น
+                          </div>
+                        </template>
+
+                        <!-- ปุ่มเบิกของ -->
                         <button
-                          class="px-3 py-2 text-xs font-medium text-white bg-amber-500 hover:bg-amber-600 rounded-lg hover:shadow-lg transition flex-none"
-                          @click.stop="$emit('change-status', getRowId(row))">
-                          เปลี่ยนสถานะ
+                          class="w-full px-4 py-2 flex items-center justify-center gap-2 text-sm font-medium text-white bg-[#1E48D1] hover:bg-[#163A9B] rounded-lg transition"
+                          @click.stop="() => { $emit('open-stock', getRowId(row)); closeMenu() }" title="ไปหน้าเบิกวัสดุอ/อุปกรณ์">
+                        
+                          <span>เบิกวัสดุอ/อุปกรณ์</span>
                         </button>
-                      </template>
-
-                      <template v-else>
-                        <div class="px-3 py-2 text-sm text-gray-500">เสร็จสิ้น</div>
-                      </template>
-
-                      <button
-                        class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center bg-[#1E48D1] hover:bg-[#163A9B] text-white rounded-lg transition cursor-pointer flex-none"
-                          @click.stop="$emit('open-stock', getRowId(row)); closeMenu()"
-                        title="ไปหน้าเบิกของ">
-                        <img src="/icon/shopping-basket-icon.svg" alt="basket" class="w-5 h-5" />
-                      </button>
+                      </div>
                     </div>
                   </div>
                 </template>

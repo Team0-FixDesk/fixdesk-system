@@ -395,7 +395,7 @@ function openWithdrawModal() {
   // 1) ถ้ามี rf_tt_id (กรณีเก็บเป็น ID)
   if (repair.value?.rf_tt_id) {
     withdrawForm.value.repair_type_id = repair.value.rf_tt_id
-  } 
+  }
   else {
     // 2) ถ้าเก็บเป็นชื่อ
     const match = technicianTypes.value.find(
@@ -456,6 +456,16 @@ async function fetchTechnicianTypes() {
   } catch (err) {
     console.error('โหลดประเภทงานซ่อมไม่สำเร็จ:', err)
   }
+}
+
+function handleRepairFrom(code) {
+  // เก็บรหัสใบแจ้งซ่อมไว้ใน sessionStorage แล้วไปหน้า technician-stock-list
+  try {
+    sessionStorage.setItem('selected_rf_code', String(code))
+  } catch (e) {
+    console.warn('Cannot store selected_rf_code', e)
+  }
+  router.push('/main/technician-stock-list')
 }
 
 onMounted(() => {
@@ -730,7 +740,7 @@ onMounted(() => {
           <div class="bg-white border border-gray-200 rounded-xl p-4 sm:p-6 shadow-sm">
             <div class="flex items-center justify-between mb-4">
               <h2 class="text-lg font-semibold text-gray-800">รายการเบิก</h2>
-            
+
               <!-- ปุ่มยืนยันการเบิก มุมขวาบน -->
               <button
                 v-if="repair?.rf_user_status !== 'done'"
@@ -738,12 +748,12 @@ onMounted(() => {
                 class="px-4 py-2 text-sm sm:text-base font-semibold rounded-lg shadow-sm
                        bg-blue-600 hover:bg-blue-700 text-white transition
                        flex items-center gap-2"
-                @click="openWithdrawModal"
+                @click="handleRepairFrom(repair?.rf_code)"
               >
-                ยืนยันการเบิก
+                เบิกวัสดุ/อุปกรณ์
               </button>
             </div>
-          
+
             <div v-if="repair?.stock_items?.length" class="space-y-2">
               <div
                 v-for="(item, i) in repair.stock_items"
@@ -754,7 +764,7 @@ onMounted(() => {
                 <span>{{ item.quantity }} ชิ้น</span>
               </div>
             </div>
-          
+
             <div v-else class="text-center text-gray-400 text-sm sm:text-base py-8">
               - ไม่มีรายการเบิก -
             </div>
