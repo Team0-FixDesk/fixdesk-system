@@ -320,6 +320,157 @@ onMounted(() => {
 
   fetchRepairDetail()
 })
+
+// ปุ่มยืนยันการเบิก + ฟอร์มใน modal
+const showWithdrawModal = ref(false)
+// ==== JWT Decode (เพิ่มส่วนนี้เข้าไปในไฟล์) ====
+function parseJwt(token) {
+  try {
+    const base64Url = token.split('.')[1]
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    )
+    return JSON.parse(jsonPayload)
+  } catch (err) {
+    console.error('ไม่สามารถ decode token ได้:', err)
+    return {}
+  }
+}
+
+
+const withdrawForm = ref({
+  requester_name: '',
+  unit: '',
+  date: '',
+  repair_type_id: '',
+  repair_type_name: '',
+  location: '',
+  urgency: '',
+  reason: '',
+  repair_code: '',
+})
+
+// ดึงข้อมูล user ที่ล็อกอินจาก token
+function getCurrentUser() {
+  const token = localStorage.getItem('token') || sessionStorage.getItem('token')
+  if (!token) return {}
+
+  const payload = parseJwt(token) || {}
+
+  // ถ้า backend ใส่ข้อมูลไว้ใน payload.user ให้ดึงออกมาด้วย
+  const user = payload.user || payload
+
+  return user
+}
+
+// เปิด modal และเติมค่าเริ่มต้นจาก user ที่ล็อกอิน + ใบแจ้งซ่อม
+function openWithdrawModal() {
+  const user = getCurrentUser()
+
+  const nameTh =
+    user.us_first_name_th && user.us_last_name_th
+      ? `${user.us_first_name_th} ${user.us_last_name_th}`
+      : user.fullname || user.name || user.us_user_name || ''
+
+  const department =
+    user.us_department || user.department || user.dep_name || ''
+
+  withdrawForm.value = {
+    requester_name: nameTh,
+    unit: department,
+    date: new Date().toISOString().slice(0, 10),
+
+    repair_type_id: '',      // <-- ตั้งว่างก่อน
+    location: `${repair.value?.building_name || ''} / ${repair.value?.floor_name || ''} / ${repair.value?.room_name || ''}`,
+    urgency: repair.value?.rf_urgency || 'medium',
+    reason: '',
+    repair_code: repair.value?.rf_code || repairCode || '',
+  }
+
+  // -------- AUTO SELECT ----------
+  // 1) ถ้ามี rf_tt_id (กรณีเก็บเป็น ID)
+  if (repair.value?.rf_tt_id) {
+    withdrawForm.value.repair_type_id = repair.value.rf_tt_id
+  } 
+  else {
+    // 2) ถ้าเก็บเป็นชื่อ
+    const match = technicianTypes.value.find(
+      t => t.tt_name === repair.value?.repair_type_name
+    )
+    withdrawForm.value.repair_type_id = match ? match.tt_id : ''
+  }
+
+  showWithdrawModal.value = true
+}
+
+
+function closeWithdrawModal() {
+  showWithdrawModal.value = false
+}
+
+async function submitWithdrawForm() {
+  try {
+    // TODO: ยิง API ถ้ามี
+    // await fetch(...)
+
+    showWithdrawModal.value = false
+
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      showConfirmButton: false,
+      timer: 2500,
+      timerProgressBar: true,
+      didOpen: (toast) => {
+        toast.addEventListener('mouseenter', Swal.stopTimer)
+        toast.addEventListener('mouseleave', Swal.resumeTimer)
+      },
+    })
+
+    Toast.fire({
+      icon: 'success',
+      title: 'ยืนยันการเบิกเรียบร้อย'
+    })
+
+  } catch (err) {
+    console.error(err)
+    Swal.fire('ผิดพลาด', 'ไม่สามารถยืนยันการเบิกได้', 'error')
+  }
+}
+
+
+const technicianTypes = ref([])
+
+async function fetchTechnicianTypes() {
+  try {
+    const res = await fetch(`${API_BASE}/technician-types`) // <-- ชื่อ endpoint ตามที่คุณตั้ง
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.message || 'โหลดประเภทงานซ่อมไม่สำเร็จ')
+
+    // คาดว่า data = [{ tt_id, tt_name }, ...]
+    technicianTypes.value = data
+  } catch (err) {
+    console.error('โหลดประเภทงานซ่อมไม่สำเร็จ:', err)
+  }
+}
+
+onMounted(() => {
+  const state = history.state
+  if (state) {
+    if (state.fromAdmin) canAssign.value = true
+    if (state.fromTechnician) canAccept.value = true
+  }
+  if (history.state && history.state.fromAdmin) {
+    canAssign.value = true
+  }
+
+  fetchRepairDetail()
+  fetchTechnicianTypes()   // 👈 เพิ่มบรรทัดนี้
+})
 </script>
 
 <template>
@@ -577,7 +728,22 @@ onMounted(() => {
 
           <!-- กล่องรายการเบิก -->
           <div class="bg-white border border-gray-200 rounded-xl p-4 sm:p-6 shadow-sm">
-            <h2 class="text-lg font-semibold text-gray-800 mb-4">รายการเบิก</h2>
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-lg font-semibold text-gray-800">รายการเบิก</h2>
+            
+              <!-- ปุ่มยืนยันการเบิก มุมขวาบน -->
+              <button
+                v-if="repair?.rf_user_status !== 'done'"
+                type="button"
+                class="px-4 py-2 text-sm sm:text-base font-semibold rounded-lg shadow-sm
+                       bg-blue-600 hover:bg-blue-700 text-white transition
+                       flex items-center gap-2"
+                @click="openWithdrawModal"
+              >
+                ยืนยันการเบิก
+              </button>
+            </div>
+          
             <div v-if="repair?.stock_items?.length" class="space-y-2">
               <div
                 v-for="(item, i) in repair.stock_items"
@@ -588,10 +754,12 @@ onMounted(() => {
                 <span>{{ item.quantity }} ชิ้น</span>
               </div>
             </div>
+          
             <div v-else class="text-center text-gray-400 text-sm sm:text-base py-8">
               - ไม่มีรายการเบิก -
             </div>
           </div>
+
         </div>
 
         <!-- ขวา -->
@@ -720,6 +888,185 @@ onMounted(() => {
       </div>
     </div>
   </div>
+  <!-- Modal ฟอร์มยืนยันการเบิก -->
+  <div
+    v-if="showWithdrawModal"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/60
+           px-3 sm:px-4 overflow-y-auto"
+    @click.self="closeWithdrawModal"
+  >
+    <div
+      class="bg-white rounded-2xl shadow-xl w-full max-w-5xl mx-auto
+             my-6 sm:my-10 p-5 sm:p-8 relative max-h-[90vh] overflow-y-auto"
+    >
+      <!-- หัวข้อ -->
+      <div class="mb-4 sm:mb-6">
+        <h2 class="text-xl sm:text-2xl font-bold text-gray-800">
+          ฟอร์มขอเบิกวัสดุ / อุปกรณ์
+        </h2>
+        <p class="text-gray-500 text-xs sm:text-sm mt-1">
+          กรอกข้อมูลส่วนตัวของผู้ขอเบิกให้ครบถ้วน
+        </p>
+      </div>
+
+      <form @submit.prevent="submitWithdrawForm" class="space-y-4 sm:space-y-5">
+        <!-- หมายเลขใบแจ้งซ่อม -->
+        <div class="flex flex-col gap-1">
+          <label class="text-sm text-gray-700 font-medium">
+            หมายเลขใบแจ้งซ่อม
+          </label>
+          <input
+            v-model="withdrawForm.repair_code"
+            type="text"
+            class="rounded-lg border border-gray-300 px-3 py-2 text-sm
+                   bg-gray-100 cursor-not-allowed text-gray-700"
+            disabled
+          />
+        </div>
+
+        <!-- แถว 1 -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          <div class="flex flex-col gap-1">
+            <label class="text-sm text-gray-700 font-medium">
+              ชื่อผู้ทำรายการเบิก
+            </label>
+            <input
+              v-model="withdrawForm.requester_name"
+              type="text"
+              class="rounded-lg border border-gray-300 px-3 py-2 text-sm
+                     bg-gray-100 cursor-not-allowed text-gray-700"
+              placeholder="กรอกชื่อ-นามสกุล"
+              required
+              disabled
+            />
+          </div>
+
+          <div class="flex flex-col gap-1">
+            <label class="text-sm text-gray-700 font-medium">
+              หน่วยงาน / สังกัด
+            </label>
+            <input
+              v-model="withdrawForm.unit"
+              type="text"
+              class="rounded-lg border border-gray-300 px-3 py-2 text-sm
+                     bg-gray-100 cursor-not-allowed text-gray-700"
+              placeholder="เช่น งานคอมพิวเตอร์"
+              required
+              disabled
+            />
+          </div>
+
+          <div class="flex flex-col gap-1">
+            <label class="text-sm text-gray-700 font-medium">
+              วันที่ทำการเบิก <span class="text-red-600">*</span>
+            </label>
+            <input
+              v-model="withdrawForm.date"
+              type="date"
+              class="rounded-lg border border-gray-300 px-3 py-2 text-sm
+                     focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              required
+            />
+          </div>
+        </div>
+
+        <!-- แถว 2 -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          <div class="flex flex-col gap-1">
+            <label class="text-sm text-gray-700 font-medium">
+              ประเภทงานซ่อม <span class="text-red-600">*</span>
+            </label>
+            <select
+              v-model="withdrawForm.repair_type_id"
+              class="rounded-lg border border-gray-300 px-3 py-2 text-sm
+                     focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+                     text-gray-700"
+            >
+              <option disabled value="">กรุณาเลือกประเภทงานซ่อม</option>
+              <option
+                v-for="type in technicianTypes"
+                :key="type.tt_id"
+                :value="type.tt_id"
+              >
+                {{ type.tt_name }}
+              </option>
+            </select>
+          </div>
+
+          <div class="flex flex-col gap-1">
+            <label class="text-sm text-gray-700 font-medium">
+              สถานที่
+            </label>
+            <input
+              v-model="withdrawForm.location"
+              type="text"
+              class="rounded-lg border border-gray-300 px-3 py-2 text-sm
+                     bg-gray-100 cursor-not-allowed text-gray-700"
+              placeholder="อาคาร / ชั้น / ห้อง"
+              disabled
+            />
+          </div>
+
+          <div class="flex flex-col gap-1">
+            <label class="text-sm text-gray-700 font-medium">
+              ความเร่งด่วน <span class="text-red-600">*</span>
+            </label>
+            <select
+              v-model="withdrawForm.urgency"
+              class="rounded-lg border border-gray-300 px-3 py-2 text-sm
+                     focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option disabled value="">เลือกระดับความเร่งด่วน</option>
+              <option value="high">เร่งด่วนมาก</option>
+              <option value="medium">เร่งด่วน</option>
+              <option value="low">ไม่เร่งด่วน</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- แถว 3: หมายเหตุ -->
+        <div class="flex flex-col gap-1">
+          <label class="text-sm text-gray-900 font-semibold">
+            หมายเหตุ
+          </label>
+          <p class="text-neutral-400 text-xs mb-2">
+            กรอกรายละเอียดเพิ่มเติม (ถ้ามี)
+          </p>
+          <textarea
+            v-model="withdrawForm.reason"
+            rows="3"
+            class="rounded-lg border border-gray-300 px-3 py-2 text-sm w-full
+                   focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+                   placeholder-gray-400"
+            placeholder="กรุณาใส่หมายเหตุ"
+          ></textarea>
+        </div>
+
+        <!-- ปุ่ม -->
+        <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 mt-4">
+          <button
+            type="button"
+            class="px-4 py-2 rounded-lg border border-gray-300 text-sm
+                   text-gray-600 hover:bg-gray-100 w-full sm:w-auto"
+            @click="closeWithdrawModal"
+          >
+            ยกเลิก
+          </button>
+          <button
+            type="submit"
+            class="px-5 py-2 rounded-lg text-sm font-semibold
+                   bg-blue-600 hover:bg-blue-700 text-white shadow-sm
+                   w-full sm:w-auto"
+          >
+            ยืนยันการเบิก
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+
+
   <assignJobModalComponent
     v-if="showAssignPopup"
     :repairId="repairCode"
