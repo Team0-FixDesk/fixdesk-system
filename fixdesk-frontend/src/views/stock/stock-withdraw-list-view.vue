@@ -69,16 +69,50 @@ const getStatusClass = (s) => {
   }
 }
 
-// Fetch Stock Forms (placeholder)
+// Fetch Stock Forms (mock data for UI)
+const problemCount = ref(null)
+
 async function fetchStockForms() {
   try {
-    // (placeholder)
+    // Mock VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV
+    const mock = [
+      { dateDisplay: '11/11/1111', code: 'ABC-000', requester: 'คนละครึ่ง กูอะ', department: 'ABC-000', location: 'อาคาร 3 ชั้น 4 ห้อง 5', urgencyKey: 'medium', statusKey: 'waiting' },
+      { dateDisplay: '11/11/1111', code: 'ABC-001', requester: 'สมใจ ไตวาย', department: 'ABC-000', location: 'อาคาร 3 ชั้น 4 ห้อง 5', urgencyKey: 'medium', statusKey: 'waiting' },
+      { dateDisplay: '11/11/1111', code: 'ABC-002', requester: 'ฎ ฎ', department: 'ABC-000', location: 'อาคาร 3 ชั้น 4 ห้อง 5', urgencyKey: 'low', statusKey: 'waiting' },
+      { dateDisplay: '11/11/1111', code: 'ABC-003', requester: 'สมหมาย ถ่ายหนัก', department: 'ABC-000', location: 'อาคาร 3 ชั้น 4 ห้อง 5', urgencyKey: 'medium', statusKey: 'approved' },
+      { dateDisplay: '11/11/1111', code: 'ABC-004', requester: 'ไม่บอก เดี๋ยวรู้', department: 'ABC-000', location: 'อาคาร 3 ชั้น 4 ห้อง 5', urgencyKey: 'medium', statusKey: 'approved' },
+      { dateDisplay: '11/11/1111', code: 'ABC-005', requester: 'ผักกาด ยืนต้น', department: 'ABC-000', location: 'อาคาร 3 ชั้น 4 ห้อง 5', urgencyKey: 'medium', statusKey: 'approved' },
+      { dateDisplay: '11/11/1111', code: 'ABC-006', requester: 'ตื่น ไม่ใหว', department: 'ABC-000', location: 'อาคาร 3 ชั้น 4 ห้อง 5', urgencyKey: 'medium', statusKey: 'approved' },
+      { dateDisplay: '11/11/1111', code: 'ABC-007', requester: 'ไทย จากจีน', department: 'ABC-000', location: 'อาคาร 3 ชั้น 4 ห้อง 5', urgencyKey: 'medium', statusKey: 'approved' },
+      { dateDisplay: '11/11/1111', code: 'ABC-008', requester: 'วิปริต จิตแจ่มใส', department: 'ABC-000', location: 'อาคาร 3 ชั้น 4 ห้อง 5', urgencyKey: 'medium', statusKey: 'approved' },
+      { dateDisplay: '11/11/1111', code: 'ABC-009', requester: 'สมชาย กลายร่าง', department: 'ABC-000', location: 'อาคาร 3 ชั้น 4 ห้อง 5', urgencyKey: 'medium', statusKey: 'rejected' },
+    ]
 
-    rawRows.value = []
-    rows.value = []
-    return []
+    // Build rows and rawRows with badge HTML using helper functions
+    // เอาข้อมูลจริงมาใส่ทับแล้วลบ mock
+    rawRows.value = mock.map((m) => ({ ...m }))
+
+    rows.value = mock.map((m) => {
+      const uClass = getUrgencyClass(m.urgencyKey)
+      const sClass = getStatusClass(m.statusKey)
+      const urgencyBadge = `<span class="px-3 py-1 rounded-full text-sm inline-block ${uClass}">${mapUrgency(m.urgencyKey)}</span>`
+      const statusBadge = `<span class="px-3 py-1 rounded-full text-sm inline-block ${sClass}">${mapStockStatus(m.statusKey)}</span>`
+
+      return {
+        ...m,
+        urgencyBadge,
+        statusBadge,
+      }
+    })
+
+    problemCount.value = rows.value.length
+
+    return rows.value
   } catch (err) {
     console.error('fetchStockForms placeholder error:', err)
+    rawRows.value = []
+    rows.value = []
+    problemCount.value = null
     return []
   }
 }
