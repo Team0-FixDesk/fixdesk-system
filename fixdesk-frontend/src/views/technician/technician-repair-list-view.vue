@@ -260,6 +260,16 @@ function handleAccept(code) {
   showAcceptPopup.value = true
 }
 
+function handleRepairFrom(code) {
+  // เก็บรหัสใบแจ้งซ่อมไว้ใน sessionStorage แล้วไปหน้า technician-stock-list
+  try {
+    sessionStorage.setItem('selected_rf_code', String(code))
+  } catch (e) {
+    console.warn('Cannot store selected_rf_code', e)
+  }
+  router.push('/main/technician-stock-list')
+}
+
 async function handleCloseJob(item) {
   const result = await Swal.fire({
     title: 'ปิดงานซ่อม',
@@ -416,7 +426,7 @@ onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
       'สถานะ',
       'ตัวดำเนินการ',
     ]" :rows="rowsForTable" :rawRows="rawRows" :perPage="10" mode="technician" @detail="goToDetail"
-      @accept="handleAccept" @close-job="handleCloseJob" />
+      @accept="handleAccept" @close-job="handleCloseJob" @open-stock="handleRepairFrom" />
   </div>
 
   <acceptJobMadalComponent v-if="showAcceptPopup" :repairCode="currentAcceptCode" :currentUserId="tokenData?.us_id"

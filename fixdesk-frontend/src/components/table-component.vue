@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 
 const props = defineProps({
   columns: {
@@ -172,6 +172,20 @@ const baseIconClass = 'w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center ro
 const assignBaseClass =
   'w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center rounded-md transition'
 
+// state for kebab (three-dots) dropdown per-row
+const openMenu = ref(null)
+
+function toggleMenu(idx) {
+  openMenu.value = openMenu.value === idx ? null : idx
+}
+
+function closeMenu() {
+  openMenu.value = null
+}
+
+onMounted(() => document.addEventListener('click', closeMenu))
+onBeforeUnmount(() => document.removeEventListener('click', closeMenu))
+
 /* ตรวจ permission แก้ไข: ถ้ามี meta ที่บอกว่า protected/has_repairs -> return false
    รวมถึงถ้าสถานะมีค่าและไม่ใช่ 'pending' จะห้ามแก้ไข/ลบ (ตาม requirement ของหน้า "ของฉัน") */
 function canEditUser(row) {
@@ -194,123 +208,129 @@ function canEditUser(row) {
 <template>
   <div class="relative overflow-x-auto">
     <table class="min-w-[640px] w-full text-xs sm:text-sm text-left text-black border-collapse">
-      <thead
-        class="text-l border-b border-[#E9E9E9] text-gray-700 uppercase bg-white text-[#444D5C]"
-      >
+      <thead class="text-l border-b border-[#E9E9E9] text-gray-700 uppercase bg-white text-[#444D5C]">
         <tr>
-          <th
-            v-for="(col, i) in props.columns"
-            :key="i"
-            v-show="
-              props.mode === 'stock' ||
-              props.mode === 'location' ||
-              props.mode === 'user' ||
-              props.mode === 'admin' ||
-              props.mode === 'assign' ||
-              props.mode === 'technician'
-                ? true
-                : i !== 1
-            "
-            class="px-3 py-2 sm:px-3 sm:py-3 text-center"
-          >
+          <th v-for="(col, i) in props.columns" :key="i" v-show="props.mode === 'stock' ||
+            props.mode === 'location' ||
+            props.mode === 'user' ||
+            props.mode === 'admin' ||
+            props.mode === 'assign' ||
+            props.mode === 'technician'
+            ? true
+            : i !== 1
+            " class="px-3 py-2 sm:px-3 sm:py-3 text-center">
             {{ col }}
           </th>
         </tr>
       </thead>
 
       <tbody>
-        <tr
-          v-for="(row, ri) in paginatedRows"
-          :key="ri"
+        <tr v-for="(row, ri) in paginatedRows" :key="ri"
           class="bg-white border-b border-[#E9E9E9] hover:bg-gray-50 cursor-pointer"
-          :class="{ '!bg-gray-50': row[idColumnIndex] == activeId }"
-          @click="$emit('detail', getRowId(row))"
-        >
+          :class="{ '!bg-gray-50': row[idColumnIndex] == activeId }" @click="$emit('detail', getRowId(row))">
           <template v-for="(cell, ci) in row" :key="ci">
-            <th
-              v-if="ci === 0 && props.mode !== 'location'"
-              class="px-6 py-4 font-medium text-center text-black whitespace-nowrap"
-            >
+            <th v-if="ci === 0 && props.mode !== 'location'"
+              class="px-6 py-4 font-medium text-center text-black whitespace-nowrap">
               {{ cell }}
             </th>
 
             <!-- คอลัมน์อื่น -->
-            <td
-              v-else-if="
-                props.mode === 'location'
-                  ? ci !== 0
-                  : props.mode === 'stock' ||
-                      props.mode === 'user' ||
-                      props.mode === 'admin' ||
-                      props.mode === 'assign' ||
-                      props.mode === 'technician'
-                    ? true
-                    : ci !== 1
-              "
-              class="px-3 py-2 sm:px-4 sm:py-4 text-center"
-            >
+            <td v-else-if="
+              props.mode === 'location'
+                ? ci !== 0
+                : props.mode === 'stock' ||
+                  props.mode === 'user' ||
+                  props.mode === 'admin' ||
+                  props.mode === 'assign' ||
+                  props.mode === 'technician'
+                  ? true
+                  : ci !== 1
+            " class="px-3 py-2 sm:px-4 sm:py-4 text-center">
               <!-- คอลัมน์ action -->
               <div v-if="cell === 'actions'" class="flex justify-center gap-2">
-                <!-- ดูรายละเอียด (แสดงเสมอ) -->
-                <div
+                <!-- ดูรายละเอียด (ไม่แสดงในโหมด technician) -->
+                <div v-if="props.mode !== 'technician'"
                   class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center bg-[#1E48D1] hover:bg-[#163A9B] text-white rounded-lg transition cursor-pointer flex-none"
-                  title="ดูรายละเอียด"
-                  @click.stop="$emit('detail', getRowId(row))"
-                >
+                  title="ดูรายละเอียด" @click.stop="$emit('detail', getRowId(row))">
                   <img src="/icon/info-icon.svg" alt="info" class="w-5 h-5" />
                 </div>
 
-                <!-- โหมด technician -->
+                <!-- โหมด technician: แสดงเป็นปุ่ม kebab (สามจุด) พร้อมเมนู -->
                 <template v-if="props.mode === 'technician'">
-                  <template v-if="getRowStatus(row) === 'pending'">
-                    <button
-                      class="px-5 py-2 text-xs font-medium text-white bg-teal-700 hover:bg-teal-900 rounded-lg hover:transition flex-none"
-                      @click.stop="$emit('accept', getRowId(row))"
-                    >
-                      รับงาน
+                  <div class="relative" @click.stop>
+                    <button @click.stop="toggleMenu(ri)"
+                      class="w-8 h-8 flex items-center justify-center bg-[#1E48D1] hover:bg-[#163A9B] text-white rounded-md transition"
+                      :title="'ตัวเลือกเพิ่มเติม'">
+                      <!-- vertical kebab icon -->
+                      <img src="/icon/Kebab.svg" alt="menu" class="w-5 h-5">
                     </button>
-                  </template>
-                  <template v-else-if="getRowStatus(row) === 'in_progress'">
-                    <button
-                      class="px-5 py-2 text-xs font-medium text-white bg-green-600 rounded-lg"
-                      @click.stop="$emit('close-job', getRowMetaByCode(row))"
-                    >
-                      ปิดงาน
-                    </button>
-                  </template>
-                  <template v-else-if="getRowStatus(row) !== 'done'">
-                    <button
-                      class="px-3 py-2 text-xs font-medium text-white bg-amber-500 hover:bg-amber-600 rounded-lg hover:shadow-lg transition flex-none"
-                      @click.stop="$emit('change-status', getRowId(row))"
-                    >
-                      เปลี่ยนสถานะ
-                    </button>
-                  </template>
 
-                  <template v-else>
-                    <span
-                      class="px-5 py-2 text-xs font-medium text-gray-400 bg-gray-100 rounded-lg cursor-default flex-none"
-                    >
-                      เสร็จสิ้น
-                    </span>
-                  </template>
+                    <div v-if="openMenu === ri"
+                      class="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-md shadow-lg z-20">
+
+                      <!-- ปุ่มทั้งหมดอยู่ใน container เดียวกัน -->
+                      <div class="p-2 space-y-2">
+                        <!-- ปุ่มรายละเอียด -->
+                        <button
+                          class="w-full px-4 py-2 flex items-center justify-center gap-2 text-sm font-medium text-white bg-[#1E48D1] hover:bg-[#163A9B] rounded-lg transition"
+                          @click.stop="() => { $emit('detail', getRowId(row)); closeMenu() }">
+                          <span>รายละเอียด</span>
+                        </button>
+
+                        <!-- ปุ่มตามสถานะงาน -->
+                        <template v-if="getRowStatus(row) === 'pending'">
+                          <button
+                            class="w-full px-4 py-2 text-sm font-medium text-white bg-teal-700 hover:bg-teal-900 rounded-lg transition"
+                            @click.stop="() => { $emit('accept', getRowId(row)); closeMenu() }">
+                            รับงาน
+                          </button>
+                        </template>
+
+                        <template v-else-if="getRowStatus(row) === 'in_progress'">
+                          <button
+                            class="w-full px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition"
+                            @click.stop="() => { $emit('close-job', getRowMetaByCode(row)); closeMenu() }">
+                            ปิดงาน
+                          </button>
+                        </template>
+
+                        <template v-else-if="getRowStatus(row) !== 'done'">
+                          <button
+                            class="w-full px-4 py-2 text-sm font-medium text-white bg-amber-500 hover:bg-amber-600 rounded-lg transition"
+                            @click.stop="() => { $emit('change-status', getRowId(row)); closeMenu() }">
+                            เปลี่ยนสถานะ
+                          </button>
+                        </template>
+
+                        <template v-else>
+                          <div class="px-4 py-2 text-sm text-center text-gray-500">
+                            เสร็จสิ้น
+                          </div>
+                        </template>
+
+                        <!-- ปุ่มเบิกของ -->
+                        <button
+                          class="w-full px-4 py-2 flex items-center justify-center gap-2 text-sm font-medium text-white bg-[#1E48D1] hover:bg-[#163A9B] rounded-lg transition"
+                          @click.stop="() => { $emit('open-stock', getRowId(row)); closeMenu() }" title="ไปหน้าเบิกวัสดุอ/อุปกรณ์">
+                        
+                          <span>เบิกวัสดุอ/อุปกรณ์</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </template>
 
                 <!-- โหมด user (แก้ไข/ลบ) -->
                 <template v-else-if="props.mode === 'user'">
                   <!-- ถ้ามีฟอร์มค้าง ให้แสดงปุ่ม disabled และ tooltip อธิบาย -->
                   <template v-if="rowHasActiveRepairs(row)">
-                    <div
-                      :class="[baseIconClass, 'bg-gray-300 text-gray-400 cursor-not-allowed']"
-                      :title="'บัญชีนี้มีใบแจ้งซ่อมหรือการมอบหมายงานที่เชื่อมโยงอยู่ จึงไม่สามารถแก้ไขได้'"
-                    >
+                    <div :class="[baseIconClass, 'bg-gray-300 text-gray-400 cursor-not-allowed']"
+                      :title="'บัญชีนี้มีใบแจ้งซ่อมหรือการมอบหมายงานที่เชื่อมโยงอยู่ จึงไม่สามารถแก้ไขได้'">
                       <img src="/icon/edit-icon.svg" alt="edit" class="w-5 h-5 opacity-70" />
                     </div>
 
-                    <div
-                      :class="[baseIconClass, 'bg-gray-300 text-gray-400 cursor-not-allowed']"
-                      :title="'บัญชีนี้มีใบแจ้งซ่อมหรือการมอบหมายงานที่เชื่อมโยงอยู่ จึงไม่สามารถลบได้'"
-                    >
+                    <div :class="[baseIconClass, 'bg-gray-300 text-gray-400 cursor-not-allowed']"
+                      :title="'บัญชีนี้มีใบแจ้งซ่อมหรือการมอบหมายงานที่เชื่อมโยงอยู่ จึงไม่สามารถลบได้'">
                       <img src="/icon/bin-icon.svg" alt="delete" class="w-5 h-5 opacity-70" />
                     </div>
                   </template>
@@ -319,46 +339,36 @@ function canEditUser(row) {
                   <template v-else>
                     <!-- ถ้าสถานะไม่ใช่ pending ให้ disabled (สีเทา + tooltip) -->
                     <template v-if="!isPendingStatus(row)">
-                      <div
-                        :class="[baseIconClass, 'bg-gray-300 text-gray-400 cursor-not-allowed']"
-                        :title="'ไม่สามารถแก้ไขได้ (สถานะไม่ใช่รอดำเนินการ)'"
-                      >
+                      <div :class="[baseIconClass, 'bg-gray-300 text-gray-400 cursor-not-allowed']"
+                        :title="'ไม่สามารถแก้ไขได้ (สถานะไม่ใช่รอดำเนินการ)'">
                         <img src="/icon/edit-icon.svg" alt="edit" class="w-5 h-5 opacity-70" />
                       </div>
 
-                      <div
-                        :class="[baseIconClass, 'bg-gray-300 text-gray-400 cursor-not-allowed']"
-                        :title="'ไม่สามารถลบได้ (สถานะไม่ใช่รอดำเนินการ)'"
-                      >
+                      <div :class="[baseIconClass, 'bg-gray-300 text-gray-400 cursor-not-allowed']"
+                        :title="'ไม่สามารถลบได้ (สถานะไม่ใช่รอดำเนินการ)'">
                         <img src="/icon/bin-icon.svg" alt="delete" class="w-5 h-5 opacity-70" />
                       </div>
                     </template>
 
                     <!-- สถานะเป็น pending และไม่มีฟอร์มค้าง -> ปกติ -->
                     <template v-else>
-                      <div
-                        :class="[
-                          baseIconClass,
-                          canEditUser(row)
-                            ? 'bg-yellow-400 hover:bg-yellow-500 text-white cursor-pointer'
-                            : 'bg-gray-300 text-gray-400 cursor-not-allowed',
-                        ]"
-                        :title="canEditUser(row) ? 'แก้ไข' : 'ไม่สามารถแก้ไขได้'"
-                        @click.stop="canEditUser(row) && $emit('edit', getRowId(row))"
-                      >
+                      <div :class="[
+                        baseIconClass,
+                        canEditUser(row)
+                          ? 'bg-yellow-400 hover:bg-yellow-500 text-white cursor-pointer'
+                          : 'bg-gray-300 text-gray-400 cursor-not-allowed',
+                      ]" :title="canEditUser(row) ? 'แก้ไข' : 'ไม่สามารถแก้ไขได้'"
+                        @click.stop="canEditUser(row) && $emit('edit', getRowId(row))">
                         <img src="/icon/edit-icon.svg" alt="edit" class="w-5 h-5 opacity-90" />
                       </div>
 
-                      <div
-                        :class="[
-                          baseIconClass,
-                          canEditUser(row)
-                            ? 'bg-red-500 hover:bg-red-600 text-white cursor-pointer'
-                            : 'bg-gray-300 text-gray-400 cursor-not-allowed',
-                        ]"
-                        :title="canEditUser(row) ? 'ลบ' : 'ไม่สามารถลบได้'"
-                        @click.stop="canEditUser(row) && $emit('delete', getRowId(row))"
-                      >
+                      <div :class="[
+                        baseIconClass,
+                        canEditUser(row)
+                          ? 'bg-red-500 hover:bg-red-600 text-white cursor-pointer'
+                          : 'bg-gray-300 text-gray-400 cursor-not-allowed',
+                      ]" :title="canEditUser(row) ? 'ลบ' : 'ไม่สามารถลบได้'"
+                        @click.stop="canEditUser(row) && $emit('delete', getRowId(row))">
                         <img src="/icon/bin-icon.svg" alt="delete" class="w-5 h-5 opacity-90" />
                       </div>
                     </template>
@@ -367,17 +377,13 @@ function canEditUser(row) {
 
                 <!-- โหมด assign (มอบหมาย) -->
                 <template v-else-if="props.mode === 'assign'">
-                  <button
-                    :class="[
-                      assignBaseClass,
-                      isRowAssigned(row)
-                        ? 'bg-gray-300 text-gray-400 cursor-not-allowed'
-                        : 'bg-green-600 hover:bg-green-700 text-white cursor-pointer',
-                    ]"
-                    :title="isRowAssigned(row) ? 'มอบหมายแล้ว' : 'มอบหมายงาน'"
-                    :disabled="isRowAssigned(row)"
-                    @click.stop="!isRowAssigned(row) && $emit('assign', getRowId(row))"
-                  >
+                  <button :class="[
+                    assignBaseClass,
+                    isRowAssigned(row)
+                      ? 'bg-gray-300 text-gray-400 cursor-not-allowed'
+                      : 'bg-green-600 hover:bg-green-700 text-white cursor-pointer',
+                  ]" :title="isRowAssigned(row) ? 'มอบหมายแล้ว' : 'มอบหมายงาน'" :disabled="isRowAssigned(row)"
+                    @click.stop="!isRowAssigned(row) && $emit('assign', getRowId(row))">
                     <img src="/icon/arrow-right.svg" alt="assign" class="w-5 h-5" />
                   </button>
                 </template>
@@ -386,31 +392,20 @@ function canEditUser(row) {
                 <template v-else-if="props.mode === 'full' || props.mode === 'location'">
                   <div
                     class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center bg-yellow-400 hover:bg-yellow-500 text-white rounded-md transition cursor-pointer"
-                    title="แก้ไข"
-                    @click.stop="$emit('edit', getRowId(row))"
-                  >
+                    title="แก้ไข" @click.stop="$emit('edit', getRowId(row))">
                     <img src="/icon/edit-icon.svg" alt="edit" class="w-5 h-5" />
                   </div>
 
                   <div
                     class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center bg-red-500 hover:bg-red-600 text-white rounded-md transition cursor-pointer"
-                    title="ลบ"
-                    @click.stop="$emit('delete', getRowId(row))"
-                  >
+                    title="ลบ" @click.stop="$emit('delete', getRowId(row))">
                     <img src="/icon/bin-icon.svg" alt="delete" class="w-5 h-5" />
                   </div>
                 </template>
               </div>
 
               <!-- ถ้าไม่ใช่ actions ให้แสดงค่าปกติ (รองรับ HTML badges) -->
-              <slot
-                v-else
-                :name="`cell-${ci}`"
-                :row="row"
-                :cell="cell"
-                :rowIndex="ri"
-                :columnIndex="ci"
-              >
+              <slot v-else :name="`cell-${ci}`" :row="row" :cell="cell" :rowIndex="ri" :columnIndex="ci">
                 <span class="break-words" v-html="cell"></span>
               </slot>
             </td>
@@ -422,47 +417,30 @@ function canEditUser(row) {
     <!-- Pagination -->
     <div class="flex justify-center sm:justify-end mt-4">
       <div class="inline-flex rounded-md shadow-sm border border-gray-300">
-        <button
-          @click="goToPage(1)"
-          :disabled="currentPage === 1"
-          class="px-3 py-2 text-gray-500 border-r border-gray-300 hover:bg-gray-100 disabled:opacity-40"
-        >
+        <button @click="goToPage(1)" :disabled="currentPage === 1"
+          class="px-3 py-2 text-gray-500 border-r border-gray-300 hover:bg-gray-100 disabled:opacity-40">
           «
         </button>
-        <button
-          @click="prevPage"
-          :disabled="currentPage === 1"
-          class="px-3 py-2 text-gray-500 border-r border-gray-300 hover:bg-gray-100 disabled:opacity-40"
-        >
+        <button @click="prevPage" :disabled="currentPage === 1"
+          class="px-3 py-2 text-gray-500 border-r border-gray-300 hover:bg-gray-100 disabled:opacity-40">
           ‹
         </button>
 
-        <button
-          v-for="page in totalPages"
-          :key="page"
-          @click="goToPage(page)"
-          :class="[
-            'px-3 py-2 border-r border-gray-300 hover:bg-gray-100 transition-colors',
-            currentPage === page
-              ? 'bg-blue-100 text-blue-600 border-blue-300'
-              : 'bg-white text-gray-700',
-          ]"
-        >
+        <button v-for="page in totalPages" :key="page" @click="goToPage(page)" :class="[
+          'px-3 py-2 border-r border-gray-300 hover:bg-gray-100 transition-colors',
+          currentPage === page
+            ? 'bg-blue-100 text-blue-600 border-blue-300'
+            : 'bg-white text-gray-700',
+        ]">
           {{ page }}
         </button>
 
-        <button
-          @click="nextPage"
-          :disabled="currentPage === totalPages"
-          class="px-3 py-2 text-gray-500 border-r border-gray-300 hover:bg-gray-100 disabled:opacity-40"
-        >
+        <button @click="nextPage" :disabled="currentPage === totalPages"
+          class="px-3 py-2 text-gray-500 border-r border-gray-300 hover:bg-gray-100 disabled:opacity-40">
           ›
         </button>
-        <button
-          @click="goToPage(totalPages)"
-          :disabled="currentPage === totalPages"
-          class="px-3 py-2 text-gray-500 hover:bg-gray-100 disabled:opacity-40"
-        >
+        <button @click="goToPage(totalPages)" :disabled="currentPage === totalPages"
+          class="px-3 py-2 text-gray-500 hover:bg-gray-100 disabled:opacity-40">
           »
         </button>
       </div>
@@ -475,11 +453,13 @@ table {
   table-layout: fixed;
   width: 100%;
 }
+
 td,
 th {
   text-align: center;
   vertical-align: middle;
 }
+
 tbody tr:hover {
   background-color: #f9fafb;
 }
