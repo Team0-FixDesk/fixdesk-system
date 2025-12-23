@@ -16,6 +16,7 @@
   "dependencies": {
     "@fullcalendar/core": "^6.1.19",
     "@fullcalendar/daygrid": "^6.1.19",
+    "axios": "^1.13.2",
     "date-holidays": "^3.26.5",
     "echarts": "^6.0.0",
     "flowbite": "^3.1.2",
