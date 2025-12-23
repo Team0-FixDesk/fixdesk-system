@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 
 import TableComponent from '@/components/table-component.vue'
 import TableActionsComponent from '@/components/table-actions-component.vue'
-import acceptJobModal from '@/components/accept-job-madal-component.vue'
+import acceptJobModal from '@/components/modal/accept-job-modal-component.vue'
 
 import Swal from 'sweetalert2'
 import { jwtDecode } from 'jwt-decode'
@@ -20,7 +20,7 @@ const openMenuId = ref(null)
 
 const searchQuery = ref('')
 const selectedDate = ref('')
-const selectedStatus = ref([])
+const selectedStatus = ref(['pending', 'in_progress'])
 
 const showAcceptPopup = ref(false)
 const currentAcceptCode = ref(null)
@@ -145,8 +145,8 @@ async function handleCloseJob(code) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        tech_summary: "งานเสร็จแล้ว",
-        tech_remark: "",
+        tech_summary: 'งานเสร็จแล้ว',
+        tech_remark: '',
       }),
     })
 
@@ -155,7 +155,6 @@ async function handleCloseJob(code) {
 
     Swal.fire('สำเร็จ', 'ปิดงานแล้ว', 'success')
     loadRepairs()
-
   } catch (err) {
     Swal.fire('ผิดพลาด', err.message, 'error')
   }

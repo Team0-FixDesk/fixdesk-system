@@ -2,8 +2,8 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import RepairStatusTimeline from '@/components/status-timeline-component.vue'
-import assignJobModalComponent from '@/components/assign-job-modal-component.vue'
-import AcceptJobModalComponent from '@/components/accept-job-madal-component.vue'
+import assignJobModalComponent from '@/components/modal/assign-job-modal-component.vue'
+import AcceptJobModalComponent from '@/components/modal/accept-job-madal-component.vue'
 import Swal from 'sweetalert2'
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
@@ -332,7 +332,7 @@ function parseJwt(token) {
       atob(base64)
         .split('')
         .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-        .join('')
+        .join(''),
     )
     return JSON.parse(jsonPayload)
   } catch (err) {
@@ -340,7 +340,6 @@ function parseJwt(token) {
     return {}
   }
 }
-
 
 const withdrawForm = ref({
   requester_name: '',
@@ -376,15 +375,14 @@ function openWithdrawModal() {
       ? `${user.us_first_name_th} ${user.us_last_name_th}`
       : user.fullname || user.name || user.us_user_name || ''
 
-  const department =
-    user.us_department || user.department || user.dep_name || ''
+  const department = user.us_department || user.department || user.dep_name || ''
 
   withdrawForm.value = {
     requester_name: nameTh,
     unit: department,
     date: new Date().toISOString().slice(0, 10),
 
-    repair_type_id: '',      // <-- ตั้งว่างก่อน
+    repair_type_id: '', // <-- ตั้งว่างก่อน
     location: `${repair.value?.building_name || ''} / ${repair.value?.floor_name || ''} / ${repair.value?.room_name || ''}`,
     urgency: repair.value?.rf_urgency || 'medium',
     reason: '',
@@ -395,18 +393,14 @@ function openWithdrawModal() {
   // 1) ถ้ามี rf_tt_id (กรณีเก็บเป็น ID)
   if (repair.value?.rf_tt_id) {
     withdrawForm.value.repair_type_id = repair.value.rf_tt_id
-  }
-  else {
+  } else {
     // 2) ถ้าเก็บเป็นชื่อ
-    const match = technicianTypes.value.find(
-      t => t.tt_name === repair.value?.repair_type_name
-    )
+    const match = technicianTypes.value.find((t) => t.tt_name === repair.value?.repair_type_name)
     withdrawForm.value.repair_type_id = match ? match.tt_id : ''
   }
 
   showWithdrawModal.value = true
 }
-
 
 function closeWithdrawModal() {
   showWithdrawModal.value = false
@@ -433,15 +427,13 @@ async function submitWithdrawForm() {
 
     Toast.fire({
       icon: 'success',
-      title: 'ยืนยันการเบิกเรียบร้อย'
+      title: 'ยืนยันการเบิกเรียบร้อย',
     })
-
   } catch (err) {
     console.error(err)
     Swal.fire('ผิดพลาด', 'ไม่สามารถยืนยันการเบิกได้', 'error')
   }
 }
-
 
 const technicianTypes = ref([])
 
@@ -479,7 +471,7 @@ onMounted(() => {
   }
 
   fetchRepairDetail()
-  fetchTechnicianTypes()   // 👈 เพิ่มบรรทัดนี้
+  fetchTechnicianTypes() // 👈 เพิ่มบรรทัดนี้
 })
 </script>
 
@@ -745,9 +737,7 @@ onMounted(() => {
               <button
                 v-if="repair?.rf_user_status !== 'done'"
                 type="button"
-                class="px-4 py-2 text-sm sm:text-base font-semibold rounded-lg shadow-sm
-                       bg-blue-600 hover:bg-blue-700 text-white transition
-                       flex items-center gap-2"
+                class="px-4 py-2 text-sm sm:text-base font-semibold rounded-lg shadow-sm bg-blue-600 hover:bg-blue-700 text-white transition flex items-center gap-2"
                 @click="handleRepairFrom(repair?.rf_code)"
               >
                 เบิกวัสดุ/อุปกรณ์
@@ -769,7 +759,6 @@ onMounted(() => {
               - ไม่มีรายการเบิก -
             </div>
           </div>
-
         </div>
 
         <!-- ขวา -->
@@ -901,35 +890,26 @@ onMounted(() => {
   <!-- Modal ฟอร์มยืนยันการเบิก -->
   <div
     v-if="showWithdrawModal"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/60
-           px-3 sm:px-4 overflow-y-auto"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-3 sm:px-4 overflow-y-auto"
     @click.self="closeWithdrawModal"
   >
     <div
-      class="bg-white rounded-2xl shadow-xl w-full max-w-5xl mx-auto
-             my-6 sm:my-10 p-5 sm:p-8 relative max-h-[90vh] overflow-y-auto"
+      class="bg-white rounded-2xl shadow-xl w-full max-w-5xl mx-auto my-6 sm:my-10 p-5 sm:p-8 relative max-h-[90vh] overflow-y-auto"
     >
       <!-- หัวข้อ -->
       <div class="mb-4 sm:mb-6">
-        <h2 class="text-xl sm:text-2xl font-bold text-gray-800">
-          ฟอร์มขอเบิกวัสดุ / อุปกรณ์
-        </h2>
-        <p class="text-gray-500 text-xs sm:text-sm mt-1">
-          กรอกข้อมูลส่วนตัวของผู้ขอเบิกให้ครบถ้วน
-        </p>
+        <h2 class="text-xl sm:text-2xl font-bold text-gray-800">ฟอร์มขอเบิกวัสดุ / อุปกรณ์</h2>
+        <p class="text-gray-500 text-xs sm:text-sm mt-1">กรอกข้อมูลส่วนตัวของผู้ขอเบิกให้ครบถ้วน</p>
       </div>
 
       <form @submit.prevent="submitWithdrawForm" class="space-y-4 sm:space-y-5">
         <!-- หมายเลขใบแจ้งซ่อม -->
         <div class="flex flex-col gap-1">
-          <label class="text-sm text-gray-700 font-medium">
-            หมายเลขใบแจ้งซ่อม
-          </label>
+          <label class="text-sm text-gray-700 font-medium"> หมายเลขใบแจ้งซ่อม </label>
           <input
             v-model="withdrawForm.repair_code"
             type="text"
-            class="rounded-lg border border-gray-300 px-3 py-2 text-sm
-                   bg-gray-100 cursor-not-allowed text-gray-700"
+            class="rounded-lg border border-gray-300 px-3 py-2 text-sm bg-gray-100 cursor-not-allowed text-gray-700"
             disabled
           />
         </div>
@@ -937,14 +917,11 @@ onMounted(() => {
         <!-- แถว 1 -->
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           <div class="flex flex-col gap-1">
-            <label class="text-sm text-gray-700 font-medium">
-              ชื่อผู้ทำรายการเบิก
-            </label>
+            <label class="text-sm text-gray-700 font-medium"> ชื่อผู้ทำรายการเบิก </label>
             <input
               v-model="withdrawForm.requester_name"
               type="text"
-              class="rounded-lg border border-gray-300 px-3 py-2 text-sm
-                     bg-gray-100 cursor-not-allowed text-gray-700"
+              class="rounded-lg border border-gray-300 px-3 py-2 text-sm bg-gray-100 cursor-not-allowed text-gray-700"
               placeholder="กรอกชื่อ-นามสกุล"
               required
               disabled
@@ -952,14 +929,11 @@ onMounted(() => {
           </div>
 
           <div class="flex flex-col gap-1">
-            <label class="text-sm text-gray-700 font-medium">
-              หน่วยงาน / สังกัด
-            </label>
+            <label class="text-sm text-gray-700 font-medium"> หน่วยงาน / สังกัด </label>
             <input
               v-model="withdrawForm.unit"
               type="text"
-              class="rounded-lg border border-gray-300 px-3 py-2 text-sm
-                     bg-gray-100 cursor-not-allowed text-gray-700"
+              class="rounded-lg border border-gray-300 px-3 py-2 text-sm bg-gray-100 cursor-not-allowed text-gray-700"
               placeholder="เช่น งานคอมพิวเตอร์"
               required
               disabled
@@ -973,8 +947,7 @@ onMounted(() => {
             <input
               v-model="withdrawForm.date"
               type="date"
-              class="rounded-lg border border-gray-300 px-3 py-2 text-sm
-                     focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               required
             />
           </div>
@@ -988,30 +961,21 @@ onMounted(() => {
             </label>
             <select
               v-model="withdrawForm.repair_type_id"
-              class="rounded-lg border border-gray-300 px-3 py-2 text-sm
-                     focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-                     text-gray-700"
+              class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700"
             >
               <option disabled value="">กรุณาเลือกประเภทงานซ่อม</option>
-              <option
-                v-for="type in technicianTypes"
-                :key="type.tt_id"
-                :value="type.tt_id"
-              >
+              <option v-for="type in technicianTypes" :key="type.tt_id" :value="type.tt_id">
                 {{ type.tt_name }}
               </option>
             </select>
           </div>
 
           <div class="flex flex-col gap-1">
-            <label class="text-sm text-gray-700 font-medium">
-              สถานที่
-            </label>
+            <label class="text-sm text-gray-700 font-medium"> สถานที่ </label>
             <input
               v-model="withdrawForm.location"
               type="text"
-              class="rounded-lg border border-gray-300 px-3 py-2 text-sm
-                     bg-gray-100 cursor-not-allowed text-gray-700"
+              class="rounded-lg border border-gray-300 px-3 py-2 text-sm bg-gray-100 cursor-not-allowed text-gray-700"
               placeholder="อาคาร / ชั้น / ห้อง"
               disabled
             />
@@ -1023,8 +987,7 @@ onMounted(() => {
             </label>
             <select
               v-model="withdrawForm.urgency"
-              class="rounded-lg border border-gray-300 px-3 py-2 text-sm
-                     focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option disabled value="">เลือกระดับความเร่งด่วน</option>
               <option value="high">เร่งด่วนมาก</option>
@@ -1036,18 +999,12 @@ onMounted(() => {
 
         <!-- แถว 3: หมายเหตุ -->
         <div class="flex flex-col gap-1">
-          <label class="text-sm text-gray-900 font-semibold">
-            หมายเหตุ
-          </label>
-          <p class="text-neutral-400 text-xs mb-2">
-            กรอกรายละเอียดเพิ่มเติม (ถ้ามี)
-          </p>
+          <label class="text-sm text-gray-900 font-semibold"> หมายเหตุ </label>
+          <p class="text-neutral-400 text-xs mb-2">กรอกรายละเอียดเพิ่มเติม (ถ้ามี)</p>
           <textarea
             v-model="withdrawForm.reason"
             rows="3"
-            class="rounded-lg border border-gray-300 px-3 py-2 text-sm w-full
-                   focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-                   placeholder-gray-400"
+            class="rounded-lg border border-gray-300 px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400"
             placeholder="กรุณาใส่หมายเหตุ"
           ></textarea>
         </div>
@@ -1056,17 +1013,14 @@ onMounted(() => {
         <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 mt-4">
           <button
             type="button"
-            class="px-4 py-2 rounded-lg border border-gray-300 text-sm
-                   text-gray-600 hover:bg-gray-100 w-full sm:w-auto"
+            class="px-4 py-2 rounded-lg border border-gray-300 text-sm text-gray-600 hover:bg-gray-100 w-full sm:w-auto"
             @click="closeWithdrawModal"
           >
             ยกเลิก
           </button>
           <button
             type="submit"
-            class="px-5 py-2 rounded-lg text-sm font-semibold
-                   bg-blue-600 hover:bg-blue-700 text-white shadow-sm
-                   w-full sm:w-auto"
+            class="px-5 py-2 rounded-lg text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-sm w-full sm:w-auto"
           >
             ยืนยันการเบิก
           </button>
@@ -1074,8 +1028,6 @@ onMounted(() => {
       </form>
     </div>
   </div>
-
-
 
   <assignJobModalComponent
     v-if="showAssignPopup"

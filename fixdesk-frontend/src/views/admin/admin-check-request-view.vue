@@ -3,7 +3,7 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import TableComponent from '@/components/table-component.vue'
 import TableActions from '@/components/table-actions-component.vue'
-import AssignJobModalComponent from '@/components/assign-job-modal-component.vue'
+import AssignJobModalComponent from '@/components/modal/assign-job-modal-component.vue'
 
 // Router
 const router = useRouter()

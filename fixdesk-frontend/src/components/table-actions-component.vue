@@ -58,11 +58,11 @@ function parseStatusBadge(html) {
 
   const text = html.replace(/<[^>]+>/g, '').trim()
   const map = {
-    'รอดำเนินการ': 'pending',
-    'กำลังดำเนินการ': 'in_progress',
-    'ดำเนินการเสร็จสิ้น': 'done',
-    'เสร็จสิ้น': 'done',
-    'ยกเลิก': 'cancel',
+    รอดำเนินการ: 'pending',
+    กำลังดำเนินการ: 'in_progress',
+    ดำเนินการเสร็จสิ้น: 'done',
+    เสร็จสิ้น: 'done',
+    ยกเลิก: 'cancel',
   }
 
   return map[text] || null
@@ -112,8 +112,12 @@ onBeforeUnmount(() => {
       <!-- ทุก role ใช้ได้ -->
       <button
         @click="emit('detail', row)"
-        class="w-full text-left px-3 py-2 rounded-md hover:bg-gray-100"
+        class="w-full text-left px-3 py-2 rounded-md hover:bg-gray-100 flex items-center gap-2"
       >
+        <img
+          src="/icon/info-icon.svg"
+          class="bg-blue-400 hover:bg-blue-600 rounded-md p-1 h-6 w-6"
+        />
         รายละเอียด
       </button>
 
@@ -134,6 +138,7 @@ onBeforeUnmount(() => {
         >
           ปิดงาน
         </button>
+        <div class="border-t border-gray-300 mx-1"></div>
 
         <button
           v-if="normalizedStatus !== 'done'"
@@ -142,8 +147,10 @@ onBeforeUnmount(() => {
         >
           เปลี่ยนสถานะ
         </button>
+        <div class="border-t border-gray-300 mx-1"></div>
 
         <button
+          v-if="normalizedStatus === 'pending'"
           @click="emit('open-stock', row)"
           class="w-full text-left px-3 py-2 hover:bg-gray-100"
         >
@@ -155,15 +162,24 @@ onBeforeUnmount(() => {
       <template v-if="role === 'admin' || role === 'location'">
         <button
           @click="emit('edit', row)"
-          class="w-full text-left px-3 py-2 hover:bg-gray-100"
+          class="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2"
         >
+          <img
+            src="/icon/edit-icon.svg"
+            class="bg-amber-400 hover:bg-amber-600 rounded-md p-1 h-6 w-6"
+          />
           แก้ไข
         </button>
+        <div class="border-t border-gray-300 mx-1"></div>
 
         <button
           @click="emit('delete', row)"
-          class="w-full text-left px-3 py-2 hover:bg-gray-100 text-red-600"
+          class="w-full text-left px-3 py-2 hover:bg-gray-100 text-red-600 flex items-center gap-2"
         >
+          <img
+            src="/icon/bin-icon.svg"
+            class="bg-red-400 hover:bg-red-600 rounded-md p-1 h-6 w-6"
+          />
           ลบ
         </button>
       </template>
@@ -172,8 +188,12 @@ onBeforeUnmount(() => {
       <template v-if="role === 'assign'">
         <button
           @click="emit('assign', row)"
-          class="w-full text-left px-3 py-2 hover:bg-gray-100"
+          class="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2"
         >
+          <img
+            src="/icon/arrow-right.svg"
+            class="bg-green-400 hover:bg-green-600 rounded-md p-1 h-6 w-6"
+          />
           มอบหมายงาน
         </button>
       </template>
@@ -183,16 +203,24 @@ onBeforeUnmount(() => {
         <button
           v-if="normalizedStatus === 'pending'"
           @click="emit('edit', row)"
-          class="w-full text-left px-3 py-2 hover:bg-gray-100"
+          class="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2"
         >
+          <img
+            src="/icon/edit-icon.svg"
+            class="bg-amber-400 hover:bg-amber-600 rounded-md p-1 h-6 w-6"
+          />
           แก้ไข
         </button>
-
+        <div class="border-t border-gray-300 mx-1"></div>
         <button
           v-if="normalizedStatus === 'pending'"
           @click="emit('delete', row)"
-          class="w-full text-left px-3 py-2 hover:bg-gray-100 text-red-600"
+          class="w-full text-left px-3 py-2 hover:bg-gray-100 text-red-600 flex items-center gap-2"
         >
+          <img
+            src="/icon/bin-icon.svg"
+            class="bg-red-400 hover:bg-red-600 rounded-md p-1 h-6 w-6"
+          />
           ลบ
         </button>
       </template>
