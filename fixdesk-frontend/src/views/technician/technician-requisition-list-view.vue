@@ -2,7 +2,6 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import TableComponent from '@/components/table-component.vue';
-import TableActionsComponent from '@/components/table-actions-component.vue';
 
 defineOptions({ name: 'TechnicianRequisitionListView' })
 
@@ -21,7 +20,6 @@ const tableColumns = [
 ]
 
 const tableRows = ref([])
-const openMenuId = ref(null)
 
 // Filters & Search
 const searchInput = ref('')
@@ -59,7 +57,7 @@ async function loadMyRepairs() {
         Authorization: `Bearer ${token}`,
       },
     })
-    
+
     const data = await response.json()
 
     if (!response.ok) throw new Error(data.message || 'โหลดข้อมูลล้มเหลว')
@@ -224,15 +222,28 @@ onBeforeUnmount(() => {
       <TableComponent :columns="tableColumns" :rows="filteredRows" :perPage="10" :statusStockColumn="3">
         <!-- คอลัมน์ Action (index 6) -->
         <template #cell-4="{ row }">
-          <TableActionsComponent
-            :open-menu-id="openMenuId"
-            @toggle-menu="openMenuId = $event"
-            role="technician"
-            :row="row"
-            :status_stock="row[3]"
-            @detail="openDetail(row[1])"
-          />
-        </template>
+  <div class="flex justify-center items-center h-full">
+    <button
+      @click="openDetail(row[1])"
+      title="รายละเอียด"
+      class="
+        w-9 h-9
+        flex items-center justify-center
+        rounded-md
+        bg-blue-500 text-white
+        transition-all duration-200
+        hover:bg-blue-600
+        hover:scale-105
+        hover:shadow-md
+        active:scale-95
+      "
+    >
+      <img src="/icon/info-icon.svg" class="w-4 h-4" />
+    </button>
+  </div>
+</template>
+
+
       </TableComponent>
     </div>
   </div>
