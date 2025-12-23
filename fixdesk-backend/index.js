@@ -29,6 +29,7 @@ db.connect((err) => {
   console.log("Connected to Database");
 });
 
+const publicRoutes = require("./src/public")(db);
 const UserRoutes = require("./src/user");
 const TechnicianRoutes = require("./src/technician");
 const LocationRoutes = require("./src/location");
@@ -41,6 +42,7 @@ const locationRoutes = LocationRoutes(db);
 const repairFormRoutes = RepairFormRoutes(db);
 const stockRoutes = StockRoutes(db);
 
+app.use("/public", publicRoutes);
 app.use(userRoutes);
 app.use(technicianRoutes);
 app.use(locationRoutes);

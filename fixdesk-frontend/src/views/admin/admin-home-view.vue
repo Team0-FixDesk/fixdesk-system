@@ -13,7 +13,10 @@ const repairRequests = ref([])
 const loading = ref(false)
 const error = ref(null)
 
-/* --- map helpers (ประกาศก่อน rowsForTable) --- */
+/* --- [เพิ่มใหม่ 1] ตัวแปรเก็บสถานะการกรอง --- */
+const currentFilter = ref(null) // ค่าเริ่มต้นเป็น null (แสดงทั้งหมด)
+
+/* --- map helpers --- */
 const mapUrgency = (urgency) => {
   const urgencyMap = {
     high: 'เร่งด่วนมาก',
@@ -27,8 +30,8 @@ const mapStatus = (status) => {
   const statusMap = {
     pending: 'รอดำเนินการ',
     in_progress: 'กำลังดำเนินการ',
-    completed: 'เสร็จสิ้น',
-    cancelled: 'ยกเลิก',
+    done: 'เสร็จสิ้น', // แก้ไขให้ตรงกับ DB (บางทีใช้ done หรือ completed)
+    cancel: 'ยกเลิก', // แก้ไขให้ตรงกับ DB
   }
   return statusMap[status] || 'รอดำเนินการ'
 }
@@ -39,9 +42,7 @@ const fetchRepairRequests = async () => {
   error.value = null
   try {
     const token = localStorage.getItem('token') || sessionStorage.getItem('token')
-    if (!token) {
-      throw new Error('ไม่พบ token การเข้าสู่ระบบ')
-    }
+    if (!token) throw new Error('ไม่พบ token การเข้าสู่ระบบ')
 
     const response = await fetch(`${import.meta.env.VITE_API_BASE}/admin/repairs`, {
       method: 'GET',
@@ -50,9 +51,7 @@ const fetchRepairRequests = async () => {
         'Content-Type': 'application/json',
       },
     })
-    if (!response.ok) {
-      throw new Error('เกิดข้อผิดพลาดในการดึงข้อมูล')
-    }
+    if (!response.ok) throw new Error('เกิดข้อผิดพลาดในการดึงข้อมูล')
 
     const data = await response.json()
     repairRequests.value = data.map((item) => ({
@@ -65,6 +64,10 @@ const fetchRepairRequests = async () => {
       department: item.department_name || '-',
       urgency: mapUrgency(item.rf_urgency),
       status: mapStatus(item.rf_user_status),
+
+      /* --- [เพิ่มใหม่ 2] เก็บค่า status ดิบภาษาอังกฤษไว้ใช้กรอง --- */
+      rawStatus: item.rf_user_status,
+
       technicianName:
         item.tech_first_name && item.tech_last_name
           ? `${item.tech_first_name} ${item.tech_last_name}`
@@ -78,10 +81,55 @@ const fetchRepairRequests = async () => {
   }
 }
 
-/* --- แปลงเป็น rows สำหรับ TableComponent (array of arrays) --- */
-// แปลง repairRequests -> rows ที่มีคอลัมน์ครบตามต้องการ
+/* --- Helper Checks --- */
+const isToday = (request) => {
+  const today = new Date()
+  const date = request.rawDate || new Date(request.date)
+  return date.toDateString() === today.toDateString()
+}
+
+const isWithinLastSevenDays = (request) => {
+  const today = new Date()
+  const date = request.rawDate || new Date(request.date)
+  const diffTime = Math.abs(today - date)
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+  return diffDays <= 7
+}
+
+/* --- [เพิ่มใหม่ 3] Computed สำหรับกรองข้อมูล --- */
+// ตัวนี้จะกรอง repairRequests ตาม currentFilter ก่อนส่งไปแปลงเป็น rows
+const filteredRequests = computed(() => {
+  if (!currentFilter.value) {
+    return repairRequests.value // ถ้าไม่มี filter ให้ส่งกลับทั้งหมด
+  }
+
+  return repairRequests.value.filter((req) => {
+    switch (currentFilter.value) {
+      case 'today':
+        return isToday(req)
+      case 'in_progress':
+        return req.rawStatus === 'in_progress'
+      case 'completed_7days':
+        // เช็คว่าเป็น status done หรือ completed
+        return (
+          (req.rawStatus === 'done' || req.rawStatus === 'completed') && isWithinLastSevenDays(req)
+        )
+      case 'cancelled_7days':
+        // เช็คว่าเป็น status cancel หรือ cancelled
+        return (
+          (req.rawStatus === 'cancel' || req.rawStatus === 'cancelled') &&
+          isWithinLastSevenDays(req)
+        )
+      default:
+        return true
+    }
+  })
+})
+
+/* --- [แก้ไข] rowsForTable ให้ใช้ filteredRequests แทน repairRequests --- */
 const rowsForTable = computed(() =>
-  repairRequests.value.map((r) => {
+  filteredRequests.value.map((r) => {
+    // <-- เปลี่ยนตรงนี้
     const urgencyHtml =
       r.urgency === 'เร่งด่วนมาก'
         ? `<span class='inline-flex justify-center items-center w-28 h-8 rounded-full bg-red-100 text-red-600 font-semibold'>เร่งด่วนมาก</span>`
@@ -99,69 +147,86 @@ const rowsForTable = computed(() =>
             : `<span class='inline-flex justify-center items-center w-28 h-8 rounded-full bg-gray-100 text-gray-500 font-semibold'>ยกเลิก</span>`
 
     return [
-      r.date || '-', // วันที่
-      r.ticketId || '-', // ใบแจ้งซ่อม
-      r.requesterName || '-', // ชื่อผู้แจ้ง
-      r.type || '-', // ประเภท
-      r.department || '-', // หน่วยงาน
-      urgencyHtml, // ความเร่งด่วน (HTML badge)
-      statusHtml, // สถานะงาน (HTML badge)
-      'actions', // ปุ่มรายละเอียด / edit / delete (TableComponent จะเรนเดอร์)
+      r.date || '-',
+      r.ticketId || '-',
+      r.requesterName || '-',
+      r.department || '-',
+      r.type || '-',
+      urgencyHtml,
+      statusHtml,
+      'actions',
     ]
   }),
 )
 
-/* --- สถิติ (เดิม) --- */
-const isToday = (request) => {
-  const today = new Date()
-  const date = request.rawDate || new Date(request.date)
-  return date.toDateString() === today.toDateString()
-}
-
-const isWithinLastSevenDays = (request) => {
-  const today = new Date()
-  const date = request.rawDate || new Date(request.date)
-  const diffTime = Math.abs(today - date)
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-  return diffDays <= 7
-}
-
+/* --- [แก้ไข] statItems เพิ่ม key สำหรับ Filter --- */
 const todayTasksCount = computed(
   () => repairRequests.value.filter((request) => isToday(request)).length,
 )
 const inProgressTasksCount = computed(
-  () => repairRequests.value.filter((request) => request.status === 'กำลังดำเนินการ').length,
+  () => repairRequests.value.filter((request) => request.rawStatus === 'in_progress').length,
 )
 const completedTasksCount = computed(
   () =>
     repairRequests.value.filter(
-      (request) => request.status === 'เสร็จสิ้น' && isWithinLastSevenDays(request),
+      (request) =>
+        (request.rawStatus === 'done' || request.rawStatus === 'completed') &&
+        isWithinLastSevenDays(request),
     ).length,
 )
 const cancelledTasksCount = computed(
   () =>
     repairRequests.value.filter(
-      (request) => request.status === 'ยกเลิก' && isWithinLastSevenDays(request),
+      (request) =>
+        (request.rawStatus === 'cancel' || request.rawStatus === 'cancelled') &&
+        isWithinLastSevenDays(request),
     ).length,
 )
 
 const statItems = computed(() => [
-  { value: todayTasksCount.value, label: 'งานทั้งหมดในวันนี้', colorClass: 'text-blue-600' },
-  { value: inProgressTasksCount.value, label: 'กำลังดำเนินการ', colorClass: 'text-orange-500' },
-  { value: completedTasksCount.value, label: 'เสร็จสิ้น (7 วัน)', colorClass: 'text-green-600' },
-  { value: cancelledTasksCount.value, label: 'ยกเลิก (7 วัน)', colorClass: 'text-red-600' },
+  {
+    value: todayTasksCount.value,
+    label: 'งานทั้งหมดในวันนี้',
+    colorClass: 'text-amber-500',
+    filterKey: 'today',
+  },
+  {
+    value: inProgressTasksCount.value,
+    label: 'กำลังดำเนินการ',
+    colorClass: 'text-blue-600',
+    filterKey: 'in_progress',
+  },
+  {
+    value: completedTasksCount.value,
+    label: 'ดำเนินการเสร็จสิ้น (7 วัน)',
+    colorClass: 'text-green-600',
+    filterKey: 'completed_7days',
+  },
+  {
+    value: cancelledTasksCount.value,
+    label: 'งานที่ยกเลิก (7 วัน)',
+    colorClass: 'text-red-600',
+    filterKey: 'cancelled_7days',
+  },
 ])
 
-/* --- Pagination (ถ้า TableComponent มี pagination ในตัว คุณอาจไม่ต้องใช้ค่าพวกนี้) --- */
-const itemsPerPage = 5
+/* --- [เพิ่มใหม่ 4] ฟังก์ชันรับ Event Click จาก Card --- */
+const handleCardClick = (item) => {
+  // ส่งไปยังหน้ารายการ พร้อมแนบ query status ไปด้วย
+  router.push({
+    path: '/main/admin-check-request', // <-- ตรวจสอบว่าใน router.js คุณตั้ง path นี้ไว้ชื่ออะไร
+    query: { status: item.filterKey },
+  })
+}
 
-/* --- Actions --- */
+// ... (ส่วน Pagination และ Actions อื่นๆ เหมือนเดิม) ...
+const itemsPerPage = 5
 const goToRepairDetail = (ticketId) => {
   router.push(`/main/repair-detail/${ticketId}`)
 }
 
-/* ลบรายการ (Admin) */
 async function deleteRepair(ticketId) {
+  // ... code ลบเหมือนเดิม ...
   const result = await Sweetalert.fire({
     title: 'ลบรายการนี้?',
     text: `คุณต้องการลบใบแจ้งซ่อมหมายเลข ${ticketId} หรือไม่?`,
@@ -194,7 +259,6 @@ async function deleteRepair(ticketId) {
   }
 }
 
-/* --- onMounted --- */
 onMounted(() => {
   fetchRepairRequests()
 })
@@ -235,17 +299,17 @@ onMounted(() => {
     </div>
 
     <!-- Stats -->
-    <CardHomeComponent :items="statItems" />
+    <CardHomeComponent :items="statItems" @click="handleCardClick" />
 
     <!-- Table (ใช้ TableComponent) -->
     <div class="p-3 mx-auto max-w-8xl">
       <TableComponent
         :columns="[
           'วันที่',
-          'ใบแจ้งซ่อม',
+          'หมายเลขแจ้งซ่อม',
           'ชื่อผู้แจ้ง',
-          'ประเภท',
           'หน่วยงาน',
+          'ประเภท',
           'ความเร่งด่วน',
           'สถานะงาน',
           'รายละเอียด',

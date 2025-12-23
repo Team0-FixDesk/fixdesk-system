@@ -3,6 +3,7 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
 import TableComponent from '@/components/table-component.vue'
+import TableActionsComponent from '@/components/table-actions-component.vue'
 
 defineOptions({ name: 'AdminManageLocationView' })
 
@@ -217,11 +218,21 @@ async function fetchAllDataAlternative() {
     }
   } catch (err) {
     console.error('Error fetching location data:', err)
-    Swal.fire({
-      icon: 'error',
+    // Toast notification
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true,
+    })
+    Toast.fire({
       title: 'เกิดข้อผิดพลาด',
       text: 'ไม่สามารถโหลดข้อมูลสถานที่ได้',
-      confirmButtonColor: '#EF4444',
+      icon: 'error',
+      background: '#fee2e2',
+      color: '#dc2626',
     })
   }
 }
@@ -372,31 +383,22 @@ function extractNumber(str) {
 }
 
 // แก้ไข tableRows ให้มี ID เป็นคอลัมน์แรก
+// Table rows (ใช้ TableComponent ใหม่)
 const tableRows = computed(() => {
-  return displayData.value.map((item) => [
-    item.id.toString(), // คอลัมน์ 0: ID (ซ่อนในโหมด location)
-    item.building, // คอลัมน์ 1: อาคาร
-    item.floor, // คอลัมน์ 2: ชั้น
-    item.room, // คอลัมน์ 3: ห้อง
-    'actions', // คอลัมน์ 4: การจัดการ
-  ])
+  return displayData.value.map((item) => {
+    return [
+      item.id, // 0: primary ID
+      item.building, // 1: อาคาร
+      item.floor, // 2: ชั้น
+      item.room, // 3: ห้อง
+      '', // 4: action (slot)
+    ]
+  })
 })
+const openMenuId = ref(null)
 
 // เปลี่ยน columns ให้มี 5 คอลัมน์ แต่จะซ่อนคอลัมน์แรก
-const columns = ['อาคาร', 'ชั้น', 'ห้อง', 'การจัดการ'] // ลบ 'ID' ออก
-
-// Raw rows for TableComponent meta data
-const rawRows = computed(() => {
-  return displayData.value.map((item) => ({
-    id: item.id,
-    type: item.type,
-    name: item.name,
-    code: item.id.toString(), // ตรงกับ row[0]
-    building: item.building,
-    floor: item.floor,
-    room: item.room,
-  }))
-})
+const columns = ['', 'อาคาร', 'ชั้น', 'ห้อง', 'การจัดการ']
 
 // Filter functions
 function toggleBuildingFilter() {
@@ -569,22 +571,44 @@ async function confirmDelete(username) {
       throw new Error(data.message || 'ลบไม่สำเร็จ')
     }
 
-    await Swal.fire({
-      icon: 'success',
+    // Toast notification
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 2500,
+      timerProgressBar: true,
+      didOpen: (toast) => {
+        toast.addEventListener('mouseenter', Swal.stopTimer)
+        toast.addEventListener('mouseleave', Swal.resumeTimer)
+      },
+    })
+    Toast.fire({
       title: 'สำเร็จ!',
       text: 'ลบห้องเรียบร้อยแล้ว',
-      confirmButtonColor: '#1E48D1',
-      timer: 1500,
-      showConfirmButton: false,
+      icon: 'success',
+      background: '#f0f9ff',
+      color: '#1e3a8a',
     })
 
     await refreshData()
   } catch (err) {
-    await Swal.fire({
-      icon: 'error',
+    // Toast notification
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true,
+    })
+    Toast.fire({
       title: 'เกิดข้อผิดพลาด',
       text: err.message || 'เกิดข้อผิดพลาดในการลบข้อมูล',
-      confirmButtonColor: '#EF4444',
+      icon: 'error',
+      background: '#fee2e2',
+      color: '#dc2626',
     })
   }
 }
@@ -673,13 +697,25 @@ async function saveSingleLocation() {
 
     closeAddModal()
 
-    await Swal.fire({
+    // Toast notification
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 2000,
+      timerProgressBar: true,
+      didOpen: (toast) => {
+        toast.addEventListener('mouseenter', Swal.stopTimer)
+        toast.addEventListener('mouseleave', Swal.resumeTimer)
+      },
+    })
+    await Toast.fire({
       icon: 'success',
       title: 'สำเร็จ!',
       text: 'เพิ่มข้อมูลเรียบร้อยแล้ว',
-      confirmButtonColor: '#1E48D1',
-      timer: 1500,
-      showConfirmButton: false,
+      background: '#f0f9ff',
+      color: '#1e3a8a',
     })
 
     await refreshData()
@@ -779,13 +815,25 @@ async function bulkCreateLocation() {
 
     closeAddModal()
 
-    await Swal.fire({
+    // Toast notification
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 2000,
+      timerProgressBar: true,
+      didOpen: (toast) => {
+        toast.addEventListener('mouseenter', Swal.stopTimer)
+        toast.addEventListener('mouseleave', Swal.resumeTimer)
+      },
+    })
+    await Toast.fire({
       icon: 'success',
       title: 'สำเร็จ!',
       text: 'สร้างสถานที่เรียบร้อยแล้ว',
-      confirmButtonColor: '#1E48D1',
-      timer: 1500,
-      showConfirmButton: false,
+      background: '#f0f9ff',
+      color: '#1e3a8a',
     })
 
     await refreshData()
@@ -842,13 +890,25 @@ async function saveEditLocation() {
 
     closeEditModal()
 
-    await Swal.fire({
+    // Toast notification
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 2000,
+      timerProgressBar: true,
+      didOpen: (toast) => {
+        toast.addEventListener('mouseenter', Swal.stopTimer)
+        toast.addEventListener('mouseleave', Swal.resumeTimer)
+      },
+    })
+    await Toast.fire({
       icon: 'success',
       title: 'สำเร็จ!',
       text: 'แก้ไขข้อมูลห้องเรียบร้อยแล้ว',
-      confirmButtonColor: '#1E48D1',
-      timer: 1500,
-      showConfirmButton: false,
+      background: '#f0f9ff',
+      color: '#1e3a8a',
     })
 
     await refreshData()
@@ -1061,14 +1121,27 @@ onBeforeUnmount(() => {
         <TableComponent
           :columns="columns"
           :rows="tableRows"
-          :rawRows="rawRows"
           :perPage="10"
           :idColumnIndex="0"
-          mode="location"
           @detail="openViewModal"
           @edit="openEditModal"
           @delete="confirmDelete"
-        />
+        >
+          <!-- slot: action column -->
+          <template #cell-4="{ row }">
+            <TableActionsComponent
+              role="admin"
+              :row-id="row[0]"
+              :open-menu-id="openMenuId"
+              :row="row"
+              :status="null"
+              @toggle-menu="openMenuId = $event"
+              @detail="openViewModal(row[0])"
+              @edit="openEditModal(row[0])"
+              @delete="confirmDelete(row[0])"
+            />
+          </template>
+        </TableComponent>
       </div>
     </div>
 

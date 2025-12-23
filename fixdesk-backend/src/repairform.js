@@ -392,8 +392,10 @@ module.exports = function RepairFormRoutes(db) {
         rf.rf_user_status,
         rf.rf_create_at,
         b.bd_name AS building_name,
-        u.us_department AS department_name
+        u.us_department AS department_name,
+        tt.tt_name AS tt_name
       FROM repair_form rf
+      LEFT JOIN technician_type tt ON rf.rf_tt_id = tt.tt_id
       LEFT JOIN room r ON rf.rf_room_id = r.room_id
       LEFT JOIN floor f ON r.room_fl_id = f.fl_id
       LEFT JOIN building b ON f.fl_bd_id = b.bd_id
@@ -832,6 +834,7 @@ module.exports = function RepairFormRoutes(db) {
   rf.rf_code,
   rf.rf_create_at,
   rf.rf_user_status,
+  rf.rf_problem,
   COALESCE(rf.rf_urgency, 'medium') AS rf_urgency,
   u.us_first_name_th AS us_first_name,
   u.us_last_name_th AS us_last_name,
@@ -1058,6 +1061,31 @@ ORDER BY rf.rf_create_at DESC
         }); // end rf query
       }); // end beginTransaction
     }); // end obtainConnection
+  });
+
+  // [เพิ่มใหม่] ดึงสถิติสถานะงานซ่อม (สำหรับแสดง Card หน้า Dashboard)
+  // -------------------------------------------------------
+  router.get("/repair-stats/:userId", (req, res) => {
+    const { userId } = req.params;
+
+    const sql = `
+      SELECT 
+        COUNT(*) AS total,
+        COALESCE(SUM(CASE WHEN rf_user_status = 'pending' THEN 1 ELSE 0 END), 0) AS pending,
+        COALESCE(SUM(CASE WHEN rf_user_status = 'in_progress' THEN 1 ELSE 0 END), 0) AS in_progress,
+        COALESCE(SUM(CASE WHEN rf_user_status = 'done' THEN 1 ELSE 0 END), 0) AS completed
+      FROM repair_form
+      WHERE rf_us_id = ?
+    `;
+
+    db.query(sql, [userId], (err, results) => {
+      if (err) {
+        console.error("Error fetching stats:", err);
+        return res.status(500).json({ message: "ดึงข้อมูลสถิติไม่สำเร็จ" });
+      }
+      // ส่งคืน object ก้อนเดียว เช่น { total: 10, pending: 2, ... }
+      res.json(results[0]);
+    });
   });
 
   return router;
