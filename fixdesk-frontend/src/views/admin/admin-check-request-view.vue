@@ -63,20 +63,19 @@ async function loadAdminRepairs() {
     }
 
     // // แปลงข้อมูลเป็น row
-    tableRows.value = data.map((repair) => {
-      const fullName = `${repair.us_first_name || ''} ${repair.us_last_name || ''}`.trim()
-
-      return [
-        new Date(repair.rf_create_at).toLocaleDateString('th-TH'), // 0
-        repair.rf_code, // 1
-        fullName || '-', // 2
-        repair.department_name || '-', // 3
-        repair.tt_name || '-', // 4
-        repair.rf_urgency, // 5
-        repair.rf_user_status, // 6
-        '', // 7 action
-      ]
-    })
+    tableRows.value = data.map((repair) => ({
+      row: [
+        new Date(repair.rf_create_at).toLocaleDateString('th-TH'),
+        repair.rf_code,
+        `${repair.us_first_name || ''} ${repair.us_last_name || ''}`,
+        repair.department_name || '-',
+        repair.tt_name || '-',
+        repair.rf_urgency,
+        repair.rf_user_status,
+        '', // action
+      ],
+      meta: repair,
+    }))
   } catch (err) {
     console.error('โหลดข้อมูลไม่สำเร็จ:', err)
   }
@@ -87,7 +86,10 @@ const filteredRows = computed(() => {
   const search = searchInput.value.toLowerCase()
   const dateFilter = selectedDate.value
 
-  return tableRows.value.filter((row) => {
+  return tableRows.value.filter((item) => {
+    const row = item.row
+    const meta = item.meta
+
     const dateText = row[0]
     const code = String(row[1]).toLowerCase()
     const name = String(row[2]).toLowerCase()
@@ -96,22 +98,18 @@ const filteredRows = computed(() => {
     const urgency = row[5]
     const status = row[6]
 
-    // ค้นหา
     const matchesSearch =
       code.includes(search) ||
       name.includes(search) ||
       department.includes(search) ||
       type.includes(search)
 
-    // ความเร่งด่วน
     const matchesUrgency =
       selectedUrgencies.value.length === 0 || selectedUrgencies.value.includes(urgency)
 
-    // สถานะงาน
     const matchesStatus =
       selectedStatuses.value.length === 0 || selectedStatuses.value.includes(status)
 
-    // วันที่
     const matchesDate =
       !dateFilter ||
       new Date(dateText).toLocaleDateString('th-TH') ===
@@ -273,24 +271,26 @@ onBeforeUnmount(() => {
     <!-- ---------------- Table ---------------- -->
     <TableComponent
       :columns="tableColumns"
-      :rows="filteredRows"
+      :rows="filteredRows.map((item) => item.row)"
       :perPage="10"
       :urgencyColumn="5"
       :statusColumn="6"
     >
       <!-- คอลัมน์ Action (index 7) -->
-      <template #cell-7="{ row }">
-        <TableActions
-          :row-id="row[1]"
-          :open-menu-id="openMenuId"
-          @toggle-menu="openMenuId = $event"
-          role="assign"
-          :row="row"
-          :status="row[6]"
-          @assign="openAssignModal(row)"
-          @detail="openDetail(row[1])"
-        />
-      </template>
+      <template #cell-7="{ row, rowIndex }">
+  <TableActions
+    :row-id="row[1]"
+    :open-menu-id="openMenuId"
+    @toggle-menu="openMenuId = $event"
+    role="assign"
+    :row="row"
+    :status="row[6]"
+    :assigned-tech="filteredRows[rowIndex].meta.rf_assigned_tech_id"
+    @assign="openAssignModal(row)"
+    @detail="openDetail(row[1])"
+  />
+</template>
+
     </TableComponent>
   </div>
   <AssignJobModalComponent
