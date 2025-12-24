@@ -154,7 +154,7 @@ onBeforeUnmount(() => {
         <div class="border-t border-gray-300 mx-1"></div>
 
         <button
-          v-if="normalizedStatus === 'pending'"
+          v-if="normalizedStatus !== 'done'"
           @click="emit('open-stock', row)"
           class="w-full text-left px-3 py-2 hover:bg-gray-100"
         >
