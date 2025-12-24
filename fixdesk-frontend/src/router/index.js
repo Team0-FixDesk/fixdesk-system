@@ -31,7 +31,7 @@ import TechnicianHomeView from '../views/technician/technician-home-view.vue'
 import TechnicianRepairListView from '../views/technician/technician-repair-list-view.vue'
 import TechnicianHistoryView from '../views/technician/technician-history-view.vue'
 import TechnicianStockListView from '../views/technician/technician-stock-list-view.vue'
-import TechnicianMyStockView from '../views/technician/technician-my-stock-view.vue'
+import TechnicianRequisitionListView from '../views/technician/technician-requisition-list-view.vue'
 
 // STOCK
 import StockHomeView from '../views/stock/stock-home-view.vue'
@@ -88,8 +88,8 @@ const router = createRouter({
           meta: { role: ['Technician'] },
         },
         {
-          path: 'technician-my-stock',
-          component: TechnicianMyStockView,
+          path: 'technician-requisition-list',
+          component: TechnicianRequisitionListView,
           meta: { role: ['Technician'] },
         },
 

@@ -12,6 +12,7 @@ const props = defineProps({
   // index ของคอลัมน์เร่งด่วนและสถานะ
   urgencyColumn: { type: Number, default: null }, // เช่น 4
   statusColumn: { type: Number, default: null }, // เช่น 5
+  statusStockColumn: { type: Number, default: null },
 })
 const openMenuId = ref(null)
 const currentPage = ref(1)
@@ -58,6 +59,21 @@ function renderStatusBadge(type) {
       return type
   }
 }
+
+function renderStatusStockBadge(type) {
+  switch (type) {
+    case 'waiting':
+      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-amber-50 text-amber-500 font-semibold">รออนุมัติ</span>`
+    case 'approved':
+      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-green-100 text-green-600 font-semibold">อนุมัติแล้ว</span>`
+    case 'rejected':
+      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-red-100 text-red-500 font-semibold">ไม่อนุมัติ</span>`
+    case 'completed':
+      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-violet-100 text-violet-500 font-semibold">เสร็จสิ้นแล้ว</span>`
+    default:
+      return type
+  }
+}
 </script>
 
 <template>
@@ -92,6 +108,12 @@ function renderStatusBadge(type) {
             <span
               v-else-if="cellIndex === props.statusColumn"
               v-html="renderStatusBadge(cell)"
+            ></span>
+
+            <!-- STATUS STOCK BADGE -->
+            <span
+              v-else-if="cellIndex === props.statusStockColumn"
+              v-html="renderStatusStockBadge(cell)"
             ></span>
 
             <!-- SLOT (ใช้สำหรับ Actions) -->

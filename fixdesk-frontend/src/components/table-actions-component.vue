@@ -18,6 +18,10 @@ const props = defineProps({
     type: String,
     default: null, // raw HTML หรือ key ('pending', 'in_progress', ...)
   },
+  status_stock: {
+    type: String,
+    default: null, // raw HTML หรือ key ('pending', 'cancel', ...)
+  },
   row: {
     type: Array,
     required: true,
