@@ -37,7 +37,21 @@ async function fetchTechnicians() {
     technicianTypes.value = await typesRes.json()
   } catch (err) {
     console.error('❌ โหลดข้อมูลช่างไม่สำเร็จ:', err)
-    Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถโหลดรายชื่อช่างได้', 'error')
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true
+    })
+    Toast.fire({
+      title: 'เกิดข้อผิดพลาด',
+      text: 'ไม่สามารถโหลดรายชื่อช่างได้',
+      icon: 'error',
+      background: '#fee2e2',
+      color: '#dc2626'
+    })
   }
 }
 
@@ -70,7 +84,20 @@ function closeDropdown(e) {
 
 async function confirmAssign() {
   if (!selectedTechnician.value) {
-    Swal.fire('กรุณาเลือกช่าง', '', 'warning')
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 2000,
+      timerProgressBar: true
+    })
+    Toast.fire({
+      title: 'กรุณาเลือกช่างผู้รับผิดชอบ',
+      icon: 'warning',
+      background: '#fef3c7',
+      color: '#d97706'
+    })
     return
   }
 
@@ -91,7 +118,21 @@ async function confirmAssign() {
       const msg = resBody.message || 'มอบหมายงานไม่สำเร็จ'
       // ถ้า Backend บอกว่ามอบหมายไปแล้ว ให้ถือว่า Success แบบมีเตือน
       if (msg.includes('มอบหมายแล้ว') || msg.includes('ถูกมอบหมายแล้ว')) {
-        Swal.fire('แจ้งเตือน', msg, 'info')
+        const Toast = Swal.mixin({
+          toast: true,
+          position: 'top-end',
+          animation: false,
+          showConfirmButton: false,
+          timer: 2500,
+          timerProgressBar: true
+        })
+        Toast.fire({
+          title: 'แจ้งเตือน',
+          text: msg,
+          icon: 'info',
+          background: '#e0f2fe',
+          color: '#0277bd'
+        })
         emit('success') // แจ้งแม่ว่าให้รีโหลดข้อมูล
         emit('close')
         return
@@ -99,12 +140,43 @@ async function confirmAssign() {
       throw new Error(msg)
     }
 
-    Swal.fire('สำเร็จ', 'มอบหมายงานเรียบร้อยแล้ว', 'success')
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true,
+      didOpen: (toast) => {
+        toast.addEventListener('mouseenter', Swal.stopTimer)
+        toast.addEventListener('mouseleave', Swal.resumeTimer)
+      }
+    })
+    Toast.fire({
+      title: 'มอบหมายงานเรียบร้อยแล้ว',
+      icon: 'success',
+      background: '#f0f9ff',
+      color: '#1e3a8a'
+    })
     emit('success') // แจ้งแม่ว่าสำเร็จ
     emit('close')   // ปิด Modal
 
   } catch (err) {
-    Swal.fire('เกิดข้อผิดพลาด', err.message, 'error')
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true
+    })
+    Toast.fire({
+      title: 'เกิดข้อผิดพลาด',
+      text: err.message,
+      icon: 'error',
+      background: '#fee2e2',
+      color: '#dc2626'
+    })
   } finally {
     loadingAssign.value = false
   }

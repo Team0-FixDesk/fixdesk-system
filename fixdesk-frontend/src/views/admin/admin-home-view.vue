@@ -2,9 +2,12 @@
 import CardHomeComponent from '@/components/card-home-component.vue'
 import repairButtonComponent from '@/components/repair-button-component.vue'
 import TableComponent from '@/components/table-component.vue'
+import TableActions from '@/components/table-actions-component.vue'
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import Sweetalert from 'sweetalert2'
+
+const openMenuId = ref(null)
 
 const router = useRouter()
 
@@ -13,35 +16,16 @@ const repairRequests = ref([])
 const loading = ref(false)
 const error = ref(null)
 
-/* --- map helpers (ประกาศก่อน rowsForTable) --- */
-const mapUrgency = (urgency) => {
-  const urgencyMap = {
-    high: 'เร่งด่วนมาก',
-    medium: 'เร่งด่วน',
-    low: 'ไม่เร่งด่วน',
-  }
-  return urgencyMap[urgency] || 'เร่งด่วน'
-}
+/* --- Filter state --- */
+const currentFilter = ref(null) // today / in_progress / completed_7days / cancelled_7days
 
-const mapStatus = (status) => {
-  const statusMap = {
-    pending: 'รอดำเนินการ',
-    in_progress: 'กำลังดำเนินการ',
-    completed: 'เสร็จสิ้น',
-    cancelled: 'ยกเลิก',
-  }
-  return statusMap[status] || 'รอดำเนินการ'
-}
-
-/* --- ดึงข้อมูลจาก API --- */
+/* --- Fetch API --- */
 const fetchRepairRequests = async () => {
   loading.value = true
   error.value = null
   try {
     const token = localStorage.getItem('token') || sessionStorage.getItem('token')
-    if (!token) {
-      throw new Error('ไม่พบ token การเข้าสู่ระบบ')
-    }
+    if (!token) throw new Error('ไม่พบ token')
 
     const response = await fetch(`${import.meta.env.VITE_API_BASE}/admin/repairs`, {
       method: 'GET',
@@ -50,126 +34,135 @@ const fetchRepairRequests = async () => {
         'Content-Type': 'application/json',
       },
     })
-    if (!response.ok) {
-      throw new Error('เกิดข้อผิดพลาดในการดึงข้อมูล')
-    }
+
+    if (!response.ok) throw new Error('โหลดข้อมูลล้มเหลว')
 
     const data = await response.json()
-    repairRequests.value = data.map((item) => ({
-      date: new Date(item.rf_create_at).toLocaleDateString('th-TH'),
-      rawDate: new Date(item.rf_create_at),
-      ticketId: item.rf_code,
-      requesterName: `${item.us_first_name || ''} ${item.us_last_name || ''}`.trim(),
-      type: item.tt_name || '-',
-      assetId: item.rf_prop_number || '-',
-      department: item.department_name || '-',
-      urgency: mapUrgency(item.rf_urgency),
-      status: mapStatus(item.rf_user_status),
-      technicianName:
-        item.tech_first_name && item.tech_last_name
-          ? `${item.tech_first_name} ${item.tech_last_name}`
-          : 'ยังไม่มอบหมาย',
+
+    repairRequests.value = data.map((r) => ({
+      row: [
+        new Date(r.rf_create_at).toLocaleDateString('th-TH'),
+        r.rf_code,
+        `${r.us_first_name || ''} ${r.us_last_name || ''}`.trim(),
+        r.department_name || '-',
+        r.tt_name || '-',
+        r.rf_urgency,
+        r.rf_user_status,
+        '', // action
+      ],
+      meta: r,
+      rawDate: new Date(r.rf_create_at),
     }))
   } catch (err) {
-    console.error('Error fetching repair requests:', err)
     error.value = err.message
   } finally {
     loading.value = false
   }
 }
 
-/* --- แปลงเป็น rows สำหรับ TableComponent (array of arrays) --- */
-// แปลง repairRequests -> rows ที่มีคอลัมน์ครบตามต้องการ
-const rowsForTable = computed(() =>
-  repairRequests.value.map((r) => {
-    const urgencyHtml =
-      r.urgency === 'เร่งด่วนมาก'
-        ? `<span class='inline-flex justify-center items-center w-28 h-8 rounded-full bg-red-100 text-red-600 font-semibold'>เร่งด่วนมาก</span>`
-        : r.urgency === 'เร่งด่วน'
-          ? `<span class='inline-flex justify-center items-center w-28 h-8 rounded-full bg-amber-50 text-amber-500 font-semibold'>เร่งด่วน</span>`
-          : `<span class='inline-flex justify-center items-center w-28 h-8 rounded-full bg-green-100 text-green-600 font-semibold'>ไม่เร่งด่วน</span>`
-
-    const statusHtml =
-      r.status === 'รอดำเนินการ'
-        ? `<span class='inline-flex justify-center items-center w-28 h-8 rounded-full bg-amber-50 text-amber-500 font-semibold'>รอดำเนินการ</span>`
-        : r.status === 'กำลังดำเนินการ'
-          ? `<span class='inline-flex justify-center items-center w-28 h-8 rounded-full bg-blue-100 text-blue-600 font-semibold'>กำลังดำเนินการ</span>`
-          : r.status === 'เสร็จสิ้น'
-            ? `<span class='inline-flex justify-center items-center w-28 h-8 rounded-full bg-green-100 text-green-600 font-semibold'>เสร็จสิ้น</span>`
-            : `<span class='inline-flex justify-center items-center w-28 h-8 rounded-full bg-gray-100 text-gray-500 font-semibold'>ยกเลิก</span>`
-
-    return [
-      r.date || '-', // วันที่
-      r.ticketId || '-', // ใบแจ้งซ่อม
-      r.requesterName || '-', // ชื่อผู้แจ้ง
-      r.department || '-', // หน่วยงาน
-      r.type || '-', // ประเภท
-      urgencyHtml, // ความเร่งด่วน (HTML badge)
-      statusHtml, // สถานะงาน (HTML badge)
-      'actions', // ปุ่มรายละเอียด / edit / delete (TableComponent จะเรนเดอร์)
-    ]
-  }),
-)
-
-/* --- สถิติ (เดิม) --- */
-const isToday = (request) => {
+/* --- Helper --- */
+const isToday = (req) => {
   const today = new Date()
-  const date = request.rawDate || new Date(request.date)
-  return date.toDateString() === today.toDateString()
+  return req.rawDate.toDateString() === today.toDateString()
 }
 
-const isWithinLastSevenDays = (request) => {
+const isWithin7Days = (req) => {
   const today = new Date()
-  const date = request.rawDate || new Date(request.date)
-  const diffTime = Math.abs(today - date)
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-  return diffDays <= 7
+  const diff = Math.abs(today - req.rawDate)
+  return diff / (1000 * 60 * 60 * 24) <= 7
 }
 
-const todayTasksCount = computed(
-  () => repairRequests.value.filter((request) => isToday(request)).length,
+/* --- Filtered Rows --- */
+const filteredRequests = computed(() => {
+  if (!currentFilter.value) return repairRequests.value
+
+  return repairRequests.value.filter((item) => {
+    const status = item.meta.rf_user_status
+
+    switch (currentFilter.value) {
+      case 'today':
+        return isToday(item)
+      case 'in_progress':
+        return status === 'in_progress'
+      case 'completed_7days':
+        return (status === 'done' || status === 'completed') && isWithin7Days(item)
+      case 'cancelled_7days':
+        return (status === 'cancel' || status === 'cancelled') && isWithin7Days(item)
+      default:
+        return true
+    }
+  })
+})
+
+/* --- Table component rows --- */
+const rowsForDisplay = computed(() => filteredRequests.value.map((item) => item.row))
+
+/* --- Stats --- */
+const todayTasks = computed(() => repairRequests.value.filter((r) => isToday(r)).length)
+const progressTasks = computed(
+  () => repairRequests.value.filter((r) => r.meta.rf_user_status === 'in_progress').length,
 )
-const inProgressTasksCount = computed(
-  () => repairRequests.value.filter((request) => request.status === 'กำลังดำเนินการ').length,
-)
-const completedTasksCount = computed(
+const completedTasks = computed(
   () =>
     repairRequests.value.filter(
-      (request) => request.status === 'เสร็จสิ้น' && isWithinLastSevenDays(request),
+      (r) =>
+        (r.meta.rf_user_status === 'done' || r.meta.rf_user_status === 'completed') &&
+        isWithin7Days(r),
     ).length,
 )
-const cancelledTasksCount = computed(
+const cancelledTasks = computed(
   () =>
     repairRequests.value.filter(
-      (request) => request.status === 'ยกเลิก' && isWithinLastSevenDays(request),
+      (r) =>
+        (r.meta.rf_user_status === 'cancel' || r.meta.rf_user_status === 'cancelled') &&
+        isWithin7Days(r),
     ).length,
 )
 
 const statItems = computed(() => [
-  { value: todayTasksCount.value, label: 'งานทั้งหมดในวันนี้', colorClass: 'text-blue-600' },
-  { value: inProgressTasksCount.value, label: 'กำลังดำเนินการ', colorClass: 'text-orange-500' },
-  { value: completedTasksCount.value, label: 'เสร็จสิ้น (7 วัน)', colorClass: 'text-green-600' },
-  { value: cancelledTasksCount.value, label: 'ยกเลิก (7 วัน)', colorClass: 'text-red-600' },
+  {
+    value: todayTasks.value,
+    label: 'งานทั้งหมดวันนี้',
+    colorClass: 'text-amber-500',
+    filterKey: 'today',
+  },
+  {
+    value: progressTasks.value,
+    label: 'กำลังดำเนินการ',
+    colorClass: 'text-blue-600',
+    filterKey: 'in_progress',
+  },
+  {
+    value: completedTasks.value,
+    label: 'เสร็จสิ้น (7 วัน)',
+    colorClass: 'text-green-600',
+    filterKey: 'completed_7days',
+  },
+  {
+    value: cancelledTasks.value,
+    label: 'ยกเลิก (7 วัน)',
+    colorClass: 'text-red-600',
+    filterKey: 'cancelled_7days',
+  },
 ])
 
-/* --- Pagination (ถ้า TableComponent มี pagination ในตัว คุณอาจไม่ต้องใช้ค่าพวกนี้) --- */
-const itemsPerPage = 5
+const handleCardClick = (item) => {
+  currentFilter.value = item.filterKey
+}
 
 /* --- Actions --- */
 const goToRepairDetail = (ticketId) => {
   router.push(`/main/repair-detail/${ticketId}`)
 }
 
-/* ลบรายการ (Admin) */
 async function deleteRepair(ticketId) {
   const result = await Sweetalert.fire({
-    title: 'ลบรายการนี้?',
-    text: `คุณต้องการลบใบแจ้งซ่อมหมายเลข ${ticketId} หรือไม่?`,
+    title: 'ลบรายการ?',
+    text: `ต้องการลบหมายเลข ${ticketId}?`,
     icon: 'warning',
     showCancelButton: true,
-    confirmButtonText: 'ลบเลย',
+    confirmButtonText: 'ลบ',
     cancelButtonText: 'ยกเลิก',
-    confirmButtonColor: '#e53e3e',
   })
   if (!result.isConfirmed) return
 
@@ -183,21 +176,16 @@ async function deleteRepair(ticketId) {
       },
     })
     const body = await res.json()
-    if (!res.ok) throw new Error(body.message || 'ลบไม่สำเร็จ')
+    if (!res.ok) throw new Error(body.message)
 
-    // เอาออกจาก repairRequests
-    repairRequests.value = repairRequests.value.filter((r) => r.ticketId !== ticketId)
-    Sweetalert.fire('สำเร็จ', 'ลบรายการเรียบร้อยแล้ว', 'success')
+    repairRequests.value = repairRequests.value.filter((r) => r.meta.rf_code !== ticketId)
+    Sweetalert.fire('สำเร็จ', 'ลบเรียบร้อย', 'success')
   } catch (err) {
-    console.error('ลบไม่สำเร็จ:', err)
-    Sweetalert.fire('เกิดข้อผิดพลาด', err.message || 'ลบไม่สำเร็จ', 'error')
+    Sweetalert.fire('ผิดพลาด', err.message, 'error')
   }
 }
 
-/* --- onMounted --- */
-onMounted(() => {
-  fetchRepairRequests()
-})
+onMounted(fetchRepairRequests)
 </script>
 
 <template>
@@ -205,40 +193,27 @@ onMounted(() => {
     <!-- Header -->
     <div class="flex justify-between items-center mb-6">
       <div>
-        <h1 class="text-2xl font-bold text-gray-800">หน้าแรก</h1>
-        <p class="text-sm text-gray-600 mt-1">ภาพรวมงานแจ้งเรียนแจ้งซ่อม</p>
+        <h1 class="text-2xl font-bold text-gray-800">หน้าแรก (Admin)</h1>
+        <p class="text-sm text-gray-600 mt-1">ภาพรวมงานแจ้งซ่อม</p>
       </div>
+
       <div class="flex space-x-2">
         <button
           @click="fetchRepairRequests"
           :disabled="loading"
-          class="bg-gray-500 hover:bg-gray-600 disabled:opacity-50 text-white px-4 py-2 rounded-md flex items-center"
+          class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md flex items-center"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="h-5 w-5 mr-1"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-            />
-          </svg>
           รีเฟรช
         </button>
         <repairButtonComponent />
       </div>
     </div>
 
-    <!-- Stats -->
-    <CardHomeComponent :items="statItems" />
+    <!-- Stats Cards -->
+    <CardHomeComponent :items="statItems" @click="handleCardClick" />
 
-    <!-- Table (ใช้ TableComponent) -->
-    <div class="p-3 mx-auto max-w-8xl">
+    <!-- Table -->
+    <div class="p-3 mx-auto max-w-8xl mt-4">
       <TableComponent
         :columns="[
           'วันที่',
@@ -248,21 +223,26 @@ onMounted(() => {
           'ประเภท',
           'ความเร่งด่วน',
           'สถานะงาน',
-          'รายละเอียด',
+          'การดำเนินการ',
         ]"
-        :rows="rowsForTable"
-        :raw-rows="repairRequests"
-        :perPage="itemsPerPage"
-        mode="admin"
-        @detail="(payload) => goToRepairDetail(payload?.ticketId || payload || payload?.id)"
-        @delete="(payload) => deleteRepair(payload?.ticketId || payload || payload?.id)"
-      />
+        :rows="rowsForDisplay"
+        :perPage="10"
+        :urgencyColumn="5"
+        :statusColumn="6"
+      >
+        <template #cell-7="{ row, rowIndex }">
+          <TableActions
+            :open-menu-id="openMenuId"
+            @toggle-menu="openMenuId = $event"
+            :row-id="row[1]"
+            :row="row"
+            :status="row[6]"
+            :assigned-tech="filteredRequests[rowIndex].meta.rf_assigned_tech_id"
+            @detail="goToRepairDetail(row[1])"
+            @delete="deleteRepair(row[1])"
+          />
+        </template>
+      </TableComponent>
     </div>
   </div>
 </template>
-
-<style>
-.empty-row td {
-  border-bottom: 1px solid #e5e7eb;
-}
-</style>

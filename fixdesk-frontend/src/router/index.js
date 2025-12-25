@@ -2,6 +2,7 @@ import { createRouter, createWebHashHistory } from 'vue-router'
 import { jwtDecode } from 'jwt-decode'
 
 // AUTH
+import HomeView from '@/views/home-view.vue'
 import LoginView from '../views/login-view.vue'
 import MainLayout from '../layouts/main-layout.vue'
 
@@ -30,7 +31,7 @@ import TechnicianHomeView from '../views/technician/technician-home-view.vue'
 import TechnicianRepairListView from '../views/technician/technician-repair-list-view.vue'
 import TechnicianHistoryView from '../views/technician/technician-history-view.vue'
 import TechnicianStockListView from '../views/technician/technician-stock-list-view.vue'
-import TechnicianMyStockView from '../views/technician/technician-my-stock-view.vue'
+import TechnicianRequisitionListView from '../views/technician/technician-requisition-list-view.vue'
 
 // STOCK
 import StockHomeView from '../views/stock/stock-home-view.vue'
@@ -42,7 +43,8 @@ import StockManageInventoryView from '../views/stock/stock-manage-inventory-view
 const router = createRouter({
   history: createWebHashHistory(import.meta.env.BASE_URL),
   routes: [
-    { path: '/', redirect: '/login' },
+    { path: '/', redirect: '/home' },
+    { path: '/home', name: 'home' , component: HomeView },
     { path: '/login', name: 'login', component: LoginView },
     {
       path: '/main',
@@ -86,8 +88,8 @@ const router = createRouter({
           meta: { role: ['Technician'] },
         },
         {
-          path: 'technician-my-stock',
-          component: TechnicianMyStockView,
+          path: 'technician-requisition-list',
+          component: TechnicianRequisitionListView,
           meta: { role: ['Technician'] },
         },
 
@@ -138,6 +140,8 @@ const router = createRouter({
 // NAVIGATION GUARD
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('token') || sessionStorage.getItem('token')
+  if (to.path === '/home') return next()
+
   // CASE: หน้า Login
   if (to.path === '/login') {
     if (token) {

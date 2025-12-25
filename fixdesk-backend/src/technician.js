@@ -214,10 +214,11 @@ module.exports = function TechnicianRoutes(db) {
   });
 
   // ดึงประวัติใบงานที่เสร็จสิ้น
-  router.get('/technician/history', authMiddleware, (req, res) => {
+  router.get("/technician/history", authMiddleware, (req, res) => {
     const techId = req.user && req.user.us_id;
-    console.debug('GET /technician/history - requested by user id=', techId);
-    if (!techId) return res.status(401).json({ message: 'ต้องแนบโทเคนที่ถูกต้อง' });
+    console.debug("GET /technician/history - requested by user id=", techId);
+    if (!techId)
+      return res.status(401).json({ message: "ต้องแนบโทเคนที่ถูกต้อง" });
 
     const query = `
       SELECT
@@ -253,13 +254,14 @@ module.exports = function TechnicianRoutes(db) {
 
     db.query(query, [techId], (err, results) => {
       if (err) {
-        console.error('Error fetching technician completed history:', err);
-        return res.status(500).json({ message: 'ดึงประวัติใบงานไม่สำเร็จ', error: err.message });
+        console.error("Error fetching technician completed history:", err);
+        return res
+          .status(500)
+          .json({ message: "ดึงประวัติใบงานไม่สำเร็จ", error: err.message });
       }
       res.json(results);
     });
   });
-
 
   // ดึงรายการใบเบิกของผู้ใช้งานที่ล็อกอิน)
   router.get("/technician/my-stock-forms", authMiddleware, (req, res) => {
@@ -304,6 +306,259 @@ module.exports = function TechnicianRoutes(db) {
       }
       res.json(results);
     });
+  });
+
+  router.put("/technician/close-job/:rf_code", authMiddleware, (req, res) => {
+    const techId = req.user?.us_id;
+    const { rf_code } = req.params;
+    const { tech_summary, tech_image_after } = req.body;
+
+    if (!techId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const query = `
+      UPDATE repair_form rf
+      JOIN repair_assignment ra ON rf.rf_id = ra.ra_rf_id
+      SET
+        rf.rf_user_status = 'done',
+        rf.rf_done_at = NOW(),
+        rf.rf_tech_summary = ?,
+        rf.rf_tech_image_after = ?
+      WHERE
+        rf.rf_code = ?
+        AND ra.ra_us_id = ?
+        AND rf.rf_user_status = 'in_progress'
+    `;
+
+    db.query(
+      query,
+      [tech_summary || null, tech_image_after || null, rf_code, techId],
+      (err, result) => {
+        if (err) {
+          console.error("❌ Close job error:", err);
+          return res.status(500).json({ message: "ปิดงานไม่สำเร็จ" });
+        }
+
+        if (result.affectedRows === 0) {
+          return res.status(400).json({
+            message: "ไม่พบงาน หรือสถานะไม่อยู่ในขั้นกำลังดำเนินการ",
+          });
+        }
+
+        res.json({ message: "ปิดงานสำเร็จ" });
+      }
+    );
+  });
+
+  /**
+   * POST /withdraw
+   * Payload: { repair_code?: string, note?: string, items: [{ id: number, qty: number }] }
+   * Creates a stock withdrawal form and decrements product quantities
+   */
+  router.post("/withdraw", authMiddleware, async (req, res) => {
+    const { repair_code, note, items } = req.body || {};
+
+    // Validate items array
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ message: "ไม่มีรายการสินค้าในตะกร้า" });
+    }
+
+    // Validate each item
+    for (const item of items) {
+      if (!item.id || !item.qty || Number(item.qty) <= 0) {
+        return res
+          .status(400)
+          .json({ message: "รูปแบบข้อมูลรายการสินค้าไม่ถูกต้อง" });
+      }
+    }
+
+    // Helper: Promisify database query
+    const query = (sql, params) => {
+      return new Promise((resolve, reject) => {
+        db.query(sql, params, (err, results) => {
+          if (err) reject(err);
+          else resolve(results);
+        });
+      });
+    };
+
+    // Helper: Begin transaction
+    const beginTransaction = () => {
+      return new Promise((resolve, reject) => {
+        db.beginTransaction((err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+    };
+
+    // Helper: Commit transaction
+    const commit = () => {
+      return new Promise((resolve, reject) => {
+        db.commit((err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+    };
+
+    // Helper: Rollback transaction
+    const rollback = () => {
+      return new Promise((resolve) => {
+        db.rollback(() => resolve());
+      });
+    };
+
+    try {
+      await beginTransaction();
+
+      const userId = req.user?.us_id || null;
+      let repairFormId = null;
+
+      // Lookup repair form ID if repair_code provided
+      if (repair_code) {
+        const repairRows = await query(
+          "SELECT rf_id FROM repair_form WHERE rf_code = ? LIMIT 1",
+          [repair_code]
+        );
+        if (repairRows.length > 0) {
+          repairFormId = repairRows[0].rf_id;
+        } else {
+          console.warn(`Repair code not found: ${repair_code}`);
+        }
+      }
+      // เตรียมตัวแปรวันปัจจุบัน
+      const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+
+      // นับจำนวนใบเบิกของวันนี้ เพื่อรันรหัส
+      const countRows = await query(
+        "SELECT COUNT(*) AS count FROM stock_form WHERE DATE(sf_create_at) = ?",
+        [today]
+      );
+
+      const todayCount = countRows[0].count + 1;
+      const datePart = today.replace(/-/g, ""); // YYYYMMDD
+      const runningNumber = String(todayCount).padStart(3, "0");
+
+      // Generate unique stock form code
+      const sfCode = `SF${datePart}${runningNumber}`;
+      const sfStatus = "completed";
+
+      console.log("Creating stock form:", {
+        sfCode,
+        sfStatus,
+        userId,
+        repairFormId,
+      });
+
+      // Create stock form header
+      const headerResult = await query(
+        `INSERT INTO stock_form 
+       (sf_code, sf_create_at, sf_status, sf_us_id, sf_rf_id, sf_update_at) 
+       VALUES (?, NOW(), ?, ?, ?, NULL)`,
+        [sfCode, sfStatus, userId, repairFormId]
+      );
+
+      const sfId = headerResult.insertId;
+      console.log("Stock form created:", { sfId, sfCode });
+
+      // Process each item
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        const requestedQty = Number(item.qty);
+
+        console.log(`Processing item ${i + 1}/${items.length}:`, {
+          pd_id: item.id,
+          qty: requestedQty,
+        });
+
+        // Check product stock (with row lock)
+        const productRows = await query(
+          "SELECT pd_id, pd_name, pd_quantity FROM products WHERE pd_id = ? FOR UPDATE",
+          [item.id]
+        );
+
+        if (productRows.length === 0) {
+          throw new Error(`ไม่พบสินค้า id=${item.id}`);
+        }
+
+        const product = productRows[0];
+        const currentQty = Number(product.pd_quantity || 0);
+
+        console.log("Stock check:", {
+          pd_id: product.pd_id,
+          pd_name: product.pd_name,
+          currentQty,
+          requestedQty,
+        });
+
+        // Validate sufficient stock
+        if (currentQty < requestedQty) {
+          throw new Error(
+            `จำนวนสินค้าไม่เพียงพอสำหรับ ${product.pd_name} (มี ${currentQty} ต้องการ ${requestedQty})`
+          );
+        }
+
+        // Decrement product quantity
+        await query(
+          "UPDATE products SET pd_quantity = pd_quantity - ? WHERE pd_id = ?",
+          [requestedQty, item.id]
+        );
+        console.log(`Stock decremented: pd_id=${item.id}, qty=${requestedQty}`);
+
+        // Insert stock form detail
+        await query(
+          "INSERT INTO stock_form_detail (sfd_sf_id, sfd_pd_id, sfd_qty) VALUES (?, ?, ?)",
+          [sfId, item.id, requestedQty]
+        );
+        console.log(
+          `Form detail inserted: sfd_sf_id=${sfId}, sfd_pd_id=${item.id}`
+        );
+
+        // Record stock transaction
+        await query(
+          `INSERT INTO stock_transactions 
+         (stt_product_id, stt_user_id, stt_type, stt_quantity, stt_created_at, stt_ref_sf_id) 
+         VALUES (?, ?, 'OUT', ?, NOW(), ?)`,
+          [item.id, userId, requestedQty, sfId]
+        );
+        console.log(`Stock transaction recorded: pd_id=${item.id}, type=OUT`);
+      }
+
+      // Commit transaction
+      await commit();
+      console.log("Withdraw committed successfully:", {
+        sfId,
+        sfCode,
+        userId,
+        itemCount: items.length,
+      });
+
+      return res.status(201).json({
+        message: "เบิกสินค้าเรียบร้อย",
+        sf_id: sfId,
+        sf_code: sfCode,
+      });
+    } catch (error) {
+      await rollback();
+      console.error("WITHDRAW ERROR:", error);
+
+      // Determine appropriate error response
+      const errorMessage = error.message || "เกิดข้อผิดพลาดในการเบิกสินค้า";
+      let statusCode = 500;
+
+      if (errorMessage.includes("ไม่พบสินค้า")) {
+        statusCode = 404;
+      } else if (errorMessage.includes("ไม่เพียงพอ")) {
+        statusCode = 400;
+      }
+
+      return res.status(statusCode).json({
+        message: errorMessage,
+        error: error.message,
+      });
+    }
   });
 
   return router;
