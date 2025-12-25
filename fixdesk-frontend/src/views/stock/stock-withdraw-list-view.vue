@@ -1,243 +1,186 @@
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
-import TableComponent from '@/components/table-component.vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
+import TableComponent from '@/components/table-component.vue'
+import TableActions from '@/components/table-actions-component.vue'
 import Sweetalert from 'sweetalert2'
+
 defineOptions({ name: 'StockWithdrawListView' })
 
-// Table Columns
-const columns = [
-  'วันที่',
-  'รหัสการเบิกของ',
-  'ชื่อผู้ขอเบิก',
-  'หน่วยงาน',
-  'ความเร่งด่วน',
-  'สถานะการเบิก',
-  'ตัวดำเนินการ',
-]
-
 const router = useRouter()
+const API_BASE = import.meta.env.VITE_API_BASE
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
+// columns
+const columns = ['รหัสใบเบิกของ', 'หน่วยงาน', 'รายละเอียด', 'สถานะการเบิก', 'ตัวดำเนินการ']
 
-function getAuthHeaders() {
-  const token = localStorage.getItem('token') || sessionStorage.getItem('token')
-  return { Authorization: `Bearer ${token}` }
-}
+const tableRows = ref([])
 
-// Filters + Status
 const searchQuery = ref('')
-const showUrgencyFilter = ref(false)
-const showStatusFilter = ref(false)
-const selectedUrgencies = ref([])
 const selectedStatuses = ref([])
 const selectedDate = ref('')
 
-//
-const rows = ref([])
-const rawRows = ref([])
+const showUrgency = ref(false)
+const showStatus = ref(false)
+const openMenuId = ref(null)
 
-// utils: map urgency + status + text + classes
-const mapUrgency = (u) => ({ low: 'ไม่เร่งด่วน', medium: 'เร่งด่วน', high: 'เร่งด่วนมาก' }[u] || 'เร่งด่วน')
-const mapStockStatus = (s) => ({ waiting: 'รออนุมัติ', approved: 'อนุมัติแล้ว', rejected: 'ไม่อนุมัติ', completed: 'เสร็จสิ้น' }[s] || s)
-
-const getUrgencyClass = (u) => {
-  switch (u) {
-    case 'high':
-      return 'bg-red-100 text-red-700'
-    case 'medium':
-      return 'bg-amber-50 text-amber-600'
-    case 'low':
-      return 'bg-green-100 text-green-700'
-    default:
-      return 'bg-gray-100 text-gray-600'
-  }
-}
-
-const getStatusClass = (s) => {
-  switch (s) {
-    case 'waiting':
-      return 'bg-amber-50 text-amber-600'
-    case 'approved':
-      return 'bg-green-100 text-green-600'
-    case 'rejected':
-      return 'bg-red-100 text-red-700'
-    case 'completed':
-      return 'bg-gray-100 text-gray-700'
-    default:
-      return 'bg-gray-100 text-gray-700'
-  }
-}
-
-// Fetch Stock Forms (mock data for UI)
-const problemCount = ref(null)
-
-async function fetchStockForms() {
+// ==================== ดึงทั้งหมด ====================
+async function loadStockForms() {
   try {
-    // Mock VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV
-    const mock = [
-      { dateDisplay: '11/11/1111', code: 'ABC-000', requester: 'คนละครึ่ง กูอะ', department: 'ABC-000', location: 'อาคาร 3 ชั้น 4 ห้อง 5', urgencyKey: 'medium', statusKey: 'waiting' },
-      { dateDisplay: '11/11/1111', code: 'ABC-001', requester: 'สมใจ ไตวาย', department: 'ABC-000', location: 'อาคาร 3 ชั้น 4 ห้อง 5', urgencyKey: 'medium', statusKey: 'waiting' },
-      { dateDisplay: '11/11/1111', code: 'ABC-002', requester: 'ฎ ฎ', department: 'ABC-000', location: 'อาคาร 3 ชั้น 4 ห้อง 5', urgencyKey: 'low', statusKey: 'waiting' },
-      { dateDisplay: '11/11/1111', code: 'ABC-003', requester: 'สมหมาย ถ่ายหนัก', department: 'ABC-000', location: 'อาคาร 3 ชั้น 4 ห้อง 5', urgencyKey: 'medium', statusKey: 'approved' },
-      { dateDisplay: '11/11/1111', code: 'ABC-004', requester: 'ไม่บอก เดี๋ยวรู้', department: 'ABC-000', location: 'อาคาร 3 ชั้น 4 ห้อง 5', urgencyKey: 'medium', statusKey: 'approved' },
-      { dateDisplay: '11/11/1111', code: 'ABC-005', requester: 'ผักกาด ยืนต้น', department: 'ABC-000', location: 'อาคาร 3 ชั้น 4 ห้อง 5', urgencyKey: 'medium', statusKey: 'approved' },
-      { dateDisplay: '11/11/1111', code: 'ABC-006', requester: 'ตื่น ไม่ใหว', department: 'ABC-000', location: 'อาคาร 3 ชั้น 4 ห้อง 5', urgencyKey: 'medium', statusKey: 'approved' },
-      { dateDisplay: '11/11/1111', code: 'ABC-007', requester: 'ไทย จากจีน', department: 'ABC-000', location: 'อาคาร 3 ชั้น 4 ห้อง 5', urgencyKey: 'medium', statusKey: 'approved' },
-      { dateDisplay: '11/11/1111', code: 'ABC-008', requester: 'วิปริต จิตแจ่มใส', department: 'ABC-000', location: 'อาคาร 3 ชั้น 4 ห้อง 5', urgencyKey: 'medium', statusKey: 'approved' },
-      { dateDisplay: '11/11/1111', code: 'ABC-009', requester: 'สมชาย กลายร่าง', department: 'ABC-000', location: 'อาคาร 3 ชั้น 4 ห้อง 5', urgencyKey: 'medium', statusKey: 'rejected' },
-    ]
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token')
 
-    // Build rows and rawRows with badge HTML using helper functions
-    // เอาข้อมูลจริงมาใส่ทับแล้วลบ mock
-    rawRows.value = mock.map((m) => ({ ...m }))
+    if (!token) {
+      console.error('No token found')
+      return
+    }
 
-    rows.value = mock.map((m) => {
-      const uClass = getUrgencyClass(m.urgencyKey)
-      const sClass = getStatusClass(m.statusKey)
-      const urgencyBadge = `<span class="px-3 py-1 rounded-full text-sm inline-block ${uClass}">${mapUrgency(m.urgencyKey)}</span>`
-      const statusBadge = `<span class="px-3 py-1 rounded-full text-sm inline-block ${sClass}">${mapStockStatus(m.statusKey)}</span>`
-
-      return {
-        ...m,
-        urgencyBadge,
-        statusBadge,
-      }
+    const res = await fetch(`${API_BASE}/stock-forms`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
     })
 
-    problemCount.value = rows.value.length
+    if (res.status === 401) {
+      throw new Error('โทเคนหมดอายุหรือไม่ถูกต้อง')
+    }
 
-    return rows.value
+    const data = await res.json()
+
+    if (!res.ok) throw new Error(data.message)
+
+    tableRows.value = data.map((item) => [
+      item.sf_code, // 0: รหัสใบเบิก
+      item.us_department || '-', // 1: หน่วยงานผู้เบิก
+      `<div style="text-align:left;">
+     <span style="display:inline-block; width:70px;">วันที่:</span>
+     ${new Date(item.sf_create_at).toLocaleDateString('th-TH')}<br>
+     <span style="display:inline-block; width:70px;">ผู้ขอเบิก:</span>
+     ${item.requester}<br>
+     <span style="display:inline-block; width:70px;">สถานที่:</span>
+     ${item.bd_name} ${item.fl_name} ${item.room_name}
+   </div>`, // 2: รายละเอียด
+      item.sf_status, // 3: สถานะการเบิก
+      '', // 4: Action
+    ])
   } catch (err) {
-    console.error('fetchStockForms placeholder error:', err)
-    rawRows.value = []
-    rows.value = []
-    problemCount.value = null
-    return []
+    console.error('Error:', err.message)
+
+    if (err.message.includes('โทเคน')) {
+      Sweetalert.fire({
+        title: 'Session หมดอายุ',
+        text: 'กรุณาเข้าสู่ระบบใหม่',
+        icon: 'warning',
+      })
+      router.push('/login')
+    }
   }
 }
 
-onMounted(async () => {
-  await fetchStockForms()
-})
-
-// Filter + Cells
+// ==================== Filters ====================
 const filteredRows = computed(() => {
   const q = searchQuery.value.toLowerCase()
-  const selectedDateObj = selectedDate.value ? new Date(selectedDate.value) : null
 
-  const filtered = rows.value.filter((r) => {
-    const matchSearch =
-      r.code.toLowerCase().includes(q) ||
-      r.requester.toLowerCase().includes(q) ||
-      r.department.toLowerCase().includes(q) ||
-      r.location.toLowerCase().includes(q)
+  return tableRows.value.filter((row) => {
+    const code = row[0].toLowerCase()
+    console.log("openDetail value:", row[0])
 
-    const matchUrgency = selectedUrgencies.value.length === 0 || selectedUrgencies.value.includes(r.urgencyKey)
-    const matchStatus = selectedStatuses.value.length === 0 || selectedStatuses.value.includes(r.statusKey)
-    const matchDate = !selectedDateObj || new Date(r.dateDisplay).toDateString() === selectedDateObj.toDateString()
+    const dept = row[1]?.toLowerCase() || ''
+    const detail = row[2]?.toLowerCase() || ''
+    const status = row[3]
 
-    return matchSearch && matchUrgency && matchStatus && matchDate
+    const matchSearch = code.includes(q) || dept.includes(q) || detail.includes(q)
+
+    const matchStatus =
+      selectedStatuses.value.length === 0 || selectedStatuses.value.includes(status)
+
+    return matchSearch && matchStatus
   })
-
-  return filtered.map((r) => [r.dateDisplay, r.code, r.requester, r.department, r.urgencyBadge, r.statusBadge, 'actions'])
 })
 
-function goToDetail(code) {
-  // Route -> Not Empty?
-  if (!code) return
-  try {
-    router.push(`/main/stock-withdraw-detail/${code}`)
-  } catch (e) {
-    console.debug('goToDetail:', code)
+function closeDropdown(e) {
+  if (!e.target.closest('.relative')) {
+    showUrgency.value = false
+    showStatus.value = false
   }
 }
 
+// ==================== ACTION ====================
+const openDetail = (sfCode) => {
+  router.push(`/main/stock-requisition/${sfCode}`)
+}
+
+onMounted(() => {
+  loadStockForms()
+  document.addEventListener('click', closeDropdown)
+})
+onBeforeUnmount(() => {
+  document.removeEventListener('click', closeDropdown)
+})
 </script>
 
 <template>
-  <div class="bg-white rounded-xl shadow-md p-12 mx-auto max-w-8xl container mx-auto px-5 py-6">
+  <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-7xl">
+    <h1 class="text-xl font-bold mb-6">รายการเบิกของทั้งหมด</h1>
 
-    <!-- Header -->
-    <div class="flex justify-between items-center mb-6">
-      <div>
-        <h1 class="text-2xl font-bold text-gray-800">รายการเบิกของ</h1>
-      </div>
-    </div>
-    <!-- Search Bar -->
-    <div class="flex gap-2">
-      <div class="flex">
-        <!-- Textbox -->
-        <input v-model="searchQuery" type="text" placeholder="ค้นหา" class="flex-1 placeholder:text-[#ADADAD] border border-gray-300 rounded-l-lg focus:outline-none"/>
+    <!-- FILTERS -->
+    <div class="flex gap-3 mb-6 flex-wrap">
+      <input
+        v-model="searchQuery"
+        type="text"
+        placeholder="ค้นหา"
+        class="w-[240px] h-10 px-4 rounded-lg border border-gray-300"
+      />
 
-        <!-- Search Button -->
-        <button class="px-4 bg-[#1E48D1] border border-blue-600 rounded-r-lg flex items-center justify-center">
+      <input
+        v-model="selectedDate"
+        type="date"
+        class="h-10 px-3 rounded-lg border border-gray-300"
+      />
 
-          <!-- Get Icon -->
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35m1.85-5.65a7.5 7.5 0 11-15 0 7.5 7.5 0 0115 0z" />
-          </svg>
-        </button>
-      </div>
-
-      <!-- Filter Day-->
-      <div>
-        <input v-model="selectedDate" type="date" placeholder="วันที่" class="flex-1 placeholder:text-[#ADADAD] border border-gray-300 rounded-lg"/>
-      </div>
-
-      <!-- Filter Urgency + Checkbox -->
+      <!-- status -->
       <div class="relative">
-        <button @click.stop="showUrgencyFilter = !showUrgencyFilter" class="flex items-center gap-1 border border-gray-300 rounded-lg px-4 py-2 bg-white text-gray-700">
-          ความเร่งด่วน
-          <img src="/icon/sidebar/chevron-down-icon.svg" class="w-4 h-4 opacity-70 transition-transform duration-200" :class="{ 'rotate-180': showUrgencyFilter }" alt="toggle" />
-        </button>
-        <div v-if="showUrgencyFilter" class="absolute mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg p-3 text-sm text-gray-700 z-10">
-          <label class="flex items-center py-1">
-            <input type="checkbox" value="low" v-model="selectedUrgencies" class="w-4 h-4 text-blue-600 border-gray-300" />
-            <span class="ml-2">ไม่เร่งด่วน</span>
-          </label>
-          <label class="flex items-center py-1">
-            <input type="checkbox" value="medium" v-model="selectedUrgencies" class="w-4 h-4 text-blue-600 border-gray-300" />
-            <span class="ml-2">เร่งด่วน</span>
-          </label>
-          <label class="flex items-center py-1">
-            <input type="checkbox" value="high" v-model="selectedUrgencies" class="w-4 h-4 text-blue-600 border-gray-300" />
-            <span class="ml-2">เร่งด่วนมาก</span>
-          </label>
-        </div>
-      </div>
-
-      <!-- Filter Status + Checkbox -->
-      <div class="relative">
-        <button @click.stop="showStatusFilter = !showStatusFilter" class="flex items-center gap-1 border border-gray-300 rounded-lg px-4 py-2 bg-white text-gray-700">
+        <button
+          @click.stop="showStatus = !showStatus"
+          class="flex items-center gap-1 border border-gray-300 rounded-lg px-4 py-2 bg-white"
+        >
           สถานะ
-          <img src="/icon/sidebar/chevron-down-icon.svg" class="w-4 h-4 opacity-70 transition-transform duration-200" :class="{ 'rotate-180': showStatusFilter }" alt="toggle" />
         </button>
-        <div v-if="showStatusFilter" class="absolute mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg p-3 text-sm text-gray-700 z-10">
-          <label class="flex items-center py-1">
-            <input type="checkbox" value="waiting" v-model="selectedStatuses" class="w-4 h-4 text-blue-600 border-gray-300" />
-            <span class="ml-2">รออนุมัติ</span>
-          </label>
-          <label class="flex items-center py-1">
-            <input type="checkbox" value="approved" v-model="selectedStatuses" class="w-4 h-4 text-blue-600 border-gray-300" />
-            <span class="ml-2">อนุมัติแล้ว</span>
-          </label>
-          <label class="flex items-center py-1">
-            <input type="checkbox" value="rejected" v-model="selectedStatuses" class="w-4 h-4 text-blue-600 border-gray-300" />
-            <span class="ml-2">ไม่อนุมัติ</span>
-          </label>
-          <label class="flex items-center py-1">
-            <input type="checkbox" value="completed" v-model="selectedStatuses" class="w-4 h-4 text-blue-600 border-gray-300" />
-            <span class="ml-2">เสร็จสิ้น</span>
-          </label>
+
+        <div
+          v-if="showStatus"
+          class="absolute mt-2 w-48 bg-white border rounded-md shadow-lg p-3 text-sm z-10"
+        >
+          <label
+            ><input type="checkbox" value="waiting" v-model="selectedStatuses" /> รออนุมัติ</label
+          >
+          <label
+            ><input type="checkbox" value="approved" v-model="selectedStatuses" />
+            อนุมัติแล้ว</label
+          >
+          <label
+            ><input type="checkbox" value="rejected" v-model="selectedStatuses" /> ไม่อนุมัติ</label
+          >
+          <label
+            ><input type="checkbox" value="completed" v-model="selectedStatuses" /> เสร็จสิ้น</label
+          >
         </div>
       </div>
     </div>
-    <!-- Table -->
-    <div class="p-3 mx-auto max-w-8xl">
-      <TableComponent :columns="columns" :rows="filteredRows" :perPage="10" mode="user" :rawRows="rawRows" @detail="goToDetail" />
-    </div>
 
-    <span class="text-[14px] text-[#444D5C]">แสดงรายการ 1-10 จาก {{problemCount || "ทั้งหมด"}}</span>
+    <!-- TABLE -->
+    <TableComponent :columns="columns" :rows="filteredRows" :perPage="10" :statusStockColumn="3">
+      <template #cell-4="{ row }">
+        <TableActions
+          :row-id="row[0]"
+          :open-menu-id="openMenuId"
+          role="stock"
+          :row="row"
+          :status="row[3]"
+          @toggle-menu="openMenuId = $event"
+          @detail="openDetail(row[0])"
+        />
+      </template>
+    </TableComponent>
   </div>
 </template>

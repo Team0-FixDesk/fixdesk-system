@@ -67,8 +67,8 @@ async function loadMyRepairs() {
 
       // return [
       //   form.sf_code || '-',                                     // 0 รหัสการเบิกของ
-      //   (`<div style="text-align: left;"> 
-      //       วันที่ : ${new Date(form.sf_create_at).toLocaleDateString('th-TH')} </br> 
+      //   (`<div style="text-align: left;">
+      //       วันที่ : ${new Date(form.sf_create_at).toLocaleDateString('th-TH')} </br>
       //       สถานที่ : ${location} </div>`),                        // 1 วันที่ + สถานที่
       //   // form.sf_urgency,                                      // ความเร่งด่วน (key)
       //   form.sf_status,                                          // 2 สถานะงาน (key)
@@ -131,7 +131,6 @@ const filteredRows = computed(() => {
 
 function toggleStatusFilter() {
   isStatusFilterOpen.value = !isStatusFilterOpen.value
-  if (isStatusFilterOpen.value) isUrgencyFilterOpen.value = false
 }
 
 function resetFilters() {
@@ -224,10 +223,10 @@ onBeforeUnmount(() => {
 
     <!-- ------------------ Table ------------------ -->
     <div class="p-3 mx-auto max-w-8xl">
-      <TableComponent 
-      :columns="tableColumns" 
-      :rows="filteredRows" 
-      :perPage="10" 
+      <TableComponent
+      :columns="tableColumns"
+      :rows="filteredRows"
+      :perPage="10"
       :statusStockColumn="2">
 
         <!-- รหัสรายการเบิกของ -->
@@ -235,7 +234,7 @@ onBeforeUnmount(() => {
           <div class="cursor-pointer hover:text-blue-600 hover:underline" @click="openDetail(row[1])">
             {{ row[0] }}
           </div>
-        </template> 
+        </template>
 
         <!-- วันที่ + สถานที่ -->
         <template #cell-1="{ row }">
