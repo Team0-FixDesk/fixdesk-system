@@ -45,6 +45,8 @@ function getAuthHeaders() {
   return { Authorization: `Bearer ${token}` }
 }
 
+
+
 // Fetch repairs
 async function loadRepairs() {
   try {

@@ -26,6 +26,10 @@ const props = defineProps({
     type: Array,
     required: true,
   },
+  assignedTech: {
+    type: [String, Number, null],
+    default: null,
+  },
 })
 
 const emit = defineEmits([
@@ -154,7 +158,7 @@ onBeforeUnmount(() => {
         <div class="border-t border-gray-300 mx-1"></div>
 
         <button
-          v-if="normalizedStatus === 'pending'"
+          v-if="normalizedStatus !== 'done'"
           @click="emit('open-stock', row)"
           class="w-full text-left px-3 py-2 hover:bg-gray-100"
         >
@@ -191,6 +195,7 @@ onBeforeUnmount(() => {
       <!-- Assign -->
       <template v-if="role === 'assign'">
         <button
+          v-if="!props.assignedTech"
           @click="emit('assign', row)"
           class="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2"
         >

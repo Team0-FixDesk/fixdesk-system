@@ -35,11 +35,11 @@ const paginatedRows = computed(() => {
 function renderUrgencyBadge(type) {
   switch (type) {
     case 'high':
-      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-red-100 text-red-600 font-semibold">เร่งด่วนมาก</span>`
+      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-lg bg-red-100 text-red-600 font-semibold">เร่งด่วนมาก</span>`
     case 'medium':
-      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-amber-50 text-amber-500 font-semibold">เร่งด่วน</span>`
+      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-lg bg-amber-50 text-amber-500 font-semibold">เร่งด่วน</span>`
     case 'low':
-      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-green-100 text-green-600 font-semibold">ไม่เร่งด่วน</span>`
+      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-lg bg-green-100 text-green-600 font-semibold">ไม่เร่งด่วน</span>`
     default:
       return type
   }
@@ -48,13 +48,13 @@ function renderUrgencyBadge(type) {
 function renderStatusBadge(type) {
   switch (type) {
     case 'pending':
-      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-amber-50 text-amber-500 font-semibold">รอดำเนินการ</span>`
+      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-lg bg-amber-50 text-amber-500 font-semibold">รอดำเนินการ</span>`
     case 'in_progress':
-      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-blue-100 text-blue-600 font-semibold">กำลังดำเนินการ</span>`
+      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-lg bg-blue-100 text-blue-600 font-semibold">กำลังดำเนินการ</span>`
     case 'done':
-      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-green-100 text-green-600 font-semibold">ดำเนินการเสร็จสิ้น</span>`
+      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-lg bg-green-100 text-green-600 font-semibold">ดำเนินการเสร็จสิ้น</span>`
     case 'cancel':
-      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-gray-100 text-gray-500 font-semibold">ยกเลิก</span>`
+      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-lg bg-gray-100 text-gray-500 font-semibold">ยกเลิก</span>`
     default:
       return type
   }

@@ -367,7 +367,9 @@ module.exports = function TechnicianRoutes(db) {
     // Validate each item
     for (const item of items) {
       if (!item.id || !item.qty || Number(item.qty) <= 0) {
-        return res.status(400).json({ message: "รูปแบบข้อมูลรายการสินค้าไม่ถูกต้อง" });
+        return res
+          .status(400)
+          .json({ message: "รูปแบบข้อมูลรายการสินค้าไม่ถูกต้อง" });
       }
     }
 
@@ -426,7 +428,6 @@ module.exports = function TechnicianRoutes(db) {
           console.warn(`Repair code not found: ${repair_code}`);
         }
       }
-
       // เตรียมตัวแปรวันปัจจุบัน
       const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
 
@@ -441,10 +442,15 @@ module.exports = function TechnicianRoutes(db) {
       const runningNumber = String(todayCount).padStart(3, "0");
 
       // Generate unique stock form code
-      const sfCode = `SF${ datePart }${ runningNumber }`;
-      const sfStatus = "waiting";
+      const sfCode = `SF${datePart}${runningNumber}`;
+      const sfStatus = "completed";
 
-      console.log("Creating stock form:", { sfCode, sfStatus, userId, repairFormId });
+      console.log("Creating stock form:", {
+        sfCode,
+        sfStatus,
+        userId,
+        repairFormId,
+      });
 
       // Create stock form header
       const headerResult = await query(
@@ -464,7 +470,7 @@ module.exports = function TechnicianRoutes(db) {
 
         console.log(`Processing item ${i + 1}/${items.length}:`, {
           pd_id: item.id,
-          qty: requestedQty
+          qty: requestedQty,
         });
 
         // Check product stock (with row lock)
@@ -484,7 +490,7 @@ module.exports = function TechnicianRoutes(db) {
           pd_id: product.pd_id,
           pd_name: product.pd_name,
           currentQty,
-          requestedQty
+          requestedQty,
         });
 
         // Validate sufficient stock
@@ -506,7 +512,9 @@ module.exports = function TechnicianRoutes(db) {
           "INSERT INTO stock_form_detail (sfd_sf_id, sfd_pd_id, sfd_qty) VALUES (?, ?, ?)",
           [sfId, item.id, requestedQty]
         );
-        console.log(`Form detail inserted: sfd_sf_id=${sfId}, sfd_pd_id=${item.id}`);
+        console.log(
+          `Form detail inserted: sfd_sf_id=${sfId}, sfd_pd_id=${item.id}`
+        );
 
         // Record stock transaction
         await query(
@@ -524,15 +532,14 @@ module.exports = function TechnicianRoutes(db) {
         sfId,
         sfCode,
         userId,
-        itemCount: items.length
+        itemCount: items.length,
       });
 
       return res.status(201).json({
         message: "เบิกสินค้าเรียบร้อย",
         sf_id: sfId,
-        sf_code: sfCode
+        sf_code: sfCode,
       });
-
     } catch (error) {
       await rollback();
       console.error("WITHDRAW ERROR:", error);
@@ -549,7 +556,7 @@ module.exports = function TechnicianRoutes(db) {
 
       return res.status(statusCode).json({
         message: errorMessage,
-        error: error.message
+        error: error.message,
       });
     }
   });
