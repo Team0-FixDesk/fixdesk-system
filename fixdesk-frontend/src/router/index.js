@@ -32,12 +32,14 @@ import TechnicianRepairListView from '../views/technician/technician-repair-list
 import TechnicianHistoryView from '../views/technician/technician-history-view.vue'
 import TechnicianStockListView from '../views/technician/technician-stock-list-view.vue'
 import TechnicianRequisitionListView from '../views/technician/technician-requisition-list-view.vue'
+import technicianRequisitionDetailView from '@/views/technician/technician-requisition-detail-view.vue'
 
 // STOCK
 import StockHomeView from '../views/stock/stock-home-view.vue'
 import StockWithdrawListView from '../views/stock/stock-withdraw-list-view.vue'
 import StockWithdrawHistoryView from '../views/stock/stock-withdraw-history-view.vue'
 import StockManageInventoryView from '../views/stock/stock-manage-inventory-view.vue'
+import TechnicianRequisitionDetailView from '@/views/technician/technician-requisition-detail-view.vue'
 
 // ROUTER CONFIG
 const router = createRouter({
@@ -91,6 +93,12 @@ const router = createRouter({
           path: 'technician-requisition-list',
           component: TechnicianRequisitionListView,
           meta: { role: ['Technician'] },
+        },
+        {
+          path: 'technician-requisition-detail/:code',
+          name: 'TechnicianRequisitionDetail',
+          component: TechnicianRequisitionDetailView,
+          meta: { role: ['Technician'] ,}
         },
 
         { path: 'stock-home', component: StockHomeView, meta: { role: ['Stock'] } },

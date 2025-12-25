@@ -352,10 +352,10 @@ module.exports = function TechnicianRoutes(db) {
   });
 
   /**
-   * POST /withdraw
-   * Payload: { repair_code?: string, note?: string, items: [{ id: number, qty: number }] }
-   * Creates a stock withdrawal form and decrements product quantities
-   */
+ * POST /withdraw
+ * Payload: { repair_code?: string, note?: string, items: [{ id: number, qty: number }] }
+ * Creates a stock withdrawal form and decrements product quantities
+ */
   router.post("/withdraw", authMiddleware, async (req, res) => {
     const { repair_code, note, items } = req.body || {};
 

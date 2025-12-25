@@ -12,9 +12,8 @@ const API_BASE = import.meta.env.VITE_API_BASE
 
 // Table Structure
 const tableColumns = [
-  'วันที่',
-  'รหัสการเบิกของ',
-  'สถานที่',
+  'รหัสรายการเบิกของ',
+  'รายละเอียด',
   'สถานะงาน',
   'ตัวดำเนินการ',
 ]
@@ -64,15 +63,26 @@ async function loadMyRepairs() {
 
     // Map to table rows
     tableRows.value = data.map((form) => {
-      const location = form.building_name ? `อาคาร ${form.building_name}` : '-'
+      const location = form.building_name ? `${form.building_name}` : '-'
+
+      // return [
+      //   form.sf_code || '-',                                     // 0 รหัสการเบิกของ
+      //   (`<div style="text-align: left;"> 
+      //       วันที่ : ${new Date(form.sf_create_at).toLocaleDateString('th-TH')} </br> 
+      //       สถานที่ : ${location} </div>`),                        // 1 วันที่ + สถานที่
+      //   // form.sf_urgency,                                      // ความเร่งด่วน (key)
+      //   form.sf_status,                                          // 2 สถานะงาน (key)
+      //   '',                                                      // 3 actions column
+      // ]
 
       return [
-        new Date(form.sf_create_at).toLocaleDateString('th-TH'), // 0 วันที่
-        form.sf_code || '-',                                     // 1 รหัสการเบิกของ
-        location,                                                // 2 สถานที่
-        // requisition.sf_urgency,                               // ความเร่งด่วน (key)
-        form.sf_status,                                          // 3 สถานะงาน (key)
-        '',                                                      // 4 actions column
+        form.sf_code || '-', // 0 รหัสรายการเบิกของ
+        {
+          date: new Date(form.sf_create_at).toLocaleDateString('th-TH'),
+          location,
+        },                    // 1 รายละเอียด (วันที่ + สถานที่)
+        form.sf_status,       // 2 สถานะงาน
+        '',                   // 3 ตัวดำเนินการ
       ]
     })
   } catch (err) {
@@ -86,8 +96,8 @@ const filteredRows = computed(() => {
   const dateFilter = selectedDate.value
 
   return tableRows.value.filter((row) => {
-    const dateText = String(row[0])
-    const code = String(row[1]).toLowerCase()
+    const code = String(row[0]).toLowerCase()
+    const dateText = String(row[1])
     const location = String(row[2]).toLowerCase()
     // const urgency = row[4]
     const status = row[3]
@@ -140,7 +150,7 @@ function handleOutsideClick(event) {
 }
 
 // Navigation handlers
-const openDetail = (code) => router.push(`/main/repair-detail/${code}`)
+const openDetail = (code) => router.push(`/main/technician-requisition-detail/${code[0]}`)
 
 // Lifecycle
 onMounted(() => {
@@ -148,7 +158,7 @@ onMounted(() => {
   document.addEventListener('click', handleOutsideClick)
 
   // Pre-filter จาก query status เช่น ?status=pending
-  if (route.query.status && ['waiting', 'approved', 'rejected', 'completed'].includes(route.query.status)) {
+  if (route.query.status && ['waiting', 'approved', 'rejected'].includes(route.query.status)) {
     selectedStatuses.value = [route.query.status]
   }
 })
@@ -168,7 +178,7 @@ onBeforeUnmount(() => {
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div class="flex flex-wrap items-center gap-3">
           <!-- ค้นหา -->
-          <input v-model="searchInput" type="text" placeholder="ค้นหารายการเบิกของ"
+          <input v-model="searchInput" type="text" placeholder="ค้นหาจากรหัสรายการเบิก/สถานที่ "
             class="w-[260px] h-10 px-4 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500" />
 
           <!-- วันที่ -->
@@ -199,11 +209,6 @@ onBeforeUnmount(() => {
                 <input type="checkbox" value="approved" v-model="selectedStatuses" />
                 <span class="ml-2">อนุมัติแล้ว</span>
               </label>
-
-              <label class="flex items-center py-1">
-                <input type="checkbox" value="completed" v-model="selectedStatuses" />
-                <span class="ml-2">เสร็จสิ้นแล้ว</span>
-              </label>
             </div>
           </div>
 
@@ -219,32 +224,52 @@ onBeforeUnmount(() => {
 
     <!-- ------------------ Table ------------------ -->
     <div class="p-3 mx-auto max-w-8xl">
-      <TableComponent :columns="tableColumns" :rows="filteredRows" :perPage="10" :statusStockColumn="3">
-        <!-- คอลัมน์ Action (index 6) -->
-        <template #cell-4="{ row }">
-  <div class="flex justify-center items-center h-full">
-    <button
-      @click="openDetail(row[1])"
-      title="รายละเอียด"
-      class="
-        w-9 h-9
-        flex items-center justify-center
-        rounded-md
-        bg-blue-500 text-white
-        transition-all duration-200
-        hover:bg-blue-600
-        hover:scale-105
-        hover:shadow-md
-        active:scale-95
-      "
-    >
-      <img src="/icon/info-icon.svg" class="w-4 h-4" />
-    </button>
-  </div>
-</template>
+      <TableComponent 
+      :columns="tableColumns" 
+      :rows="filteredRows" 
+      :perPage="10" 
+      :statusStockColumn="2">
 
+        <!-- รหัสรายการเบิกของ -->
+        <template #cell-0="{ row }">
+          <div class="cursor-pointer hover:text-blue-600 hover:underline" @click="openDetail(row[1])">
+            {{ row[0] }}
+          </div>
+        </template> 
+
+        <!-- วันที่ + สถานที่ -->
+        <template #cell-1="{ row }">
+          <div class="space-y-0.5 text-left cursor-pointer" @click="openDetail(row)">
+            <div class="font-semibold text-gray-900">
+              วันที่ &nbsp;: {{ row[1].date }}
+            </div>
+
+            <div class="text-xs text-gray-500">
+              อาคาร : {{ row[1].location }}
+            </div>
+          </div>
+        </template>
+
+        <!-- ตัวดำเนินการ -->
+        <template #cell-3="{ row }">
+          <div class="flex justify-center">
+            <button @click="openDetail(row[1])" title="รายละเอียด"
+              class="w-9 h-9 flex items-center justify-center rounded-md bg-blue-500 text-white duration-200 hover:bg-blue-600 hover:scale-105">
+              <img src="/icon/info-icon.svg" class="w-4 h-4" />
+            </button>
+          </div>
+        </template>
 
       </TableComponent>
     </div>
   </div>
 </template>
+
+<style scoped>
+/* header: รายละเอียด */
+:deep(th:nth-child(2)) {
+  text-align: left !important;
+}
+
+
+</style>
