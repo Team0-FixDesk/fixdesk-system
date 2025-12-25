@@ -1,6 +1,8 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import TableComponent from '@/components/table-component.vue'
+import TableActions from '@/components/table-actions-component.vue'
+
 import Sweetalert from 'sweetalert2'
 
 defineOptions({ name: 'AdminUserInfoView' })
@@ -20,6 +22,7 @@ const selectedTechTypes = ref([])
 const showRoleFilter = ref(false)
 const showTechFilter = ref(false)
 const userIdByUsername = ref({})
+const openMenuId = ref(null)
 
 async function fetchUsers() {
   try {
@@ -66,14 +69,14 @@ async function fetchUsers() {
       animation: false,
       showConfirmButton: false,
       timer: 3000,
-      timerProgressBar: true
+      timerProgressBar: true,
     })
     Toast.fire({
       title: 'ผิดพลาด',
       text: 'ไม่สามารถโหลดข้อมูลผู้ใช้ได้',
       icon: 'error',
       background: '#fee2e2',
-      color: '#dc2626'
+      color: '#dc2626',
     })
   }
 }
@@ -169,14 +172,14 @@ function openViewModal(username) {
       animation: false,
       showConfirmButton: false,
       timer: 3000,
-      timerProgressBar: true
+      timerProgressBar: true,
     })
     Toast.fire({
       title: 'ผิดพลาด',
       text: err.message,
       icon: 'error',
       background: '#fee2e2',
-      color: '#dc2626'
+      color: '#dc2626',
     })
   }
 }
@@ -247,7 +250,7 @@ async function confirmAddUser() {
       icon: 'success',
       title: 'เพิ่มผู้ใช้เรียบร้อยแล้ว',
       background: '#f0f9ff',
-      color: '#1e3a8a'
+      color: '#1e3a8a',
     })
     showAddModal.value = false
     await fetchUsers()
@@ -256,7 +259,7 @@ async function confirmAddUser() {
       icon: 'error',
       title: err.message || 'ไม่สามารถเพิ่มผู้ใช้ได้',
       background: '#fee2e2',
-      color: '#dc2626'
+      color: '#dc2626',
     })
   }
 }
@@ -291,14 +294,14 @@ function openEditModal(username) {
       animation: false,
       showConfirmButton: false,
       timer: 3000,
-      timerProgressBar: true
+      timerProgressBar: true,
     })
     Toast.fire({
       title: 'ผิดพลาด',
       text: err.message,
       icon: 'error',
       background: '#fee2e2',
-      color: '#dc2626'
+      color: '#dc2626',
     })
   }
 }
@@ -344,7 +347,7 @@ async function confirmEditUser() {
       icon: 'success',
       title: 'แก้ไขข้อมูลผู้ใช้เรียบร้อยแล้ว',
       background: '#f0f9ff',
-      color: '#1e3a8a'
+      color: '#1e3a8a',
     })
     showEditModal.value = false
     await fetchUsers()
@@ -353,7 +356,7 @@ async function confirmEditUser() {
       icon: 'error',
       title: err.message || 'ไม่สามารถแก้ไขข้อมูลผู้ใช้ได้',
       background: '#fee2e2',
-      color: '#dc2626'
+      color: '#dc2626',
     })
   }
 }
@@ -416,7 +419,7 @@ async function confirmDelete(username) {
       icon: 'success',
       title: 'ลบผู้ใช้เรียบร้อยแล้ว',
       background: '#f0f9ff',
-      color: '#1e3a8a'
+      color: '#1e3a8a',
     })
     await fetchUsers()
   } catch (err) {
@@ -424,7 +427,7 @@ async function confirmDelete(username) {
       icon: 'error',
       title: err.message || 'ไม่สามารถลบผู้ใช้ได้',
       background: '#fee2e2',
-      color: '#dc2626'
+      color: '#dc2626',
     })
   }
 }
@@ -698,14 +701,14 @@ async function fetchMasterData() {
       animation: false,
       showConfirmButton: false,
       timer: 3000,
-      timerProgressBar: true
+      timerProgressBar: true,
     })
     Toast.fire({
       title: 'ผิดพลาด',
       text: 'ไม่สามารถโหลดข้อมูลคำนำหน้า/บทบาท/ประเภทช่างได้',
       icon: 'error',
       background: '#fee2e2',
-      color: '#dc2626'
+      color: '#dc2626',
     })
   }
 }
@@ -756,14 +759,14 @@ async function handleAddTechType() {
       didOpen: (toast) => {
         toast.addEventListener('mouseenter', Sweetalert.stopTimer)
         toast.addEventListener('mouseleave', Sweetalert.resumeTimer)
-      }
+      },
     })
     await Toast.fire({
       title: 'สำเร็จ',
       text: 'เพิ่มตำแหน่งช่างเรียบร้อยแล้ว',
       icon: 'success',
       background: '#f0f9ff',
-      color: '#1e3a8a'
+      color: '#1e3a8a',
     })
     await fetchMasterData()
     await fetchUsers()
@@ -775,14 +778,14 @@ async function handleAddTechType() {
       animation: false,
       showConfirmButton: false,
       timer: 3000,
-      timerProgressBar: true
+      timerProgressBar: true,
     })
     Toast.fire({
       title: 'ผิดพลาด',
       text: err.message || 'ไม่สามารถเพิ่มตำแหน่งช่างได้',
       icon: 'error',
       background: '#fee2e2',
-      color: '#dc2626'
+      color: '#dc2626',
     })
   }
 }
@@ -823,14 +826,14 @@ async function handleEditTechType(item) {
       didOpen: (toast) => {
         toast.addEventListener('mouseenter', Sweetalert.stopTimer)
         toast.addEventListener('mouseleave', Sweetalert.resumeTimer)
-      }
+      },
     })
     await Toast.fire({
       title: 'สำเร็จ',
       text: 'แก้ไขตำแหน่งช่างเรียบร้อยแล้ว',
       icon: 'success',
       background: '#f0f9ff',
-      color: '#1e3a8a'
+      color: '#1e3a8a',
     })
     await fetchMasterData()
     await fetchUsers()
@@ -842,14 +845,14 @@ async function handleEditTechType(item) {
       animation: false,
       showConfirmButton: false,
       timer: 3000,
-      timerProgressBar: true
+      timerProgressBar: true,
     })
     Toast.fire({
       title: 'ผิดพลาด',
       text: err.message || 'ไม่สามารถแก้ไขตำแหน่งช่างได้',
       icon: 'error',
       background: '#fee2e2',
-      color: '#dc2626'
+      color: '#dc2626',
     })
   }
 }
@@ -885,14 +888,14 @@ async function handleDeleteTechType(item) {
       didOpen: (toast) => {
         toast.addEventListener('mouseenter', Sweetalert.stopTimer)
         toast.addEventListener('mouseleave', Sweetalert.resumeTimer)
-      }
+      },
     })
     await Toast.fire({
       title: 'สำเร็จ',
       text: 'ลบตำแหน่งช่างเรียบร้อยแล้ว',
       icon: 'success',
       background: '#f0f9ff',
-      color: '#1e3a8a'
+      color: '#1e3a8a',
     })
     await fetchMasterData()
     await fetchUsers()
@@ -904,14 +907,14 @@ async function handleDeleteTechType(item) {
       animation: false,
       showConfirmButton: false,
       timer: 3000,
-      timerProgressBar: true
+      timerProgressBar: true,
     })
     Toast.fire({
       title: 'ผิดพลาด',
       text: err.message || 'ไม่สามารถลบตำแหน่งช่างได้',
       icon: 'error',
       background: '#fee2e2',
-      color: '#dc2626'
+      color: '#dc2626',
     })
   }
 }
@@ -964,8 +967,9 @@ async function handleDeleteTechType(item) {
           <!-- ฟิลเตอร์ตำแหน่ง -->
           <div class="relative">
             <button
-  @click.stop="toggleTechFilter"   class="h-10 flex items-center gap-2 border border-gray-300 rounded-lg px-4 py-2 bg-white text-gray-700"
->
+              @click.stop="toggleTechFilter"
+              class="h-10 flex items-center gap-2 border border-gray-300 rounded-lg px-4 py-2 bg-white text-gray-700"
+            >
               ตำแหน่ง
               <img
                 src="/icon/sidebar/chevron-down-icon.svg"
@@ -1030,15 +1034,25 @@ async function handleDeleteTechType(item) {
               u.department,
               u.role,
               u.technicianType,
-              'actions',
+              '',
             ])
           "
           :perPage="10"
-          mode="full"
-          @detail="(username) => openViewModal(username)"
-          @edit="(username) => openEditModal(username)"
-          @delete="confirmDelete"
-        />
+        >
+          <!-- ใส่ SLOT ให้ column ตัวดำเนินการ -->
+          <template #cell-5="{ row }">
+            <TableActions
+              :row-id="row[1]"
+              :row="row"
+              role="admin"
+              :open-menu-id="openMenuId"
+              @toggle-menu="openMenuId = $event"
+              @detail="openViewModal(row[1])"
+              @edit="openEditModal(row[1])"
+              @delete="confirmDelete(row[1])"
+            />
+          </template>
+        </TableComponent>
       </div>
     </div>
 
