@@ -68,8 +68,6 @@ function renderStatusStockBadge(type) {
       return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-green-100 text-green-600 font-semibold">อนุมัติแล้ว</span>`
     case 'rejected':
       return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-red-100 text-red-500 font-semibold">ไม่อนุมัติ</span>`
-    case 'completed':
-      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-violet-100 text-violet-500 font-semibold">เสร็จสิ้นแล้ว</span>`
     default:
       return type
   }

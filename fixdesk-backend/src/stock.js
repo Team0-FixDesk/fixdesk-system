@@ -291,38 +291,42 @@ module.exports = function StockRoutes(db) {
     });
 
   router.get("/stock-forms/:id", authMiddleware, (req, res) => {
-  const userId = req.params.id;
+    const userId = req.params.id;
 
-  const query = `
+    const query = `
     SELECT
-      sf.sf_id,
-      sf.sf_code,
-      sf.sf_rf_id,
-      sf.sf_us_id,
-      sf.sf_status,
-      sf.sf_create_at,
-      sf.sf_update_at,
-      b.bd_name AS building_name
+    sf.sf_id,
+    sf.sf_code,
+    sf.sf_status,
+    sf.sf_create_at,
+    b.bd_name AS building_name,
+    GROUP_CONCAT(pd.pd_name SEPARATOR ', ') AS product_name,
+    GROUP_CONCAT(sfd.sfd_qty SEPARATOR ', ') AS product_qty
+
     FROM stock_form sf
     LEFT JOIN repair_form rf ON sf.sf_rf_id = rf.rf_id
     LEFT JOIN room r ON rf.rf_room_id = r.room_id
     LEFT JOIN floor f ON r.room_fl_id = f.fl_id
     LEFT JOIN building b ON f.fl_bd_id = b.bd_id
+    LEFT JOIN stock_form_detail sfd ON sfd.sfd_sf_id = sf.sf_id
+    LEFT JOIN products pd ON pd.pd_id = sfd.sfd_pd_id
+
     WHERE sf.sf_us_id = ?
+    GROUP BY sf.sf_id
     ORDER BY sf.sf_id DESC;
   `;
 
-  db.query(query, [userId], (err, results) => {
-    if (err) {
-      console.error("SQL Error:", err);
-      return res.status(500).json({
-        message: "ดึงข้อมูลคลังสินค้าไม่สำเร็จ",
-        error: err.message,
-      });
-    }
-    res.json(results);
+    db.query(query, [userId], (err, results) => {
+      if (err) {
+        console.error("SQL Error:", err);
+        return res.status(500).json({
+          message: "ดึงข้อมูลคลังสินค้าไม่สำเร็จ",
+          error: err.message,
+        });
+      }
+      res.json(results);
+    });
   });
-});
 
 
   return router;

@@ -3,7 +3,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import RepairStatusTimeline from '@/components/status-timeline-component.vue'
 import assignJobModalComponent from '@/components/modal/assign-job-modal-component.vue'
-import AcceptJobModalComponent from '@/components/modal/accept-job-madal-component.vue'
+import AcceptJobModalComponent from '@/components/modal/accept-job-modal-component.vue'
 import Swal from 'sweetalert2'
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
