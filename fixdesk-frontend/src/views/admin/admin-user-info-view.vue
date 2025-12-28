@@ -5,6 +5,9 @@ import TableActions from '@/components/table-actions-component.vue'
 
 import Sweetalert from 'sweetalert2'
 
+import { usePhoneFormat } from '@/composables/usePhoneFormat'
+const { toRaw, toDisplay} = usePhoneFormat()
+
 defineOptions({ name: 'AdminUserInfoView' })
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
 
@@ -14,7 +17,7 @@ const getAuthHeaders = () => {
   return { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
 }
 
-const columns = ['ชื่อเต็ม', 'ชื่อผู้ใช้', 'หน่วยงาน', 'บทบาท', 'ตำแหน่ง', 'ตัวดำเนินการ']
+const columns = ['ชื่อ-นามสกุล', 'ชื่อผู้ใช้', 'หน่วยงาน', 'บทบาท', 'ตำแหน่ง', 'ตัวดำเนินการ']
 const rows = ref([])
 const searchQuery = ref('')
 const selectedRoles = ref([])
@@ -41,7 +44,10 @@ async function fetchUsers() {
       department: user.us_department || '-',
       role: user.role_name || '-', // จาก DB
       technicianType: user.technician_type || '-', // จาก DB
-      raw: user,
+      raw: {
+        ...user,
+        us_phone: toDisplay(user.us_phone),
+      },
     }))
 
     // สร้าง map username → id
@@ -80,6 +86,16 @@ async function fetchUsers() {
     })
   }
 }
+
+// Global toast ใช้ได้ทุกที่
+const toast = Sweetalert.mixin({
+  toast: true,
+  position: 'top-end',
+  showConfirmButton: false,
+  timer: 3000,
+  timerProgressBar: true,
+})
+
 
 //ฟิลเตอร์
 const roleFilterOptions = ref([]) // list บทบาททั้งหมดจาก DB
@@ -162,7 +178,9 @@ function openViewModal(username) {
     const row = rows.value.find((r) => r.username === username)
     if (!row) throw new Error('ไม่พบผู้ใช้ในข้อมูลที่โหลดไว้')
 
-    Object.assign(viewForm.value, row.raw)
+    const data = { ...row.raw }
+    data.us_phone = toDisplay(data.us_phone)
+    Object.assign(viewForm.value, data)
     showViewModal.value = true
   } catch (err) {
     // Toast notification
@@ -234,6 +252,7 @@ async function confirmAddUser() {
         us_ttn_id: parseInt(addForm.value.us_ttn_id),
         us_role_id: parseInt(addForm.value.us_role_id),
         us_tt_id: addForm.value.us_tt_id ? parseInt(addForm.value.us_tt_id) : null,
+        us_phone: toRaw(addForm.value.us_phone),
       }),
     })
     const data = await res.json()
@@ -284,7 +303,9 @@ function openEditModal(username) {
   try {
     const row = rows.value.find((r) => r.username === username)
     if (!row) throw new Error('ไม่พบผู้ใช้ในข้อมูลที่โหลดไว้')
-    Object.assign(editForm.value, row.raw)
+    const data = { ...row.raw }
+    data.us_phone = toDisplay(data.us_phone)
+    Object.assign(editForm.value, data)
     showEditModal.value = true
   } catch (err) {
     // Toast notification
@@ -331,6 +352,7 @@ async function confirmEditUser() {
         us_ttn_id: parseInt(editForm.value.us_ttn_id),
         us_role_id: parseInt(editForm.value.us_role_id),
         us_tt_id: editForm.value.us_tt_id ? parseInt(editForm.value.us_tt_id) : null,
+        us_phone: toRaw(editForm.value.us_phone),
       }),
     })
     const data = await res.json()
@@ -528,7 +550,7 @@ function validateAddForm() {
   if (!addForm.value.us_phone.trim()) {
     addErrors.value.phone = 'กรุณากรอกเบอร์โทร'
     valid = false
-  } else if (!/^[0-9]{9,10}$/.test(addForm.value.us_phone)) {
+  } else if (!/^[0-9]{9,10}$/.test(toRaw(addForm.value.us_phone))) {
     addErrors.value.phone = 'เบอร์โทรต้องเป็นตัวเลข 9–10 หลัก'
     valid = false
   }
@@ -618,7 +640,7 @@ function validateEditForm() {
   if (!editForm.value.us_phone.trim()) {
     editErrors.value.phone = 'กรุณากรอกเบอร์โทร'
     valid = false
-  } else if (!/^[0-9]{9,10}$/.test(editForm.value.us_phone)) {
+  } else if (!/^[0-9]{9,10}$/.test(toRaw(editForm.value.us_phone))) {
     editErrors.value.phone = 'เบอร์โทรต้องเป็นตัวเลข 9–10 หลัก'
     valid = false
   }
@@ -811,6 +833,7 @@ async function handleEditTechType(item) {
       method: 'PUT',
       headers: getAuthHeaders(),
       body: JSON.stringify({ tt_name: name.trim() }),
+      us_phone: toRaw(addForm.value.us_phone),
     })
     const data = await res.json()
     if (!res.ok) throw new Error(data.message || 'แก้ไขตำแหน่งช่างไม่สำเร็จ')
@@ -1038,6 +1061,7 @@ async function handleDeleteTechType(item) {
             ])
           "
           :perPage="10"
+          :columnAlign="['left','left','left','left','left','center']"
         >
           <!-- ใส่ SLOT ให้ column ตัวดำเนินการ -->
           <template #cell-5="{ row }">
@@ -1373,6 +1397,7 @@ async function handleDeleteTechType(item) {
               >
               <input
                 v-model="addForm.us_phone"
+                @input="addForm.us_phone = toDisplay(addForm.us_phone)"
                 type="tel"
                 :class="[
                   'w-full px-3 py-2 border rounded-md',
@@ -1604,6 +1629,7 @@ async function handleDeleteTechType(item) {
               <label class="block text-sm font-medium mb-1.5">เบอร์โทร</label>
               <input
                 v-model="editForm.us_phone"
+                @input="editForm.us_phone = toDisplay(editForm.us_phone)"
                 type="tel"
                 :class="[
                   'w-full px-3 py-2 border rounded-md',
