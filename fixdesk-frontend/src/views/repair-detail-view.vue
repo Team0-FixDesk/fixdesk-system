@@ -5,6 +5,8 @@ import RepairStatusTimeline from '@/components/status-timeline-component.vue'
 import assignJobModalComponent from '@/components/modal/assign-job-modal-component.vue'
 import AcceptJobModalComponent from '@/components/modal/accept-job-modal-component.vue'
 import Swal from 'sweetalert2'
+import { usePhoneFormat } from '@/composables/usePhoneFormat'
+const { toDisplay } = usePhoneFormat()
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
 const route = useRoute()
@@ -402,6 +404,20 @@ function openWithdrawModal() {
   showWithdrawModal.value = true
 }
 
+const showWithdrawButton = computed(() => {
+  if (!repair.value) return false
+
+  const status = repair.value.rf_user_status
+
+  // ไม่ให้แสดงถ้าเป็น pending หรือ done
+  if (status === 'pending' || status === 'done') return false
+
+  // ต้องมาจากหน้า technician-repair-list เท่านั้น
+  if (!history.state?.fromTechnician) return false
+
+  return true
+})
+
 function closeWithdrawModal() {
   showWithdrawModal.value = false
 }
@@ -476,7 +492,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="bg-gray-50 min-h-screen py-6 sm:py-10 space-y-6 sm:space-y-8 px-3 sm:px-6 lg:px-8">
+  <div class="bg-gray-50 min-h-screen px-3 sm:px-6 lg:px-8">
     <!-- Loading -->
     <div v-if="isLoading" class="text-center text-gray-500 py-16 text-base sm:text-lg">
       กำลังโหลดข้อมูล...
@@ -735,7 +751,7 @@ onMounted(() => {
 
               <!-- ปุ่มยืนยันการเบิก มุมขวาบน -->
               <button
-                v-if="repair?.rf_user_status !== 'done'"
+                v-if="showWithdrawButton"
                 type="button"
                 class="px-4 py-2 text-sm sm:text-base font-semibold rounded-lg shadow-sm bg-blue-600 hover:bg-blue-700 text-white transition flex items-center gap-2"
                 @click="handleRepairFrom(repair?.rf_code)"
@@ -773,7 +789,8 @@ onMounted(() => {
             <div class="space-y-2 text-gray-700 text-sm sm:text-base">
               <p><span class="text-gray-500">ชื่อ:</span> {{ repair?.reporter?.name || '-' }}</p>
               <p>
-                <span class="text-gray-500">เบอร์โทร:</span> {{ repair?.reporter?.phone || '-' }}
+                <span class="text-gray-500">เบอร์โทร:</span>
+                {{ repair?.reporter?.phone ? toDisplay(repair.reporter.phone) : '-' }}
               </p>
               <p>
                 <span class="text-gray-500">หน่วยงาน:</span>
