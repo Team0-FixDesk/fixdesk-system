@@ -443,72 +443,71 @@ module.exports = function RepairFormRoutes(db) {
   router.get("/repair-requests/:code", (req, res) => {
     const { code } = req.params;
 
-    // แก้ SQL: Join repair_assignment เพื่อหาหัวหน้า
     const sql = `
-      SELECT
-        rf.rf_code,
-        rf.rf_problem,
-        rf.rf_detail,
-        rf.rf_urgency,
-        rf.rf_phone,
-        rf.rf_create_at,
-        rf.rf_in_process_at,
-        rf.rf_done_at,
-        rf.rf_user_status,
-        rf.rf_prop_number,
-        rf.rf_image,
-  
-        -- ประเภทงาน / สถานที่
-        t.tt_id AS repair_type_id,
-        t.tt_name AS repair_type_name,
-        b.bd_id AS building_id,
-        b.bd_name AS building_name,
-        f.fl_id AS floor_id,
-        f.fl_name AS floor_name,
-        r.room_id AS room_id,
-        r.room_name AS room_name,
-  
-        -- ผู้แจ้ง
-        CONCAT(tn.ttn_title_th, u.us_first_name_th, ' ', u.us_last_name_th) AS reporter_name,
-        u.us_phone AS reporter_phone,
-        u.us_department AS reporter_department,
-  
-        -- ผู้รับผิดชอบงานหลัก (หัวหน้าทีม)
-        tech.us_id AS main_technician_id,
-        CONCAT(tn_tech.ttn_title_th, tech.us_first_name_th, ' ', tech.us_last_name_th) AS main_technician_name,
-        tt_tech.tt_name AS main_technician_position
-  
-      FROM repair_form rf
-      LEFT JOIN room r ON rf.rf_room_id = r.room_id
-      LEFT JOIN floor f ON r.room_fl_id = f.fl_id
-      LEFT JOIN building b ON f.fl_bd_id = b.bd_id
-      LEFT JOIN technician_type t ON rf.rf_tt_id = t.tt_id
-  
+    SELECT
+      rf.rf_id,
+      rf.rf_code,
+      rf.rf_problem,
+      rf.rf_detail,
+      rf.rf_urgency,
+      rf.rf_phone,
+      rf.rf_create_at,
+      rf.rf_in_process_at,
+      rf.rf_done_at,
+      rf.rf_user_status,
+      rf.rf_prop_number,
+      rf.rf_image,
+
+      -- ประเภทงาน / สถานที่
+      t.tt_id AS repair_type_id,
+      t.tt_name AS repair_type_name,
+      b.bd_id AS building_id,
+      b.bd_name AS building_name,
+      f.fl_id AS floor_id,
+      f.fl_name AS floor_name,
+      r.room_id AS room_id,
+      r.room_name AS room_name,
+
       -- ผู้แจ้ง
-      LEFT JOIN user u ON rf.rf_us_id = u.us_id
-      LEFT JOIN title_name tn ON u.us_ttn_id = tn.ttn_id
-  
-      -- เชื่อมตารางมอบหมายงาน (เฉพาะหัวหน้า)
-      LEFT JOIN repair_assignment ra ON rf.rf_id = ra.ra_rf_id AND ra.ra_is_lead = 1
-      LEFT JOIN user tech ON ra.ra_us_id = tech.us_id
-      LEFT JOIN title_name tn_tech ON tech.us_ttn_id = tn_tech.ttn_id
-      LEFT JOIN technician_type tt_tech ON tech.us_tt_id = tt_tech.tt_id
-  
-      WHERE rf.rf_code = ?`;
+      CONCAT(tn.ttn_title_th, u.us_first_name_th, ' ', u.us_last_name_th) AS reporter_name,
+      u.us_phone AS reporter_phone,
+      u.us_department AS reporter_department,
+
+      -- ผู้รับผิดชอบงานหลัก
+      tech.us_id AS main_technician_id,
+      CONCAT(tn_tech.ttn_title_th, tech.us_first_name_th, ' ', tech.us_last_name_th) AS main_technician_name,
+      tt_tech.tt_name AS main_technician_position
+
+    FROM repair_form rf
+    LEFT JOIN room r ON rf.rf_room_id = r.room_id
+    LEFT JOIN floor f ON r.room_fl_id = f.fl_id
+    LEFT JOIN building b ON f.fl_bd_id = b.bd_id
+    LEFT JOIN technician_type t ON rf.rf_tt_id = t.tt_id
+
+    -- ผู้แจ้ง
+    LEFT JOIN user u ON rf.rf_us_id = u.us_id
+    LEFT JOIN title_name tn ON u.us_ttn_id = tn.ttn_id
+
+    -- หัวหน้าทีม
+    LEFT JOIN repair_assignment ra ON rf.rf_id = ra.ra_rf_id AND ra.ra_is_lead = 1
+    LEFT JOIN user tech ON ra.ra_us_id = tech.us_id
+    LEFT JOIN title_name tn_tech ON tech.us_ttn_id = tn_tech.ttn_id
+    LEFT JOIN technician_type tt_tech ON tech.us_tt_id = tt_tech.tt_id
+
+    WHERE rf.rf_code = ?
+  `;
 
     db.query(sql, [code], (err, results) => {
-      if (err) {
-        console.error("Database error:", err);
+      if (err)
         return res
           .status(500)
-          .json({ message: "เกิดข้อผิดพลาดในเซิร์ฟเวอร์", error: err.message });
-      }
-      if (results.length === 0) {
+          .json({ message: "เกิดข้อผิดพลาด", error: err.message });
+      if (results.length === 0)
         return res.status(404).json({ message: "ไม่พบใบแจ้งซ่อมนี้" });
-      }
 
       const r = results[0];
-      res.json({
+
+      const responseData = {
         rf_code: r.rf_code,
         rf_detail: r.rf_detail || "-",
         rf_problem: r.rf_problem || "-",
@@ -520,24 +519,59 @@ module.exports = function RepairFormRoutes(db) {
         rf_done_at: r.rf_done_at || null,
         rf_prop_number: r.rf_prop_number || "-",
         rf_image: r.rf_image ? JSON.parse(r.rf_image) : null,
-        repair_type_id: r.repair_type_id || null,
-        repair_type_name: r.repair_type_name || "-",
-        building_id: r.building_id || null,
-        building_name: r.building_name || "-",
-        floor_id: r.floor_id || null,
-        floor_name: r.floor_name || "-",
-        room_id: r.room_id || null,
-        room_name: r.room_name || "-",
+
+        repair_type_id: r.repair_type_id,
+        repair_type_name: r.repair_type_name,
+        building_id: r.building_id,
+        building_name: r.building_name,
+        floor_id: r.floor_id,
+        floor_name: r.floor_name,
+        room_id: r.room_id,
+        room_name: r.room_name,
+
         reporter: {
-          name: r.reporter_name || "-",
-          phone: r.reporter_phone || "-",
-          department: r.reporter_department || "-",
+          name: r.reporter_name,
+          phone: r.reporter_phone,
+          department: r.reporter_department,
         },
+
         main_technician: r.main_technician_name || "-",
         tech_position: r.main_technician_position || "-",
+      };
+
+      // ➊ ดึง stock items
+      const stockQuery = `
+      SELECT
+        pd.pd_id,
+        pd.pd_name,
+        pd.pd_asset_code,
+        pd.pd_upload_image,
+        sfd.sfd_qty
+      FROM stock_form sf
+      LEFT JOIN stock_form_detail sfd ON sfd.sfd_sf_id = sf.sf_id
+      LEFT JOIN products pd ON pd.pd_id = sfd.sfd_pd_id
+      WHERE sf.sf_rf_id = ?
+    `;
+
+      db.query(stockQuery, [r.rf_id], (err2, stockRows) => {
+        if (err2)
+          return res.status(500).json({ message: "โหลดรายการเบิกล้มเหลว" });
+
+        const stockItems = stockRows.map((i) => ({
+          id: i.pd_id,
+          name: i.pd_name,
+          assetCode: i.pd_asset_code,
+          qty: i.sfd_qty,
+          img: i.pd_upload_image,
+        }));
+
+        responseData.stock_items = stockItems;
+
+        return res.json(responseData);
       });
     });
   });
+
 
   router.put("/repair-requests/:code", (req, res) => {
     const { code } = req.params;

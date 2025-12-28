@@ -475,5 +475,73 @@ module.exports = function StockRoutes(db) {
     });
   });
 
+  // เบิกสินค้า
+  router.post("/withdraw", authMiddleware, (req, res) => {
+    const { repair_code, requester_name, department, withdraw_date, items } =
+      req.body;
+
+    if (!items || items.length === 0) {
+      return res.status(400).json({ message: "ไม่มีรายการสินค้า" });
+    }
+
+    // 1) หา repair_form จากรหัส
+    const findRepair = `
+    SELECT rf_id FROM repair_form WHERE rf_code = ?
+  `;
+
+    db.query(findRepair, [repair_code], (err, rfRows) => {
+      if (err) return res.status(500).json({ message: err.message });
+
+      if (rfRows.length === 0) {
+        return res.status(404).json({ message: "ไม่พบใบแจ้งซ่อม" });
+      }
+
+      const rf_id = rfRows[0].rf_id;
+
+      // 2) สร้าง stock_form (หัวฟอร์ม)
+      const insertStockForm = `
+      INSERT INTO stock_form (sf_code, sf_status, sf_create_at, sf_us_id, sf_rf_id)
+      VALUES (?, 'approved', NOW(), ?, ?)
+    `;
+
+      const sf_code = "SF" + Date.now();
+
+      const userId = req.user.id;
+
+      db.query(insertStockForm, [sf_code, userId, rf_id], (err2, sfResult) => {
+        if (err2) return res.status(500).json({ message: err2.message });
+
+        const sf_id = sfResult.insertId;
+
+        // 3) ลูปสินค้า เพื่อ insert stock_form_detail + update products
+        items.forEach((item) => {
+          const pd_id = item.id;
+          const qty = item.qty;
+
+          // Insert detail
+          const insertDetail = `
+          INSERT INTO stock_form_detail (sfd_sf_id, sfd_pd_id, sfd_qty)
+          VALUES (?, ?, ?)
+        `;
+          db.query(insertDetail, [sf_id, pd_id, qty]);
+
+          // Update สต๊อกสินค้า
+          const updateStock = `
+          UPDATE products
+          SET pd_quantity = pd_quantity - ?
+          WHERE pd_id = ? AND pd_quantity >= ?
+        `;
+
+          db.query(updateStock, [qty, pd_id, qty]);
+        });
+
+        return res.json({
+          message: "เบิกสินค้าเรียบร้อย",
+          sf_code,
+        });
+      });
+    });
+  });
+
   return router;
 };
