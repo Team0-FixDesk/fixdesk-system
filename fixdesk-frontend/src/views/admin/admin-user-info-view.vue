@@ -6,7 +6,7 @@ import TableActions from '@/components/table-actions-component.vue'
 import Sweetalert from 'sweetalert2'
 
 import { usePhoneFormat } from '@/composables/usePhoneFormat'
-const { toRaw, toDisplay, maskInput } = usePhoneFormat()
+const { toRaw, toDisplay} = usePhoneFormat()
 
 defineOptions({ name: 'AdminUserInfoView' })
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
@@ -17,7 +17,7 @@ const getAuthHeaders = () => {
   return { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
 }
 
-const columns = ['ชื่อเต็ม', 'ชื่อผู้ใช้', 'หน่วยงาน', 'บทบาท', 'ตำแหน่ง', 'ตัวดำเนินการ']
+const columns = ['ชื่อ-นามสกุล', 'ชื่อผู้ใช้', 'หน่วยงาน', 'บทบาท', 'ตำแหน่ง', 'ตัวดำเนินการ']
 const rows = ref([])
 const searchQuery = ref('')
 const selectedRoles = ref([])
@@ -86,6 +86,16 @@ async function fetchUsers() {
     })
   }
 }
+
+// Global toast ใช้ได้ทุกที่
+const toast = Sweetalert.mixin({
+  toast: true,
+  position: 'top-end',
+  showConfirmButton: false,
+  timer: 3000,
+  timerProgressBar: true,
+})
+
 
 //ฟิลเตอร์
 const roleFilterOptions = ref([]) // list บทบาททั้งหมดจาก DB
@@ -1051,6 +1061,7 @@ async function handleDeleteTechType(item) {
             ])
           "
           :perPage="10"
+          :columnAlign="['left','left','left','left','left','center']"
         >
           <!-- ใส่ SLOT ให้ column ตัวดำเนินการ -->
           <template #cell-5="{ row }">

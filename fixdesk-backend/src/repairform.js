@@ -391,7 +391,9 @@ module.exports = function RepairFormRoutes(db) {
         rf.rf_urgency,
         rf.rf_user_status,
         rf.rf_create_at,
-        b.bd_name AS building_name,
+        b.bd_name,
+        f.fl_name,
+        r.room_name,
         u.us_department AS department_name,
         tt.tt_name AS tt_name
       FROM repair_form rf

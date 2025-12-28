@@ -13,6 +13,7 @@ const props = defineProps({
   urgencyColumn: { type: Number, default: null }, // เช่น 4
   statusColumn: { type: Number, default: null }, // เช่น 5
   statusStockColumn: { type: Number, default: null },
+  columnAlign: { type: Array, default: () => [] },
 })
 const openMenuId = ref(null)
 const currentPage = ref(1)
@@ -31,6 +32,19 @@ const paginatedRows = computed(() => {
   const endIndex = startIndex + props.perPage
   return props.rows.slice(startIndex, endIndex)
 })
+
+function getAlignClass(columnIndex) {
+  const align = props.columnAlign[columnIndex] || 'center'
+
+  switch (align) {
+    case 'left':
+      return 'text-left'
+    case 'right':
+      return 'text-right'
+    default:
+      return 'text-center'
+  }
+}
 
 function renderUrgencyBadge(type) {
   switch (type) {
@@ -84,12 +98,13 @@ function renderStatusStockBadge(type) {
   <div class="relative overflow-x-auto">
     <!-- Table -->
     <table class="min-w-[640px] w-full text-xs sm:text-sm border-collapse">
-      <thead class="border-b bg-white">
+      <thead class="bg-gray-100 border-b border-gray-300">
         <tr>
           <th
             v-for="(column, columnIndex) in columns"
             :key="columnIndex"
-            class="px-3 py-3 text-center"
+            class="px-3 py-3 font-semibold text-gray-700 sticky top-0 z-10 bg-gray-100"
+            :class="getAlignClass(columnIndex)"
           >
             {{ column }}
           </th>
@@ -104,7 +119,12 @@ function renderStatusStockBadge(type) {
           :class="{ '!bg-gray-50': row[idColumnIndex] == activeId }"
           @click="$emit('detail', getRowId(row))"
         >
-          <td v-for="(cell, cellIndex) in row" :key="cellIndex" class="px-3 py-2 text-center">
+          <td
+            v-for="(cell, cellIndex) in row"
+            :key="cellIndex"
+            class="px-3 py-2"
+            :class="getAlignClass(cellIndex)"
+          >
             <!-- URGENCY BADGE -->
             <span v-if="cellIndex === props.urgencyColumn" v-html="renderUrgencyBadge(cell)"></span>
 
