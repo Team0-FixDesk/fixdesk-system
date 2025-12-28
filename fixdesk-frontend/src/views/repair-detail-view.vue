@@ -631,8 +631,8 @@ onMounted(() => {
                   >
                     <img src="/icon/prop-icon.svg" class="w-6 h-6 sm:w-7 sm:h-7" />
                   </div>
-                  <div>
-                    <span class="text-sm sm:text-base leading-tight text-gray-500 block"
+                  <div class="break-word">
+                    <span class="text-sm sm:text-base leading-tight text-gray-500 block "
                       >หมายเลขครุภัณฑ์:</span
                     >
                     <span
@@ -746,7 +746,7 @@ onMounted(() => {
 
           <!-- กล่องรายการเบิก -->
           <div class="bg-white border border-gray-200 rounded-xl p-4 sm:p-6 shadow-sm">
-            <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center justify-between mb-4 border-b border-gray-300 pb-2 mb-4">
               <h2 class="text-lg font-semibold text-gray-800">รายการเบิก</h2>
 
               <!-- ปุ่มยืนยันการเบิก มุมขวาบน -->
@@ -760,14 +760,37 @@ onMounted(() => {
               </button>
             </div>
 
-            <div v-if="repair?.stock_items?.length" class="space-y-2">
+            <div v-if="repair?.stock_items?.length" class="space-y-3">
               <div
                 v-for="(item, i) in repair.stock_items"
                 :key="i"
-                class="flex justify-between border-b pb-1 text-gray-700"
+                class="flex p-1 items-center"
+                :class="{
+                  'border-b border-gray-200': i < repair.stock_items.length - 1,
+                }"
               >
-                <span>{{ item.name }}</span>
-                <span>{{ item.quantity }} ชิ้น</span>
+                <!-- รายละเอียดสินค้า -->
+                <div class="flex-1 leading-tight">
+                  <p class="text-gray-800 font-semibold text-sm">
+                    {{ item.name }}
+                  </p>
+
+                  <p class="text-xs text-gray-500">
+                    หมายเลขวัสดุ/ครุภัณฑ์:
+                    <span class="text-gray-700 font-medium">
+                      {{ item.assetCode || '-' }}
+                    </span>
+                  </p>
+                </div>
+
+                <!-- จำนวนที่เบิก -->
+                <div class="text-right">
+                  <p class="text-xs text-gray-500">จำนวนที่เบิก</p>
+                  <p class="text-sm text-gray-400">
+                    {{ item.qty }}
+                    <span class="text-sm text-gray-500">ชิ้น</span>
+                  </p>
+                </div>
               </div>
             </div>
 
