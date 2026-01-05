@@ -297,21 +297,29 @@ module.exports = function StockRoutes(db) {
 
     const query = `
     SELECT
-    sf.sf_id,
-    sf.sf_code,
-    sf.sf_status,
-    sf.sf_create_at,
-    b.bd_name AS building_name,
-    GROUP_CONCAT(pd.pd_name SEPARATOR ', ') AS product_name,
-    GROUP_CONCAT(sfd.sfd_qty SEPARATOR ', ') AS product_qty
+      sf.sf_id,
+      sf.sf_code,
+      sf.sf_rf_id,
+      sf.sf_us_id,
+      sf.sf_status,
+      sf.sf_create_at,
+      sf.sf_update_at,
+      b.bd_name AS building_name,
+
+      GROUP_CONCAT(
+        CONCAT(pd.pd_name, ' x', sfd.sfd_qty)
+        SEPARATOR '\\n'
+      ) AS items
 
     FROM stock_form sf
+
+    LEFT JOIN stock_form_detail sfd ON sf.sf_id = sfd.sfd_sf_id
+    LEFT JOIN products pd ON sfd.sfd_pd_id = pd.pd_id
+
     LEFT JOIN repair_form rf ON sf.sf_rf_id = rf.rf_id
     LEFT JOIN room r ON rf.rf_room_id = r.room_id
     LEFT JOIN floor f ON r.room_fl_id = f.fl_id
     LEFT JOIN building b ON f.fl_bd_id = b.bd_id
-    LEFT JOIN stock_form_detail sfd ON sfd.sfd_sf_id = sf.sf_id
-    LEFT JOIN products pd ON pd.pd_id = sfd.sfd_pd_id
 
     WHERE sf.sf_us_id = ?
     GROUP BY sf.sf_id
