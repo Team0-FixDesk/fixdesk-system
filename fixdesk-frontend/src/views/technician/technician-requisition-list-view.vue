@@ -12,10 +12,11 @@ const API_BASE = import.meta.env.VITE_API_BASE
 
 // Table Structure
 const tableColumns = [
-  'รหัสรายการเบิกของ',
-  'รายละเอียด',
-  'สถานะงาน',
-  'ตัวดำเนินการ',
+  'รหัสรายการเบิกของ', //0
+  'รายละเอียด',       //1
+  'รายการของเบิก',    //2
+  'สถานะงาน',       //3
+  'ตัวดำเนินการ',     //4
 ]
 
 const tableRows = ref([])
@@ -23,11 +24,9 @@ const tableRows = ref([])
 // Filters & Search
 const searchInput = ref('')
 const selectedStatuses = ref([])
-// const selectedUrgencies = ref([])
 const selectedDate = ref('')
 
 const isStatusFilterOpen = ref(false)
-// const isUrgencyFilterOpen = ref(false)
 
 // Utils: Decode JWT for userId
 function parseJwt(token) {
@@ -76,18 +75,29 @@ async function loadMyRepairs() {
       // ]
 
       return [
-        form.sf_code || '-', // 0 รหัสรายการเบิกของ
+        form.sf_code || '-',
         {
           date: new Date(form.sf_create_at).toLocaleDateString('th-TH'),
           location,
-        },                    // 1 รายละเอียด (วันที่ + สถานที่)
-        form.sf_status,       // 2 สถานะงาน
-        '',                   // 3 ตัวดำเนินการ
+        },
+        form.items ? form.items.split('\n') : [],
+        form.sf_status,
+        '',
       ]
     })
   } catch (err) {
     console.error('โหลดข้อมูลไม่สำเร็จ:', err)
   }
+}
+
+/* ฟังก์ชันตัดคำ */
+function truncateItem(text, maxWords = 5) {
+  if (!text) return ''
+  const [name] = text.split(' x')
+  const words = name.split(' ')
+  return words.length > maxWords
+    ? words.slice(0, maxWords).join(' ') + '...'
+    : name
 }
 
 // Computed: Filtered Rows
@@ -97,17 +107,12 @@ const filteredRows = computed(() => {
 
   return tableRows.value.filter((row) => {
     const code = String(row[0]).toLowerCase()
-    const dateText = String(row[1])
-    const location = String(row[2]).toLowerCase()
-    // const urgency = row[4]
+    const dateText = String(row[1].date)
+    const location = String(row[1].location).toLowerCase()
     const status = row[3]
 
     // ค้นหา
     const matchesSearch = code.includes(search) || location.includes(search)
-
-    // // Filter urgencies
-    // const matchesUrgency =
-    //   selectedUrgencies.value.length === 0 || selectedUrgencies.value.includes(urgency)
 
     // Filter status
     const matchesStatus =
@@ -123,18 +128,11 @@ const filteredRows = computed(() => {
   })
 })
 
-// Dropdown Controls
-// function toggleUrgencyFilter() {
-//   isUrgencyFilterOpen.value = !isUrgencyFilterOpen.value
-//   if (isUrgencyFilterOpen.value) isStatusFilterOpen.value = false
-// }
-
 function toggleStatusFilter() {
   isStatusFilterOpen.value = !isStatusFilterOpen.value
 }
 
 function resetFilters() {
-  // selectedUrgencies.value = []
   selectedStatuses.value = []
   searchInput.value = ''
   selectedDate.value = ''
@@ -144,7 +142,6 @@ function resetFilters() {
 function handleOutsideClick(event) {
   if (!event.target.closest('.relative')) {
     isStatusFilterOpen.value = false
-    // isUrgencyFilterOpen.value = false
   }
 }
 
@@ -231,28 +228,43 @@ onBeforeUnmount(() => {
 
         <!-- รหัสรายการเบิกของ -->
         <template #cell-0="{ row }">
-          <div class="cursor-pointer hover:text-blue-600 hover:underline" @click="openDetail(row[1])">
+          <div class="cursor-pointer hover:text-blue-600 hover:underline" @click="openDetail(row[0])">
             {{ row[0] }}
           </div>
         </template>
 
         <!-- วันที่ + สถานที่ -->
         <template #cell-1="{ row }">
-          <div class="space-y-0.5 text-left cursor-pointer" @click="openDetail(row)">
+          <div class="space-y-0.5 text-left cursor-pointer" @click="openDetail(row[0])">
             <div class="font-semibold text-gray-900">
-              วันที่ &nbsp;: {{ row[1].date }}
+              วันที่ : {{ row[1].date }}
             </div>
 
             <div class="text-xs text-gray-500">
-              อาคาร : {{ row[1].location }}
+              สถานที่ : {{ row[1].location }}
             </div>
           </div>
         </template>
 
+        <!-- รายการของเบิก -->
+        <template #cell-2="{ row }">
+          <div class="space-y-1 text-sm cursor-pointer" @click="openDetail(row[0])">
+            <div v-for="(item, i) in row[2]" :key="i" class="flex justify-between gap-2 max-w-[260px]" :title="item">
+              <span class="truncate max-w-[180px]">
+                {{ truncateItem(item) }}
+              </span>
+              <span class="text-gray-500">
+                x{{ item.split(' x')[1] }}
+              </span>
+            </div>
+          </div>
+        </template>
+
+
         <!-- ตัวดำเนินการ -->
-        <template #cell-3="{ row }">
+        <template #cell-4="{ row }">
           <div class="flex justify-center">
-            <button @click="openDetail(row[1])" title="รายละเอียด"
+            <button @click="openDetail(row[0])" title="รายละเอียด"
               class="w-9 h-9 flex items-center justify-center rounded-md bg-blue-500 text-white duration-200 hover:bg-blue-600 hover:scale-105">
               <img src="/icon/info-icon.svg" class="w-4 h-4" />
             </button>
@@ -270,5 +282,8 @@ onBeforeUnmount(() => {
   text-align: left !important;
 }
 
-
+/* header: รายการของเบิก */
+:deep(th:nth-child(3)) {
+  text-align: left !important;
+}
 </style>

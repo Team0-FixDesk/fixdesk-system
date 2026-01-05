@@ -41,11 +41,16 @@ const fetchRepairRequests = async () => {
 
     repairRequests.value = data.map((r) => ({
       row: [
-        new Date(r.rf_create_at).toLocaleDateString('th-TH'),
         r.rf_code,
-        `${r.us_first_name || ''} ${r.us_last_name || ''}`.trim(),
-        r.department_name || '-',
-        r.tt_name || '-',
+        r.tt_name,
+        'วันที่แจ้ง: ' +
+          new Date(r.rf_create_at).toLocaleDateString('th-TH') +
+          '</br>' +
+          'ชื่อผู้แจ้ง: ' +
+          `${r.us_first_name || ''} ${r.us_last_name || ''}`.trim() +
+          '</br>' +
+          'หน่วยงาน: ' +
+          r.department_name,
         r.rf_urgency,
         r.rf_user_status,
         '', // action
@@ -193,18 +198,11 @@ onMounted(fetchRepairRequests)
     <!-- Header -->
     <div class="flex justify-between items-center mb-6">
       <div>
-        <h1 class="text-2xl font-bold text-gray-800">หน้าแรก (Admin)</h1>
+        <h1 class="text-2xl font-bold text-gray-800">หน้าหลักผู้ดูแลระบบ</h1>
         <p class="text-sm text-gray-600 mt-1">ภาพรวมงานแจ้งซ่อม</p>
       </div>
 
       <div class="flex space-x-2">
-        <button
-          @click="fetchRepairRequests"
-          :disabled="loading"
-          class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md flex items-center"
-        >
-          รีเฟรช
-        </button>
         <repairButtonComponent />
       </div>
     </div>
@@ -215,31 +213,23 @@ onMounted(fetchRepairRequests)
     <!-- Table -->
     <div class="p-3 mx-auto max-w-8xl mt-4">
       <TableComponent
-        :columns="[
-          'วันที่',
-          'หมายเลขแจ้งซ่อม',
-          'ชื่อผู้แจ้ง',
-          'หน่วยงาน',
-          'ประเภท',
-          'ความเร่งด่วน',
-          'สถานะงาน',
-          'การดำเนินการ',
-        ]"
+        :columns="['หมายเลขแจ้งซ่อม', 'ประเภทงาน', 'รายละเอียด', 'ความเร่งด่วน', 'สถานะงาน', 'การดำเนินการ']"
         :rows="rowsForDisplay"
         :perPage="10"
-        :urgencyColumn="5"
-        :statusColumn="6"
+        :urgencyColumn="3"
+        :statusColumn="4"
+        :columnAlign="['left', 'left', 'left', 'center', 'center', 'center']"
       >
-        <template #cell-7="{ row, rowIndex }">
+        <template #cell-5="{ row, rowIndex }">
           <TableActions
             :open-menu-id="openMenuId"
             @toggle-menu="openMenuId = $event"
-            :row-id="row[1]"
+            :row-id="row[0]"
             :row="row"
-            :status="row[6]"
+            :status="row[4]"
             :assigned-tech="filteredRequests[rowIndex].meta.rf_assigned_tech_id"
-            @detail="goToRepairDetail(row[1])"
-            @delete="deleteRepair(row[1])"
+            @detail="goToRepairDetail(row[0])"
+            @delete="deleteRepair(row[0])"
           />
         </template>
       </TableComponent>
