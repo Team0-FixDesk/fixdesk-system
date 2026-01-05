@@ -14,7 +14,7 @@ const API_BASE = import.meta.env.VITE_API_BASE
 const tableColumns = [
   'รหัสรายการเบิกของ', //0
   'รายละเอียด',       //1
-  '',               //2
+  'รายการของเบิก',    //2
   'สถานะงาน',       //3
   'ตัวดำเนินการ',     //4
 ]
@@ -250,7 +250,7 @@ onBeforeUnmount(() => {
         <!-- ตัวดำเนินการ -->
         <template #cell-4="{ row }">
           <div class="flex justify-center">
-            <button @click="openDetail()" title="รายละเอียด"
+            <button @click="openDetail(row[0])" title="รายละเอียด"
               class="w-9 h-9 flex items-center justify-center rounded-md bg-blue-500 text-white duration-200 hover:bg-blue-600 hover:scale-105">
               <img src="/icon/info-icon.svg" class="w-4 h-4" />
             </button>
@@ -265,6 +265,11 @@ onBeforeUnmount(() => {
 <style scoped>
 /* header: รายละเอียด */
 :deep(th:nth-child(2)) {
+  text-align: left !important;
+}
+
+/* header: รายการของเบิก */
+:deep(th:nth-child(3)) {
   text-align: left !important;
 }
 </style>
