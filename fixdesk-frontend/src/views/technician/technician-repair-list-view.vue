@@ -72,13 +72,22 @@ function formatRow(r) {
   const place = [r.bd_name, r.fl_name, r.room_name].filter(Boolean).join(' / ') || '-'
 
   return [
-    new Date(r.rf_create_at).toLocaleDateString('th-TH'), // 0 วันที่
     r.rf_code, // 1 รหัสใบแจ้งซ่อม
-    fullName, // 2 ผู้แจ้ง
-    r.department_name || '-', // 3 หน่วยงาน
-    r.rf_problem || '-', // 4 อาการเสีย
-    place, // 5 สถานที่
-    r.rf_user_status, // 6 key สถานะ
+    'วันที่แจ้ง: ' +
+      new Date(r.rf_create_at).toLocaleDateString('th-TH') +
+      '</br>' +
+      'ชื่อผู้แจ้ง: ' +
+      fullName +
+      '</br>' +
+      'หน่วยงาน: ' +
+      r.department_name +
+      '</br>' +
+      'เรื่องที่แจ้ง: ' +
+      r.rf_problem +
+      '</br>' +
+      'สถานที่: ' +
+      place,
+    r.rf_user_status,
     '', // 7 actions slot
   ]
 }
@@ -89,28 +98,15 @@ const filteredRows = computed(() => {
 
   return tableRows.value.filter((row) => {
     const matchSearch =
-      row[1].toLowerCase().includes(q) || // code
-      row[2].toLowerCase().includes(q) || // requester
-      row[4].toLowerCase().includes(q) // problem
+      row[0].toLowerCase().includes(q) || // รหัส
+      row[1].toLowerCase().includes(q) || // รายละเอียด
+      row[1].toLowerCase().includes(q) // สถานที่
 
-    const matchDate = selectedDate.value ? sameDate(row[0], selectedDate.value) : true
+    const matchStatus = selectedStatus.value.length === 0 || selectedStatus.value.includes(row[2])
 
-    const matchStatus = selectedStatus.value.length === 0 || selectedStatus.value.includes(row[6])
-
-    return matchSearch && matchDate && matchStatus
+    return matchSearch && matchStatus
   })
 })
-
-function sameDate(thDate, inputDate) {
-  // แปลงวันที่ไทยให้เทียบได้
-  try {
-    const [d, m, y] = thDate.split('/')
-    const converted = `${y - 543}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`
-    return converted === inputDate
-  } catch {
-    return false
-  }
-}
 
 // Actions
 function goToDetail(code) {
@@ -120,28 +116,6 @@ function goToDetail(code) {
   })
 }
 
-const isFromTechnician = computed(() => history.state?.fromTechnician === true)
-
-const showAcceptButton = computed(() => {
-  return (
-    isFromTechnician.value &&
-    repair.value?.rf_user_status === 'pending'
-  )
-})
-
-const showChangeStatusButton = computed(() => {
-  return (
-    isFromTechnician.value &&
-    repair.value?.rf_user_status === 'in_progress'
-  )
-})
-
-const showWithdrawButton = computed(() => {
-  return (
-    isFromTechnician.value &&
-    repair.value?.rf_user_status === 'in_progress'
-  )
-})
 function handleAccept(code) {
   currentAcceptCode.value = code
   showAcceptPopup.value = true
@@ -213,32 +187,24 @@ onMounted(() => {
 
     <!-- Table -->
     <TableComponent
-      :columns="[
-        'วันที่',
-        'รหัสใบแจ้ง',
-        'ผู้แจ้ง',
-        'หน่วยงาน',
-        'อาการเสีย',
-        'สถานที่',
-        'สถานะ',
-        'ดำเนินการ',
-      ]"
+      :columns="['รหัสใบแจ้ง', 'รายละเอียด', 'สถานะ', 'ดำเนินการ']"
       :rows="filteredRows"
       :perPage="10"
-      :statusColumn="6"
+      :statusColumn="2"
+      :columnAlign="['left', 'left','center', 'center']"
     >
-      <template #cell-7="{ row }">
+      <template #cell-3="{ row }">
         <TableActionsComponent
           role="technician"
-          :row-id="row[1]"
+          :row-id="row[0]"
           :open-menu-id="openMenuId"
           @toggle-menu="openMenuId = $event"
           :row="row"
-          :status="row[6]"
-          @detail="goToDetail(row[1])"
-          @accept="handleAccept(row[1])"
-          @close-job="handleCloseJob(row[1])"
-          @open-stock="handleOpenStock(row[1])"
+          :status="row[2]"
+          @detail="goToDetail(row[0])"
+          @accept="handleAccept(row[0])"
+          @close-job="handleCloseJob(row[0])"
+          @open-stock="handleOpenStock(row[0])"
         />
       </template>
     </TableComponent>
