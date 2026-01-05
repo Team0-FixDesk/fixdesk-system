@@ -3,6 +3,10 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
 
+import { usePhoneFormat } from "@/composables/usePhoneFormat";
+const { toDisplay } = usePhoneFormat();
+
+
 defineOptions({ name: 'RepairEditView' })
 
 const route = useRoute()
@@ -371,7 +375,7 @@ onMounted(async () => {
     const payload = parseJwt(token)
     formData.value.reporterName =
       `${payload.us_prefix_th || ''}${payload.us_first_name_th || ''} ${payload.us_last_name_th || ''}`.trim()
-    formData.value.phoneNumber = payload.us_tel || ''
+formData.value.phoneNumber = toDisplay(payload.us_tel || '');
     formData.value.department = payload.us_department || ''
   }
 

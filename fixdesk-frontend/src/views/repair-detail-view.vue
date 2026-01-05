@@ -5,6 +5,8 @@ import RepairStatusTimeline from '@/components/status-timeline-component.vue'
 import assignJobModalComponent from '@/components/modal/assign-job-modal-component.vue'
 import AcceptJobModalComponent from '@/components/modal/accept-job-modal-component.vue'
 import Swal from 'sweetalert2'
+import { usePhoneFormat } from '@/composables/usePhoneFormat'
+const { toDisplay } = usePhoneFormat()
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
 const route = useRoute()
@@ -402,6 +404,20 @@ function openWithdrawModal() {
   showWithdrawModal.value = true
 }
 
+const showWithdrawButton = computed(() => {
+  if (!repair.value) return false
+
+  const status = repair.value.rf_user_status
+
+  // ไม่ให้แสดงถ้าเป็น pending หรือ done
+  if (status === 'pending' || status === 'done') return false
+
+  // ต้องมาจากหน้า technician-repair-list เท่านั้น
+  if (!history.state?.fromTechnician) return false
+
+  return true
+})
+
 function closeWithdrawModal() {
   showWithdrawModal.value = false
 }
@@ -476,7 +492,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="bg-gray-50 min-h-screen py-6 sm:py-10 space-y-6 sm:space-y-8 px-3 sm:px-6 lg:px-8">
+  <div class="bg-gray-50 min-h-screen px-3 sm:px-6 lg:px-8">
     <!-- Loading -->
     <div v-if="isLoading" class="text-center text-gray-500 py-16 text-base sm:text-lg">
       กำลังโหลดข้อมูล...
@@ -615,8 +631,8 @@ onMounted(() => {
                   >
                     <img src="/icon/prop-icon.svg" class="w-6 h-6 sm:w-7 sm:h-7" />
                   </div>
-                  <div>
-                    <span class="text-sm sm:text-base leading-tight text-gray-500 block"
+                  <div class="break-word">
+                    <span class="text-sm sm:text-base leading-tight text-gray-500 block "
                       >หมายเลขครุภัณฑ์:</span
                     >
                     <span
@@ -730,12 +746,12 @@ onMounted(() => {
 
           <!-- กล่องรายการเบิก -->
           <div class="bg-white border border-gray-200 rounded-xl p-4 sm:p-6 shadow-sm">
-            <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center justify-between mb-4 border-b border-gray-300 pb-2 mb-4">
               <h2 class="text-lg font-semibold text-gray-800">รายการเบิก</h2>
 
               <!-- ปุ่มยืนยันการเบิก มุมขวาบน -->
               <button
-                v-if="repair?.rf_user_status !== 'done'"
+                v-if="showWithdrawButton"
                 type="button"
                 class="px-4 py-2 text-sm sm:text-base font-semibold rounded-lg shadow-sm bg-blue-600 hover:bg-blue-700 text-white transition flex items-center gap-2"
                 @click="handleRepairFrom(repair?.rf_code)"
@@ -744,14 +760,37 @@ onMounted(() => {
               </button>
             </div>
 
-            <div v-if="repair?.stock_items?.length" class="space-y-2">
+            <div v-if="repair?.stock_items?.length" class="space-y-3">
               <div
                 v-for="(item, i) in repair.stock_items"
                 :key="i"
-                class="flex justify-between border-b pb-1 text-gray-700"
+                class="flex p-1 items-center"
+                :class="{
+                  'border-b border-gray-200': i < repair.stock_items.length - 1,
+                }"
               >
-                <span>{{ item.name }}</span>
-                <span>{{ item.quantity }} ชิ้น</span>
+                <!-- รายละเอียดสินค้า -->
+                <div class="flex-1 leading-tight">
+                  <p class="text-gray-800 font-semibold text-sm">
+                    {{ item.name }}
+                  </p>
+
+                  <p class="text-xs text-gray-500">
+                    หมายเลขวัสดุ/ครุภัณฑ์:
+                    <span class="text-gray-700 font-medium">
+                      {{ item.assetCode || '-' }}
+                    </span>
+                  </p>
+                </div>
+
+                <!-- จำนวนที่เบิก -->
+                <div class="text-right">
+                  <p class="text-xs text-gray-500">จำนวนที่เบิก</p>
+                  <p class="text-sm text-gray-400">
+                    {{ item.qty }}
+                    <span class="text-sm text-gray-500">ชิ้น</span>
+                  </p>
+                </div>
               </div>
             </div>
 
@@ -773,7 +812,8 @@ onMounted(() => {
             <div class="space-y-2 text-gray-700 text-sm sm:text-base">
               <p><span class="text-gray-500">ชื่อ:</span> {{ repair?.reporter?.name || '-' }}</p>
               <p>
-                <span class="text-gray-500">เบอร์โทร:</span> {{ repair?.reporter?.phone || '-' }}
+                <span class="text-gray-500">เบอร์โทร:</span>
+                {{ repair?.reporter?.phone ? toDisplay(repair.reporter.phone) : '-' }}
               </p>
               <p>
                 <span class="text-gray-500">หน่วยงาน:</span>

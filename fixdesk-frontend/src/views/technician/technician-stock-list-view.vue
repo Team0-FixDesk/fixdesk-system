@@ -29,11 +29,13 @@ const currentUserName = ref('')
 const currentDepartment = ref('')
 
 const loadTechnicianProfile = () => {
-  const user = JSON.parse(localStorage.getItem("session_user") || sessionStorage.getItem("session_user"))
+  const user = JSON.parse(
+    localStorage.getItem('session_user') || sessionStorage.getItem('session_user'),
+  )
   if (!user) return
 
-  currentUserName.value = user.fullName || ""
-  currentDepartment.value = user.department || ""
+  currentUserName.value = user.fullName || ''
+  currentDepartment.value = user.department || ''
 }
 
 const repairJobList = ref([])
@@ -208,13 +210,26 @@ const addToCart = (product) => {
     return
   }
 
-  if (f) f.qty++
-  else cartItems.value.push({ ...product, qty: 1 })
+  if (f) {
+    f.qty++
+  } else {
+    cartItems.value.push({ ...product, qty: 1 })
+  }
+
+  // 🔥 ลดจำนวนใน stockItems แบบ realtime
+  const stockItem = stockItems.value.find((i) => i.id === product.id)
+  if (stockItem) stockItem.quantity--
 
   bounceCart()
 }
 
 const removeFromCart = (id) => {
+  const removed = cartItems.value.find((i) => i.id === id)
+
+  // 🔥 เพิ่มจำนวนกลับเข้าสต๊อก
+  const stockItem = stockItems.value.find((i) => i.id === id)
+  if (stockItem) stockItem.quantity += removed.qty
+
   cartItems.value = cartItems.value.filter((i) => i.id !== id)
 }
 
@@ -597,7 +612,15 @@ const confirmWithdraw = async (formData) => {
                 <!-- qty -->
                 <div class="flex items-center gap-2 mt-2">
                   <button
-                    @click="item.qty--"
+                    @click="
+                      () => {
+                        if (item.qty > 1) {
+                          item.qty--
+                          const s = stockItems.find((s) => s.id === item.id)
+                          if (s) s.quantity++
+                        }
+                      }
+                    "
                     :disabled="item.qty <= 1"
                     class="w-8 h-8 flex items-center justify-center border rounded-md hover:bg-gray-100 disabled:opacity-40"
                   >
@@ -609,7 +632,15 @@ const confirmWithdraw = async (formData) => {
                   </span>
 
                   <button
-                    @click="item.qty < item.quantity ? item.qty++ : null"
+                    @click="
+                      () => {
+                        if (item.qty < item.quantity) {
+                          item.qty++
+                          const s = stockItems.find((s) => s.id === item.id)
+                          if (s) s.quantity--
+                        }
+                      }
+                    "
                     :disabled="item.qty >= item.quantity"
                     class="w-8 h-8 flex items-center justify-center border rounded-md hover:bg-gray-100 disabled:opacity-40"
                   >

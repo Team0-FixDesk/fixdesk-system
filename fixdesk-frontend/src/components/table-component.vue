@@ -13,6 +13,7 @@ const props = defineProps({
   urgencyColumn: { type: Number, default: null }, // เช่น 4
   statusColumn: { type: Number, default: null }, // เช่น 5
   statusStockColumn: { type: Number, default: null },
+  columnAlign: { type: Array, default: () => [] },
 })
 const openMenuId = ref(null)
 const currentPage = ref(1)
@@ -32,14 +33,27 @@ const paginatedRows = computed(() => {
   return props.rows.slice(startIndex, endIndex)
 })
 
+function getAlignClass(columnIndex) {
+  const align = props.columnAlign[columnIndex] || 'center'
+
+  switch (align) {
+    case 'left':
+      return 'text-left'
+    case 'right':
+      return 'text-right'
+    default:
+      return 'text-center'
+  }
+}
+
 function renderUrgencyBadge(type) {
   switch (type) {
     case 'high':
-      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-lg bg-red-100 text-red-600 font-semibold">เร่งด่วนมาก</span>`
+      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-red-100 text-red-600 font-semibold">เร่งด่วนมาก</span>`
     case 'medium':
-      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-lg bg-amber-50 text-amber-500 font-semibold">เร่งด่วน</span>`
+      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-amber-50 text-amber-500 font-semibold">เร่งด่วน</span>`
     case 'low':
-      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-lg bg-green-100 text-green-600 font-semibold">ไม่เร่งด่วน</span>`
+      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-green-100 text-green-600 font-semibold">ไม่เร่งด่วน</span>`
     default:
       return type
   }
@@ -48,13 +62,13 @@ function renderUrgencyBadge(type) {
 function renderStatusBadge(type) {
   switch (type) {
     case 'pending':
-      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-lg bg-amber-50 text-amber-500 font-semibold">รอดำเนินการ</span>`
+      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-amber-50 text-amber-500 font-semibold">รอดำเนินการ</span>`
     case 'in_progress':
-      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-lg bg-blue-100 text-blue-600 font-semibold">กำลังดำเนินการ</span>`
+      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-blue-100 text-blue-600 font-semibold">กำลังดำเนินการ</span>`
     case 'done':
-      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-lg bg-green-100 text-green-600 font-semibold">ดำเนินการเสร็จสิ้น</span>`
+      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-green-100 text-green-600 font-semibold">ดำเนินการเสร็จสิ้น</span>`
     case 'cancel':
-      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-lg bg-gray-100 text-gray-500 font-semibold">ยกเลิก</span>`
+      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-gray-100 text-gray-500 font-semibold">ยกเลิก</span>`
     default:
       return type
   }
@@ -68,6 +82,12 @@ function renderStatusStockBadge(type) {
       return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-green-100 text-green-600 font-semibold">อนุมัติแล้ว</span>`
     case 'rejected':
       return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-red-100 text-red-500 font-semibold">ไม่อนุมัติ</span>`
+    case 'in_stock':
+      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-red-100 text-red-500 font-semibold">ไม่อนุมัติ</span>`
+    case 'out_of_stock':
+      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-red-100 text-red-500 font-semibold">ไม่อนุมัติ</span>`
+    case 'low_stock':
+      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-red-100 text-red-500 font-semibold">ไม่อนุมัติ</span>`
     default:
       return type
   }
@@ -78,12 +98,13 @@ function renderStatusStockBadge(type) {
   <div class="relative overflow-x-auto">
     <!-- Table -->
     <table class="min-w-[640px] w-full text-xs sm:text-sm border-collapse">
-      <thead class="border-b bg-white">
+      <thead class="bg-gray-100 border-b border-gray-300">
         <tr>
           <th
             v-for="(column, columnIndex) in columns"
             :key="columnIndex"
-            class="px-3 py-3 text-center"
+            class="px-3 py-3 font-semibold text-gray-700 sticky top-0 z-10 bg-gray-100"
+            :class="getAlignClass(columnIndex)"
           >
             {{ column }}
           </th>
@@ -98,7 +119,12 @@ function renderStatusStockBadge(type) {
           :class="{ '!bg-gray-50': row[idColumnIndex] == activeId }"
           @click="$emit('detail', getRowId(row))"
         >
-          <td v-for="(cell, cellIndex) in row" :key="cellIndex" class="px-3 py-2 text-center">
+          <td
+            v-for="(cell, cellIndex) in row"
+            :key="cellIndex"
+            class="px-3 py-2"
+            :class="getAlignClass(cellIndex)"
+          >
             <!-- URGENCY BADGE -->
             <span v-if="cellIndex === props.urgencyColumn" v-html="renderUrgencyBadge(cell)"></span>
 

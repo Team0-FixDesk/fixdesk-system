@@ -64,6 +64,16 @@ async function loadMyRepairs() {
     tableRows.value = data.map((form) => {
       const location = form.building_name ? `${form.building_name}` : '-'
 
+      // return [
+      //   form.sf_code || '-',                                     // 0 รหัสการเบิกของ
+      //   (`<div style="text-align: left;">
+      //       วันที่ : ${new Date(form.sf_create_at).toLocaleDateString('th-TH')} </br>
+      //       สถานที่ : ${location} </div>`),                        // 1 วันที่ + สถานที่
+      //   // form.sf_urgency,                                      // ความเร่งด่วน (key)
+      //   form.sf_status,                                          // 2 สถานะงาน (key)
+      //   '',                                                      // 3 actions column
+      // ]
+
       return [
         form.sf_code || '-',
         {
@@ -210,7 +220,11 @@ onBeforeUnmount(() => {
 
     <!-- ------------------ Table ------------------ -->
     <div class="p-3 mx-auto max-w-8xl">
-      <TableComponent :columns="tableColumns" :rows="filteredRows" :perPage="10" :statusStockColumn="3">
+      <TableComponent
+      :columns="tableColumns"
+      :rows="filteredRows"
+      :perPage="10"
+      :statusStockColumn="2">
 
         <!-- รหัสรายการเบิกของ -->
         <template #cell-0="{ row }">

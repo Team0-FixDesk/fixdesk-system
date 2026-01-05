@@ -45,8 +45,6 @@ function getAuthHeaders() {
   return { Authorization: `Bearer ${token}` }
 }
 
-
-
 // Fetch repairs
 async function loadRepairs() {
   try {
@@ -116,9 +114,34 @@ function sameDate(thDate, inputDate) {
 
 // Actions
 function goToDetail(code) {
-  router.push(`/main/repair-detail/${code}`)
+  router.push({
+    path: `/main/repair-detail/${code}`,
+    state: { fromTechnician: true },
+  })
 }
 
+const isFromTechnician = computed(() => history.state?.fromTechnician === true)
+
+const showAcceptButton = computed(() => {
+  return (
+    isFromTechnician.value &&
+    repair.value?.rf_user_status === 'pending'
+  )
+})
+
+const showChangeStatusButton = computed(() => {
+  return (
+    isFromTechnician.value &&
+    repair.value?.rf_user_status === 'in_progress'
+  )
+})
+
+const showWithdrawButton = computed(() => {
+  return (
+    isFromTechnician.value &&
+    repair.value?.rf_user_status === 'in_progress'
+  )
+})
 function handleAccept(code) {
   currentAcceptCode.value = code
   showAcceptPopup.value = true
