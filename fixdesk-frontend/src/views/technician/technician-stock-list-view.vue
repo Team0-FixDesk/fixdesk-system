@@ -197,39 +197,37 @@ const cartBtn = ref(null)
 // SideBar steps → list | confirm
 const cartStep = ref('list')
 
-const addToCart = (product) => {
-  const f = cartItems.value.find((i) => i.id === product.id)
-  const qtyInCart = f ? f.qty : 0
+const addToCart = (payload) => {
+  let product = null
 
-  if (qtyInCart + 1 > product.quantity) {
+  if (payload && typeof payload === 'object') {
+    product = payload
+  } else if (typeof payload === 'number' || typeof payload === 'string') {
+    const id = Number(payload)
+    product = stockItems.value.find((x) => x.id === id) || null
+  }
+
+  if (!product) return
+
+  const available = getAvailableQty(product.id)
+  if (available <= 0) {
     Swal.fire({
       icon: 'warning',
-      title: `เพิ่มไม่ได้`,
-      text: `คงเหลือ ${product.quantity} ${product.unit}`,
+      title: 'เพิ่มไม่ได้',
+      text: `คงเหลือ 0 ${product.unit}`,
     })
     return
   }
 
-  if (f) {
-    f.qty++
-  } else {
-    cartItems.value.push({ ...product, qty: 1 })
-  }
-
-  // 🔥 ลดจำนวนใน stockItems แบบ realtime
-  const stockItem = stockItems.value.find((i) => i.id === product.id)
-  if (stockItem) stockItem.quantity--
+  const f = cartItems.value.find((i) => i.id === product.id)
+  if (f) f.qty++
+  else cartItems.value.push({ ...product, qty: 1 })
 
   bounceCart()
 }
 
+
 const removeFromCart = (id) => {
-  const removed = cartItems.value.find((i) => i.id === id)
-
-  // 🔥 เพิ่มจำนวนกลับเข้าสต๊อก
-  const stockItem = stockItems.value.find((i) => i.id === id)
-  if (stockItem) stockItem.quantity += removed.qty
-
   cartItems.value = cartItems.value.filter((i) => i.id !== id)
 }
 
@@ -281,6 +279,15 @@ const confirmWithdraw = async (formData) => {
     cartItems.value = []
     isCartOpen.value = false
     cartStep.value = 'list'
+    
+    // เคลียร์ “กำลังเบิกของสำหรับใบแจ้งซ่อม”
+    selectedRepairCode.value = null
+    try {
+      sessionStorage.removeItem('selected_rf_code')
+    } catch {}
+
+    // โหลดคลังใหม่
+    await fetchInventoryItems()
 
     await fetchInventoryItems()
   } catch (err) {
@@ -288,6 +295,25 @@ const confirmWithdraw = async (formData) => {
   } finally {
     isProcessingWithdraw.value = false
   }
+}
+
+const cartQtyById = computed(() => {
+  const m = new Map()
+  for (const it of cartItems.value) {
+    m.set(it.id, (m.get(it.id) || 0) + it.qty)
+  }
+  return m
+})
+
+const getBaseQty = (id) => {
+  const s = stockItems.value.find((x) => x.id === id)
+  return s ? Number(s.quantity || 0) : 0
+}
+
+const getAvailableQty = (id) => {
+  const base = getBaseQty(id)
+  const inCart = cartQtyById.value.get(id) || 0
+  return Math.max(0, base - inCart)
 }
 </script>
 
@@ -492,7 +518,7 @@ const confirmWithdraw = async (formData) => {
             "
             class="inline-flex items-center h-10 px-4 bg-blue-600 text-white rounded-lg"
           >
-            🛒 ตระกร้า {{ totalInCart }}
+            <img src="/icon/cart.png" alt="" class="h-7 w-7"> ตระกร้า {{ totalInCart }}
           </button>
         </div>
       </div>
@@ -507,8 +533,8 @@ const confirmWithdraw = async (formData) => {
         <ProductCardComponent
           v-for="item in filteredStockItems"
           :key="item.id"
-          :product="item"
-          @add="addToCart"
+          :product="{ ...item, quantity: getAvailableQty(item.id) }"
+          @add="($event) => addToCart($event ?? item)"
         />
       </div>
 
@@ -616,8 +642,6 @@ const confirmWithdraw = async (formData) => {
                       () => {
                         if (item.qty > 1) {
                           item.qty--
-                          const s = stockItems.find((s) => s.id === item.id)
-                          if (s) s.quantity++
                         }
                       }
                     "
@@ -634,26 +658,24 @@ const confirmWithdraw = async (formData) => {
                   <button
                     @click="
                       () => {
-                        if (item.qty < item.quantity) {
+                        if (getAvailableQty(item.id) > 0) {
                           item.qty++
-                          const s = stockItems.find((s) => s.id === item.id)
-                          if (s) s.quantity--
                         }
                       }
                     "
-                    :disabled="item.qty >= item.quantity"
+                    :disabled="getAvailableQty(item.id) <= 0"
                     class="w-8 h-8 flex items-center justify-center border rounded-md hover:bg-gray-100 disabled:opacity-40"
                   >
                     +
                   </button>
 
-                  <span class="text-xs text-gray-400"> (คงเหลือ {{ item.quantity }}) </span>
+                  <span class="text-xs text-gray-400"> (คงเหลือ {{ getAvailableQty(item.id) }}) </span>
                 </div>
               </div>
 
               <!-- delete -->
-              <button @click="removeFromCart(item.id)" class="text-red-500 hover:text-red-600">
-                🗑
+              <button @click="removeFromCart(item.id)" class="text-red-500 hover:text-red-600 bg-red-500 h-8 justify-center border rounded-md">
+                <img src="/icon/bin-icon.svg" alt="ลบ">
               </button>
             </div>
           </div>
