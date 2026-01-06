@@ -303,6 +303,7 @@ module.exports = function StockRoutes(db) {
       sf.sf_us_id,
       sf.sf_status,
       sf.sf_create_at,
+      rf.rf_code AS rf_code,
       sf.sf_update_at,
       b.bd_name AS building_name,
 

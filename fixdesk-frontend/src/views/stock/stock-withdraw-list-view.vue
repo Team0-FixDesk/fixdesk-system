@@ -52,14 +52,18 @@ async function loadStockForms() {
     tableRows.value = data.map((item) => [
       item.sf_code, // 0: รหัสใบเบิก
       item.us_department || '-', // 1: หน่วยงานผู้เบิก
-      `<div style="text-align:left;">
-     <span style="display:inline-block; width:70px;">วันที่:</span>
-     ${new Date(item.sf_create_at).toLocaleDateString('th-TH')}<br>
-     <span style="display:inline-block; width:70px;">ผู้ขอเบิก:</span>
-     ${item.requester}<br>
-     <span style="display:inline-block; width:70px;">สถานที่:</span>
-     ${item.bd_name} ${item.fl_name} ${item.room_name}
-   </div>`, // 2: รายละเอียด
+      'วันที่: ' +
+        new Date(item.sf_create_at).toLocaleDateString('th-TH') +
+        '<br>' +
+        'ผู้ขอเบิก: ' +
+        item.requester +
+        '<br>' +
+        'สถานที่: ' +
+        item.bd_name +
+        ' ' +
+        item.fl_name +
+        ' ' +
+        item.room_name, // 2: รายละเอียด
       item.sf_status, // 3: สถานะการเบิก
       '', // 4: Action
     ])
@@ -83,7 +87,7 @@ const filteredRows = computed(() => {
 
   return tableRows.value.filter((row) => {
     const code = row[0].toLowerCase()
-    console.log("openDetail value:", row[0])
+    console.log('openDetail value:', row[0])
 
     const dept = row[1]?.toLowerCase() || ''
     const detail = row[2]?.toLowerCase() || ''
@@ -124,7 +128,7 @@ onBeforeUnmount(() => {
     <h1 class="text-xl font-bold mb-6">รายการเบิกของทั้งหมด</h1>
 
     <!-- FILTERS -->
-    <div class="flex gap-3 mb-6 flex-wrap">
+    <div class="flex gap-3 mb-6 flex-wrap relative z-40">
       <input
         v-model="searchQuery"
         type="text"
@@ -169,7 +173,13 @@ onBeforeUnmount(() => {
     </div>
 
     <!-- TABLE -->
-    <TableComponent :columns="columns" :rows="filteredRows" :perPage="10" :statusStockColumn="3">
+    <TableComponent
+      :columns="columns"
+      :rows="filteredRows"
+      :perPage="10"
+      :statusStockColumn="3"
+      :columnAlign="['left', 'left', 'left', 'center', 'center']"
+    >
       <template #cell-4="{ row }">
         <TableActions
           :row-id="row[0]"

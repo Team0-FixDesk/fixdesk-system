@@ -757,7 +757,7 @@ const openEditModal = async (pdIdFromTable) => {
       </div>
     </div>
 
-    <div class="mb-6">
+    <div class="mb-6 relative z-40">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div class="flex flex-wrap items-center gap-3">
           <input
