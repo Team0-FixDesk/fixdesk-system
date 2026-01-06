@@ -1,9 +1,12 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import TableComponent from '@/components/table-component.vue'
+import TableActions from '@/components/table-actions-component.vue'
 import { useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
 const router = useRouter()
+
+const openMenuId = ref(null)
 
 function getAuthHeaders() {
   const token = localStorage.getItem('token') || sessionStorage.getItem('token')
@@ -69,11 +72,11 @@ const fetchCategories = async () => {
 }
 
 // --- Maps / Table Rows ---
-const allRows = ref([])  // เก็บข้อมูลดิบทั้งหมด
+const allRows = ref([]) // เก็บข้อมูลดิบทั้งหมด
 const assetToIdMap = ref({})
 const pdIdToCategoryIdMap = ref({})
 const pdIdToImageMap = ref({})
-const stockStatusMap = ref({})  // map: pdId -> 'in_stock' | 'low_stock' | 'out_of_stock'
+const stockStatusMap = ref({}) // map: pdId -> 'in_stock' | 'low_stock' | 'out_of_stock'
 
 // --- Computed: Filtered Rows (กรองข้อมูลตามเงื่อนไข) ---
 const filteredRows = computed(() => {
@@ -88,13 +91,13 @@ const filteredRows = computed(() => {
     const matchSearch = !query || name.includes(query) || assetCode.includes(query)
 
     // 2. กรองตามหมวดหมู่ (ใช้ชื่อหมวดหมู่โดยตรง)
-    const matchCategory = selectedTypes.value.length === 0 ||
-      selectedTypes.value.includes(categoryName)
+    const matchCategory =
+      selectedTypes.value.length === 0 || selectedTypes.value.includes(categoryName)
 
     // 3. กรองตามสถานะ stock
     const stockStatus = stockStatusMap.value[pdId]
-    const matchStatus = selectedStatuses.value.length === 0 ||
-      selectedStatuses.value.includes(stockStatus)
+    const matchStatus =
+      selectedStatuses.value.length === 0 || selectedStatuses.value.includes(stockStatus)
 
     return matchSearch && matchCategory && matchStatus
   })
@@ -145,39 +148,36 @@ async function fetchAllStock() {
 
       // map: pdId -> stock status (สำหรับ filter) - คำนวณจากจำนวนสินค้า
       let stockStatus = 'in_stock'
-      let stockStatusLabel = 'พร้อมใช้งาน'
       if (quantity <= 0) {
         stockStatus = 'out_of_stock'
-        stockStatusLabel = 'สินค้าหมด'
       } else if (quantity < 10) {
         stockStatus = 'low_stock'
-        stockStatusLabel = 'ใกล้หมด'
       }
+
       stockStatusMap.value[pdId] = stockStatus
 
-      // rows สำหรับตาราง (ไม่มีชื่อไฟล์)
       return [
-        pdId, // [0] PK
-        assetCode, // [1]
-        item.pd_name ?? '-', // [2]
-        item.ct_name ?? '-', // [3]
-        quantity, // [4]
-        item.units_name ?? '-', // [5]
-        stockStatusLabel, // [6]
-        'actions', // [7]
+        pdId, // 0
+        assetCode, // 1
+        item.pd_name ?? '-', // 2
+        item.ct_name ?? '-', // 3
+        quantity, // 4
+        item.units_name ?? '-', // 5
+        stockStatus, // 6
+        'actions', // 7
       ]
     })
 
     // อัพเดท summary counts
     itemsCount.value = allRows.value.length
-    itemRequestDeclined.value = Object.values(stockStatusMap.value).filter(s => s === 'low_stock' || s === 'out_of_stock').length
+    itemRequestDeclined.value = Object.values(stockStatusMap.value).filter(
+      (s) => s === 'low_stock' || s === 'out_of_stock',
+    ).length
   } catch (error) {
     console.error('Error fetching stock data:', error)
     Swal.fire('ผิดพลาด', error.message || 'ไม่สามารถดึงข้อมูลสินค้าได้', 'error')
   }
 }
-
-
 
 // Load categories เมื่อ component mount
 onMounted(() => {
@@ -215,14 +215,13 @@ const addErrors = ref({})
 
 // --- Filter & Search ---
 const searchQuery = ref('')
-const selectedStatuses = ref([])  // 'in_stock' | 'low_stock' | 'out_of_stock'
+const selectedStatuses = ref([]) // 'in_stock' | 'low_stock' | 'out_of_stock'
 const selectedTypes = ref([])
 const itemsCount = ref(0)
 const itemsNew = ref(0)
 const itemRequestWaiting = ref(0)
 const itemRequestDeclined = ref(0)
 const itemNewToday = ref(0)
-
 
 // --- Methods ---
 
@@ -370,14 +369,14 @@ const confirmAddItem = async () => {
       didOpen: (toast) => {
         toast.addEventListener('mouseenter', Swal.stopTimer)
         toast.addEventListener('mouseleave', Swal.resumeTimer)
-      }
+      },
     })
     Toast.fire({
       title: 'สำเร็จ!',
       text: 'บันทึกรายการสำเร็จ!',
       icon: 'success',
       background: '#f0f9ff',
-      color: '#1e3a8a'
+      color: '#1e3a8a',
     })
 
     closeAddModal()
@@ -390,14 +389,14 @@ const confirmAddItem = async () => {
       animation: false,
       showConfirmButton: false,
       timer: 3000,
-      timerProgressBar: true
+      timerProgressBar: true,
     })
     Toast.fire({
       title: 'ผิดพลาด!',
       text: error.message || 'เกิดข้อผิดพลาดในการบันทึกรายการ',
       icon: 'error',
       background: '#fee2e2',
-      color: '#dc2626'
+      color: '#dc2626',
     })
   }
 }
@@ -473,13 +472,11 @@ const handleDelete = async (pdIdFromTable) => {
   })
 }
 
-
 const goToDetail = (pdIdFromTable) => {
   const pdId = String(pdIdFromTable ?? '')
   if (!pdId) return
   router.push(`/stock/detail/${pdId}`)
 }
-
 
 const goToEdit = (valueFromTable) => {
   let row = null
@@ -491,9 +488,7 @@ const goToEdit = (valueFromTable) => {
 
   // กรณีส่งมาเป็น id หรือ asset_code
   if (!row) {
-    row = allRows.value.find(
-      (r) => r[0] === valueFromTable || r[1] === valueFromTable
-    )
+    row = allRows.value.find((r) => r[0] === valueFromTable || r[1] === valueFromTable)
   }
 
   if (!row) {
@@ -506,9 +501,8 @@ const goToEdit = (valueFromTable) => {
   editForm.value = {
     name: row[2],
     asset_no: row[1],
-    ct_id: pdIdToCategoryIdMap.value[row[0]] !== null
-           ? Number(pdIdToCategoryIdMap.value[row[0]])
-           : null,  // fallback เป็น null
+    ct_id:
+      pdIdToCategoryIdMap.value[row[0]] !== null ? Number(pdIdToCategoryIdMap.value[row[0]]) : null, // fallback เป็น null
     quantity: row[4],
     unit: row[5],
     status: row[6] === 'พร้อมใช้งาน' ? 'active' : 'inactive',
@@ -516,8 +510,8 @@ const goToEdit = (valueFromTable) => {
   }
 
   editFilePreview.value = []
-  console.log('editForm.ct_id:', editForm.value.ct_id);
-  console.log('typeOptions:', typeOptions.value);
+  console.log('editForm.ct_id:', editForm.value.ct_id)
+  console.log('typeOptions:', typeOptions.value)
   showEditModal.value = true
 }
 
@@ -588,16 +582,13 @@ const confirmEditItem = async () => {
       formData.append('pd_upload_image', editFilePreview.value[0].file)
     }
 
-    const res = await fetch(
-      `${API_BASE}/update-stock/${editingPdId.value}`,
-      {
-        method: 'PUT',
-        headers: {
-          ...getAuthHeaders(), // ห้ามใส่ Content-Type เมื่อส่ง FormData
-        },
-        body: formData,
-      }
-    )
+    const res = await fetch(`${API_BASE}/update-stock/${editingPdId.value}`, {
+      method: 'PUT',
+      headers: {
+        ...getAuthHeaders(), // ห้ามใส่ Content-Type เมื่อส่ง FormData
+      },
+      body: formData,
+    })
 
     const result = await res.json()
 
@@ -730,28 +721,28 @@ const openEditModal = async (pdIdFromTable) => {
       </button>
     </div>
 
-    <div class="flex flex-wrap justify-center gap-6 mb-8">
-      <div class="bg-white rounded-lg border p-6 w-60 text-center shadow-sm">
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 mb-8">
+      <div class="bg-white rounded-lg border p-6 text-center shadow-sm">
         <h2 class="text-2xl font-bold text-blue-600">{{ itemsCount }} รายการ</h2>
         <p class="text-gray-600 text-sm">รายการของทั้งหมด</p>
       </div>
 
-      <div class="bg-white rounded-lg border p-6 w-60 text-center shadow-sm">
+      <div class="bg-white rounded-lg border p-6 text-center shadow-sm">
         <h2 class="text-2xl font-bold text-orange-500">{{ itemsNew }} รายการ</h2>
         <p class="text-gray-600 text-sm">คำขอเบิกของ</p>
       </div>
 
-      <div class="bg-white rounded-lg border p-6 w-60 text-center shadow-sm">
+      <div class="bg-white rounded-lg border p-6 text-center shadow-sm">
         <h2 class="text-2xl font-bold text-green-600">{{ itemRequestWaiting }} รายการ</h2>
         <p class="text-gray-600 text-sm">คำขอเบิกรออนุมัติ</p>
       </div>
 
-      <div class="bg-white rounded-lg border p-6 w-60 text-center shadow-sm">
+      <div class="bg-white rounded-lg border p-6 text-center shadow-sm">
         <h2 class="text-2xl font-bold text-red-600">{{ itemRequestDeclined }} รายการ</h2>
         <p class="text-gray-600 text-sm">ใกล้หมด Stock</p>
       </div>
 
-      <div class="bg-white rounded-lg border p-6 w-60 text-center shadow-sm">
+      <div class="bg-white rounded-lg border p-6 text-center shadow-sm">
         <h2 class="text-2xl font-bold text-purple-600">{{ itemNewToday }} รายการ</h2>
         <p class="text-gray-600 text-sm">ของเข้าใหม่วันนี้</p>
       </div>
@@ -833,8 +824,14 @@ const openEditModal = async (pdIdFromTable) => {
               v-if="showTypeFilter"
               class="absolute mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg p-3 text-sm text-gray-700 z-10 max-h-60 overflow-y-auto"
             >
-              <div v-if="typeOptions.length === 0" class="text-gray-400 text-sm p-2">ไม่มีข้อมูล</div>
-              <label v-for="category in typeOptions" :key="category" class="flex items-center py-1 hover:bg-gray-50 cursor-pointer">
+              <div v-if="typeOptions.length === 0" class="text-gray-400 text-sm p-2">
+                ไม่มีข้อมูล
+              </div>
+              <label
+                v-for="category in typeOptions"
+                :key="category"
+                class="flex items-center py-1 hover:bg-gray-50 cursor-pointer"
+              >
                 <input
                   type="checkbox"
                   :value="category"
@@ -865,12 +862,24 @@ const openEditModal = async (pdIdFromTable) => {
         :columns="columns"
         :rows="filteredRows"
         :perPage="10"
-        mode="full"
         :idColumnIndex="0"
-        @delete="handleDelete"
-        @edit="openEditModal"
-        @detail="goToDetail"
-      />
+        :statusStockinventoryColumn="6"
+        :columnAlign="['left', 'left', 'left', 'center', 'center']"
+      >
+        <template #cell-7="{ row }">
+          <TableActions
+            :row-id="row[0]"
+            :open-menu-id="openMenuId"
+            role="stock"
+            :row="row"
+            :status="row[6]"
+            @toggle-menu="openMenuId = $event"
+            @detail="goToDetail(row[0])"
+            @edit="openEditModal(row[0])"
+            @delete="handleDelete(row[0])"
+          />
+        </template>
+      </TableComponent>
     </div>
 
     <div
@@ -1169,8 +1178,19 @@ const openEditModal = async (pdIdFromTable) => {
         <div class="flex justify-between items-center px-6 py-4 border-b border-gray-100">
           <div class="flex items-center gap-3">
             <div class="bg-orange-500 text-white rounded p-1 flex items-center justify-center">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                stroke-width="3"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                />
               </svg>
             </div>
             <h2 class="text-lg font-bold text-black">แก้ไขรายการของ</h2>
@@ -1179,8 +1199,19 @@ const openEditModal = async (pdIdFromTable) => {
             @click="closeEditModal"
             class="text-gray-400 hover:text-gray-600 transition-colors"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-6 w-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
@@ -1218,7 +1249,10 @@ const openEditModal = async (pdIdFromTable) => {
                   หมวดหมู่ <span class="text-red-500">*</span>
                 </label>
                 <span class="text-xs text-gray-400 block mb-1">โปรดเลือกหมวดหมู่รายการ</span>
-                <select v-model="editForm.ct_id" class="text-black w-full px-3 py-2 border border-gray-300 focus:ring-1 rounded-md bg-white">
+                <select
+                  v-model="editForm.ct_id"
+                  class="text-black w-full px-3 py-2 border border-gray-300 focus:ring-1 rounded-md bg-white"
+                >
                   <option value="" disabled>กรุณาเลือกหมวดหมู่</option>
                   <option v-for="opt in typeOptions" :key="opt.value" :value="String(opt.value)">
                     {{ opt.label }}
@@ -1275,7 +1309,9 @@ const openEditModal = async (pdIdFromTable) => {
                 for="dropzone-file-edit"
                 :class="[
                   'flex flex-col items-center justify-center w-full border-2 border-dashed rounded-lg cursor-pointer transition flex-1 min-h-[200px] mb-4',
-                  isEditDragOver ? 'border-orange-400 bg-orange-50 scale-105' : 'border-gray-300 bg-gray-50 hover:bg-gray-100'
+                  isEditDragOver
+                    ? 'border-orange-400 bg-orange-50 scale-105'
+                    : 'border-gray-300 bg-gray-50 hover:bg-gray-100',
                 ]"
                 @dragover.prevent="handleEditDragOver"
                 @dragleave.prevent="handleEditDragLeave"
@@ -1292,39 +1328,86 @@ const openEditModal = async (pdIdFromTable) => {
                     <span class="text-xs px-2 py-1 bg-green-100 text-green-700 rounded">WEBP</span>
                   </div>
                 </div>
-                <input id="dropzone-file-edit" type="file" accept="image/*" class="hidden" @change="handleEditFileUpload" />
+                <input
+                  id="dropzone-file-edit"
+                  type="file"
+                  accept="image/*"
+                  class="hidden"
+                  @change="handleEditFileUpload"
+                />
               </label>
 
               <div v-else-if="editFilePreview.length === 0 && editForm.upload_image" class="mb-4">
-                 <div class="relative w-full h-64 bg-gray-100 rounded-lg border border-gray-300 flex items-center justify-center overflow-hidden group">
-                    <img :src="`${API_BASE}/uploads/${editForm.upload_image}`" class="h-full object-contain" alt="Current Image" />
+                <div
+                  class="relative w-full h-64 bg-gray-100 rounded-lg border border-gray-300 flex items-center justify-center overflow-hidden group"
+                >
+                  <img
+                    :src="`${API_BASE}/uploads/${editForm.upload_image}`"
+                    class="h-full object-contain"
+                    alt="Current Image"
+                  />
 
-                    <label for="dropzone-file-edit-replace" class="absolute inset-0 bg-black bg-opacity-50 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-white">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                        <span class="font-semibold">คลิกเพื่อเปลี่ยนรูปภาพ</span>
-                    </label>
-                    <input id="dropzone-file-edit-replace" type="file" accept="image/*" class="hidden" @change="handleEditFileUpload" />
-                 </div>
-                 <p class="text-xs text-gray-500 mt-2 text-center">รูปภาพปัจจุบัน (อัปโหลดใหม่เพื่อแทนที่)</p>
+                  <label
+                    for="dropzone-file-edit-replace"
+                    class="absolute inset-0 bg-black bg-opacity-50 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-white"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="h-10 w-10 mb-2"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                      />
+                    </svg>
+                    <span class="font-semibold">คลิกเพื่อเปลี่ยนรูปภาพ</span>
+                  </label>
+                  <input
+                    id="dropzone-file-edit-replace"
+                    type="file"
+                    accept="image/*"
+                    class="hidden"
+                    @change="handleEditFileUpload"
+                  />
+                </div>
+                <p class="text-xs text-gray-500 mt-2 text-center">
+                  รูปภาพปัจจุบัน (อัปโหลดใหม่เพื่อแทนที่)
+                </p>
               </div>
 
               <div v-else class="w-full border rounded-lg p-4 bg-gray-50 relative mb-4">
                 <div class="flex items-start gap-4">
-                  <div class="w-24 h-24 rounded-lg overflow-hidden border border-gray-200 bg-white flex-shrink-0">
+                  <div
+                    class="w-24 h-24 rounded-lg overflow-hidden border border-gray-200 bg-white flex-shrink-0"
+                  >
                     <img :src="editFilePreview[0].url" class="w-full h-full object-cover" />
                   </div>
                   <div class="flex-1 min-w-0 pt-1">
-                    <p class="text-sm font-semibold text-gray-900 truncate">{{ editFilePreview[0].name }}</p>
+                    <p class="text-sm font-semibold text-gray-900 truncate">
+                      {{ editFilePreview[0].name }}
+                    </p>
                     <p class="text-xs text-green-600 mt-2">กำลังจะบันทึกรูปภาพใหม่...</p>
                   </div>
                   <button
                     @click.prevent="removeEditFile"
                     class="absolute top-2 right-2 p-1 bg-white rounded-full text-gray-400 hover:text-red-500 border shadow-sm"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                      <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="h-5 w-5"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fill-rule="evenodd"
+                        d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                        clip-rule="evenodd"
+                      />
                     </svg>
                   </button>
                 </div>
@@ -1351,7 +1434,6 @@ const openEditModal = async (pdIdFromTable) => {
         </div>
       </div>
     </div>
-
   </div>
 </template>
 
