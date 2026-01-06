@@ -160,7 +160,7 @@ onBeforeUnmount(() => {
     <h1 class="text-xl font-bold text-black mb-6">รายการแจ้งซ่อมทั้งหมด</h1>
 
     <!-- ---------------- Filters ---------------- -->
-    <div class="mb-6">
+    <div class="relative z-40 mb-6">
       <div class="flex flex-wrap items-center gap-3">
         <!-- ค้นหา -->
         <input

@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import TableComponent from '@/components/table-component.vue';
+import TableComponent from '@/components/table-component.vue'
 
 defineOptions({ name: 'TechnicianRequisitionListView' })
 
@@ -13,10 +13,10 @@ const API_BASE = import.meta.env.VITE_API_BASE
 // Table Structure
 const tableColumns = [
   'รหัสรายการเบิกของ', //0
-  'รายละเอียด',       //1
-  'รายการของเบิก',    //2
-  'สถานะงาน',       //3
-  'ตัวดำเนินการ',     //4
+  'รายละเอียด', //1
+  'รายการของเบิก', //2
+  'สถานะงาน', //3
+  'ตัวดำเนินการ', //4
 ]
 
 const tableRows = ref([])
@@ -62,25 +62,20 @@ async function loadMyRepairs() {
 
     // Map to table rows
     tableRows.value = data.map((form) => {
-      const location = form.building_name ? `${form.building_name}` : '-'
-
-      // return [
-      //   form.sf_code || '-',                                     // 0 รหัสการเบิกของ
-      //   (`<div style="text-align: left;">
-      //       วันที่ : ${new Date(form.sf_create_at).toLocaleDateString('th-TH')} </br>
-      //       สถานที่ : ${location} </div>`),                        // 1 วันที่ + สถานที่
-      //   // form.sf_urgency,                                      // ความเร่งด่วน (key)
-      //   form.sf_status,                                          // 2 สถานะงาน (key)
-      //   '',                                                      // 3 actions column
-      // ]
+      const location = form.building_name || '-'
+      const items = form.items ? form.items.split('\n') : []
 
       return [
-        form.sf_code || '-',
+        form.sf_code, // 0
         {
-          date: new Date(form.sf_create_at).toLocaleDateString('th-TH'),
+          date: new Date(form.sf_create_at).toLocaleString('th-TH', {
+            dateStyle: 'medium',
+            timeStyle: 'short',
+          }),
           location,
+          rf_code: form.rf_code,
         },
-        form.items ? form.items.split('\n') : [],
+        items,
         form.sf_status,
         '',
       ]
@@ -95,9 +90,11 @@ function truncateItem(text, maxWords = 5) {
   if (!text) return ''
   const [name] = text.split(' x')
   const words = name.split(' ')
-  return words.length > maxWords
-    ? words.slice(0, maxWords).join(' ') + '...'
-    : name
+  return words.length > maxWords ? words.slice(0, maxWords).join(' ') + '...' : name
+}
+
+const openDetail = (rfCode) => {
+  router.push(`/main/repair-detail/${rfCode}`)
 }
 
 // Computed: Filtered Rows
@@ -122,7 +119,7 @@ const filteredRows = computed(() => {
     const matchesDate =
       !dateFilter ||
       new Date(dateText).toLocaleDateString('th-TH') ===
-      new Date(dateFilter).toLocaleDateString('th-TH')
+        new Date(dateFilter).toLocaleDateString('th-TH')
 
     return matchesSearch && matchesStatus && matchesDate
   })
@@ -145,9 +142,6 @@ function handleOutsideClick(event) {
   }
 }
 
-// Navigation handlers
-const openDetail = (code) => router.push(`/main/technician-requisition-detail/${code[0]}`)
-
 // Lifecycle
 onMounted(() => {
   loadMyRepairs()
@@ -158,11 +152,15 @@ onMounted(() => {
     selectedStatuses.value = [route.query.status]
   }
 })
+function extractQuantity(item) {
+  if (!item) return 1
+  const match = item.match(/x\s*(\d+)/i)
+  return match ? Number(match[1]) : 1
+}
 
 onBeforeUnmount(() => {
   document.removeEventListener('click', handleOutsideClick)
 })
-
 </script>
 
 <template>
@@ -170,27 +168,42 @@ onBeforeUnmount(() => {
     <h1 class="text-xl font-bold text-black mb-6">รายการเบิกของฉัน</h1>
 
     <!-- ------------------ Filters ------------------ -->
-    <div class="mb-6">
+    <div class="relative z-50 mb-6">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div class="flex flex-wrap items-center gap-3">
           <!-- ค้นหา -->
-          <input v-model="searchInput" type="text" placeholder="ค้นหาจากรหัสรายการเบิก/สถานที่ "
-            class="w-[260px] h-10 px-4 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500" />
+          <input
+            v-model="searchInput"
+            type="text"
+            placeholder="ค้นหาจากรหัสรายการเบิก/สถานที่ "
+            class="w-[260px] h-10 px-4 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500"
+          />
 
           <!-- วันที่ -->
-          <input v-model="selectedDate" type="date" class="h-10 px-3 rounded-lg border border-gray-300 text-gray-700" />
+          <input
+            v-model="selectedDate"
+            type="date"
+            class="h-10 px-3 rounded-lg border border-gray-300 text-gray-700"
+          />
 
           <!-- สถานะ -->
           <div class="relative">
-            <button @click.stop="toggleStatusFilter"
-              class="flex items-center gap-1 border border-gray-300 rounded-lg px-4 py-2 bg-white">
+            <button
+              @click.stop="toggleStatusFilter"
+              class="flex items-center gap-1 border border-gray-300 rounded-lg px-4 py-2 bg-white"
+            >
               สถานะ
-              <img src="/icon/sidebar/chevron-down-icon.svg" class="w-4 h-4 opacity-70"
-                :class="{ 'rotate-180': isStatusFilterOpen }" />
+              <img
+                src="/icon/sidebar/chevron-down-icon.svg"
+                class="w-4 h-4 opacity-70"
+                :class="{ 'rotate-180': isStatusFilterOpen }"
+              />
             </button>
 
-            <div v-if="isStatusFilterOpen"
-              class="absolute mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg p-3 z-10 text-sm">
+            <div
+              v-if="isStatusFilterOpen"
+              class="absolute mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg p-3 z-10 text-sm"
+            >
               <label class="flex items-center py-1">
                 <input type="checkbox" value="waiting" v-model="selectedStatuses" />
                 <span class="ml-2">รออนุมัติ</span>
@@ -209,81 +222,59 @@ onBeforeUnmount(() => {
           </div>
 
           <!-- ล้างตัวกรอง -->
-          <button v-if="selectedStatuses.length || searchInput" @click="resetFilters"
-            class="text-blue-600 hover:text-blue-700 text-sm font-medium">
+          <button
+            v-if="selectedStatuses.length || searchInput"
+            @click="resetFilters"
+            class="text-blue-600 hover:text-blue-700 text-sm font-medium"
+          >
             ล้างตัวกรอง
           </button>
         </div>
-
       </div>
     </div>
 
     <!-- ------------------ Table ------------------ -->
     <div class="p-3 mx-auto max-w-8xl">
       <TableComponent
-      :columns="tableColumns"
-      :rows="filteredRows"
-      :perPage="10"
-      :statusStockColumn="2">
-
-        <!-- รหัสรายการเบิกของ -->
-        <template #cell-0="{ row }">
-          <div class="cursor-pointer hover:text-blue-600 hover:underline" @click="openDetail(row[0])">
-            {{ row[0] }}
-          </div>
-        </template>
-
-        <!-- วันที่ + สถานที่ -->
-        <template #cell-1="{ row }">
-          <div class="space-y-0.5 text-left cursor-pointer" @click="openDetail(row[0])">
-            <div class="font-semibold text-gray-900">
-              วันที่ : {{ row[1].date }}
-            </div>
-
-            <div class="text-xs text-gray-500">
-              สถานที่ : {{ row[1].location }}
-            </div>
-          </div>
-        </template>
-
-        <!-- รายการของเบิก -->
+        :columns="tableColumns"
+        :rows="filteredRows"
+        :perPage="10"
+        :statusStockColumn="3"
+        :columnAlign="['left', 'left', 'left', 'center']"
+      >
         <template #cell-2="{ row }">
-          <div class="space-y-1 text-sm cursor-pointer" @click="openDetail(row[0])">
-            <div v-for="(item, i) in row[2]" :key="i" class="flex justify-between gap-2 max-w-[260px]" :title="item">
-              <span class="truncate max-w-[180px]">
+          <div class="space-y-1 text-sm">
+            <div v-for="(item, i) in row[2]" :key="i" class="flex items-center" :title="item">
+              <!-- ชื่อรายการ (ชิดซ้าย) -->
+              <span class="flex-1 truncate">
                 {{ truncateItem(item) }}
               </span>
-              <span class="text-gray-500">
-                x{{ item.split(' x')[1] }}
+
+              <!-- จำนวน (ชิดขวา) -->
+              <span class="shrink-0 text-gray-500 text-right w-8">
+                x{{ extractQuantity(item) }}
               </span>
             </div>
           </div>
         </template>
-
-
-        <!-- ตัวดำเนินการ -->
+        <template #cell-1="{ row }">
+          <div class="text-sm space-y-1">
+            <div>วันที่เบิก: {{ row[1].date }}</div>
+            <div>รหัสใบแจ้งซ่อม: {{ row[1].rf_code }}</div>
+            <div>สถานที่: {{ row[1].location }}</div>
+          </div>
+        </template>
         <template #cell-4="{ row }">
           <div class="flex justify-center">
-            <button @click="openDetail(row[0])" title="รายละเอียด"
-              class="w-9 h-9 flex items-center justify-center rounded-md bg-blue-500 text-white duration-200 hover:bg-blue-600 hover:scale-105">
-              <img src="/icon/info-icon.svg" class="w-4 h-4" />
+            <button
+              @click="openDetail(row[1].rf_code)"
+              class="flex items-center gap-2 px-2 py-2 rounded-md bg-blue-500 text-white hover:bg-blue-600"
+            >
+              <img src="/icon/info-icon.svg" class="h-4 w-4" />
             </button>
           </div>
         </template>
-
       </TableComponent>
     </div>
   </div>
 </template>
-
-<style scoped>
-/* header: รายละเอียด */
-:deep(th:nth-child(2)) {
-  text-align: left !important;
-}
-
-/* header: รายการของเบิก */
-:deep(th:nth-child(3)) {
-  text-align: left !important;
-}
-</style>
