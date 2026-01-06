@@ -168,7 +168,7 @@ onBeforeUnmount(() => {
     <h1 class="text-xl font-bold text-black mb-6">รายการเบิกของฉัน</h1>
 
     <!-- ------------------ Filters ------------------ -->
-    <div class="relative z-50 mb-6">
+    <div class="relative z-40 mb-6">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div class="flex flex-wrap items-center gap-3">
           <!-- ค้นหา -->
