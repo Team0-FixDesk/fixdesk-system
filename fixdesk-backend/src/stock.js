@@ -436,53 +436,117 @@ module.exports = function StockRoutes(db) {
   router.put("/stock-forms/update-status", authMiddleware, (req, res) => {
     const { sf_code, status } = req.body;
 
+    console.log("update-status body:", req.body);
+
     if (!sf_code || !status) {
       return res.status(400).json({ message: "ต้องมี sf_code และ status" });
     }
 
-    // ตรวจสอบสถานะปัจจุบันก่อน
+    // 1) หา sf_id + สถานะปัจจุบัน
     const checkQuery = `
-    SELECT sf_status 
-    FROM stock_form 
-    WHERE sf_code = ?
-  `;
+      SELECT sf_id, sf_status
+      FROM stock_form
+      WHERE sf_code = ?
+    `;
 
     db.query(checkQuery, [sf_code], (err, rows) => {
       if (err) {
-        console.error(err);
-        return res.status(500).json({ message: "เกิดข้อผิดพลาด" });
+        console.error("checkQuery error:", err);
+        return res.status(500).json({ message: "เกิดข้อผิดพลาด (checkQuery)" });
       }
 
-      if (rows.length === 0) {
+      if (!rows || rows.length === 0) {
         return res.status(404).json({ message: "ไม่พบใบเบิกนี้" });
       }
 
+      const sf_id = rows[0].sf_id;
       const current = rows[0].sf_status;
 
-      // กันโกง backend ↓↓↓↓↓
+      // กันแก้ซ้ำ
       if (current !== "waiting") {
         return res.status(400).json({
           message: "ใบเบิกได้รับการอนุมัติหรือปฏิเสธแล้ว ไม่สามารถแก้ไขได้",
         });
       }
 
-      // ผ่าน → อัปเดตได้
-      const updateQuery = `
-      UPDATE stock_form
-      SET sf_status = ?
-      WHERE sf_code = ?
-    `;
+      // ฟังก์ชันอัปเดตสถานะอย่างเดียว
+      const updateStatusOnly = () => {
+        const updateQuery = `
+          UPDATE stock_form
+          SET sf_status = ?
+          WHERE sf_code = ?
+        `;
 
-      db.query(updateQuery, [status, sf_code], (err2) => {
-        if (err2) {
-          console.error(err2);
-          return res.status(500).json({ message: "อัปเดตไม่สำเร็จ" });
-        }
+        db.query(updateQuery, [status, sf_code], (err2) => {
+          if (err2) {
+            console.error("updateQuery error:", err2);
+            return res.status(500).json({ message: "อัปเดตสถานะไม่สำเร็จ" });
+          }
 
-        return res.json({ message: "อัปเดตสถานะสำเร็จ" });
-      });
+          return res.json({ message: "อัปเดตสถานะสำเร็จ" });
+        });
+      };
+
+      // 2) ถ้า rejected -> คืนสต๊อกก่อน แล้วค่อยอัปเดตสถานะ
+      if (status === "rejected") {
+        const detailQuery = `
+          SELECT sfd_pd_id, sfd_qty
+          FROM stock_form_detail
+          WHERE sfd_sf_id = ?
+        `;
+
+        db.query(detailQuery, [sf_id], (errD, items) => {
+          if (errD) {
+            console.error("detailQuery error:", errD);
+            return res
+              .status(500)
+              .json({ message: "โหลดรายการคืนสต๊อกไม่สำเร็จ" });
+          }
+
+          // ถ้าไม่มีรายการก็อัปเดตสถานะไปเลย
+          if (!items || items.length === 0) {
+            return updateStatusOnly();
+          }
+
+          let idx = 0;
+
+          const returnNext = () => {
+            if (idx >= items.length) {
+              // คืนครบแล้ว -> อัปเดตสถานะ
+              return updateStatusOnly();
+            }
+
+            const { sfd_pd_id, sfd_qty } = items[idx++];
+
+            const returnStockSql = `
+              UPDATE products
+              SET pd_quantity = pd_quantity + ?
+              WHERE pd_id = ?
+            `;
+
+            db.query(returnStockSql, [sfd_qty, sfd_pd_id], (errR) => {
+              if (errR) {
+                console.error("returnStockSql error:", errR);
+                return res.status(500).json({
+                  message: "คืนสต๊อกไม่สำเร็จ",
+                  error: errR.message,
+                });
+              }
+              returnNext();
+            });
+          };
+
+          returnNext();
+        });
+
+        return; // กัน flow ไหลลงไป approved
+      }
+
+      // 3) approved (หรืออื่น ๆ) -> อัปเดตสถานะอย่างเดียว
+      return updateStatusOnly();
     });
   });
+
 
   // เบิกสินค้า
   router.post("/withdraw", authMiddleware, (req, res) => {
