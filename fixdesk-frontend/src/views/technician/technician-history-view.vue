@@ -10,14 +10,10 @@ const API_BASE = import.meta.env.VITE_API_BASE
 
 // Columns ของตาราง
 const tableColumns = [
-  'วันที่',
   'หมายเลขแจ้งซ่อม',
-  'ผู้แจ้ง',
-  'หน่วยงาน',
-  'อาการเสีย',
-  'สถานที่',
+  'รายละเอียด',
   'สถานะ',
-  'การดำเนินการ'
+  'การดำเนินการ',
 ]
 
 const tableRows = ref([])
@@ -28,12 +24,10 @@ const searchInput = ref('')
 // โหลดข้อมูล
 async function loadRepairHistory() {
   try {
-    const token =
-      localStorage.getItem('token') ||
-      sessionStorage.getItem('token')
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token')
 
     const res = await fetch(`${API_BASE}/technician/history`, {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}` },
     })
 
     const data = await res.json()
@@ -43,14 +37,17 @@ async function loadRepairHistory() {
       const fullName = `${item.us_first_name || ''} ${item.us_last_name || ''}`.trim()
 
       return [
-        new Date(item.rf_create_at).toLocaleDateString('th-TH'), // 0 วันที่
-        item.rf_code,                                            // 1 หมายเลขแจ้งซ่อม
-        fullName,                                                // 2 ผู้แจ้ง
-        item.department_name || '-',                             // 3 หน่วยงาน
-        item.rf_problem || '-',                                  // 4 อาการเสีย
-        `${item.building_name || ''} ${item.floor_name || ''} ${item.room_name || ''}`.trim(), // 5 สถานที่
-        item.rf_user_status,                                     // 6 สถานะ key
-        ''                                                       // 7 actions
+        item.rf_code, // 1 หมายเลขแจ้งซ่อม
+        "วันที่แจ้ง: "+new Date(item.rf_create_at).toLocaleDateString('th-TH')+"</br>"+
+        "ชื่อผู้แจ้ง: " + fullName + "</br>"
+        +"หน่วยงาน: "+
+        item.department_name+ "</br>"
+        +"เรื่องที่แจ้ง: "+
+        item.rf_problem + "</br>"
+        +"สถานที่: "+
+        `${item.building_name} ${item.floor_name} ${item.room_name}`.trim(),
+        item.rf_user_status,
+        '', // 7 actions
       ]
     })
   } catch (err) {
@@ -63,12 +60,12 @@ const filteredRows = computed(() => {
   const search = searchInput.value.toLowerCase()
 
   return tableRows.value
-    .filter((row) => row[6] === 'done') // ✔ แสดงเฉพาะงานที่เสร็จสิ้น
+    .filter((row) => row[2] === 'done') // ✔ แสดงเฉพาะงานที่เสร็จสิ้น
     .filter((row) => {
-      const code = String(row[1]).toLowerCase()
-      const requester = String(row[2]).toLowerCase()
-      const dept = String(row[3]).toLowerCase()
-      const problem = String(row[4]).toLowerCase()
+      const code = String(row[0]).toLowerCase()
+      const requester = String(row[1]).toLowerCase()
+      const dept = String(row[1]).toLowerCase()
+      const problem = String(row[1]).toLowerCase()
 
       return (
         code.includes(search) ||
@@ -91,7 +88,6 @@ onMounted(() => {
 
 <template>
   <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-7xl">
-
     <h1 class="text-xl font-bold text-black mb-6">ประวัติการแจ้งซ่อมของช่าง</h1>
 
     <!-- Search -->
@@ -109,18 +105,19 @@ onMounted(() => {
       :columns="tableColumns"
       :rows="filteredRows"
       :perPage="10"
-      :statusColumn="6"
+      :statusColumn="2"
+      :columnAlign="['left', 'left', 'center', 'center']"
     >
       <!-- Actions -->
-      <template #cell-7="{ row }">
+      <template #cell-3="{ row }">
         <TableActionsComponent
           role="technician"
-          :row-id="row[1]"
+          :row-id="row[0]"
           :open-menu-id="openMenuId"
           @toggle-menu="openMenuId = $event"
           :row="row"
-          :status="row[6]"
-          @detail="goToDetail(row[1])"
+          :status="row[2]"
+          @detail="goToDetail(row[0])"
         />
       </template>
     </TableComponent>

@@ -2,6 +2,8 @@
 import { ref, onMounted, reactive } from 'vue'
 import { jwtDecode } from 'jwt-decode'
 import Swal from 'sweetalert2'
+import { usePhoneFormat } from '@/composables/usePhoneFormat'
+const { toRaw, toDisplay, maskInput } = usePhoneFormat()
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
 
@@ -82,7 +84,6 @@ function logout(e) {
   window.location.href = '/login'
 }
 
-
 // รีเซ็ตฟอร์มและ errors
 function resetProfileForm() {
   editForm.value.us_phone = ''
@@ -109,7 +110,7 @@ function validateProfileForm() {
       icon: 'warning',
       confirmButtonColor: '#f59e0b',
     })
-  } else if (!/^\d{9,10}$/.test(editForm.value.us_phone)) {
+  } else if (!/^\d{9,10}$/.test(toRaw(editForm.value.us_phone))) {
     errors.value.us_phone = 'เบอร์โทรศัพท์ต้องมี 9 หรือ 10 หลัก'
     valid = false
     Swal.fire({
@@ -120,7 +121,7 @@ function validateProfileForm() {
     })
   }
 
-  return valid;
+  return valid
 }
 
 function validatePasswordForm() {
@@ -206,7 +207,7 @@ async function loadUserData() {
     // อัปเดตข้อมูลใน popup
     editForm.value.us_ttn_id = data.us_ttn_id
     editForm.value.us_department = data.us_department
-    editForm.value.us_phone = data.us_phone
+    editForm.value.us_phone = toDisplay(data.us_phone)
     firstNameTH.value = data.us_first_name_th
     lastNameTH.value = data.us_last_name_th
     firstNameEN.value = data.us_first_name_en
@@ -231,7 +232,7 @@ async function executeSave() {
   const payload = {
     us_ttn_id: editForm.value.us_ttn_id,
     us_department: editForm.value.us_department,
-    us_phone: editForm.value.us_phone,
+    us_phone: toRaw(editForm.value.us_phone),
     us_first_name_th: firstNameTH.value,
     us_last_name_th: lastNameTH.value,
     us_first_name_en: firstNameEN.value,
@@ -471,9 +472,7 @@ function closeAllPopup() {
                     v-model="editForm.us_phone"
                     type="tel"
                     maxlength="10"
-                    @input="
-                      editForm.us_phone = editForm.us_phone.replace(/[^0-9]/g, '').slice(0, 10)
-                    "
+                    @input="editForm.us_phone = toDisplay(editForm.us_phone)"
                     class="w-full pl-3 pr-3 py-2 border border-gray-300 rounded-lg text-black text-sm sm:text-base focus:border-black focus:ring-0 focus:outline-none transition-colors"
                     placeholder="กรอกเบอร์โทร"
                   />
@@ -666,7 +665,6 @@ function closeAllPopup() {
               ยืนยัน
             </button>
           </div>
-
         </div>
       </div>
     </div>

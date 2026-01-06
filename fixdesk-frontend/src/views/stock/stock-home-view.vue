@@ -17,9 +17,9 @@
 
 
     <!-- Stats cards -->
-    <div class="flex flex-wrap justify-center gap-6 mb-8">
+    <div class="flex flex-wrap justify-center gap-6 mb-6">
       <!-- Card 1 -->
-      <div class="bg-white rounded-lg border p-6 w-60">
+      <div class="bg-white rounded-lg border p-6 w-[20%]">
         <div class="text-center">
           <h2 class="text-2xl font-bold text-blue-600">{{ itemsCount }} รายการ</h2>
           <p class="text-gray-600 text-sm">จำนวนรายการ</p>
@@ -27,7 +27,7 @@
       </div>
 
       <!-- Card 2 -->
-      <div class="bg-white rounded-lg border p-6 w-60">
+      <div class="bg-white rounded-lg border p-6 w-[20%]">
         <div class="text-center">
           <h2 class="text-2xl font-bold text-orange-500">{{ itemsNew }} รายการ</h2>
           <p class="text-gray-600 text-sm">ของเข้าใหม่วันนี้</p>
@@ -35,7 +35,7 @@
       </div>
 
       <!-- Card 3 -->
-      <div class="bg-white rounded-lg border p-6 w-60">
+      <div class="bg-white rounded-lg border p-6 w-[20%]">
         <div class="text-center">
           <h2 class="text-2xl font-bold text-green-600">{{ itemRequestWaiting }} รายการ</h2>
           <p class="text-gray-600 text-sm">คำขอเบิกรออนุมัติ</p>
@@ -43,7 +43,7 @@
       </div>
 
       <!-- Card 4 -->
-      <div class="bg-white rounded-lg border p-6 w-60">
+      <div class="bg-white rounded-lg border p-6 w-[20%]">
         <div class="text-center">
           <h2 class="text-2xl font-bold text-red-600">{{ itemRequestDeclined }} รายการ</h2>
           <p class="text-gray-600 text-sm">คำขอเบิกไม่อนุมัติ</p>
@@ -52,8 +52,9 @@
     </div>
 
     <!-- Bar Charts Box -->
+     <!-- Don't touch yet? -->
     <div class="flex gap-4">
-      <div class="bg-white rounded-xl border pt-4 px-6 flex-1">
+      <div class="bg-white rounded-xl border pt-4 px-6 flex-[1.4]">
         <div class="flex justify-between items-center">
           <div>
             <h1 class="text-2xl font-bold text-gray-800">ภาพรวมสต็อก (กราฟ)</h1>
@@ -79,7 +80,7 @@
       </div>
 
       <!-- Recent Requests (x5) Box -->
-      <div class="bg-white rounded-xl border pt-4 px-6 flex-2">
+      <div class="bg-white rounded-xl border pt-4 px-6 flex-[1]">
         <div>
           <h1 class="text-2xl font-bold text-gray-800">คำขอเบิก (รออนุมัติ)</h1>
           <p class="text-gray-600">รายการของที่เบิก (5 รายการล่าสุด)</p>
@@ -89,8 +90,8 @@
           <!-- Requests (x5)-->
           <span class="inline-block px-3 py-1 rounded-full" style="background-color:#D9EFFF; color:#0072C3; font-size:0.875rem; font-weight:500;">{{ Req_ID || "REQ-0000-000" }}</span>
           <p class="text-gray-600 text-sm text-xl"><b>{{ problem || "[หัวข้อปัญหา]" }}</b></p>
-          <p class="text-[16px] text-[#A1A1A1]">เบิก {{ attempt || "[ครั้งที่เบิก]" }} • {{ us_id || "[ชื่อผู้เบิก]"}}</p>
-          <p class="text-[16px] text-[#A1A1A1]">ขอเมื่อ {{ cate || "00/00/0000" }} {{ time || "00:00:00"}}</p>
+          <p class="text-[16px] text-[#A1A1A1]">เบิก {{ attempt || "[ครั้งที่เบิก]" }} • {{ us_name || "[ชื่อผู้เบิก]"}}</p>
+          <p class="text-[16px] text-[#A1A1A1]">ขอเมื่อ {{ date || "00/00/0000" }} {{ time || "00:00:00"}}</p>
         </div>
       </div>
     </div>
@@ -99,23 +100,61 @@
   </div>
 </template>
 
-<style>
-.flex-1 {
-  flex: 1.4;
-}
-.flex-2 {
-  flex: 1;
-}
-</style>
-
 <script setup>
+import { ref, onMounted } from 'vue'
 
-const itemsCount = 1
-const itemsNew = 2
-const itemRequestWaiting = 3
-const itemRequestDeclined = 4
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
+
+// Pull With Auth
+function getAuthHeaders() {
+  const token = localStorage.getItem('token') || sessionStorage.getItem('token')
+  return {
+    Authorization: `Bearer ${token}`,
+  }
+}
+
+// For Display
+const itemsCount = ref(0)
+const itemsNew = ref(0)
+const itemRequestWaiting = ref(0)
+const itemRequestDeclined = ref(0)
 
 defineOptions({ name: 'StockHomeView' })
+
+async function fetchCounts() {
+  // Try-Catch Update Auth +Error
+  try {
+    const res = await fetch(`${API_BASE}/show-stock`, { headers: getAuthHeaders() })
+    if (res.ok) {
+      const products = await res.json()
+      if (Array.isArray(products)) {
+        itemsCount.value = products.length
+
+        const today = new Date().toISOString().slice(0, 10)
+        itemsNew.value = products.filter((p) => p.pd_updated_at && p.pd_updated_at.slice(0, 10) === today).length
+      }
+    }
+  } catch (err) {
+    console.error('เกิดข้อผิดพลาดในการค้นหาข้อมูล:', err)
+  }
+
+  try {
+    const res2 = await fetch(`${API_BASE}/technician/my-stock-forms`, { headers: getAuthHeaders() })
+    if (res2.ok) {
+      const forms = await res2.json()
+      if (Array.isArray(forms)) {
+        itemRequestWaiting.value = forms.filter((f) => f.sf_status === 'waiting').length
+        itemRequestDeclined.value = forms.filter((f) => f.sf_status === 'rejected').length
+      }
+    }
+  } catch (err) {
+    console.error('เกิดข้อผิดพลาดในการค้นหาข้อมูล:', err)
+  }
+}
+
+onMounted(() => {
+  fetchCounts()
+})
 </script>
 
 <script>

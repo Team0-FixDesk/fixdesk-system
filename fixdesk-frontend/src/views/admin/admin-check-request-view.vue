@@ -3,7 +3,7 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import TableComponent from '@/components/table-component.vue'
 import TableActions from '@/components/table-actions-component.vue'
-import AssignJobModalComponent from '@/components/assign-job-modal-component.vue'
+import AssignJobModalComponent from '@/components/modal/assign-job-modal-component.vue'
 
 // Router
 const router = useRouter()
@@ -12,16 +12,7 @@ const API_BASE = import.meta.env.VITE_API_BASE
 const showAssignModal = ref(false)
 const assignRepairId = ref(null)
 
-const tableColumns = [
-  'วันที่',
-  'หมายเลขแจ้งซ่อม',
-  'ชื่อผู้แจ้ง',
-  'หน่วยงาน',
-  'ประเภท',
-  'ความเร่งด่วน',
-  'สถานะงาน',
-  'การดำเนินการ',
-]
+const tableColumns = ['หมายเลขแจ้งซ่อม', 'รายละเอียด', 'ความเร่งด่วน', 'สถานะงาน', 'การดำเนินการ']
 
 const tableRows = ref([])
 const openMenuId = ref(null)
@@ -63,20 +54,19 @@ async function loadAdminRepairs() {
     }
 
     // // แปลงข้อมูลเป็น row
-    tableRows.value = data.map((repair) => {
-      const fullName = `${repair.us_first_name || ''} ${repair.us_last_name || ''}`.trim()
-
-      return [
-        new Date(repair.rf_create_at).toLocaleDateString('th-TH'), // 0
-        repair.rf_code, // 1
-        fullName || '-', // 2
-        repair.department_name || '-', // 3
-        repair.tt_name || '-', // 4
-        repair.rf_urgency, // 5
-        repair.rf_user_status, // 6
-        '', // 7 action
-      ]
-    })
+    tableRows.value = data.map((repair) => ({
+      row: [
+        repair.rf_code,
+        "วันที่แจ้ง: " + new Date(repair.rf_create_at).toLocaleDateString('th-TH')
+        + "</br>" + "ชื่อผู้แจ้ง: " + `${repair.us_first_name} ${repair.us_last_name}`
+        + "</br>" + "หน่วยงาน: " + repair.department_name
+        + "</br>" + "ประเภทแจ้งซ่อม : "+  repair.tt_name,
+        repair.rf_urgency,
+        repair.rf_user_status,
+        '', // action
+      ],
+      meta: repair,
+    }))
   } catch (err) {
     console.error('โหลดข้อมูลไม่สำเร็จ:', err)
   }
@@ -87,31 +77,29 @@ const filteredRows = computed(() => {
   const search = searchInput.value.toLowerCase()
   const dateFilter = selectedDate.value
 
-  return tableRows.value.filter((row) => {
-    const dateText = row[0]
-    const code = String(row[1]).toLowerCase()
-    const name = String(row[2]).toLowerCase()
-    const department = String(row[3]).toLowerCase()
-    const type = String(row[4]).toLowerCase()
-    const urgency = row[5]
-    const status = row[6]
+  return tableRows.value.filter((item) => {
+    const row = item.row
 
-    // ค้นหา
+    const dateText = row[1]
+    const code = String(row[0]).toLowerCase()
+    const name = String(row[1]).toLowerCase()
+    const department = String(row[1]).toLowerCase()
+    const type = String(row[1]).toLowerCase()
+    const urgency = row[2]
+    const status = row[3]
+
     const matchesSearch =
       code.includes(search) ||
       name.includes(search) ||
       department.includes(search) ||
       type.includes(search)
 
-    // ความเร่งด่วน
     const matchesUrgency =
       selectedUrgencies.value.length === 0 || selectedUrgencies.value.includes(urgency)
 
-    // สถานะงาน
     const matchesStatus =
       selectedStatuses.value.length === 0 || selectedStatuses.value.includes(status)
 
-    // วันที่
     const matchesDate =
       !dateFilter ||
       new Date(dateText).toLocaleDateString('th-TH') ===
@@ -152,7 +140,7 @@ function openDetail(code) {
 }
 
 function openAssignModal(row) {
-  assignRepairId.value = row[1]
+  assignRepairId.value = row[0]
   showAssignModal.value = true
 }
 
@@ -169,7 +157,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-7xl">
-    <h1 class="text-xl font-bold text-black mb-6">รายการแจ้งซ่อมทั้งหมด (Admin)</h1>
+    <h1 class="text-xl font-bold text-black mb-6">รายการแจ้งซ่อมทั้งหมด</h1>
 
     <!-- ---------------- Filters ---------------- -->
     <div class="mb-6">
@@ -273,22 +261,24 @@ onBeforeUnmount(() => {
     <!-- ---------------- Table ---------------- -->
     <TableComponent
       :columns="tableColumns"
-      :rows="filteredRows"
+      :rows="filteredRows.map((item) => item.row)"
       :perPage="10"
-      :urgencyColumn="5"
-      :statusColumn="6"
+      :urgencyColumn="2"
+      :statusColumn="3"
+      :columnAlign="['left', 'left', 'center', 'center', 'center']"
     >
       <!-- คอลัมน์ Action (index 7) -->
-      <template #cell-7="{ row }">
+      <template #cell-4="{ row, rowIndex }">
         <TableActions
-          :row-id="row[1]"
+          :row-id="row[0]"
           :open-menu-id="openMenuId"
           @toggle-menu="openMenuId = $event"
           role="assign"
           :row="row"
-          :status="row[6]"
+          :status="row[3]"
+          :assigned-tech="filteredRows[rowIndex].meta.rf_assigned_tech_id"
           @assign="openAssignModal(row)"
-          @detail="openDetail(row[1])"
+          @detail="openDetail(row[0])"
         />
       </template>
     </TableComponent>

@@ -15,10 +15,9 @@ const API_BASE = import.meta.env.VITE_API_BASE
 
 // Table Structure
 const tableColumns = [
-  'วันที่',
   'หมายเลขแจ้งซ่อม',
   'ประเภทงาน',
-  'สถานที่',
+  'รายละเอียด',
   'ความเร่งด่วน',
   'สถานะงาน',
   'ตัวดำเนินการ',
@@ -61,21 +60,31 @@ async function loadMyRepairs() {
 
     // Map to table rows
     tableRows.value = data.map((repair) => {
-      const location = repair.building_name ? `อาคาร ${repair.building_name}` : '-'
+      const location = repair.bd_name
+        ? `${repair.bd_name} ${repair.fl_name} ${repair.room_name}`
+        : '-'
 
       return [
-        new Date(repair.rf_create_at).toLocaleDateString('th-TH'),  // 0 วันที่
-        repair.rf_code || '-',                                      // 1 หมายเลข
-        repair.tt_name || '-',                                      // 2 ประเภทงาน
-        location,                                                   // 3 สถานที่
-        repair.rf_urgency,                                          // 4 ความเร่งด่วน (key)
-        repair.rf_user_status,                                      // 5 สถานะงาน (key)
-        '',                                                         // 6 actions column
+        repair.rf_code || '-', // 1 หมายเลข
+        repair.tt_name || '-', // 2 ประเภทงาน
+        'วันที่แจ้ง: ' +
+          new Date(repair.rf_create_at).toLocaleDateString('th-TH') +
+          '</br>' +
+          'สถานที่: ' +
+          location, // 3 สถานที่
+        repair.rf_urgency, // 4 ความเร่งด่วน (key)
+        repair.rf_user_status, // 5 สถานะงาน (key)
+        '', // 6 actions column
       ]
     })
   } catch (err) {
     console.error('โหลดข้อมูลไม่สำเร็จ:', err)
   }
+}
+
+function extractThaiDate(cell) {
+  const match = cell.match(/วันที่แจ้ง:\s*([\d/]+)/)
+  return match ? match[1] : null
 }
 
 // Computed: Filtered Rows
@@ -84,15 +93,16 @@ const filteredRows = computed(() => {
   const dateFilter = selectedDate.value
 
   return tableRows.value.filter((row) => {
-    const dateText = String(row[0])
-    const code = String(row[1]).toLowerCase()
-    const type = String(row[2]).toLowerCase()
-    const location = String(row[3]).toLowerCase()
-    const urgency = row[4]
-    const status = row[5]
+    const dateFromRow = extractThaiDate(row[2])
+    const code = String(row[0]).toLowerCase()
+    const type = String(row[1]).toLowerCase()
+    const location = String(row[2]).toLowerCase()
+    const urgency = row[3]
+    const status = row[4]
 
     // ค้นหา
-    const matchesSearch = code.includes(search) || type.includes(search) || location.includes(search)
+    const matchesSearch =
+      code.includes(search) || type.includes(search) || location.includes(search)
 
     // Filter urgencies
     const matchesUrgency =
@@ -104,9 +114,7 @@ const filteredRows = computed(() => {
 
     // Filter by date
     const matchesDate =
-      !dateFilter ||
-      new Date(dateText).toLocaleDateString('th-TH') ===
-        new Date(dateFilter).toLocaleDateString('th-TH')
+      !dateFilter || dateFromRow === new Date(dateFilter).toLocaleDateString('th-TH')
 
     return matchesSearch && matchesUrgency && matchesStatus && matchesDate
   })
@@ -245,7 +253,7 @@ onBeforeUnmount(() => {
 
             <div
               v-if="isUrgencyFilterOpen"
-              class="absolute mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg p-3 z-10 text-sm"
+              class="absolute mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg p-3 z-50 text-sm"
             >
               <label class="flex items-center py-1">
                 <input type="checkbox" value="low" v-model="selectedUrgencies" />
@@ -280,7 +288,7 @@ onBeforeUnmount(() => {
 
             <div
               v-if="isStatusFilterOpen"
-              class="absolute mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg p-3 z-10 text-sm"
+              class="absolute mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg p-3 z-50 text-sm"
             >
               <label class="flex items-center py-1">
                 <input type="checkbox" value="pending" v-model="selectedStatuses" />
@@ -320,21 +328,22 @@ onBeforeUnmount(() => {
         :columns="tableColumns"
         :rows="filteredRows"
         :perPage="10"
-        :urgencyColumn="4"
-        :statusColumn="5"
+        :urgencyColumn="3"
+        :statusColumn="4"
+        :columnAlign="['left', 'left', 'left', 'center', 'center', 'center']"
       >
         <!-- คอลัมน์ Action (index 6) -->
-        <template #cell-6="{ row }">
+        <template #cell-5="{ row }">
           <TableActions
-            :row-id="row[1]"
+            :row-id="row[0]"
             :open-menu-id="openMenuId"
             @toggle-menu="openMenuId = $event"
             role="user"
             :row="row"
-            :status="row[5]"
-            @detail="openDetail(row[1])"
-            @edit="openEdit(row[1])"
-            @delete="deleteRepair(row[1])"
+            :status="row[4]"
+            @detail="openDetail(row[0])"
+            @edit="openEdit(row[0])"
+            @delete="deleteRepair(row[0])"
           />
         </template>
       </TableComponent>

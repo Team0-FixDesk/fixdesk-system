@@ -2,9 +2,12 @@
 import CardHomeComponent from '@/components/card-home-component.vue'
 import repairButtonComponent from '@/components/repair-button-component.vue'
 import TableComponent from '@/components/table-component.vue'
+import TableActions from '@/components/table-actions-component.vue'
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import Sweetalert from 'sweetalert2'
+
+const openMenuId = ref(null)
 
 const router = useRouter()
 
@@ -13,36 +16,16 @@ const repairRequests = ref([])
 const loading = ref(false)
 const error = ref(null)
 
-/* --- [เพิ่มใหม่ 1] ตัวแปรเก็บสถานะการกรอง --- */
-const currentFilter = ref(null) // ค่าเริ่มต้นเป็น null (แสดงทั้งหมด)
+/* --- Filter state --- */
+const currentFilter = ref(null) // today / in_progress / completed_7days / cancelled_7days
 
-/* --- map helpers --- */
-const mapUrgency = (urgency) => {
-  const urgencyMap = {
-    high: 'เร่งด่วนมาก',
-    medium: 'เร่งด่วน',
-    low: 'ไม่เร่งด่วน',
-  }
-  return urgencyMap[urgency] || 'เร่งด่วน'
-}
-
-const mapStatus = (status) => {
-  const statusMap = {
-    pending: 'รอดำเนินการ',
-    in_progress: 'กำลังดำเนินการ',
-    done: 'เสร็จสิ้น', // แก้ไขให้ตรงกับ DB (บางทีใช้ done หรือ completed)
-    cancel: 'ยกเลิก', // แก้ไขให้ตรงกับ DB
-  }
-  return statusMap[status] || 'รอดำเนินการ'
-}
-
-/* --- ดึงข้อมูลจาก API --- */
+/* --- Fetch API --- */
 const fetchRepairRequests = async () => {
   loading.value = true
   error.value = null
   try {
     const token = localStorage.getItem('token') || sessionStorage.getItem('token')
-    if (!token) throw new Error('ไม่พบ token การเข้าสู่ระบบ')
+    if (!token) throw new Error('ไม่พบ token')
 
     const response = await fetch(`${import.meta.env.VITE_API_BASE}/admin/repairs`, {
       method: 'GET',
@@ -51,190 +34,140 @@ const fetchRepairRequests = async () => {
         'Content-Type': 'application/json',
       },
     })
-    if (!response.ok) throw new Error('เกิดข้อผิดพลาดในการดึงข้อมูล')
+
+    if (!response.ok) throw new Error('โหลดข้อมูลล้มเหลว')
 
     const data = await response.json()
-    repairRequests.value = data.map((item) => ({
-      date: new Date(item.rf_create_at).toLocaleDateString('th-TH'),
-      rawDate: new Date(item.rf_create_at),
-      ticketId: item.rf_code,
-      requesterName: `${item.us_first_name || ''} ${item.us_last_name || ''}`.trim(),
-      type: item.tt_name || '-',
-      assetId: item.rf_prop_number || '-',
-      department: item.department_name || '-',
-      urgency: mapUrgency(item.rf_urgency),
-      status: mapStatus(item.rf_user_status),
 
-      /* --- [เพิ่มใหม่ 2] เก็บค่า status ดิบภาษาอังกฤษไว้ใช้กรอง --- */
-      rawStatus: item.rf_user_status,
-
-      technicianName:
-        item.tech_first_name && item.tech_last_name
-          ? `${item.tech_first_name} ${item.tech_last_name}`
-          : 'ยังไม่มอบหมาย',
+    repairRequests.value = data.map((r) => ({
+      row: [
+        r.rf_code,
+        r.tt_name,
+        'วันที่แจ้ง: ' +
+          new Date(r.rf_create_at).toLocaleDateString('th-TH') +
+          '</br>' +
+          'ชื่อผู้แจ้ง: ' +
+          `${r.us_first_name || ''} ${r.us_last_name || ''}`.trim() +
+          '</br>' +
+          'หน่วยงาน: ' +
+          r.department_name,
+        r.rf_urgency,
+        r.rf_user_status,
+        '', // action
+      ],
+      meta: r,
+      rawDate: new Date(r.rf_create_at),
     }))
   } catch (err) {
-    console.error('Error fetching repair requests:', err)
     error.value = err.message
   } finally {
     loading.value = false
   }
 }
 
-/* --- Helper Checks --- */
-const isToday = (request) => {
+/* --- Helper --- */
+const isToday = (req) => {
   const today = new Date()
-  const date = request.rawDate || new Date(request.date)
-  return date.toDateString() === today.toDateString()
+  return req.rawDate.toDateString() === today.toDateString()
 }
 
-const isWithinLastSevenDays = (request) => {
+const isWithin7Days = (req) => {
   const today = new Date()
-  const date = request.rawDate || new Date(request.date)
-  const diffTime = Math.abs(today - date)
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-  return diffDays <= 7
+  const diff = Math.abs(today - req.rawDate)
+  return diff / (1000 * 60 * 60 * 24) <= 7
 }
 
-/* --- [เพิ่มใหม่ 3] Computed สำหรับกรองข้อมูล --- */
-// ตัวนี้จะกรอง repairRequests ตาม currentFilter ก่อนส่งไปแปลงเป็น rows
+/* --- Filtered Rows --- */
 const filteredRequests = computed(() => {
-  if (!currentFilter.value) {
-    return repairRequests.value // ถ้าไม่มี filter ให้ส่งกลับทั้งหมด
-  }
+  if (!currentFilter.value) return repairRequests.value
 
-  return repairRequests.value.filter((req) => {
+  return repairRequests.value.filter((item) => {
+    const status = item.meta.rf_user_status
+
     switch (currentFilter.value) {
       case 'today':
-        return isToday(req)
+        return isToday(item)
       case 'in_progress':
-        return req.rawStatus === 'in_progress'
+        return status === 'in_progress'
       case 'completed_7days':
-        // เช็คว่าเป็น status done หรือ completed
-        return (
-          (req.rawStatus === 'done' || req.rawStatus === 'completed') && isWithinLastSevenDays(req)
-        )
+        return (status === 'done' || status === 'completed') && isWithin7Days(item)
       case 'cancelled_7days':
-        // เช็คว่าเป็น status cancel หรือ cancelled
-        return (
-          (req.rawStatus === 'cancel' || req.rawStatus === 'cancelled') &&
-          isWithinLastSevenDays(req)
-        )
+        return (status === 'cancel' || status === 'cancelled') && isWithin7Days(item)
       default:
         return true
     }
   })
 })
 
-/* --- [แก้ไข] rowsForTable ให้ใช้ filteredRequests แทน repairRequests --- */
-const rowsForTable = computed(() =>
-  filteredRequests.value.map((r) => {
-    // <-- เปลี่ยนตรงนี้
-    const urgencyHtml =
-      r.urgency === 'เร่งด่วนมาก'
-        ? `<span class='inline-flex justify-center items-center w-28 h-8 rounded-full bg-red-100 text-red-600 font-semibold'>เร่งด่วนมาก</span>`
-        : r.urgency === 'เร่งด่วน'
-          ? `<span class='inline-flex justify-center items-center w-28 h-8 rounded-full bg-amber-50 text-amber-500 font-semibold'>เร่งด่วน</span>`
-          : `<span class='inline-flex justify-center items-center w-28 h-8 rounded-full bg-green-100 text-green-600 font-semibold'>ไม่เร่งด่วน</span>`
+/* --- Table component rows --- */
+const rowsForDisplay = computed(() => filteredRequests.value.map((item) => item.row))
 
-    const statusHtml =
-      r.status === 'รอดำเนินการ'
-        ? `<span class='inline-flex justify-center items-center w-28 h-8 rounded-full bg-amber-50 text-amber-500 font-semibold'>รอดำเนินการ</span>`
-        : r.status === 'กำลังดำเนินการ'
-          ? `<span class='inline-flex justify-center items-center w-28 h-8 rounded-full bg-blue-100 text-blue-600 font-semibold'>กำลังดำเนินการ</span>`
-          : r.status === 'เสร็จสิ้น'
-            ? `<span class='inline-flex justify-center items-center w-28 h-8 rounded-full bg-green-100 text-green-600 font-semibold'>เสร็จสิ้น</span>`
-            : `<span class='inline-flex justify-center items-center w-28 h-8 rounded-full bg-gray-100 text-gray-500 font-semibold'>ยกเลิก</span>`
-
-    return [
-      r.date || '-',
-      r.ticketId || '-',
-      r.requesterName || '-',
-      r.department || '-',
-      r.type || '-',
-      urgencyHtml,
-      statusHtml,
-      'actions',
-    ]
-  }),
+/* --- Stats --- */
+const todayTasks = computed(() => repairRequests.value.filter((r) => isToday(r)).length)
+const progressTasks = computed(
+  () => repairRequests.value.filter((r) => r.meta.rf_user_status === 'in_progress').length,
 )
-
-/* --- [แก้ไข] statItems เพิ่ม key สำหรับ Filter --- */
-const todayTasksCount = computed(
-  () => repairRequests.value.filter((request) => isToday(request)).length,
-)
-const inProgressTasksCount = computed(
-  () => repairRequests.value.filter((request) => request.rawStatus === 'in_progress').length,
-)
-const completedTasksCount = computed(
+const completedTasks = computed(
   () =>
     repairRequests.value.filter(
-      (request) =>
-        (request.rawStatus === 'done' || request.rawStatus === 'completed') &&
-        isWithinLastSevenDays(request),
+      (r) =>
+        (r.meta.rf_user_status === 'done' || r.meta.rf_user_status === 'completed') &&
+        isWithin7Days(r),
     ).length,
 )
-const cancelledTasksCount = computed(
+const cancelledTasks = computed(
   () =>
     repairRequests.value.filter(
-      (request) =>
-        (request.rawStatus === 'cancel' || request.rawStatus === 'cancelled') &&
-        isWithinLastSevenDays(request),
+      (r) =>
+        (r.meta.rf_user_status === 'cancel' || r.meta.rf_user_status === 'cancelled') &&
+        isWithin7Days(r),
     ).length,
 )
 
 const statItems = computed(() => [
   {
-    value: todayTasksCount.value,
-    label: 'งานทั้งหมดในวันนี้',
+    value: todayTasks.value,
+    label: 'งานทั้งหมดวันนี้',
     colorClass: 'text-amber-500',
     filterKey: 'today',
   },
   {
-    value: inProgressTasksCount.value,
+    value: progressTasks.value,
     label: 'กำลังดำเนินการ',
     colorClass: 'text-blue-600',
     filterKey: 'in_progress',
   },
   {
-    value: completedTasksCount.value,
-    label: 'ดำเนินการเสร็จสิ้น (7 วัน)',
+    value: completedTasks.value,
+    label: 'เสร็จสิ้น (7 วัน)',
     colorClass: 'text-green-600',
     filterKey: 'completed_7days',
   },
   {
-    value: cancelledTasksCount.value,
-    label: 'งานที่ยกเลิก (7 วัน)',
+    value: cancelledTasks.value,
+    label: 'ยกเลิก (7 วัน)',
     colorClass: 'text-red-600',
     filterKey: 'cancelled_7days',
   },
 ])
 
-/* --- [เพิ่มใหม่ 4] ฟังก์ชันรับ Event Click จาก Card --- */
 const handleCardClick = (item) => {
-  // ส่งไปยังหน้ารายการ พร้อมแนบ query status ไปด้วย
-  router.push({
-    path: '/main/admin-check-request', // <-- ตรวจสอบว่าใน router.js คุณตั้ง path นี้ไว้ชื่ออะไร
-    query: { status: item.filterKey },
-  })
+  currentFilter.value = item.filterKey
 }
 
-// ... (ส่วน Pagination และ Actions อื่นๆ เหมือนเดิม) ...
-const itemsPerPage = 5
+/* --- Actions --- */
 const goToRepairDetail = (ticketId) => {
   router.push(`/main/repair-detail/${ticketId}`)
 }
 
 async function deleteRepair(ticketId) {
-  // ... code ลบเหมือนเดิม ...
   const result = await Sweetalert.fire({
-    title: 'ลบรายการนี้?',
-    text: `คุณต้องการลบใบแจ้งซ่อมหมายเลข ${ticketId} หรือไม่?`,
+    title: 'ลบรายการ?',
+    text: `ต้องการลบหมายเลข ${ticketId}?`,
     icon: 'warning',
     showCancelButton: true,
-    confirmButtonText: 'ลบเลย',
+    confirmButtonText: 'ลบ',
     cancelButtonText: 'ยกเลิก',
-    confirmButtonColor: '#e53e3e',
   })
   if (!result.isConfirmed) return
 
@@ -248,20 +181,16 @@ async function deleteRepair(ticketId) {
       },
     })
     const body = await res.json()
-    if (!res.ok) throw new Error(body.message || 'ลบไม่สำเร็จ')
+    if (!res.ok) throw new Error(body.message)
 
-    // เอาออกจาก repairRequests
-    repairRequests.value = repairRequests.value.filter((r) => r.ticketId !== ticketId)
-    Sweetalert.fire('สำเร็จ', 'ลบรายการเรียบร้อยแล้ว', 'success')
+    repairRequests.value = repairRequests.value.filter((r) => r.meta.rf_code !== ticketId)
+    Sweetalert.fire('สำเร็จ', 'ลบเรียบร้อย', 'success')
   } catch (err) {
-    console.error('ลบไม่สำเร็จ:', err)
-    Sweetalert.fire('เกิดข้อผิดพลาด', err.message || 'ลบไม่สำเร็จ', 'error')
+    Sweetalert.fire('ผิดพลาด', err.message, 'error')
   }
 }
 
-onMounted(() => {
-  fetchRepairRequests()
-})
+onMounted(fetchRepairRequests)
 </script>
 
 <template>
@@ -269,64 +198,41 @@ onMounted(() => {
     <!-- Header -->
     <div class="flex justify-between items-center mb-6">
       <div>
-        <h1 class="text-2xl font-bold text-gray-800">หน้าแรก</h1>
-        <p class="text-sm text-gray-600 mt-1">ภาพรวมงานแจ้งเรียนแจ้งซ่อม</p>
+        <h1 class="text-2xl font-bold text-gray-800">หน้าหลักผู้ดูแลระบบ</h1>
+        <p class="text-sm text-gray-600 mt-1">ภาพรวมงานแจ้งซ่อม</p>
       </div>
+
       <div class="flex space-x-2">
-        <button
-          @click="fetchRepairRequests"
-          :disabled="loading"
-          class="bg-gray-500 hover:bg-gray-600 disabled:opacity-50 text-white px-4 py-2 rounded-md flex items-center"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="h-5 w-5 mr-1"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-            />
-          </svg>
-          รีเฟรช
-        </button>
         <repairButtonComponent />
       </div>
     </div>
 
-    <!-- Stats -->
+    <!-- Stats Cards -->
     <CardHomeComponent :items="statItems" @click="handleCardClick" />
 
-    <!-- Table (ใช้ TableComponent) -->
-    <div class="p-3 mx-auto max-w-8xl">
+    <!-- Table -->
+    <div class="p-3 mx-auto max-w-8xl mt-4">
       <TableComponent
-        :columns="[
-          'วันที่',
-          'หมายเลขแจ้งซ่อม',
-          'ชื่อผู้แจ้ง',
-          'หน่วยงาน',
-          'ประเภท',
-          'ความเร่งด่วน',
-          'สถานะงาน',
-          'รายละเอียด',
-        ]"
-        :rows="rowsForTable"
-        :raw-rows="repairRequests"
-        :perPage="itemsPerPage"
-        mode="admin"
-        @detail="(payload) => goToRepairDetail(payload?.ticketId || payload || payload?.id)"
-        @delete="(payload) => deleteRepair(payload?.ticketId || payload || payload?.id)"
-      />
+        :columns="['หมายเลขแจ้งซ่อม', 'ประเภทงาน', 'รายละเอียด', 'ความเร่งด่วน', 'สถานะงาน', 'การดำเนินการ']"
+        :rows="rowsForDisplay"
+        :perPage="10"
+        :urgencyColumn="3"
+        :statusColumn="4"
+        :columnAlign="['left', 'left', 'left', 'center', 'center', 'center']"
+      >
+        <template #cell-5="{ row, rowIndex }">
+          <TableActions
+            :open-menu-id="openMenuId"
+            @toggle-menu="openMenuId = $event"
+            :row-id="row[0]"
+            :row="row"
+            :status="row[4]"
+            :assigned-tech="filteredRequests[rowIndex].meta.rf_assigned_tech_id"
+            @detail="goToRepairDetail(row[0])"
+            @delete="deleteRepair(row[0])"
+          />
+        </template>
+      </TableComponent>
     </div>
   </div>
 </template>
-
-<style>
-.empty-row td {
-  border-bottom: 1px solid #e5e7eb;
-}
-</style>
