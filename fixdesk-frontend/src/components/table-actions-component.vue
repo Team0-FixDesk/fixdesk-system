@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, onBeforeUnmount } from 'vue'
+  import { computed, onMounted, onBeforeUnmount, ref, nextTick } from 'vue'
 
 const props = defineProps({
   rowId: {
@@ -47,11 +47,36 @@ const emit = defineEmits([
 // Computed: เช็คว่าเมนูนี้เปิดอยู่ไหม
 const isMenuOpen = computed(() => props.openMenuId === props.rowId)
 
-function toggleMenu(event) {
+// Ref สำหรับ dropdown position
+const buttonRef = ref(null)
+const dropdownRef = ref(null)
+const showAbove = ref(false)
+
+async function toggleMenu(event) {
   event.stopPropagation()
 
-  const next = isMenuOpen.value ? null : props.rowId
-  emit('toggle-menu', next)
+  if (isMenuOpen.value) {
+    emit('toggle-menu', null)
+    return
+  }
+
+  emit('toggle-menu', props.rowId)
+
+  // รอ DOM อัปเดตแล้วคำนวณตำแหน่ง
+  await nextTick()
+  calculatePosition()
+}
+
+function calculatePosition() {
+  if (!buttonRef.value) return
+
+  const buttonRect = buttonRef.value.getBoundingClientRect()
+  const viewportHeight = window.innerHeight
+  const spaceBelow = viewportHeight - buttonRect.bottom
+  const dropdownHeight = 200 // ประมาณความสูงของ dropdown
+
+  // ถ้าพื้นที่ด้านล่างไม่พอ ให้แสดงด้านบน
+  showAbove.value = spaceBelow < dropdownHeight
 }
 
 function closeMenu() {
@@ -105,6 +130,7 @@ onBeforeUnmount(() => {
   <div class="relative flex justify-center" @click.stop>
     <!-- Kebab Button -->
     <button
+      ref="buttonRef"
       class="w-8 h-8 bg-gray-700 hover:bg-gray-800 text-white rounded-md flex items-center justify-center"
       @click="toggleMenu"
       title="เมนู"
@@ -115,7 +141,11 @@ onBeforeUnmount(() => {
     <!-- Dropdown Menu -->
     <div
       v-if="isMenuOpen"
-      class="absolute right-0 mt-2 w-48 bg-white shadow-lg border border-gray-200 rounded-lg p-2 z-50"
+      ref="dropdownRef"
+      :class="[
+        'absolute right-0 w-48 bg-white shadow-xl border border-gray-200 rounded-lg p-2 z-50',
+        showAbove ? 'bottom-full mb-2' : 'top-full mt-2'
+      ]"
     >
       <!-- ทุก role ใช้ได้ -->
       <button
