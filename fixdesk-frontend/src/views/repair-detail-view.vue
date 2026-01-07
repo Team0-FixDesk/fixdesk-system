@@ -748,19 +748,9 @@ onMounted(() => {
           <div class="bg-white border border-gray-200 rounded-xl p-4 sm:p-6 shadow-sm">
             <div class="flex items-center justify-between mb-4 border-b border-gray-300 pb-2 mb-4">
               <h2 class="text-lg font-semibold text-gray-800">รายการเบิก</h2>
-
-              <!-- ปุ่มยืนยันการเบิก มุมขวาบน -->
-              <button
-                v-if="showWithdrawButton"
-                type="button"
-                class="px-4 py-2 text-sm sm:text-base font-semibold rounded-lg shadow-sm bg-blue-600 hover:bg-blue-700 text-white transition flex items-center gap-2"
-                @click="handleRepairFrom(repair?.rf_code)"
-              >
-                เบิกวัสดุ/อุปกรณ์
-              </button>
             </div>
 
-            <div v-if="repair?.stock_items?.length" class="space-y-3">
+            <div v-if="repair?.stock_items?.length" class="space-y-3 h-[280px] overflow-y-auto">
               <div
                 v-for="(item, i) in repair.stock_items"
                 :key="i"
@@ -794,7 +784,7 @@ onMounted(() => {
               </div>
             </div>
 
-            <div v-else class="text-center text-gray-400 text-sm sm:text-base py-8">
+            <div v-else class="text-center text-gray-400 text-sm sm:text-base py-8 h-[250px]">
               - ไม่มีรายการเบิก -
             </div>
           </div>
@@ -841,21 +831,51 @@ onMounted(() => {
               >
                 {{ isAssigned ? 'มอบหมายแล้ว' : 'มอบหมายงาน' }}
               </button>
-              <button
-                v-if="canAccept && repair?.rf_user_status !== 'done'"
-                @click="openActionPopup"
-                :class="[
-                  'px-3 py-2 text-sm font-medium rounded-lg shadow-sm transition flex items-center gap-2 ml-auto text-white',
-                  repair?.rf_user_status === 'pending'
-                    ? 'bg-teal-700 hover:bg-teal-900 px-7' /* สีฟ้ารับงาน */
-                    : 'bg-amber-500 hover:bg-amber-600' /* สีเหลืองเปลี่ยนสถานะ */,
-                ]"
-              >
-                {{ repair?.rf_user_status === 'pending' ? 'รับงาน' : 'เปลี่ยนสถานะ' }}
-              </button>
             </div>
 
             <RepairStatusTimeline :timeline-steps="repair?.timeline || []" />
+          </div>
+
+          <!-- ปุ่มเบิก และ ปุ่มเปลี่ยนสถานะ ด้านล่างกล่องสถานะ -->
+          <div
+            v-if="showWithdrawButton || (canAccept && repair?.rf_user_status !== 'done')"
+            :class="[
+              'grid gap-4',
+              showWithdrawButton ? 'grid-cols-2' : 'grid-cols-1'
+            ]"
+          >
+            <!-- ปุ่มเบิกวัสดุ/อุปกรณ์ (ซ้าย) -->
+            <button
+              v-if="showWithdrawButton"
+              type="button"
+              class="w-full px-6 py-3.5 text-sm sm:text-base font-semibold rounded-xl shadow-md transition-all duration-200 flex items-center justify-center gap-3 hover:shadow-lg hover:-translate-y-0.5 bg-blue-600 hover:bg-blue-700 text-white"
+              @click="handleRepairFrom(repair?.rf_code)"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+              </svg>
+              เบิกวัสดุ/อุปกรณ์
+            </button>
+
+            <!-- ปุ่มเปลี่ยนสถานะ (ขวา หรือ เต็มถ้าไม่มีปุ่มเบิก) -->
+            <button
+              v-if="canAccept && repair?.rf_user_status !== 'done'"
+              @click="openActionPopup"
+              :class="[
+                'w-full px-6 py-3.5 text-sm sm:text-base font-semibold rounded-xl shadow-md transition-all duration-200 flex items-center justify-center gap-3 text-white hover:shadow-lg hover:-translate-y-0.5',
+                repair?.rf_user_status === 'pending'
+                  ? 'bg-teal-700 hover:bg-teal-800'
+                  : 'bg-amber-500 hover:bg-amber-600',
+              ]"
+            >
+              <svg v-if="repair?.rf_user_status === 'pending'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+              </svg>
+              <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              {{ repair?.rf_user_status === 'pending' ? 'รับงาน' : 'เปลี่ยนสถานะ' }}
+            </button>
           </div>
         </div>
       </div>
