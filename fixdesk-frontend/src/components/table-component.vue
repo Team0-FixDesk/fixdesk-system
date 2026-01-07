@@ -65,6 +65,8 @@ function renderStatusBadge(type) {
       return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-amber-50 text-amber-500 font-semibold">รอดำเนินการ</span>`
     case 'in_progress':
       return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-blue-100 text-blue-600 font-semibold">กำลังดำเนินการ</span>`
+    case 'outsource':
+      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-purple-100 text-purple-600 font-semibold">จ้างช่างภายนอก</span>`
     case 'done':
       return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-green-100 text-green-600 font-semibold">ดำเนินการเสร็จสิ้น</span>`
     case 'cancel':

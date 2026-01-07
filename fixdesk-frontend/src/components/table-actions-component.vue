@@ -39,7 +39,7 @@ const emit = defineEmits([
   'delete',
   'assign',
   'accept',
-  'change-status',
+  'outsource',
   'close-job',
   'open-stock',
 ])
@@ -131,38 +131,60 @@ onBeforeUnmount(() => {
 
       <!-- Technician -->
       <template v-if="role === 'technician'">
+        <!-- รับงาน (pending) -->
         <button
           v-if="normalizedStatus === 'pending'"
           @click="emit('accept', row)"
-          class="w-full text-left px-3 py-2 hover:bg-gray-100"
+          class="w-full text-left px-3 py-2 rounded-md hover:bg-teal-50 flex items-center gap-2 group"
         >
-          รับงาน
+          <div class="w-6 h-6 rounded-md bg-teal-500 flex items-center justify-center group-hover:bg-teal-600">
+            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <span class="group-hover:text-teal-700">รับงาน</span>
         </button>
 
+        <!-- ปิดงาน (in_progress, outsource) -->
+        <button
+          v-if="normalizedStatus === 'in_progress' || normalizedStatus === 'outsource'"
+          @click="emit('close-job', row)"
+          class="w-full text-left px-3 py-2 rounded-md hover:bg-green-50 flex items-center gap-2 group"
+        >
+          <div class="w-6 h-6 rounded-md bg-green-500 flex items-center justify-center group-hover:bg-green-600">
+            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <span class="group-hover:text-green-700">ปิดงาน</span>
+        </button>
+
+        <!-- จ้างช่างภายนอก (in_progress) -->
         <button
           v-if="normalizedStatus === 'in_progress'"
-          @click="emit('close-job', row)"
-          class="w-full text-left px-3 py-2 hover:bg-gray-100"
+          @click="emit('outsource', row)"
+          class="w-full text-left px-3 py-2 rounded-md hover:bg-amber-50 flex items-center gap-2 group"
         >
-          ปิดงาน
+          <div class="w-6 h-6 rounded-md bg-amber-500 flex items-center justify-center group-hover:bg-amber-600">
+            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+          </div>
+          <span class="group-hover:text-amber-700">จ้างช่างภายนอก</span>
         </button>
-        <div class="border-t border-gray-300 mx-1"></div>
 
+        <!-- เบิกวัสดุอุปกรณ์ (in_progress, outsource) -->
         <button
-          v-if="normalizedStatus !== 'done'"
-          @click="emit('change-status', row)"
-          class="w-full text-left px-3 py-2 hover:bg-gray-100"
-        >
-          เปลี่ยนสถานะ
-        </button>
-        <div class="border-t border-gray-300 mx-1"></div>
-
-        <button
-          v-if="normalizedStatus !== 'done'"
+          v-if="normalizedStatus === 'in_progress' || normalizedStatus === 'outsource'"
           @click="emit('open-stock', row)"
-          class="w-full text-left px-3 py-2 hover:bg-gray-100"
+          class="w-full text-left px-3 py-2 rounded-md hover:bg-blue-50 flex items-center gap-2 group"
         >
-          เบิกวัสดุอุปกรณ์
+          <div class="w-6 h-6 rounded-md bg-blue-500 flex items-center justify-center group-hover:bg-blue-600">
+            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+            </svg>
+          </div>
+          <span class="group-hover:text-blue-700">เบิกวัสดุอุปกรณ์</span>
         </button>
       </template>
 

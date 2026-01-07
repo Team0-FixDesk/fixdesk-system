@@ -20,7 +20,7 @@ const openMenuId = ref(null)
 
 const searchQuery = ref('')
 const selectedDate = ref('')
-const selectedStatus = ref(['pending', 'in_progress'])
+const selectedStatus = ref(['pending', 'in_progress', 'outsource'])
 
 const showAcceptPopup = ref(false)
 const currentAcceptCode = ref(null)
@@ -152,6 +152,39 @@ function handleOpenStock(code) {
   router.push('/main/technician-stock-list')
 }
 
+async function handleOutsource(code) {
+  const result = await Swal.fire({
+    title: 'จ้างช่างภายนอก',
+    text: `คุณต้องการส่งงาน ${code} ให้ช่างภายนอกใช่หรือไม่`,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'ใช่, ส่งงาน',
+    cancelButtonText: 'ยกเลิก',
+    confirmButtonColor: '#f59e0b',
+  })
+
+  if (!result.isConfirmed) return
+
+  try {
+    const res = await fetch(`${API_BASE}/technician/close-job/${code}`, {
+      method: 'PUT',
+      headers: {
+        ...getAuthHeaders(),
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ status: 'outsource' }),
+    })
+
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.message)
+
+    Swal.fire('สำเร็จ', 'ส่งงานให้ช่างภายนอกเรียบร้อย', 'success')
+    loadRepairs()
+  } catch (err) {
+    Swal.fire('ผิดพลาด', err.message, 'error')
+  }
+}
+
 async function handleCloseJob(code) {
   const result = await Swal.fire({
     title: 'ปิดงานซ่อม',
@@ -237,6 +270,7 @@ onMounted(() => {
           :status="row[6]"
           @detail="goToDetail(row[1])"
           @accept="handleAccept(row[1])"
+          @outsource="handleOutsource(row[1])"
           @close-job="handleCloseJob(row[1])"
           @open-stock="handleOpenStock(row[1])"
         />
