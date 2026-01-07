@@ -572,6 +572,19 @@ function validateAddForm() {
   return valid
 }
 
+// ฟังก์ชัน clear error เมื่อผู้ใช้กำลังพิมพ์
+function clearAddError(field) {
+  if (addErrors.value[field]) {
+    addErrors.value[field] = ''
+  }
+}
+
+function clearEditError(field) {
+  if (editErrors.value[field]) {
+    editErrors.value[field] = ''
+  }
+}
+
 // ตัวแปรและ validation สำหรับตรวจสอบความถูกต้องของ input ในฟอร์มแก้ไขข้อมูลผู้ใช้
 const editErrors = ref({
   ttn: '',
@@ -1261,6 +1274,7 @@ async function handleDeleteTechType(item) {
               </label>
               <input
                 v-model="addForm.us_user_name"
+                @input="clearAddError('username')"
                 type="text"
                 :class="[
                   'w-full px-3 py-2 border rounded-md',
@@ -1278,6 +1292,7 @@ async function handleDeleteTechType(item) {
               </label>
               <input
                 v-model="addForm.us_user_pass"
+                @input="clearAddError('password')"
                 type="password"
                 :class="[
                   'w-full px-3 py-2 border rounded-md',
@@ -1297,6 +1312,7 @@ async function handleDeleteTechType(item) {
             </label>
             <select
               v-model="addForm.us_ttn_id"
+              @change="clearAddError('ttn')"
               :class="[
                 'w-full px-3 py-2 border rounded-md bg-white',
                 addErrors.ttn ? 'border-red-500' : 'border-gray-300',
@@ -1323,6 +1339,7 @@ async function handleDeleteTechType(item) {
               </label>
               <input
                 v-model="addForm.us_first_name_th"
+                @input="clearAddError('firstTh')"
                 type="text"
                 :class="[
                   'w-full px-3 py-2 border rounded-md',
@@ -1340,6 +1357,7 @@ async function handleDeleteTechType(item) {
               </label>
               <input
                 v-model="addForm.us_last_name_th"
+                @input="clearAddError('lastTh')"
                 type="text"
                 :class="[
                   'w-full px-3 py-2 border rounded-md',
@@ -1360,6 +1378,7 @@ async function handleDeleteTechType(item) {
               >
               <input
                 v-model="addForm.us_first_name_en"
+                @input="clearAddError('firstEn')"
                 type="text"
                 :class="[
                   'w-full px-3 py-2 border rounded-md',
@@ -1377,6 +1396,7 @@ async function handleDeleteTechType(item) {
               >
               <input
                 v-model="addForm.us_last_name_en"
+                @input="clearAddError('lastEn')"
                 type="text"
                 :class="[
                   'w-full px-3 py-2 border rounded-md',
@@ -1397,7 +1417,7 @@ async function handleDeleteTechType(item) {
               >
               <input
                 v-model="addForm.us_phone"
-                @input="addForm.us_phone = toDisplay(addForm.us_phone)"
+                @input="addForm.us_phone = toDisplay(addForm.us_phone); clearAddError('phone')"
                 type="tel"
                 :class="[
                   'w-full px-3 py-2 border rounded-md',
@@ -1421,6 +1441,7 @@ async function handleDeleteTechType(item) {
                   addErrors.department ? 'border-red-500' : 'border-gray-300',
                 ]"
                 placeholder="กรอกหน่วยงาน"
+                @input="clearAddError('department')"
               />
               <p v-if="addErrors.department" class="text-red-500 text-sm mt-1">
                 {{ addErrors.department }}
@@ -1435,7 +1456,7 @@ async function handleDeleteTechType(item) {
               </label>
               <select
                 v-model="addForm.us_role_id"
-                @change="handleAddRoleChange"
+                @change="handleAddRoleChange(); clearAddError('role')"
                 :class="[
                   'w-full px-3 py-2 border rounded-md bg-white',
                   addErrors.role ? 'border-red-500' : 'border-gray-300',
@@ -1458,6 +1479,7 @@ async function handleDeleteTechType(item) {
               <select
                 v-model="addForm.us_tt_id"
                 :disabled="addForm.us_role_id !== '2'"
+                @change="clearAddError('techType')"
                 :class="[
                   'w-full px-3 py-2 border rounded-md',
                   addForm.us_role_id === '2'
@@ -1535,6 +1557,7 @@ async function handleDeleteTechType(item) {
             </label>
             <select
               v-model="editForm.us_ttn_id"
+              @change="clearEditError('ttn')"
               :class="[
                 'w-full px-3 py-2 border rounded-md bg-white',
                 editErrors.ttn ? 'border-red-500' : 'border-gray-300',
@@ -1567,6 +1590,7 @@ async function handleDeleteTechType(item) {
                   editErrors.firstTh ? 'border-red-500' : 'border-gray-300',
                 ]"
                 placeholder="กรอกชื่อ"
+                @input="clearEditError('firstTh')"
               />
               <p v-if="editErrors.firstTh" class="text-red-500 text-sm mt-1">
                 {{ editErrors.firstTh }}
@@ -1584,6 +1608,7 @@ async function handleDeleteTechType(item) {
                   editErrors.lastTh ? 'border-red-500' : 'border-gray-300',
                 ]"
                 placeholder="กรอกนามสกุล"
+                @input="clearEditError('lastTh')"
               />
               <p v-if="editErrors.lastTh" class="text-red-500 text-sm mt-1">
                 {{ editErrors.lastTh }}
@@ -1602,6 +1627,7 @@ async function handleDeleteTechType(item) {
                   editErrors.firstEn ? 'border-red-500' : 'border-gray-300',
                 ]"
                 placeholder="First Name"
+                @input="clearEditError('firstEn')"
               />
               <p v-if="editErrors.firstEn" class="text-red-500 text-sm mt-1">
                 {{ editErrors.firstEn }}
@@ -1617,6 +1643,7 @@ async function handleDeleteTechType(item) {
                   editErrors.lastEn ? 'border-red-500' : 'border-gray-300',
                 ]"
                 placeholder="Last Name"
+                @input="clearEditError('lastEn')"
               />
               <p v-if="editErrors.lastEn" class="text-red-500 text-sm mt-1">
                 {{ editErrors.lastEn }}
@@ -1629,7 +1656,7 @@ async function handleDeleteTechType(item) {
               <label class="block text-sm font-medium mb-1.5">เบอร์โทร</label>
               <input
                 v-model="editForm.us_phone"
-                @input="editForm.us_phone = toDisplay(editForm.us_phone)"
+                @input="editForm.us_phone = toDisplay(editForm.us_phone); clearEditError('phone')"
                 type="tel"
                 :class="[
                   'w-full px-3 py-2 border rounded-md',
@@ -1653,6 +1680,7 @@ async function handleDeleteTechType(item) {
                   editErrors.department ? 'border-red-500' : 'border-gray-300',
                 ]"
                 placeholder="กรอกหน่วยงาน"
+                @input="clearEditError('department')"
               />
               <p v-if="editErrors.department" class="text-red-500 text-sm mt-1">
                 {{ editErrors.department }}
@@ -1667,7 +1695,7 @@ async function handleDeleteTechType(item) {
               </label>
               <select
                 v-model="editForm.us_role_id"
-                @change="handleEditRoleChange"
+                @change="handleEditRoleChange(); clearEditError('role')"
                 :class="[
                   'w-full px-3 py-2 border rounded-md bg-white',
                   editErrors.role ? 'border-red-500' : 'border-gray-300',
@@ -1694,6 +1722,7 @@ async function handleDeleteTechType(item) {
               <select
                 v-model="editForm.us_tt_id"
                 :disabled="editForm.us_role_id !== '2' && editForm.us_role_id !== 2"
+                @change="clearEditError('techType')"
                 :class="[
                   'w-full px-3 py-2 border rounded-md',
                   editForm.us_role_id === '2' || editForm.us_role_id === 2

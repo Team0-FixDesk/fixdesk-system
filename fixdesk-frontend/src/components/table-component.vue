@@ -16,6 +16,7 @@ const props = defineProps({
   statusStockinventoryColumn: { type: Number, default: null },
 
   columnAlign: { type: Array, default: () => [] },
+  hiddenColumns: { type: Array, default: () => [] }, // คอลัมน์ที่ต้องการซ่อน เช่น [0]
 })
 const openMenuId = ref(null)
 const currentPage = ref(1)
@@ -67,6 +68,8 @@ function renderStatusBadge(type) {
       return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-amber-50 text-amber-500 font-semibold">รอดำเนินการ</span>`
     case 'in_progress':
       return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-blue-100 text-blue-600 font-semibold">กำลังดำเนินการ</span>`
+    case 'outsource':
+      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-purple-100 text-purple-600 font-semibold">จ้างช่างภายนอก</span>`
     case 'done':
       return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-green-100 text-green-600 font-semibold">ดำเนินการเสร็จสิ้น</span>`
     case 'cancel':
@@ -115,7 +118,8 @@ function renderStatusStockInventoryBadge(type) {
           <th
             v-for="(column, columnIndex) in columns"
             :key="columnIndex"
-            class="px-3 py-3 font-semibold text-gray-700 sticky top-0 z-10 bg-gray-100"
+            v-show="!hiddenColumns.includes(columnIndex)"
+            class="px-3 py-3 font-semibold text-gray-700 sticky top-0 z-[5] bg-gray-100"
             :class="getAlignClass(columnIndex)"
           >
             {{ column }}
@@ -134,6 +138,7 @@ function renderStatusStockInventoryBadge(type) {
           <td
             v-for="(cell, cellIndex) in row"
             :key="cellIndex"
+            v-show="!hiddenColumns.includes(cellIndex)"
             class="px-3 py-2"
             :class="getAlignClass(cellIndex)"
           >

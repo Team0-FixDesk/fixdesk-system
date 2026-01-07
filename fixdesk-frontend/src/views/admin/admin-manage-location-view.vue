@@ -60,7 +60,7 @@ const addForm = ref({
   name: '',
   building_id: '',
   floor_id: '',
-  bulk_mode: false,
+  bulk_mode: true,
   building_mode: 'existing',
   floor_mode: 'existing',
   new_building_name: '',
@@ -400,6 +400,25 @@ const openMenuId = ref(null)
 // เปลี่ยน columns ให้มี 5 คอลัมน์ แต่จะซ่อนคอลัมน์แรก
 const columns = ['', 'อาคาร', 'ชั้น', 'ห้อง', 'การจัดการ']
 
+// Computed: กรองชั้นตามอาคารที่เลือก หรือแสดงชั้นที่ไม่ซ้ำ
+const filteredFloors = computed(() => {
+  if (selectedBuilding.value) {
+    // ถ้าเลือกอาคาร → แสดงเฉพาะชั้นของอาคารนั้น
+    return floors.value.filter((f) => f.building_id == selectedBuilding.value)
+  } else {
+    // ถ้าไม่เลือกอาคาร → แสดงชั้นที่ไม่ซ้ำกัน (unique by floor_name)
+    const uniqueFloors = []
+    const seenNames = new Set()
+    for (const floor of floors.value) {
+      if (!seenNames.has(floor.floor_name)) {
+        seenNames.add(floor.floor_name)
+        uniqueFloors.push(floor)
+      }
+    }
+    return uniqueFloors
+  }
+})
+
 // Filter functions
 function toggleBuildingFilter() {
   showBuildingFilter.value = !showBuildingFilter.value
@@ -494,7 +513,7 @@ function openAddModal() {
     name: '',
     building_id: '',
     floor_id: '',
-    bulk_mode: false,
+    bulk_mode: true,
     building_mode: 'existing',
     floor_mode: 'existing',
     new_building_name: '',
@@ -1080,7 +1099,7 @@ onBeforeUnmount(() => {
                 <span class="ml-2">ทุกชั้น</span>
               </label>
               <label
-                v-for="floor in floors"
+                v-for="floor in filteredFloors"
                 :key="floor.floor_id"
                 class="flex items-center py-1 hover:bg-gray-50 rounded px-2"
               >
@@ -1123,6 +1142,8 @@ onBeforeUnmount(() => {
           :rows="tableRows"
           :perPage="10"
           :idColumnIndex="0"
+          :hiddenColumns="[0]"
+          :column-align="['left', 'left', 'left', 'left', 'center']"
           @detail="openViewModal"
           @edit="openEditModal"
           @delete="confirmDelete"
@@ -1265,24 +1286,6 @@ onBeforeUnmount(() => {
         <div class="space-y-4 mb-6">
           <label
             class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400"
-            :class="!addForm.bulk_mode ? 'border-blue-600 bg-blue-50' : 'border-gray-200'"
-          >
-            <input
-              type="radio"
-              v-model="addForm.bulk_mode"
-              :value="false"
-              class="w-5 h-5 text-blue-600 mt-1"
-            />
-            <div class="ml-3">
-              <div class="flex items-center gap-2">
-                <span class="font-semibold text-gray-800">เพิ่มทีละระดับ</span>
-              </div>
-              <p class="text-xs text-gray-500 mt-1">เลือกเพิ่ม อาคาร, ชั้น หรือ ห้อง ทีละอย่าง</p>
-            </div>
-          </label>
-
-          <label
-            class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400"
             :class="addForm.bulk_mode ? 'border-blue-600 bg-blue-50' : 'border-gray-200'"
           >
             <input
@@ -1299,6 +1302,24 @@ onBeforeUnmount(() => {
                 >
               </div>
               <p class="text-xs text-gray-500 mt-1">สร้างอาคาร + ชั้น + ห้อง ในครั้งเดียว</p>
+            </div>
+          </label>
+
+          <label
+            class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400"
+            :class="!addForm.bulk_mode ? 'border-blue-600 bg-blue-50' : 'border-gray-200'"
+          >
+            <input
+              type="radio"
+              v-model="addForm.bulk_mode"
+              :value="false"
+              class="w-5 h-5 text-blue-600 mt-1"
+            />
+            <div class="ml-3">
+              <div class="flex items-center gap-2">
+                <span class="font-semibold text-gray-800">เพิ่มทีละระดับ</span>
+              </div>
+              <p class="text-xs text-gray-500 mt-1">เลือกเพิ่ม อาคาร, ชั้น หรือ ห้อง ทีละอย่าง</p>
             </div>
           </label>
         </div>

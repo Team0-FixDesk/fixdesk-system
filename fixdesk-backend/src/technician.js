@@ -10,7 +10,7 @@ module.exports = function TechnicianRoutes(db) {
         SELECT
             u.us_id,
             u.us_user_name,
-            tn.ttn_title_th AS prefix_name,    
+            tn.ttn_title_th AS prefix_name,
             u.us_first_name_th AS us_first_name,
             u.us_last_name_th AS us_last_name,
             u.us_phone,
@@ -308,47 +308,67 @@ module.exports = function TechnicianRoutes(db) {
     });
   });
 
+  // อัปเดตสถานะงาน (done, outsource)
   router.put("/technician/close-job/:rf_code", authMiddleware, (req, res) => {
     const techId = req.user?.us_id;
     const { rf_code } = req.params;
-    const { tech_summary, tech_image_after } = req.body;
+    const { status, tech_summary, tech_image_after } = req.body;
 
     if (!techId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const query = `
-      UPDATE repair_form rf
-      JOIN repair_assignment ra ON rf.rf_id = ra.ra_rf_id
-      SET
+    // ตรวจสอบว่าเป็นสถานะที่อนุญาต (default เป็น done ถ้าไม่ส่งมา)
+    const targetStatus = status || 'done';
+    const allowedStatuses = ['done', 'outsource'];
+    if (!allowedStatuses.includes(targetStatus)) {
+      return res.status(400).json({ message: "สถานะไม่ถูกต้อง" });
+    }
+
+    let updateFields = '';
+    let queryParams = [];
+
+    if (targetStatus === 'done') {
+      updateFields = `
         rf.rf_user_status = 'done',
         rf.rf_done_at = NOW(),
         rf.rf_tech_summary = ?,
-        rf.rf_tech_image_after = ?
+        rf.rf_tech_image_after = ?`;
+      queryParams = [tech_summary || null, tech_image_after || null, rf_code, techId];
+    } else if (targetStatus === 'outsource') {
+      updateFields = `rf.rf_user_status = 'outsource'`;
+      queryParams = [rf_code, techId];
+    }
+
+    const query = `
+      UPDATE repair_form rf
+      JOIN repair_assignment ra ON rf.rf_id = ra.ra_rf_id
+      SET ${updateFields}
       WHERE
         rf.rf_code = ?
         AND ra.ra_us_id = ?
-        AND rf.rf_user_status = 'in_progress'
+        AND rf.rf_user_status IN ('in_progress', 'outsource')
     `;
 
-    db.query(
-      query,
-      [tech_summary || null, tech_image_after || null, rf_code, techId],
-      (err, result) => {
-        if (err) {
-          console.error("❌ Close job error:", err);
-          return res.status(500).json({ message: "ปิดงานไม่สำเร็จ" });
-        }
-
-        if (result.affectedRows === 0) {
-          return res.status(400).json({
-            message: "ไม่พบงาน หรือสถานะไม่อยู่ในขั้นกำลังดำเนินการ",
-          });
-        }
-
-        res.json({ message: "ปิดงานสำเร็จ" });
+    db.query(query, queryParams, (err, result) => {
+      if (err) {
+        console.error("❌ Update job status error:", err);
+        return res.status(500).json({ message: "อัปเดตสถานะไม่สำเร็จ" });
       }
-    );
+
+      if (result.affectedRows === 0) {
+        return res.status(400).json({
+          message: "ไม่พบงาน หรือสถานะไม่อยู่ในขั้นกำลังดำเนินการ",
+        });
+      }
+
+      const successMessages = {
+        done: "ปิดงานสำเร็จ",
+        outsource: "ส่งงานให้ช่างภายนอกสำเร็จ"
+      };
+
+      res.json({ message: successMessages[targetStatus] });
+    });
   });
 
   /**
@@ -454,8 +474,8 @@ module.exports = function TechnicianRoutes(db) {
 
       // Create stock form header
       const headerResult = await query(
-        `INSERT INTO stock_form 
-       (sf_code, sf_create_at, sf_status, sf_us_id, sf_rf_id, sf_update_at) 
+        `INSERT INTO stock_form
+       (sf_code, sf_create_at, sf_status, sf_us_id, sf_rf_id, sf_update_at)
        VALUES (?, NOW(), ?, ?, ?, NULL)`,
         [sfCode, sfStatus, userId, repairFormId]
       );
@@ -518,8 +538,8 @@ module.exports = function TechnicianRoutes(db) {
 
         // Record stock transaction
         await query(
-          `INSERT INTO stock_transactions 
-         (stt_product_id, stt_user_id, stt_type, stt_quantity, stt_created_at, stt_ref_sf_id) 
+          `INSERT INTO stock_transactions
+         (stt_product_id, stt_user_id, stt_type, stt_quantity, stt_created_at, stt_ref_sf_id)
          VALUES (?, ?, 'OUT', ?, NOW(), ?)`,
           [item.id, userId, requestedQty, sfId]
         );
