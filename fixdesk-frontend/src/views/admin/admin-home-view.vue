@@ -213,24 +213,29 @@ onMounted(fetchRepairRequests)
     <!-- Table -->
     <div class="p-3 mx-auto max-w-8xl mt-4">
       <TableComponent
-        :columns="['หมายเลขแจ้งซ่อม', 'ประเภทงาน', 'รายละเอียด', 'ความเร่งด่วน', 'สถานะงาน', 'การดำเนินการ']"
+        :columns="[
+          'หมายเลขแจ้งซ่อม',
+          'ประเภทงาน',
+          'รายละเอียด',
+          'ความเร่งด่วน',
+          'สถานะงาน',
+          'การดำเนินการ',
+        ]"
         :rows="rowsForDisplay"
         :perPage="10"
         :urgencyColumn="3"
         :statusColumn="4"
         :columnAlign="['left', 'left', 'left', 'center', 'center', 'center']"
       >
-        <template #cell-5="{ row, rowIndex }">
-          <TableActions
-            :open-menu-id="openMenuId"
-            @toggle-menu="openMenuId = $event"
-            :row-id="row[0]"
-            :row="row"
-            :status="row[4]"
-            :assigned-tech="filteredRequests[rowIndex].meta.rf_assigned_tech_id"
-            @detail="goToRepairDetail(row[0])"
-            @delete="deleteRepair(row[0])"
-          />
+        <template #cell-5="{ row }">
+          <div class="flex justify-center">
+            <button
+              @click="goToRepairDetail(row[0])"
+              class="flex items-center gap-2 px-2 py-2 rounded-md bg-blue-500 text-white hover:bg-blue-600"
+            >
+              <img src="/icon/info-icon.svg" class="h-4 w-4" />
+            </button>
+          </div>
         </template>
       </TableComponent>
     </div>

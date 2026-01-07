@@ -257,6 +257,9 @@ onBeforeUnmount(() => {
           ลบ
         </button>
       </template>
+      <template v-if="role === 'stockList'">
+        
+      </template>
     </div>
   </div>
 </template>
