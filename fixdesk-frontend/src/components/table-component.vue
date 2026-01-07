@@ -14,6 +14,7 @@ const props = defineProps({
   statusColumn: { type: Number, default: null }, // เช่น 5
   statusStockColumn: { type: Number, default: null },
   columnAlign: { type: Array, default: () => [] },
+  hiddenColumns: { type: Array, default: () => [] }, // คอลัมน์ที่ต้องการซ่อน เช่น [0]
 })
 const openMenuId = ref(null)
 const currentPage = ref(1)
@@ -105,7 +106,8 @@ function renderStatusStockBadge(type) {
           <th
             v-for="(column, columnIndex) in columns"
             :key="columnIndex"
-            class="px-3 py-3 font-semibold text-gray-700 sticky top-0 z-10 bg-gray-100"
+            v-show="!hiddenColumns.includes(columnIndex)"
+            class="px-3 py-3 font-semibold text-gray-700 sticky top-0 z-[5] bg-gray-100"
             :class="getAlignClass(columnIndex)"
           >
             {{ column }}
@@ -124,6 +126,7 @@ function renderStatusStockBadge(type) {
           <td
             v-for="(cell, cellIndex) in row"
             :key="cellIndex"
+            v-show="!hiddenColumns.includes(cellIndex)"
             class="px-3 py-2"
             :class="getAlignClass(cellIndex)"
           >
