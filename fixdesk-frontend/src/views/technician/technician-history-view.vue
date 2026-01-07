@@ -110,16 +110,15 @@ onMounted(() => {
     >
       <!-- Actions -->
       <template #cell-3="{ row }">
-        <TableActionsComponent
-          role="technician"
-          :row-id="row[0]"
-          :open-menu-id="openMenuId"
-          @toggle-menu="openMenuId = $event"
-          :row="row"
-          :status="row[2]"
-          @detail="goToDetail(row[0])"
-        />
-      </template>
+          <div class="flex justify-center">
+            <button
+              @click="goToDetail(row[0])"
+              class="flex items-center gap-2 px-2 py-2 rounded-md bg-blue-500 text-white hover:bg-blue-600"
+            >
+              <img src="/icon/info-icon.svg" class="h-4 w-4" />
+            </button>
+          </div>
+        </template>
     </TableComponent>
   </div>
 </template>

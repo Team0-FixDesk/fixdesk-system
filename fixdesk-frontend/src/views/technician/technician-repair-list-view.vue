@@ -20,7 +20,8 @@ const openMenuId = ref(null)
 
 const searchQuery = ref('')
 const selectedDate = ref('')
-const selectedStatus = ref(['pending', 'in_progress'])
+const selectedStatusFilter = ref('all')
+const allowedStatuses = ['pending', 'in_progress', 'outsource']
 
 const showAcceptPopup = ref(false)
 const currentAcceptCode = ref(null)
@@ -126,6 +127,39 @@ function handleOpenStock(code) {
   router.push('/main/technician-stock-list')
 }
 
+async function handleOutsource(code) {
+  const result = await Swal.fire({
+    title: 'จ้างช่างภายนอก',
+    text: `คุณต้องการส่งงาน ${code} ให้ช่างภายนอกใช่หรือไม่`,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'ใช่, ส่งงาน',
+    cancelButtonText: 'ยกเลิก',
+    confirmButtonColor: '#f59e0b',
+  })
+
+  if (!result.isConfirmed) return
+
+  try {
+    const res = await fetch(`${API_BASE}/technician/close-job/${code}`, {
+      method: 'PUT',
+      headers: {
+        ...getAuthHeaders(),
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ status: 'outsource' }),
+    })
+
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.message)
+
+    Swal.fire('สำเร็จ', 'ส่งงานให้ช่างภายนอกเรียบร้อย', 'success')
+    loadRepairs()
+  } catch (err) {
+    Swal.fire('ผิดพลาด', err.message, 'error')
+  }
+}
+
 async function handleCloseJob(code) {
   const result = await Swal.fire({
     title: 'ปิดงานซ่อม',
@@ -170,8 +204,8 @@ onMounted(() => {
   <div class="p-8 mx-auto max-w-7xl bg-white rounded-xl shadow-md">
     <h1 class="text-xl font-bold mb-6">รายการแจ้งซ่อมสำหรับช่าง</h1>
 
-    <!-- Search -->
-    <div class="flex gap-3 mb-6">
+    <!-- Search & Filter -->
+    <div class="flex flex-wrap gap-3 mb-6">
       <input
         v-model="searchQuery"
         placeholder="ค้นหา: หมายเลข / ผู้แจ้ง / อาการเสีย"
@@ -183,6 +217,17 @@ onMounted(() => {
         type="date"
         class="h-10 px-3 rounded-lg border border-gray-300"
       />
+
+      <!-- Status Filter Dropdown -->
+      <select
+        v-model="selectedStatusFilter"
+        class="h-10 px-3 rounded-lg border border-gray-300 text-sm text-gray-700"
+      >
+        <option value="all">ทุกสถานะ</option>
+        <option value="pending">รอดำเนินการ</option>
+        <option value="in_progress">กำลังดำเนินการ</option>
+        <option value="outsource">จ้างช่างภายนอก</option>
+      </select>
     </div>
 
     <!-- Table -->

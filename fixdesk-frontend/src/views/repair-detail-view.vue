@@ -29,12 +29,29 @@ function openActionPopup() {
     // 1. ถ้ารอรับงาน -> เปิด Modal รับงาน
     showAcceptPopup.value = true
   } else if (status === 'in_progress') {
-    // 2. ถ้ากำลังทำ -> เปิด Modal เปลี่ยนสถานะ (หรือ Action อื่น)
-    handleChangeStatus()
+    // 2. ถ้ากำลังทำ -> เปิด Modal เลือกสถานะ
+    showStatusPopup.value = true
   }
 }
 
-function handleChangeStatus() {
+// Popup เลือกสถานะ
+const showStatusPopup = ref(false)
+
+function closeStatusPopup() {
+  showStatusPopup.value = false
+}
+
+function handleSelectStatus(statusType) {
+  if (statusType === 'done') {
+    showStatusPopup.value = false
+    confirmCloseJob()
+  } else if (statusType === 'outsource') {
+    showStatusPopup.value = false
+    confirmOutsource()
+  }
+}
+
+function confirmCloseJob() {
   Swal.fire({
     title: 'เปลี่ยนสถานะ',
     text: 'คุณต้องการเปลี่ยนสถานะเป็น "เสร็จสิ้น" หรือไม่?',
@@ -42,13 +59,17 @@ function handleChangeStatus() {
     showCancelButton: true,
     confirmButtonText: 'ใช่, เสร็จสิ้น',
     cancelButtonText: 'ยกเลิก',
+    confirmButtonColor: '#10b981',
   }).then(async (result) => {
     if (result.isConfirmed) {
-      // ยิง API เปลี่ยนสถานะเป็น done (ตัวอย่าง)
       try {
-        const res = await fetch(`${API_BASE}/technician/jobs/${repairCode}/status`, {
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token')
+        const res = await fetch(`${API_BASE}/technician/close-job/${repairCode}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' }, // + Token header
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
           body: JSON.stringify({ status: 'done' }),
         })
         if (res.ok) {
@@ -57,6 +78,40 @@ function handleChangeStatus() {
         }
       } catch (e) {
         console.error(e)
+        Swal.fire('ผิดพลาด', 'ไม่สามารถปิดงานได้', 'error')
+      }
+    }
+  })
+}
+
+function confirmOutsource() {
+  Swal.fire({
+    title: 'จ้างช่างภายนอก',
+    text: 'คุณต้องการส่งงานให้ช่างภายนอกหรือไม่?',
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'ใช่, ส่งงาน',
+    cancelButtonText: 'ยกเลิก',
+    confirmButtonColor: '#f59e0b',
+  }).then(async (result) => {
+    if (result.isConfirmed) {
+      try {
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token')
+        const res = await fetch(`${API_BASE}/technician/close-job/${repairCode}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ status: 'outsource' }),
+        })
+        if (res.ok) {
+          Swal.fire('สำเร็จ', 'ส่งงานให้ช่างภายนอกเรียบร้อย', 'success')
+          fetchRepairDetail()
+        }
+      } catch (e) {
+        console.error(e)
+        Swal.fire('ผิดพลาด', 'ไม่สามารถส่งงานได้', 'error')
       }
     }
   })
@@ -162,6 +217,8 @@ function getUserStatusBadge(status) {
       return `<span class="inline-flex justify-center items-center w-28 sm:w-36 h-7 sm:h-8 px-3 rounded-full bg-amber-50 text-amber-500 font-semibold text-xs sm:text-sm">รอดำเนินการ</span>`
     case 'in_progress':
       return `<span class="inline-flex justify-center items-center w-28 sm:w-36 h-7 sm:h-8 px-3 rounded-full bg-blue-100 text-blue-600 font-semibold text-xs sm:text-sm">กำลังดำเนินการ</span>`
+    case 'outsource':
+      return `<span class="inline-flex justify-center items-center w-28 sm:w-36 h-7 sm:h-8 px-3 rounded-full bg-purple-100 text-purple-600 font-semibold text-xs sm:text-sm">จ้างช่างภายนอก</span>`
     case 'done':
       return `<span class="inline-flex justify-center items-center w-28 sm:w-36 h-7 sm:h-8 px-3 rounded-full bg-green-100 text-green-600 font-semibold text-xs sm:text-sm">ดำเนินการเสร็จสิ้น</span>`
     default:
@@ -748,19 +805,9 @@ onMounted(() => {
           <div class="bg-white border border-gray-200 rounded-xl p-4 sm:p-6 shadow-sm">
             <div class="flex items-center justify-between mb-4 border-b border-gray-300 pb-2 mb-4">
               <h2 class="text-lg font-semibold text-gray-800">รายการเบิก</h2>
-
-              <!-- ปุ่มยืนยันการเบิก มุมขวาบน -->
-              <button
-                v-if="showWithdrawButton"
-                type="button"
-                class="px-4 py-2 text-sm sm:text-base font-semibold rounded-lg shadow-sm bg-blue-600 hover:bg-blue-700 text-white transition flex items-center gap-2"
-                @click="handleRepairFrom(repair?.rf_code)"
-              >
-                เบิกวัสดุ/อุปกรณ์
-              </button>
             </div>
 
-            <div v-if="repair?.stock_items?.length" class="space-y-3">
+            <div v-if="repair?.stock_items?.length" class="space-y-3 h-[280px] overflow-y-auto">
               <div
                 v-for="(item, i) in repair.stock_items"
                 :key="i"
@@ -794,7 +841,7 @@ onMounted(() => {
               </div>
             </div>
 
-            <div v-else class="text-center text-gray-400 text-sm sm:text-base py-8">
+            <div v-else class="text-center text-gray-400 text-sm sm:text-base py-8 h-[250px]">
               - ไม่มีรายการเบิก -
             </div>
           </div>
@@ -841,21 +888,121 @@ onMounted(() => {
               >
                 {{ isAssigned ? 'มอบหมายแล้ว' : 'มอบหมายงาน' }}
               </button>
-              <button
-                v-if="canAccept && repair?.rf_user_status !== 'done'"
-                @click="openActionPopup"
-                :class="[
-                  'px-3 py-2 text-sm font-medium rounded-lg shadow-sm transition flex items-center gap-2 ml-auto text-white',
-                  repair?.rf_user_status === 'pending'
-                    ? 'bg-teal-700 hover:bg-teal-900 px-7' /* สีฟ้ารับงาน */
-                    : 'bg-amber-500 hover:bg-amber-600' /* สีเหลืองเปลี่ยนสถานะ */,
-                ]"
-              >
-                {{ repair?.rf_user_status === 'pending' ? 'รับงาน' : 'เปลี่ยนสถานะ' }}
-              </button>
             </div>
 
             <RepairStatusTimeline :timeline-steps="repair?.timeline || []" />
+          </div>
+
+          <!-- ปุ่มเบิก และ ปุ่มเปลี่ยนสถานะ ด้านล่างกล่องสถานะ -->
+          <div v-if="showWithdrawButton || (canAccept && repair?.rf_user_status !== 'done')">
+            <div
+              :class="[
+                'grid gap-4',
+                showWithdrawButton ? 'grid-cols-2' : 'grid-cols-1'
+              ]"
+            >
+              <!-- ปุ่มเบิกวัสดุ/อุปกรณ์ (ซ้าย) -->
+              <button
+                v-if="showWithdrawButton"
+                type="button"
+                class="w-full px-6 py-3.5 text-sm sm:text-base font-semibold rounded-xl shadow-md transition-all duration-200 flex items-center justify-center gap-3 hover:shadow-lg hover:-translate-y-0.5 bg-blue-600 hover:bg-blue-700 text-white"
+                @click="handleRepairFrom(repair?.rf_code)"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                </svg>
+                เบิกวัสดุ/อุปกรณ์
+              </button>
+
+              <!-- ปุ่มรับงาน/เปลี่ยนสถานะ/ปิดงาน -->
+              <div v-if="canAccept && repair?.rf_user_status !== 'done'" class="relative">
+                <button
+                  @click="repair?.rf_user_status === 'pending' ? openActionPopup() : (repair?.rf_user_status === 'outsource' ? confirmCloseJob() : (showStatusPopup ? closeStatusPopup() : openActionPopup()))"
+                  :class="[
+                    'w-full px-6 py-3.5 text-sm sm:text-base font-semibold rounded-xl shadow-md transition-all duration-200 flex items-center justify-center gap-3 text-white hover:shadow-lg hover:-translate-y-0.5',
+                    repair?.rf_user_status === 'pending'
+                      ? 'bg-teal-500 hover:bg-teal-600'
+                      : repair?.rf_user_status === 'outsource'
+                        ? 'bg-green-600 hover:bg-green-700'
+                        : 'bg-amber-500 hover:bg-amber-600',
+                  ]"
+                >
+                  <!-- Icon รับงาน (pending) -->
+                  <svg v-if="repair?.rf_user_status === 'pending'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <!-- Icon ปิดงาน (outsource) -->
+                  <svg v-else-if="repair?.rf_user_status === 'outsource'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                  </svg>
+                  <!-- Icon เปลี่ยนสถานะ (in_progress) -->
+                  <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  {{ repair?.rf_user_status === 'pending' ? 'รับงาน' : (repair?.rf_user_status === 'outsource' ? 'ปิดงาน' : 'เปลี่ยนสถานะ') }}
+                </button>
+
+                <!-- Popup เลือกสถานะ (dropdown) -->
+                <div
+                  v-if="showStatusPopup"
+                  class="absolute bottom-full mb-2 right-0 w-72 bg-white border border-gray-200 rounded-xl shadow-xl z-50"
+                >
+                  <!-- หน้าเลือกตัวเลือก -->
+                  <div class="p-3">
+                    <div class="flex items-center gap-2 mb-3 pb-2 border-b border-gray-100">
+                      <div class="w-7 h-7 rounded-full bg-amber-100 flex items-center justify-center">
+                        <svg class="w-3.5 h-3.5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                      </div>
+                      <div>
+                        <h3 class="text-xs font-bold text-gray-800">เปลี่ยนสถานะงาน</h3>
+                      </div>
+                      <button @click="closeStatusPopup" class="ml-auto p-1 hover:bg-gray-100 rounded transition">
+                        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+
+                    <div class="space-y-1.5">
+                      <!-- ปิดงาน -->
+                      <button
+                        @click="handleSelectStatus('done')"
+                        class="w-full flex items-center gap-2.5 p-2.5 rounded-lg hover:bg-green-50 transition-all duration-200 group"
+                      >
+                        <div class="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center group-hover:bg-green-200 transition">
+                          <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                        <div class="text-left">
+                          <p class="text-sm font-medium text-gray-800 group-hover:text-green-700">ปิดงาน</p>
+                          <p class="text-xs text-gray-400">ดำเนินการเสร็จสิ้นแล้ว</p>
+                        </div>
+                      </button>
+
+                      <!-- จ้างช่างภายนอก (ไม่แสดงถ้าสถานะเป็น outsource อยู่แล้ว) -->
+                      <button
+                        v-if="repair?.rf_user_status !== 'outsource'"
+                        @click="handleSelectStatus('outsource')"
+                        class="w-full flex items-center gap-2.5 p-2.5 rounded-lg hover:bg-amber-50 transition-all duration-200 group"
+                      >
+                        <div class="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center group-hover:bg-amber-200 transition">
+                          <svg class="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                          </svg>
+                        </div>
+                        <div class="text-left">
+                          <p class="text-sm font-medium text-gray-800 group-hover:text-amber-700">จ้างช่างภายนอก</p>
+                          <p class="text-xs text-gray-400">ส่งต่องานให้ผู้รับเหมา</p>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -1082,4 +1229,5 @@ onMounted(() => {
     @close="showAcceptPopup = false"
     @success="handleAcceptSuccess"
   />
+
 </template>
