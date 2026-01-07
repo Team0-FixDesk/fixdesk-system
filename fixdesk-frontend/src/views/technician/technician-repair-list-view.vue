@@ -60,7 +60,7 @@ async function loadRepairs() {
     }
 
     const data = await res.json()
-    tableRows.value = data.map(formatRow)
+    tableRows.value = data.filter((r) => allowedStatuses.includes(r.rf_user_status)).map(formatRow)
   } catch (err) {
     Swal.fire('เกิดข้อผิดพลาด', err.message, 'error')
   }
@@ -98,12 +98,10 @@ const filteredRows = computed(() => {
   const q = searchQuery.value.toLowerCase()
 
   return tableRows.value.filter((row) => {
-    const matchSearch =
-      row[0].toLowerCase().includes(q) || // รหัส
-      row[1].toLowerCase().includes(q) || // รายละเอียด
-      row[1].toLowerCase().includes(q) // สถานที่
+    const matchSearch = row[0].toLowerCase().includes(q) || row[1].toLowerCase().includes(q)
 
-    const matchStatus = selectedStatus.value.length === 0 || selectedStatus.value.includes(row[2])
+    const matchStatus =
+      selectedStatusFilter.value === 'all' || row[2] === selectedStatusFilter.value
 
     return matchSearch && matchStatus
   })
@@ -125,39 +123,6 @@ function handleAccept(code) {
 function handleOpenStock(code) {
   sessionStorage.setItem('selected_rf_code', code)
   router.push('/main/technician-stock-list')
-}
-
-async function handleOutsource(code) {
-  const result = await Swal.fire({
-    title: 'จ้างช่างภายนอก',
-    text: `คุณต้องการส่งงาน ${code} ให้ช่างภายนอกใช่หรือไม่`,
-    icon: 'question',
-    showCancelButton: true,
-    confirmButtonText: 'ใช่, ส่งงาน',
-    cancelButtonText: 'ยกเลิก',
-    confirmButtonColor: '#f59e0b',
-  })
-
-  if (!result.isConfirmed) return
-
-  try {
-    const res = await fetch(`${API_BASE}/technician/close-job/${code}`, {
-      method: 'PUT',
-      headers: {
-        ...getAuthHeaders(),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ status: 'outsource' }),
-    })
-
-    const data = await res.json()
-    if (!res.ok) throw new Error(data.message)
-
-    Swal.fire('สำเร็จ', 'ส่งงานให้ช่างภายนอกเรียบร้อย', 'success')
-    loadRepairs()
-  } catch (err) {
-    Swal.fire('ผิดพลาด', err.message, 'error')
-  }
 }
 
 async function handleCloseJob(code) {
@@ -236,7 +201,7 @@ onMounted(() => {
       :rows="filteredRows"
       :perPage="10"
       :statusColumn="2"
-      :columnAlign="['left', 'left','center', 'center']"
+      :columnAlign="['left', 'left', 'center', 'center']"
     >
       <template #cell-3="{ row }">
         <TableActionsComponent

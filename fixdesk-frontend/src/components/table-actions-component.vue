@@ -246,19 +246,47 @@ onBeforeUnmount(() => {
       </template>
 
       <!-- Assign -->
-      <template v-if="role === 'assign'">
-        <button
-          v-if="!props.assignedTech"
-          @click="emit('assign', row)"
-          class="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2"
-        >
-          <img
-            src="/icon/arrow-right.svg"
-            class="bg-green-400 hover:bg-green-600 rounded-md p-1 h-6 w-6"
-          />
-          มอบหมายงาน
-        </button>
-      </template>
+      <!-- Assign -->
+<template v-if="role === 'assign'">
+  <!-- ยังไม่มอบหมาย -->
+  <button
+    v-if="props.assignedTech == null"
+    @click="emit('assign', row)"
+    class="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2"
+  >
+    <img
+      src="/icon/arrow-right.svg"
+      class="bg-green-400 hover:bg-green-600 rounded-md p-1 h-6 w-6"
+    />
+    มอบหมายงาน
+  </button>
+
+  <!-- มอบหมายแล้ว -->
+  <div
+    v-else
+    class="px-3 py-2 text-sm text-gray-500 leading-snug flex gap-2"
+  >
+    <svg
+      class="w-4 h-4 text-gray-400 mt-0.5"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+        d="M13 16h-1v-4h-1m1-4h.01M12 18a9 9 0 110-18 9 9 0 010 18z"
+      />
+    </svg>
+
+    <span>
+      งานนี้ถูกมอบหมายแล้ว<br />
+      <span class="text-blue-600 cursor-pointer hover:underline"
+            @click="emit('detail', row)">
+        ดูรายละเอียดใบแจ้งซ่อม
+      </span>
+    </span>
+  </div>
+</template>
+
 
       <!-- User -->
       <template v-if="role === 'user'">
@@ -310,7 +338,7 @@ onBeforeUnmount(() => {
         </button>
       </template>
       <template v-if="role === 'stockList'">
-        
+
       </template>
     </div>
   </div>
