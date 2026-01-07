@@ -226,7 +226,6 @@ const addToCart = (payload) => {
   bounceCart()
 }
 
-
 const removeFromCart = (id) => {
   cartItems.value = cartItems.value.filter((i) => i.id !== id)
 }
@@ -279,7 +278,7 @@ const confirmWithdraw = async (formData) => {
     cartItems.value = []
     isCartOpen.value = false
     cartStep.value = 'list'
-    
+
     // เคลียร์ “กำลังเบิกของสำหรับใบแจ้งซ่อม”
     selectedRepairCode.value = null
     try {
@@ -290,6 +289,7 @@ const confirmWithdraw = async (formData) => {
     await fetchInventoryItems()
 
     await fetchInventoryItems()
+    router.push({ name: 'technician-requisition-list' })
   } catch (err) {
     Swal.fire('ผิดพลาด', err.message, 'error')
   } finally {
@@ -518,7 +518,7 @@ const getAvailableQty = (id) => {
             "
             class="inline-flex items-center h-10 px-4 bg-blue-600 text-white rounded-lg"
           >
-            <img src="/icon/cart.png" alt="" class="h-7 w-7"> ตระกร้า {{ totalInCart }}
+            <img src="/icon/cart.png" alt="" class="h-7 w-7" /> ตระกร้า {{ totalInCart }}
           </button>
         </div>
       </div>
@@ -669,13 +669,18 @@ const getAvailableQty = (id) => {
                     +
                   </button>
 
-                  <span class="text-xs text-gray-400"> (คงเหลือ {{ getAvailableQty(item.id) }}) </span>
+                  <span class="text-xs text-gray-400">
+                    (คงเหลือ {{ getAvailableQty(item.id) }})
+                  </span>
                 </div>
               </div>
 
               <!-- delete -->
-              <button @click="removeFromCart(item.id)" class="text-red-500 hover:text-red-600 bg-red-500 h-8 justify-center border rounded-md">
-                <img src="/icon/bin-icon.svg" alt="ลบ">
+              <button
+                @click="removeFromCart(item.id)"
+                class="text-red-500 hover:text-red-600 bg-red-500 h-8 justify-center border rounded-md"
+              >
+                <img src="/icon/bin-icon.svg" alt="ลบ" />
               </button>
             </div>
           </div>
