@@ -20,7 +20,8 @@ const openMenuId = ref(null)
 
 const searchQuery = ref('')
 const selectedDate = ref('')
-const selectedStatus = ref(['pending', 'in_progress', 'outsource'])
+const selectedStatusFilter = ref('all')
+const allowedStatuses = ['pending', 'in_progress', 'outsource']
 
 const showAcceptPopup = ref(false)
 const currentAcceptCode = ref(null)
@@ -95,7 +96,10 @@ const filteredRows = computed(() => {
 
     const matchDate = selectedDate.value ? sameDate(row[0], selectedDate.value) : true
 
-    const matchStatus = selectedStatus.value.length === 0 || selectedStatus.value.includes(row[6])
+    // ถ้าเลือก all → แสดงเฉพาะ 3 สถานะที่อนุญาต, ถ้าเลือกสถานะเดียว → filter ตามนั้น
+    const matchStatus = selectedStatusFilter.value === 'all'
+      ? allowedStatuses.includes(row[6])
+      : row[6] === selectedStatusFilter.value
 
     return matchSearch && matchDate && matchStatus
   })
@@ -229,8 +233,8 @@ onMounted(() => {
   <div class="p-8 mx-auto max-w-7xl bg-white rounded-xl shadow-md">
     <h1 class="text-xl font-bold mb-6">รายการแจ้งซ่อมสำหรับช่าง</h1>
 
-    <!-- Search -->
-    <div class="flex gap-3 mb-6">
+    <!-- Search & Filter -->
+    <div class="flex flex-wrap gap-3 mb-6">
       <input
         v-model="searchQuery"
         placeholder="ค้นหา: หมายเลข / ผู้แจ้ง / อาการเสีย"
@@ -242,6 +246,17 @@ onMounted(() => {
         type="date"
         class="h-10 px-3 rounded-lg border border-gray-300"
       />
+
+      <!-- Status Filter Dropdown -->
+      <select
+        v-model="selectedStatusFilter"
+        class="h-10 px-3 rounded-lg border border-gray-300 text-sm text-gray-700"
+      >
+        <option value="all">ทุกสถานะ</option>
+        <option value="pending">รอดำเนินการ</option>
+        <option value="in_progress">กำลังดำเนินการ</option>
+        <option value="outsource">จ้างช่างภายนอก</option>
+      </select>
     </div>
 
     <!-- Table -->
