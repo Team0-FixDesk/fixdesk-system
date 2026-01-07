@@ -147,6 +147,12 @@ function renderStatusStockBadge(type) {
       return type
   }
 }
+
+function goBack() {
+  if (window.history.length > 1) {
+    router.go(-1) // หรือ router.back()
+  }
+}
 </script>
 
 <template>
@@ -154,7 +160,16 @@ function renderStatusStockBadge(type) {
     <div
       class="bg-white rounded-xl shadow-sm p-4 sm:p-6 lg:p-8 mx-auto max-w-7xl border border-gray-100"
     >
-      <h1 class="text-2xl font-bold mb-6">รายการเบิก</h1>
+      <div class="flex items-center gap-3 mb-6">
+        <div
+          class="w-11 h-11 rounded-lg bg-gray-50 border border-gray-300 flex items-center justify-center cursor-pointer hover:bg-gray-200 transition"
+          @click="goBack"
+        >
+          <img src="/icon/back-icon.svg" class="w-6 h-6 sm:w-5 sm:h-5" />
+        </div>
+
+        <h1 class="text-2xl font-bold">รายการเบิก</h1>
+      </div>
 
       <div class="grid grid-cols-12 gap-6">
         <!-- LEFT -->

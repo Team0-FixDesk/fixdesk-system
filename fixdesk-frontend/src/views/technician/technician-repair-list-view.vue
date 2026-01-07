@@ -20,7 +20,8 @@ const openMenuId = ref(null)
 
 const searchQuery = ref('')
 const selectedDate = ref('')
-const selectedStatus = ref(['pending', 'in_progress'])
+const selectedStatusFilter = ref('all')
+const allowedStatuses = ['pending', 'in_progress', 'outsource']
 
 const showAcceptPopup = ref(false)
 const currentAcceptCode = ref(null)
@@ -59,7 +60,7 @@ async function loadRepairs() {
     }
 
     const data = await res.json()
-    tableRows.value = data.map(formatRow)
+    tableRows.value = data.filter((r) => allowedStatuses.includes(r.rf_user_status)).map(formatRow)
   } catch (err) {
     Swal.fire('เกิดข้อผิดพลาด', err.message, 'error')
   }
@@ -97,12 +98,10 @@ const filteredRows = computed(() => {
   const q = searchQuery.value.toLowerCase()
 
   return tableRows.value.filter((row) => {
-    const matchSearch =
-      row[0].toLowerCase().includes(q) || // รหัส
-      row[1].toLowerCase().includes(q) || // รายละเอียด
-      row[1].toLowerCase().includes(q) // สถานที่
+    const matchSearch = row[0].toLowerCase().includes(q) || row[1].toLowerCase().includes(q)
 
-    const matchStatus = selectedStatus.value.length === 0 || selectedStatus.value.includes(row[2])
+    const matchStatus =
+      selectedStatusFilter.value === 'all' || row[2] === selectedStatusFilter.value
 
     return matchSearch && matchStatus
   })
@@ -170,8 +169,8 @@ onMounted(() => {
   <div class="p-8 mx-auto max-w-7xl bg-white rounded-xl shadow-md">
     <h1 class="text-xl font-bold mb-6">รายการแจ้งซ่อมสำหรับช่าง</h1>
 
-    <!-- Search -->
-    <div class="flex gap-3 mb-6">
+    <!-- Search & Filter -->
+    <div class="flex flex-wrap gap-3 mb-6">
       <input
         v-model="searchQuery"
         placeholder="ค้นหา: หมายเลข / ผู้แจ้ง / อาการเสีย"
@@ -183,6 +182,17 @@ onMounted(() => {
         type="date"
         class="h-10 px-3 rounded-lg border border-gray-300"
       />
+
+      <!-- Status Filter Dropdown -->
+      <select
+        v-model="selectedStatusFilter"
+        class="h-10 px-3 rounded-lg border border-gray-300 text-sm text-gray-700"
+      >
+        <option value="all">ทุกสถานะ</option>
+        <option value="pending">รอดำเนินการ</option>
+        <option value="in_progress">กำลังดำเนินการ</option>
+        <option value="outsource">จ้างช่างภายนอก</option>
+      </select>
     </div>
 
     <!-- Table -->
@@ -191,7 +201,7 @@ onMounted(() => {
       :rows="filteredRows"
       :perPage="10"
       :statusColumn="2"
-      :columnAlign="['left', 'left','center', 'center']"
+      :columnAlign="['left', 'left', 'center', 'center']"
     >
       <template #cell-3="{ row }">
         <TableActionsComponent
