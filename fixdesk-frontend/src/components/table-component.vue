@@ -13,6 +13,8 @@ const props = defineProps({
   urgencyColumn: { type: Number, default: null }, // เช่น 4
   statusColumn: { type: Number, default: null }, // เช่น 5
   statusStockColumn: { type: Number, default: null },
+  statusStockinventoryColumn: { type: Number, default: null },
+
   columnAlign: { type: Array, default: () => [] },
   hiddenColumns: { type: Array, default: () => [] }, // คอลัมน์ที่ต้องการซ่อน เช่น [0]
 })
@@ -85,12 +87,22 @@ function renderStatusStockBadge(type) {
       return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-green-100 text-green-600 font-semibold">อนุมัติแล้ว</span>`
     case 'rejected':
       return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-red-100 text-red-500 font-semibold">ไม่อนุมัติ</span>`
+    default:
+      return type
+  }
+}
+
+function renderStatusStockInventoryBadge(type) {
+  switch (type) {
     case 'in_stock':
-      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-red-100 text-red-500 font-semibold">ไม่อนุมัติ</span>`
-    case 'out_of_stock':
-      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-red-100 text-red-500 font-semibold">ไม่อนุมัติ</span>`
+      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-green-100 text-green-600 font-semibold">พร้อมใช้งาน</span>`
+
     case 'low_stock':
-      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-red-100 text-red-500 font-semibold">ไม่อนุมัติ</span>`
+      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-amber-100 text-amber-600 font-semibold">ใกล้หมด</span>`
+
+    case 'out_of_stock':
+      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-red-100 text-red-600 font-semibold">สินค้าหมด</span>`
+
     default:
       return type
   }
@@ -143,6 +155,11 @@ function renderStatusStockBadge(type) {
             <span
               v-else-if="cellIndex === props.statusStockColumn"
               v-html="renderStatusStockBadge(cell)"
+            ></span>
+
+            <span
+              v-else-if="cellIndex === props.statusStockinventoryColumn"
+              v-html="renderStatusStockInventoryBadge(cell)"
             ></span>
 
             <!-- SLOT (ใช้สำหรับ Actions) -->

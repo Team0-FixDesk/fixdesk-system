@@ -42,6 +42,7 @@ const fetchRepairRequests = async () => {
     repairRequests.value = data.map((r) => ({
       row: [
         r.rf_code,
+        r.tt_name,
         'วันที่แจ้ง: ' +
           new Date(r.rf_create_at).toLocaleDateString('th-TH') +
           '</br>' +
@@ -49,10 +50,7 @@ const fetchRepairRequests = async () => {
           `${r.us_first_name || ''} ${r.us_last_name || ''}`.trim() +
           '</br>' +
           'หน่วยงาน: ' +
-          r.department_name +
-          '</br>' +
-          'ประเภทแจ้งซ่อม : ' +
-          r.tt_name,
+          r.department_name,
         r.rf_urgency,
         r.rf_user_status,
         '', // action
@@ -215,24 +213,29 @@ onMounted(fetchRepairRequests)
     <!-- Table -->
     <div class="p-3 mx-auto max-w-8xl mt-4">
       <TableComponent
-        :columns="['หมายเลขแจ้งซ่อม', 'รายละเอียด', 'ความเร่งด่วน', 'สถานะงาน', 'การดำเนินการ']"
+        :columns="[
+          'หมายเลขแจ้งซ่อม',
+          'ประเภทงาน',
+          'รายละเอียด',
+          'ความเร่งด่วน',
+          'สถานะงาน',
+          'การดำเนินการ',
+        ]"
         :rows="rowsForDisplay"
         :perPage="10"
-        :urgencyColumn="2"
-        :statusColumn="3"
-        :columnAlign="['left', 'left', 'center', 'center', 'center']"
+        :urgencyColumn="3"
+        :statusColumn="4"
+        :columnAlign="['left', 'left', 'left', 'center', 'center', 'center']"
       >
-        <template #cell-4="{ row, rowIndex }">
-          <TableActions
-            :open-menu-id="openMenuId"
-            @toggle-menu="openMenuId = $event"
-            :row-id="row[0]"
-            :row="row"
-            :status="row[3]"
-            :assigned-tech="filteredRequests[rowIndex].meta.rf_assigned_tech_id"
-            @detail="goToRepairDetail(row[0])"
-            @delete="deleteRepair(row[0])"
-          />
+        <template #cell-5="{ row }">
+          <div class="flex justify-center">
+            <button
+              @click="goToRepairDetail(row[0])"
+              class="flex items-center gap-2 px-2 py-2 rounded-md bg-blue-500 text-white hover:bg-blue-600"
+            >
+              <img src="/icon/info-icon.svg" class="h-4 w-4" />
+            </button>
+          </div>
         </template>
       </TableComponent>
     </div>

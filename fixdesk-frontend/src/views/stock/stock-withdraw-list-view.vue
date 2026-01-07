@@ -2,7 +2,6 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import TableComponent from '@/components/table-component.vue'
-import TableActions from '@/components/table-actions-component.vue'
 import Sweetalert from 'sweetalert2'
 
 defineOptions({ name: 'StockWithdrawListView' })
@@ -21,7 +20,6 @@ const selectedDate = ref('')
 
 const showUrgency = ref(false)
 const showStatus = ref(false)
-const openMenuId = ref(null)
 
 // ==================== ดึงทั้งหมด ====================
 async function loadStockForms() {
@@ -49,20 +47,26 @@ async function loadStockForms() {
 
     if (!res.ok) throw new Error(data.message)
 
-    tableRows.value = data.map((item) => [
-      item.sf_code, // 0: รหัสใบเบิก
-      item.us_department || '-', // 1: หน่วยงานผู้เบิก
-      `<div style="text-align:left;">
-     <span style="display:inline-block; width:70px;">วันที่:</span>
-     ${new Date(item.sf_create_at).toLocaleDateString('th-TH')}<br>
-     <span style="display:inline-block; width:70px;">ผู้ขอเบิก:</span>
-     ${item.requester}<br>
-     <span style="display:inline-block; width:70px;">สถานที่:</span>
-     ${item.bd_name} ${item.fl_name} ${item.room_name}
-   </div>`, // 2: รายละเอียด
-      item.sf_status, // 3: สถานะการเบิก
-      '', // 4: Action
-    ])
+    tableRows.value = data
+      .filter((item) => item.sf_status === 'waiting')
+      .map((item) => [
+        item.sf_code, // 0
+        item.us_department || '-', // 1
+        'วันที่: ' +
+          new Date(item.sf_create_at).toLocaleDateString('th-TH') +
+          '<br>' +
+          'ผู้ขอเบิก: ' +
+          item.requester +
+          '<br>' +
+          'สถานที่: ' +
+          item.bd_name +
+          ' ' +
+          item.fl_name +
+          ' ' +
+          item.room_name, // 2
+        item.sf_status, // 3
+        '', // 4
+      ])
   } catch (err) {
     console.error('Error:', err.message)
 
@@ -83,7 +87,7 @@ const filteredRows = computed(() => {
 
   return tableRows.value.filter((row) => {
     const code = row[0].toLowerCase()
-    console.log("openDetail value:", row[0])
+    console.log('openDetail value:', row[0])
 
     const dept = row[1]?.toLowerCase() || ''
     const detail = row[2]?.toLowerCase() || ''
@@ -124,7 +128,7 @@ onBeforeUnmount(() => {
     <h1 class="text-xl font-bold mb-6">รายการเบิกของทั้งหมด</h1>
 
     <!-- FILTERS -->
-    <div class="flex gap-3 mb-6 flex-wrap">
+    <div class="flex gap-3 mb-6 flex-wrap relative z-40">
       <input
         v-model="searchQuery"
         type="text"
@@ -169,17 +173,22 @@ onBeforeUnmount(() => {
     </div>
 
     <!-- TABLE -->
-    <TableComponent :columns="columns" :rows="filteredRows" :perPage="10" :statusStockColumn="3">
+    <TableComponent
+      :columns="columns"
+      :rows="filteredRows"
+      :perPage="10"
+      :statusStockColumn="3"
+      :columnAlign="['left', 'left', 'left', 'center', 'center']"
+    >
       <template #cell-4="{ row }">
-        <TableActions
-          :row-id="row[0]"
-          :open-menu-id="openMenuId"
-          role="stock"
-          :row="row"
-          :status="row[3]"
-          @toggle-menu="openMenuId = $event"
-          @detail="openDetail(row[0])"
-        />
+        <div class="flex justify-center">
+          <button
+            @click="openDetail(row[0])"
+            class="flex items-center gap-2 px-2 py-2 rounded-md bg-blue-500 text-white hover:bg-blue-600"
+          >
+            <img src="/icon/info-icon.svg" class="h-4 w-4" />
+          </button>
+        </div>
       </template>
     </TableComponent>
   </div>

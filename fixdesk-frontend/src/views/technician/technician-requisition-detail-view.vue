@@ -1,14 +1,8 @@
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import Swal from 'sweetalert2'
+import { ref} from 'vue'
 
 defineOptions({ name: 'TechnicianRequisitionDetailView' })
 
-// Router & Config
-const route = useRoute()
-const router = useRouter()
-const API_BASE = import.meta.env.VITE_API_BASE
 
 const items = ref([
   {
@@ -145,12 +139,3 @@ const submitRequisition = () => {
 
   </div>
 </template>
-
-<style scoped>
-.form-label {
-  @apply block text-sm font-medium mb-1;
-}
-.form-input {
-  @apply w-full h-10 px-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500;
-}
-</style>

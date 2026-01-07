@@ -149,6 +149,7 @@ onBeforeUnmount(() => {
     >
       <!-- ทุก role ใช้ได้ -->
       <button
+        v-if="role !== 'stock'"
         @click="emit('detail', row)"
         class="w-full text-left px-3 py-2 rounded-md hover:bg-gray-100 flex items-center gap-2"
       >
@@ -284,6 +285,32 @@ onBeforeUnmount(() => {
           />
           ลบ
         </button>
+      </template>
+
+      <!-- Stock -->
+      <template v-if="role === 'stock'">
+        <div class="border-t border-gray-200 my-1"></div>
+
+        <button
+          @click="emit('edit', row)"
+          class="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2"
+        >
+          <img src="/icon/edit-icon.svg" class="bg-amber-400 rounded-md p-1 h-6 w-6" />
+          แก้ไข
+        </button>
+
+        <div class="border-t border-gray-200 my-1"></div>
+
+        <button
+          @click="emit('delete', row)"
+          class="w-full text-left px-3 py-2 hover:bg-gray-100 text-red-600 flex items-center gap-2"
+        >
+          <img src="/icon/bin-icon.svg" class="bg-red-400 rounded-md p-1 h-6 w-6" />
+          ลบ
+        </button>
+      </template>
+      <template v-if="role === 'stockList'">
+        
       </template>
     </div>
   </div>

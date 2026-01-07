@@ -963,7 +963,7 @@ async function handleDeleteTechType(item) {
     <!-- ฟิลเตอร์ -->
     <div class="mb-6">
       <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-4">
-        <div class="flex flex-wrap items-center gap-3">
+        <div class="flex flex-wrap items-center gap-3 relative z-40">
           <!-- ค้นหา -->
           <input
             v-model="searchQuery"
