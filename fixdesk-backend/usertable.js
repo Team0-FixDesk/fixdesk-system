@@ -190,7 +190,7 @@ CREATE TABLE stock_form (
   sf_us_id INT,                               -- ผู้เบิกของ
   sf_rf_id INT,                               -- ใบแจ้งซ่อมที่เกี่ยวข้อง
   sf_urgency ENUM('low','medium','high') DEFAULT 'medium',
-  sf_status ENUM('waiting','approved','rejected','completed') DEFAULT 'waiting',
+  sf_status ENUM('waiting','approved','rejected') DEFAULT 'waiting',
   sf_create_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,    -- Mapping: DateFormat:basicDateTH
   sf_update_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     ON UPDATE CURRENT_TIMESTAMP,

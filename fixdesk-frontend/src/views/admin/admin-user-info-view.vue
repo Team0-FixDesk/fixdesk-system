@@ -1,7 +1,12 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import TableComponent from '@/components/table-component.vue'
+import TableActions from '@/components/table-actions-component.vue'
+
 import Sweetalert from 'sweetalert2'
+
+import { usePhoneFormat } from '@/composables/usePhoneFormat'
+const { toRaw, toDisplay} = usePhoneFormat()
 
 defineOptions({ name: 'AdminUserInfoView' })
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
@@ -12,7 +17,7 @@ const getAuthHeaders = () => {
   return { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
 }
 
-const columns = ['ชื่อเต็ม', 'ชื่อผู้ใช้', 'หน่วยงาน', 'บทบาท', 'ตำแหน่ง', 'ตัวดำเนินการ']
+const columns = ['ชื่อ-นามสกุล', 'ชื่อผู้ใช้', 'หน่วยงาน', 'บทบาท', 'ตำแหน่ง', 'ตัวดำเนินการ']
 const rows = ref([])
 const searchQuery = ref('')
 const selectedRoles = ref([])
@@ -20,6 +25,7 @@ const selectedTechTypes = ref([])
 const showRoleFilter = ref(false)
 const showTechFilter = ref(false)
 const userIdByUsername = ref({})
+const openMenuId = ref(null)
 
 async function fetchUsers() {
   try {
@@ -38,7 +44,10 @@ async function fetchUsers() {
       department: user.us_department || '-',
       role: user.role_name || '-', // จาก DB
       technicianType: user.technician_type || '-', // จาก DB
-      raw: user,
+      raw: {
+        ...user,
+        us_phone: toDisplay(user.us_phone),
+      },
     }))
 
     // สร้าง map username → id
@@ -66,17 +75,27 @@ async function fetchUsers() {
       animation: false,
       showConfirmButton: false,
       timer: 3000,
-      timerProgressBar: true
+      timerProgressBar: true,
     })
     Toast.fire({
       title: 'ผิดพลาด',
       text: 'ไม่สามารถโหลดข้อมูลผู้ใช้ได้',
       icon: 'error',
       background: '#fee2e2',
-      color: '#dc2626'
+      color: '#dc2626',
     })
   }
 }
+
+// Global toast ใช้ได้ทุกที่
+const toast = Sweetalert.mixin({
+  toast: true,
+  position: 'top-end',
+  showConfirmButton: false,
+  timer: 3000,
+  timerProgressBar: true,
+})
+
 
 //ฟิลเตอร์
 const roleFilterOptions = ref([]) // list บทบาททั้งหมดจาก DB
@@ -159,7 +178,9 @@ function openViewModal(username) {
     const row = rows.value.find((r) => r.username === username)
     if (!row) throw new Error('ไม่พบผู้ใช้ในข้อมูลที่โหลดไว้')
 
-    Object.assign(viewForm.value, row.raw)
+    const data = { ...row.raw }
+    data.us_phone = toDisplay(data.us_phone)
+    Object.assign(viewForm.value, data)
     showViewModal.value = true
   } catch (err) {
     // Toast notification
@@ -169,14 +190,14 @@ function openViewModal(username) {
       animation: false,
       showConfirmButton: false,
       timer: 3000,
-      timerProgressBar: true
+      timerProgressBar: true,
     })
     Toast.fire({
       title: 'ผิดพลาด',
       text: err.message,
       icon: 'error',
       background: '#fee2e2',
-      color: '#dc2626'
+      color: '#dc2626',
     })
   }
 }
@@ -231,6 +252,7 @@ async function confirmAddUser() {
         us_ttn_id: parseInt(addForm.value.us_ttn_id),
         us_role_id: parseInt(addForm.value.us_role_id),
         us_tt_id: addForm.value.us_tt_id ? parseInt(addForm.value.us_tt_id) : null,
+        us_phone: toRaw(addForm.value.us_phone),
       }),
     })
     const data = await res.json()
@@ -247,7 +269,7 @@ async function confirmAddUser() {
       icon: 'success',
       title: 'เพิ่มผู้ใช้เรียบร้อยแล้ว',
       background: '#f0f9ff',
-      color: '#1e3a8a'
+      color: '#1e3a8a',
     })
     showAddModal.value = false
     await fetchUsers()
@@ -256,7 +278,7 @@ async function confirmAddUser() {
       icon: 'error',
       title: err.message || 'ไม่สามารถเพิ่มผู้ใช้ได้',
       background: '#fee2e2',
-      color: '#dc2626'
+      color: '#dc2626',
     })
   }
 }
@@ -281,7 +303,9 @@ function openEditModal(username) {
   try {
     const row = rows.value.find((r) => r.username === username)
     if (!row) throw new Error('ไม่พบผู้ใช้ในข้อมูลที่โหลดไว้')
-    Object.assign(editForm.value, row.raw)
+    const data = { ...row.raw }
+    data.us_phone = toDisplay(data.us_phone)
+    Object.assign(editForm.value, data)
     showEditModal.value = true
   } catch (err) {
     // Toast notification
@@ -291,14 +315,14 @@ function openEditModal(username) {
       animation: false,
       showConfirmButton: false,
       timer: 3000,
-      timerProgressBar: true
+      timerProgressBar: true,
     })
     Toast.fire({
       title: 'ผิดพลาด',
       text: err.message,
       icon: 'error',
       background: '#fee2e2',
-      color: '#dc2626'
+      color: '#dc2626',
     })
   }
 }
@@ -328,6 +352,7 @@ async function confirmEditUser() {
         us_ttn_id: parseInt(editForm.value.us_ttn_id),
         us_role_id: parseInt(editForm.value.us_role_id),
         us_tt_id: editForm.value.us_tt_id ? parseInt(editForm.value.us_tt_id) : null,
+        us_phone: toRaw(editForm.value.us_phone),
       }),
     })
     const data = await res.json()
@@ -344,7 +369,7 @@ async function confirmEditUser() {
       icon: 'success',
       title: 'แก้ไขข้อมูลผู้ใช้เรียบร้อยแล้ว',
       background: '#f0f9ff',
-      color: '#1e3a8a'
+      color: '#1e3a8a',
     })
     showEditModal.value = false
     await fetchUsers()
@@ -353,7 +378,7 @@ async function confirmEditUser() {
       icon: 'error',
       title: err.message || 'ไม่สามารถแก้ไขข้อมูลผู้ใช้ได้',
       background: '#fee2e2',
-      color: '#dc2626'
+      color: '#dc2626',
     })
   }
 }
@@ -416,7 +441,7 @@ async function confirmDelete(username) {
       icon: 'success',
       title: 'ลบผู้ใช้เรียบร้อยแล้ว',
       background: '#f0f9ff',
-      color: '#1e3a8a'
+      color: '#1e3a8a',
     })
     await fetchUsers()
   } catch (err) {
@@ -424,7 +449,7 @@ async function confirmDelete(username) {
       icon: 'error',
       title: err.message || 'ไม่สามารถลบผู้ใช้ได้',
       background: '#fee2e2',
-      color: '#dc2626'
+      color: '#dc2626',
     })
   }
 }
@@ -525,7 +550,7 @@ function validateAddForm() {
   if (!addForm.value.us_phone.trim()) {
     addErrors.value.phone = 'กรุณากรอกเบอร์โทร'
     valid = false
-  } else if (!/^[0-9]{9,10}$/.test(addForm.value.us_phone)) {
+  } else if (!/^[0-9]{9,10}$/.test(toRaw(addForm.value.us_phone))) {
     addErrors.value.phone = 'เบอร์โทรต้องเป็นตัวเลข 9–10 หลัก'
     valid = false
   }
@@ -545,6 +570,19 @@ function validateAddForm() {
     valid = false
   }
   return valid
+}
+
+// ฟังก์ชัน clear error เมื่อผู้ใช้กำลังพิมพ์
+function clearAddError(field) {
+  if (addErrors.value[field]) {
+    addErrors.value[field] = ''
+  }
+}
+
+function clearEditError(field) {
+  if (editErrors.value[field]) {
+    editErrors.value[field] = ''
+  }
 }
 
 // ตัวแปรและ validation สำหรับตรวจสอบความถูกต้องของ input ในฟอร์มแก้ไขข้อมูลผู้ใช้
@@ -615,7 +653,7 @@ function validateEditForm() {
   if (!editForm.value.us_phone.trim()) {
     editErrors.value.phone = 'กรุณากรอกเบอร์โทร'
     valid = false
-  } else if (!/^[0-9]{9,10}$/.test(editForm.value.us_phone)) {
+  } else if (!/^[0-9]{9,10}$/.test(toRaw(editForm.value.us_phone))) {
     editErrors.value.phone = 'เบอร์โทรต้องเป็นตัวเลข 9–10 หลัก'
     valid = false
   }
@@ -698,14 +736,14 @@ async function fetchMasterData() {
       animation: false,
       showConfirmButton: false,
       timer: 3000,
-      timerProgressBar: true
+      timerProgressBar: true,
     })
     Toast.fire({
       title: 'ผิดพลาด',
       text: 'ไม่สามารถโหลดข้อมูลคำนำหน้า/บทบาท/ประเภทช่างได้',
       icon: 'error',
       background: '#fee2e2',
-      color: '#dc2626'
+      color: '#dc2626',
     })
   }
 }
@@ -756,14 +794,14 @@ async function handleAddTechType() {
       didOpen: (toast) => {
         toast.addEventListener('mouseenter', Sweetalert.stopTimer)
         toast.addEventListener('mouseleave', Sweetalert.resumeTimer)
-      }
+      },
     })
     await Toast.fire({
       title: 'สำเร็จ',
       text: 'เพิ่มตำแหน่งช่างเรียบร้อยแล้ว',
       icon: 'success',
       background: '#f0f9ff',
-      color: '#1e3a8a'
+      color: '#1e3a8a',
     })
     await fetchMasterData()
     await fetchUsers()
@@ -775,14 +813,14 @@ async function handleAddTechType() {
       animation: false,
       showConfirmButton: false,
       timer: 3000,
-      timerProgressBar: true
+      timerProgressBar: true,
     })
     Toast.fire({
       title: 'ผิดพลาด',
       text: err.message || 'ไม่สามารถเพิ่มตำแหน่งช่างได้',
       icon: 'error',
       background: '#fee2e2',
-      color: '#dc2626'
+      color: '#dc2626',
     })
   }
 }
@@ -808,6 +846,7 @@ async function handleEditTechType(item) {
       method: 'PUT',
       headers: getAuthHeaders(),
       body: JSON.stringify({ tt_name: name.trim() }),
+      us_phone: toRaw(addForm.value.us_phone),
     })
     const data = await res.json()
     if (!res.ok) throw new Error(data.message || 'แก้ไขตำแหน่งช่างไม่สำเร็จ')
@@ -823,14 +862,14 @@ async function handleEditTechType(item) {
       didOpen: (toast) => {
         toast.addEventListener('mouseenter', Sweetalert.stopTimer)
         toast.addEventListener('mouseleave', Sweetalert.resumeTimer)
-      }
+      },
     })
     await Toast.fire({
       title: 'สำเร็จ',
       text: 'แก้ไขตำแหน่งช่างเรียบร้อยแล้ว',
       icon: 'success',
       background: '#f0f9ff',
-      color: '#1e3a8a'
+      color: '#1e3a8a',
     })
     await fetchMasterData()
     await fetchUsers()
@@ -842,14 +881,14 @@ async function handleEditTechType(item) {
       animation: false,
       showConfirmButton: false,
       timer: 3000,
-      timerProgressBar: true
+      timerProgressBar: true,
     })
     Toast.fire({
       title: 'ผิดพลาด',
       text: err.message || 'ไม่สามารถแก้ไขตำแหน่งช่างได้',
       icon: 'error',
       background: '#fee2e2',
-      color: '#dc2626'
+      color: '#dc2626',
     })
   }
 }
@@ -885,14 +924,14 @@ async function handleDeleteTechType(item) {
       didOpen: (toast) => {
         toast.addEventListener('mouseenter', Sweetalert.stopTimer)
         toast.addEventListener('mouseleave', Sweetalert.resumeTimer)
-      }
+      },
     })
     await Toast.fire({
       title: 'สำเร็จ',
       text: 'ลบตำแหน่งช่างเรียบร้อยแล้ว',
       icon: 'success',
       background: '#f0f9ff',
-      color: '#1e3a8a'
+      color: '#1e3a8a',
     })
     await fetchMasterData()
     await fetchUsers()
@@ -904,14 +943,14 @@ async function handleDeleteTechType(item) {
       animation: false,
       showConfirmButton: false,
       timer: 3000,
-      timerProgressBar: true
+      timerProgressBar: true,
     })
     Toast.fire({
       title: 'ผิดพลาด',
       text: err.message || 'ไม่สามารถลบตำแหน่งช่างได้',
       icon: 'error',
       background: '#fee2e2',
-      color: '#dc2626'
+      color: '#dc2626',
     })
   }
 }
@@ -924,7 +963,7 @@ async function handleDeleteTechType(item) {
     <!-- ฟิลเตอร์ -->
     <div class="mb-6">
       <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-4">
-        <div class="flex flex-wrap items-center gap-3">
+        <div class="flex flex-wrap items-center gap-3 relative z-40">
           <!-- ค้นหา -->
           <input
             v-model="searchQuery"
@@ -964,8 +1003,9 @@ async function handleDeleteTechType(item) {
           <!-- ฟิลเตอร์ตำแหน่ง -->
           <div class="relative">
             <button
-  @click.stop="toggleTechFilter"   class="h-10 flex items-center gap-2 border border-gray-300 rounded-lg px-4 py-2 bg-white text-gray-700"
->
+              @click.stop="toggleTechFilter"
+              class="h-10 flex items-center gap-2 border border-gray-300 rounded-lg px-4 py-2 bg-white text-gray-700"
+            >
               ตำแหน่ง
               <img
                 src="/icon/sidebar/chevron-down-icon.svg"
@@ -1030,15 +1070,26 @@ async function handleDeleteTechType(item) {
               u.department,
               u.role,
               u.technicianType,
-              'actions',
+              '',
             ])
           "
           :perPage="10"
-          mode="full"
-          @detail="(username) => openViewModal(username)"
-          @edit="(username) => openEditModal(username)"
-          @delete="confirmDelete"
-        />
+          :columnAlign="['left','left','left','left','left','center']"
+        >
+          <!-- ใส่ SLOT ให้ column ตัวดำเนินการ -->
+          <template #cell-5="{ row }">
+            <TableActions
+              :row-id="row[1]"
+              :row="row"
+              role="admin"
+              :open-menu-id="openMenuId"
+              @toggle-menu="openMenuId = $event"
+              @detail="openViewModal(row[1])"
+              @edit="openEditModal(row[1])"
+              @delete="confirmDelete(row[1])"
+            />
+          </template>
+        </TableComponent>
       </div>
     </div>
 
@@ -1223,6 +1274,7 @@ async function handleDeleteTechType(item) {
               </label>
               <input
                 v-model="addForm.us_user_name"
+                @input="clearAddError('username')"
                 type="text"
                 :class="[
                   'w-full px-3 py-2 border rounded-md',
@@ -1240,6 +1292,7 @@ async function handleDeleteTechType(item) {
               </label>
               <input
                 v-model="addForm.us_user_pass"
+                @input="clearAddError('password')"
                 type="password"
                 :class="[
                   'w-full px-3 py-2 border rounded-md',
@@ -1259,6 +1312,7 @@ async function handleDeleteTechType(item) {
             </label>
             <select
               v-model="addForm.us_ttn_id"
+              @change="clearAddError('ttn')"
               :class="[
                 'w-full px-3 py-2 border rounded-md bg-white',
                 addErrors.ttn ? 'border-red-500' : 'border-gray-300',
@@ -1285,6 +1339,7 @@ async function handleDeleteTechType(item) {
               </label>
               <input
                 v-model="addForm.us_first_name_th"
+                @input="clearAddError('firstTh')"
                 type="text"
                 :class="[
                   'w-full px-3 py-2 border rounded-md',
@@ -1302,6 +1357,7 @@ async function handleDeleteTechType(item) {
               </label>
               <input
                 v-model="addForm.us_last_name_th"
+                @input="clearAddError('lastTh')"
                 type="text"
                 :class="[
                   'w-full px-3 py-2 border rounded-md',
@@ -1322,6 +1378,7 @@ async function handleDeleteTechType(item) {
               >
               <input
                 v-model="addForm.us_first_name_en"
+                @input="clearAddError('firstEn')"
                 type="text"
                 :class="[
                   'w-full px-3 py-2 border rounded-md',
@@ -1339,6 +1396,7 @@ async function handleDeleteTechType(item) {
               >
               <input
                 v-model="addForm.us_last_name_en"
+                @input="clearAddError('lastEn')"
                 type="text"
                 :class="[
                   'w-full px-3 py-2 border rounded-md',
@@ -1359,6 +1417,7 @@ async function handleDeleteTechType(item) {
               >
               <input
                 v-model="addForm.us_phone"
+                @input="addForm.us_phone = toDisplay(addForm.us_phone); clearAddError('phone')"
                 type="tel"
                 :class="[
                   'w-full px-3 py-2 border rounded-md',
@@ -1382,6 +1441,7 @@ async function handleDeleteTechType(item) {
                   addErrors.department ? 'border-red-500' : 'border-gray-300',
                 ]"
                 placeholder="กรอกหน่วยงาน"
+                @input="clearAddError('department')"
               />
               <p v-if="addErrors.department" class="text-red-500 text-sm mt-1">
                 {{ addErrors.department }}
@@ -1396,7 +1456,7 @@ async function handleDeleteTechType(item) {
               </label>
               <select
                 v-model="addForm.us_role_id"
-                @change="handleAddRoleChange"
+                @change="handleAddRoleChange(); clearAddError('role')"
                 :class="[
                   'w-full px-3 py-2 border rounded-md bg-white',
                   addErrors.role ? 'border-red-500' : 'border-gray-300',
@@ -1419,6 +1479,7 @@ async function handleDeleteTechType(item) {
               <select
                 v-model="addForm.us_tt_id"
                 :disabled="addForm.us_role_id !== '2'"
+                @change="clearAddError('techType')"
                 :class="[
                   'w-full px-3 py-2 border rounded-md',
                   addForm.us_role_id === '2'
@@ -1496,6 +1557,7 @@ async function handleDeleteTechType(item) {
             </label>
             <select
               v-model="editForm.us_ttn_id"
+              @change="clearEditError('ttn')"
               :class="[
                 'w-full px-3 py-2 border rounded-md bg-white',
                 editErrors.ttn ? 'border-red-500' : 'border-gray-300',
@@ -1528,6 +1590,7 @@ async function handleDeleteTechType(item) {
                   editErrors.firstTh ? 'border-red-500' : 'border-gray-300',
                 ]"
                 placeholder="กรอกชื่อ"
+                @input="clearEditError('firstTh')"
               />
               <p v-if="editErrors.firstTh" class="text-red-500 text-sm mt-1">
                 {{ editErrors.firstTh }}
@@ -1545,6 +1608,7 @@ async function handleDeleteTechType(item) {
                   editErrors.lastTh ? 'border-red-500' : 'border-gray-300',
                 ]"
                 placeholder="กรอกนามสกุล"
+                @input="clearEditError('lastTh')"
               />
               <p v-if="editErrors.lastTh" class="text-red-500 text-sm mt-1">
                 {{ editErrors.lastTh }}
@@ -1563,6 +1627,7 @@ async function handleDeleteTechType(item) {
                   editErrors.firstEn ? 'border-red-500' : 'border-gray-300',
                 ]"
                 placeholder="First Name"
+                @input="clearEditError('firstEn')"
               />
               <p v-if="editErrors.firstEn" class="text-red-500 text-sm mt-1">
                 {{ editErrors.firstEn }}
@@ -1578,6 +1643,7 @@ async function handleDeleteTechType(item) {
                   editErrors.lastEn ? 'border-red-500' : 'border-gray-300',
                 ]"
                 placeholder="Last Name"
+                @input="clearEditError('lastEn')"
               />
               <p v-if="editErrors.lastEn" class="text-red-500 text-sm mt-1">
                 {{ editErrors.lastEn }}
@@ -1590,6 +1656,7 @@ async function handleDeleteTechType(item) {
               <label class="block text-sm font-medium mb-1.5">เบอร์โทร</label>
               <input
                 v-model="editForm.us_phone"
+                @input="editForm.us_phone = toDisplay(editForm.us_phone); clearEditError('phone')"
                 type="tel"
                 :class="[
                   'w-full px-3 py-2 border rounded-md',
@@ -1613,6 +1680,7 @@ async function handleDeleteTechType(item) {
                   editErrors.department ? 'border-red-500' : 'border-gray-300',
                 ]"
                 placeholder="กรอกหน่วยงาน"
+                @input="clearEditError('department')"
               />
               <p v-if="editErrors.department" class="text-red-500 text-sm mt-1">
                 {{ editErrors.department }}
@@ -1627,7 +1695,7 @@ async function handleDeleteTechType(item) {
               </label>
               <select
                 v-model="editForm.us_role_id"
-                @change="handleEditRoleChange"
+                @change="handleEditRoleChange(); clearEditError('role')"
                 :class="[
                   'w-full px-3 py-2 border rounded-md bg-white',
                   editErrors.role ? 'border-red-500' : 'border-gray-300',
@@ -1654,6 +1722,7 @@ async function handleDeleteTechType(item) {
               <select
                 v-model="editForm.us_tt_id"
                 :disabled="editForm.us_role_id !== '2' && editForm.us_role_id !== 2"
+                @change="clearEditError('techType')"
                 :class="[
                   'w-full px-3 py-2 border rounded-md',
                   editForm.us_role_id === '2' || editForm.us_role_id === 2
