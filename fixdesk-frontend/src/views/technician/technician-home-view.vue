@@ -94,7 +94,11 @@ const onRepairRowClick = (item) => {
   const id = typeof item === 'object' && item !== null ? item.ticketId : item
 
   if (id) {
-    router.push(`/main/repair-detail/${id}`)
+    router.push({
+      path: `/main/repair-detail/${id}`,
+      state: { fromTechnician: true }
+    })
+
   } else {
     console.warn('Invalid ID clicked:', item)
   }
@@ -113,11 +117,11 @@ const mapUrgency = (u) =>
   ({ high: 'เร่งด่วนมาก', medium: 'เร่งด่วน', low: 'ไม่เร่งด่วน' })[u] || 'เร่งด่วน'
 const mapStatus = (s) =>
   ({ pending: 'รอดำเนินการ', in_progress: 'กำลังดำเนินการ', done: 'เสร็จสิ้น', cancel: 'ยกเลิก' })[
-    s
+  s
   ] || 'รอดำเนินการ'
 const mapStockStatus = (s) =>
   ({ waiting: 'รอดำเนินการ', approved: 'อนุมัติ', rejected: 'ปฏิเสธ', completed: 'เสร็จสิ้น' })[
-    s
+  s
   ] || '-'
 
 // Function to generate HTML badge string for TableComponent
@@ -271,33 +275,22 @@ onMounted(() => {
             <h2 class="text-xl font-bold text-gray-900">งานที่ได้รับมอบหมายล่าสุด</h2>
             <p class="text-sm text-gray-500">5 รายการล่าสุด</p>
           </div>
-          <button
-            @click="router.push('/main/technician-repair-list')"
-            class="text-sm text-blue-600 hover:underline"
-          >
+          <button @click="router.push('/main/technician-repair-list')" class="text-sm text-blue-600 hover:underline">
             ดูทั้งหมด
           </button>
         </div>
 
-        <TableComponent
-          :columns="['เลขใบงาน', 'หัวข้อ', 'หน่วยงาน', 'สถานที่', 'ความเร่งด่วน', 'สถานะ']"
-          :rows="repairTableRows"
-          :rawRows="repairTableRaw"
-          :perPage="5"
-          mode="view-only"
-          :idColumnIndex="0"  @detail="(id) => onRepairRowClick(id)"
-        />
+        <TableComponent :columns="['เลขใบงาน', 'หัวข้อ', 'หน่วยงาน', 'สถานที่', 'ความเร่งด่วน', 'สถานะ']"
+          :rows="repairTableRows" :rawRows="repairTableRaw" :perPage="5" mode="view-only" :idColumnIndex="0"
+          @detail="(id) => onRepairRowClick(id)" />
       </div>
 
-      <div
-        class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 flex flex-col justify-center items-center"
-      >
+      <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 flex flex-col justify-center items-center">
         <h2 class="text-lg font-bold text-gray-800 mb-6 self-start">สัดส่วนงานทั้งหมด</h2>
         <div class="relative w-48 h-48">
           <div class="w-full h-full rounded-full" :style="donutChart"></div>
           <div
-            class="absolute top-1/2 left-1/2 w-32 h-32 bg-white rounded-full -translate-x-1/2 -translate-y-1/2 flex items-center justify-center"
-          >
+            class="absolute top-1/2 left-1/2 w-32 h-32 bg-white rounded-full -translate-x-1/2 -translate-y-1/2 flex items-center justify-center">
             <span class="text-gray-400 text-xs">ภาพรวม</span>
           </div>
         </div>
@@ -324,14 +317,9 @@ onMounted(() => {
         <p class="text-sm text-gray-500">5 รายการล่าสุด</p>
       </div>
 
-      <TableComponent
-        :columns="['อ้างอิงใบงาน', 'รหัสใบเบิก', 'หน่วยงาน', 'ความเร่งด่วน', 'สถานะ', 'จัดการ']"
-        :rows="stockTableRows"
-        :rawRows="stockTableRaw"
-        :perPage="5"
-        mode="view-only"
-        @detail="(item) => onStockRowClick(item)"
-      />
+      <TableComponent :columns="['อ้างอิงใบงาน', 'รหัสใบเบิก', 'หน่วยงาน', 'ความเร่งด่วน', 'สถานะ', 'จัดการ']"
+        :rows="stockTableRows" :rawRows="stockTableRaw" :perPage="5" mode="view-only"
+        @detail="(item) => onStockRowClick(item)" />
     </div>
   </div>
 </template>
