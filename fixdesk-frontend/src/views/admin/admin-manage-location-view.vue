@@ -400,6 +400,25 @@ const openMenuId = ref(null)
 // เปลี่ยน columns ให้มี 5 คอลัมน์ แต่จะซ่อนคอลัมน์แรก
 const columns = ['', 'อาคาร', 'ชั้น', 'ห้อง', 'การจัดการ']
 
+// Computed: กรองชั้นตามอาคารที่เลือก หรือแสดงชั้นที่ไม่ซ้ำ
+const filteredFloors = computed(() => {
+  if (selectedBuilding.value) {
+    // ถ้าเลือกอาคาร → แสดงเฉพาะชั้นของอาคารนั้น
+    return floors.value.filter((f) => f.building_id == selectedBuilding.value)
+  } else {
+    // ถ้าไม่เลือกอาคาร → แสดงชั้นที่ไม่ซ้ำกัน (unique by floor_name)
+    const uniqueFloors = []
+    const seenNames = new Set()
+    for (const floor of floors.value) {
+      if (!seenNames.has(floor.floor_name)) {
+        seenNames.add(floor.floor_name)
+        uniqueFloors.push(floor)
+      }
+    }
+    return uniqueFloors
+  }
+})
+
 // Filter functions
 function toggleBuildingFilter() {
   showBuildingFilter.value = !showBuildingFilter.value
@@ -1080,7 +1099,7 @@ onBeforeUnmount(() => {
                 <span class="ml-2">ทุกชั้น</span>
               </label>
               <label
-                v-for="floor in floors"
+                v-for="floor in filteredFloors"
                 :key="floor.floor_id"
                 class="flex items-center py-1 hover:bg-gray-50 rounded px-2"
               >
