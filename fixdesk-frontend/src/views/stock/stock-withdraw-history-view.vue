@@ -36,7 +36,7 @@ const selectedUrgencies = ref([])
 
     <!-- Filter -->
     <div class="mb-6">
-      <div class="flex flex-wrap items-center justify-between gap-3">
+      <div class="flex flex-wrap items-center justify-between gap-3 relative z-40">
         <div class="flex flex-wrap items-center gap-3">
           <!-- search Filter-->
           <input v-model="searchQuery" type="text" placeholder="ค้นหารายการของ"
@@ -121,7 +121,7 @@ const selectedUrgencies = ref([])
 
           <!-- ปุ่มล้างตัวกรอง -->
           <transition name="fade">
-            
+
           </transition>
         </div>
       </div>
