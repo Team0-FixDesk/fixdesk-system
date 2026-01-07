@@ -202,11 +202,6 @@ async function loadTimelineForCode(code) {
   }
 }
 
-async function handleSelectRepair(e) {
-  const code = e.target.value
-  selectedTrackingCode.value = code
-  await loadTimelineForCode(code)
-}
 
 function formatDateTimeTH(value) {
   if (!value) return null
@@ -262,38 +257,6 @@ function buildTimelineFromRepair(repairData) {
   return timelineSteps
 }
 
-const getBadgeHtml = (text, type) => {
-  let colorClass = 'bg-gray-100 text-gray-600'
-
-  if (type === 'urgency') {
-    if (text === 'high') {
-      text = 'เร่งด่วนมาก'
-      colorClass = 'bg-red-100 text-red-600'
-    } else if (text === 'medium') {
-      text = 'เร่งด่วน'
-      colorClass = 'bg-amber-50 text-amber-500'
-    } else if (text === 'low') {
-      text = 'ไม่เร่งด่วน'
-      colorClass = 'bg-green-100 text-green-600'
-    }
-  } else if (type === 'status') {
-    if (text === 'pending') {
-      text = 'รอดำเนินการ'
-      colorClass = 'bg-amber-50 text-amber-500'
-    } else if (text === 'in_progress') {
-      text = 'กำลังดำเนินการ'
-      colorClass = 'bg-blue-100 text-blue-600'
-    } else if (text === 'done') {
-      text = 'ดำเนินการเสร็จสิ้น'
-      colorClass = 'bg-green-100 text-green-600'
-    } else {
-      text = 'ยกเลิก'
-      colorClass = 'bg-gray-100 text-gray-500'
-    }
-  }
-
-  return `<span class="inline-flex min-w-[80px] justify-center items-center w-[130px] px-1 py-1 rounded-lg font-semibold ${colorClass}">${text}</span>`
-}
 
 // 2. Computed สำหรับ Rows ที่จะแสดง (แปลง recentRepairs ให้เป็น Array ของ Array)
 const tableRows = computed(() => {
@@ -301,8 +264,8 @@ const tableRows = computed(() => {
     formatDateTH(item.rf_create_at),
     item.rf_code,
     item.tt_name || '-',
-    getBadgeHtml(item.rf_urgency, 'urgency'),
-    getBadgeHtml(item.rf_user_status, 'status'),
+    item.rf_urgency,
+    item.rf_user_status,
   ])
 })
 
@@ -351,13 +314,14 @@ onMounted(() => {
         </div>
 
         <TableComponent
-          class="text-lg"
           :columns="['วันที่', 'หมายเลขแจ้งซ่อม', 'ประเภทงาน', 'ความเร่งด่วน', 'สถานะ']"
           :rows="tableRows"
           :rawRows="tableRawRows"
           :perPage="7"
           mode="user"
           :idColumnIndex="1"
+          :urgencyColumn="3"
+          :statusColumn="4"
           :activeId="selectedTrackingCode"
           @detail="onRowClick"
         />
@@ -440,5 +404,4 @@ onMounted(() => {
   padding-top: 0.5rem; /* ปรับระยะห่างแนวตั้งให้แคบลงด้วย (ถ้าต้องการ) */
   padding-bottom: 0.5rem;
 }
-
 </style>

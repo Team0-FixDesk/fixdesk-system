@@ -30,7 +30,7 @@ const handleLogin = async (e) => {
     })
 
     const data = await res.json()
-    console.log('📬 ผลลัพธ์จาก backend (login):', data)
+    console.log('ผลลัพธ์จาก backend (login):', data)
     if (!res.ok) throw new Error(data.message || 'เข้าสู่ระบบไม่สำเร็จ')
     const storage = rememberMe.value ? localStorage : sessionStorage
 
