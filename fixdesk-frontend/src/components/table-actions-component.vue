@@ -1,5 +1,5 @@
 <script setup>
-  import { computed, onMounted, onBeforeUnmount, ref, nextTick } from 'vue'
+import { computed, onMounted, onBeforeUnmount, ref, nextTick } from 'vue'
 
 const props = defineProps({
   rowId: {
@@ -50,6 +50,8 @@ const isMenuOpen = computed(() => props.openMenuId === props.rowId)
 // Ref สำหรับ dropdown position
 const buttonRef = ref(null)
 const dropdownRef = ref(null)
+const dropdownStyle = ref({})
+
 const showAbove = ref(false)
 
 async function toggleMenu(event) {
@@ -70,13 +72,19 @@ async function toggleMenu(event) {
 function calculatePosition() {
   if (!buttonRef.value) return
 
-  const buttonRect = buttonRef.value.getBoundingClientRect()
+  const btn = buttonRef.value.getBoundingClientRect()
+  const dropdownHeight = 220 // ปรับตามความสูงจริง
   const viewportHeight = window.innerHeight
-  const spaceBelow = viewportHeight - buttonRect.bottom
-  const dropdownHeight = 200 // ประมาณความสูงของ dropdown
 
-  // ถ้าพื้นที่ด้านล่างไม่พอ ให้แสดงด้านบน
-  showAbove.value = spaceBelow < dropdownHeight
+  const spaceBelow = viewportHeight - btn.bottom
+  const openAbove = spaceBelow < dropdownHeight
+
+  dropdownStyle.value = {
+    position: 'fixed',
+    top: openAbove ? `${btn.top - dropdownHeight - 8}px` : `${btn.bottom + 8}px`,
+    left: `${btn.right - 192}px`, // 192 = w-48
+    zIndex: 9999,
+  }
 }
 
 function closeMenu() {
@@ -139,207 +147,235 @@ onBeforeUnmount(() => {
     </button>
 
     <!-- Dropdown Menu -->
-    <div
-      v-if="isMenuOpen"
-      ref="dropdownRef"
-      :class="[
-        'absolute right-0 w-48 bg-white shadow-xl border border-gray-200 rounded-lg p-2 z-50',
-        showAbove ? 'bottom-full mb-2' : 'top-full mt-2'
-      ]"
-    >
-      <!-- ทุก role ใช้ได้ -->
-      <button
-        v-if="role !== 'stock'"
-        @click="emit('detail', row)"
-        class="w-full text-left px-3 py-2 rounded-md hover:bg-gray-100 flex items-center gap-2"
+    <Teleport to="body">
+      <div
+        v-if="isMenuOpen"
+        ref="dropdownRef"
+        class="w-48 bg-white shadow-xl border border-gray-200 rounded-lg p-2"
+        :style="dropdownStyle"
+        @click.stop
       >
-        <img
-          src="/icon/info-icon.svg"
-          class="bg-blue-400 hover:bg-blue-600 rounded-md p-1 h-6 w-6"
-        />
-        รายละเอียด
-      </button>
-
-      <!-- Technician -->
-      <template v-if="role === 'technician'">
-        <!-- รับงาน (pending) -->
+        <!-- ทุก role ใช้ได้ -->
         <button
-          v-if="normalizedStatus === 'pending'"
-          @click="emit('accept', row)"
-          class="w-full text-left px-3 py-2 rounded-md hover:bg-teal-50 flex items-center gap-2 group"
-        >
-          <div class="w-6 h-6 rounded-md bg-teal-500 flex items-center justify-center group-hover:bg-teal-600">
-            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <span class="group-hover:text-teal-700">รับงาน</span>
-        </button>
-
-        <!-- ปิดงาน (in_progress, outsource) -->
-        <button
-          v-if="normalizedStatus === 'in_progress' || normalizedStatus === 'outsource'"
-          @click="emit('close-job', row)"
-          class="w-full text-left px-3 py-2 rounded-md hover:bg-green-50 flex items-center gap-2 group"
-        >
-          <div class="w-6 h-6 rounded-md bg-green-500 flex items-center justify-center group-hover:bg-green-600">
-            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-          <span class="group-hover:text-green-700">ปิดงาน</span>
-        </button>
-
-        <!-- จ้างช่างภายนอก (in_progress) -->
-        <button
-          v-if="normalizedStatus === 'in_progress'"
-          @click="emit('outsource', row)"
-          class="w-full text-left px-3 py-2 rounded-md hover:bg-amber-50 flex items-center gap-2 group"
-        >
-          <div class="w-6 h-6 rounded-md bg-amber-500 flex items-center justify-center group-hover:bg-amber-600">
-            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
-          </div>
-          <span class="group-hover:text-amber-700">จ้างช่างภายนอก</span>
-        </button>
-
-        <!-- เบิกวัสดุอุปกรณ์ (in_progress, outsource) -->
-        <button
-          v-if="normalizedStatus === 'in_progress' || normalizedStatus === 'outsource'"
-          @click="emit('open-stock', row)"
-          class="w-full text-left px-3 py-2 rounded-md hover:bg-blue-50 flex items-center gap-2 group"
-        >
-          <div class="w-6 h-6 rounded-md bg-blue-500 flex items-center justify-center group-hover:bg-blue-600">
-            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-            </svg>
-          </div>
-          <span class="group-hover:text-blue-700">เบิกวัสดุอุปกรณ์</span>
-        </button>
-      </template>
-
-      <!-- Admin / Location -->
-      <template v-if="role === 'admin' || role === 'location'">
-        <button
-          @click="emit('edit', row)"
-          class="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2"
+          v-if="role !== 'stock'"
+          @click="emit('detail', row)"
+          class="w-full text-left px-3 py-2 rounded-md hover:bg-gray-100 flex items-center gap-2"
         >
           <img
-            src="/icon/edit-icon.svg"
-            class="bg-amber-400 hover:bg-amber-600 rounded-md p-1 h-6 w-6"
+            src="/icon/info-icon.svg"
+            class="bg-blue-400 hover:bg-blue-600 rounded-md p-1 h-6 w-6"
           />
-          แก้ไข
-        </button>
-        <div class="border-t border-gray-300 mx-1"></div>
-
-        <button
-          @click="emit('delete', row)"
-          class="w-full text-left px-3 py-2 hover:bg-gray-100 text-red-600 flex items-center gap-2"
-        >
-          <img
-            src="/icon/bin-icon.svg"
-            class="bg-red-400 hover:bg-red-600 rounded-md p-1 h-6 w-6"
-          />
-          ลบ
-        </button>
-      </template>
-
-      <!-- Assign -->
-      <!-- Assign -->
-<template v-if="role === 'assign'">
-  <!-- ยังไม่มอบหมาย -->
-  <button
-    v-if="props.assignedTech == null"
-    @click="emit('assign', row)"
-    class="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2"
-  >
-    <img
-      src="/icon/arrow-right.svg"
-      class="bg-green-400 hover:bg-green-600 rounded-md p-1 h-6 w-6"
-    />
-    มอบหมายงาน
-  </button>
-
-  <!-- มอบหมายแล้ว -->
-  <div
-    v-else
-    class="px-3 py-2 text-sm text-gray-500 leading-snug flex gap-2"
-  >
-    <svg
-      class="w-4 h-4 text-gray-400 mt-0.5"
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
-    >
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-        d="M13 16h-1v-4h-1m1-4h.01M12 18a9 9 0 110-18 9 9 0 010 18z"
-      />
-    </svg>
-
-    <span>
-      งานนี้ถูกมอบหมายแล้ว<br />
-      <span class="text-blue-600 cursor-pointer hover:underline"
-            @click="emit('detail', row)">
-        ดูรายละเอียดใบแจ้งซ่อม
-      </span>
-    </span>
-  </div>
-</template>
-
-
-      <!-- User -->
-      <template v-if="role === 'user'">
-        <button
-          v-if="normalizedStatus === 'pending'"
-          @click="emit('edit', row)"
-          class="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2"
-        >
-          <img
-            src="/icon/edit-icon.svg"
-            class="bg-amber-400 hover:bg-amber-600 rounded-md p-1 h-6 w-6"
-          />
-          แก้ไข
-        </button>
-        <div class="border-t border-gray-300 mx-1"></div>
-        <button
-          v-if="normalizedStatus === 'pending'"
-          @click="emit('delete', row)"
-          class="w-full text-left px-3 py-2 hover:bg-gray-100 text-red-600 flex items-center gap-2"
-        >
-          <img
-            src="/icon/bin-icon.svg"
-            class="bg-red-400 hover:bg-red-600 rounded-md p-1 h-6 w-6"
-          />
-          ลบ
-        </button>
-      </template>
-
-      <!-- Stock -->
-      <template v-if="role === 'stock'">
-        <div class="border-t border-gray-200 my-1"></div>
-
-        <button
-          @click="emit('edit', row)"
-          class="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2"
-        >
-          <img src="/icon/edit-icon.svg" class="bg-amber-400 rounded-md p-1 h-6 w-6" />
-          แก้ไข
+          รายละเอียด
         </button>
 
-        <div class="border-t border-gray-200 my-1"></div>
+        <!-- Technician -->
+        <template v-if="role === 'technician'">
+          <!-- รับงาน (pending) -->
+          <button
+            v-if="normalizedStatus === 'pending'"
+            @click="emit('accept', row)"
+            class="w-full text-left px-3 py-2 rounded-md hover:bg-teal-50 flex items-center gap-2 group"
+          >
+            <div
+              class="w-6 h-6 rounded-md bg-teal-500 flex items-center justify-center group-hover:bg-teal-600"
+            >
+              <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            </div>
+            <span class="group-hover:text-teal-700">รับงาน</span>
+          </button>
 
-        <button
-          @click="emit('delete', row)"
-          class="w-full text-left px-3 py-2 hover:bg-gray-100 text-red-600 flex items-center gap-2"
-        >
-          <img src="/icon/bin-icon.svg" class="bg-red-400 rounded-md p-1 h-6 w-6" />
-          ลบ
-        </button>
-      </template>
-      <template v-if="role === 'stockList'">
+          <!-- ปิดงาน (in_progress, outsource) -->
+          <button
+            v-if="normalizedStatus === 'in_progress' || normalizedStatus === 'outsource'"
+            @click="emit('close-job', row)"
+            class="w-full text-left px-3 py-2 rounded-md hover:bg-green-50 flex items-center gap-2 group"
+          >
+            <div
+              class="w-6 h-6 rounded-md bg-green-500 flex items-center justify-center group-hover:bg-green-600"
+            >
+              <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+            </div>
+            <span class="group-hover:text-green-700">ปิดงาน</span>
+          </button>
 
-      </template>
-    </div>
+          <!-- จ้างช่างภายนอก (in_progress) -->
+          <button
+            v-if="normalizedStatus === 'in_progress'"
+            @click="emit('outsource', row)"
+            class="w-full text-left px-3 py-2 rounded-md hover:bg-amber-50 flex items-center gap-2 group"
+          >
+            <div
+              class="w-6 h-6 rounded-md bg-amber-500 flex items-center justify-center group-hover:bg-amber-600"
+            >
+              <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                />
+              </svg>
+            </div>
+            <span class="group-hover:text-amber-700">จ้างช่างภายนอก</span>
+          </button>
+
+          <!-- เบิกวัสดุอุปกรณ์ (in_progress, outsource) -->
+          <button
+            v-if="normalizedStatus === 'in_progress' || normalizedStatus === 'outsource'"
+            @click="emit('open-stock', row)"
+            class="w-full text-left px-3 py-2 rounded-md hover:bg-blue-50 flex items-center gap-2 group"
+          >
+            <div
+              class="w-6 h-6 rounded-md bg-blue-500 flex items-center justify-center group-hover:bg-blue-600"
+            >
+              <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                />
+              </svg>
+            </div>
+            <span class="group-hover:text-blue-700">เบิกวัสดุอุปกรณ์</span>
+          </button>
+        </template>
+
+        <!-- Admin / Location -->
+        <template v-if="role === 'admin' || role === 'location'">
+          <button
+            @click="emit('edit', row)"
+            class="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2"
+          >
+            <img
+              src="/icon/edit-icon.svg"
+              class="bg-amber-400 hover:bg-amber-600 rounded-md p-1 h-6 w-6"
+            />
+            แก้ไข
+          </button>
+          <div class="border-t border-gray-300 mx-1"></div>
+
+          <button
+            @click="emit('delete', row)"
+            class="w-full text-left px-3 py-2 hover:bg-gray-100 text-red-600 flex items-center gap-2"
+          >
+            <img
+              src="/icon/bin-icon.svg"
+              class="bg-red-400 hover:bg-red-600 rounded-md p-1 h-6 w-6"
+            />
+            ลบ
+          </button>
+        </template>
+
+        <!-- Assign -->
+        <!-- Assign -->
+        <template v-if="role === 'assign'">
+          <!-- ยังไม่มอบหมาย -->
+          <button
+            v-if="props.assignedTech == null"
+            @click="emit('assign', row)"
+            class="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2"
+          >
+            <img
+              src="/icon/arrow-right.svg"
+              class="bg-green-400 hover:bg-green-600 rounded-md p-1 h-6 w-6"
+            />
+            มอบหมายงาน
+          </button>
+
+          <!-- มอบหมายแล้ว -->
+          <div v-else class="px-3 py-2 text-sm text-gray-500 leading-snug flex gap-2">
+            <svg
+              class="w-4 h-4 text-gray-400 mt-0.5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M13 16h-1v-4h-1m1-4h.01M12 18a9 9 0 110-18 9 9 0 010 18z"
+              />
+            </svg>
+
+            <span>
+              งานนี้ถูกมอบหมายแล้ว<br />
+              <span
+                class="text-blue-600 cursor-pointer hover:underline"
+                @click="emit('detail', row)"
+              >
+                ดูรายละเอียดใบแจ้งซ่อม
+              </span>
+            </span>
+          </div>
+        </template>
+
+        <!-- User -->
+        <template v-if="role === 'user'">
+          <button
+            v-if="normalizedStatus === 'pending'"
+            @click="emit('edit', row)"
+            class="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2"
+          >
+            <img
+              src="/icon/edit-icon.svg"
+              class="bg-amber-400 hover:bg-amber-600 rounded-md p-1 h-6 w-6"
+            />
+            แก้ไข
+          </button>
+          <div class="border-t border-gray-300 mx-1"></div>
+          <button
+            v-if="normalizedStatus === 'pending'"
+            @click="emit('delete', row)"
+            class="w-full text-left px-3 py-2 hover:bg-gray-100 text-red-600 flex items-center gap-2"
+          >
+            <img
+              src="/icon/bin-icon.svg"
+              class="bg-red-400 hover:bg-red-600 rounded-md p-1 h-6 w-6"
+            />
+            ลบ
+          </button>
+        </template>
+
+        <!-- Stock -->
+        <template v-if="role === 'stock'">
+          <div class="border-t border-gray-200 my-1"></div>
+
+          <button
+            @click="emit('edit', row)"
+            class="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2"
+          >
+            <img src="/icon/edit-icon.svg" class="bg-amber-400 rounded-md p-1 h-6 w-6" />
+            แก้ไข
+          </button>
+
+          <div class="border-t border-gray-200 my-1"></div>
+
+          <button
+            @click="emit('delete', row)"
+            class="w-full text-left px-3 py-2 hover:bg-gray-100 text-red-600 flex items-center gap-2"
+          >
+            <img src="/icon/bin-icon.svg" class="bg-red-400 rounded-md p-1 h-6 w-6" />
+            ลบ
+          </button>
+        </template>
+        <template v-if="role === 'stockList'"> </template>
+      </div>
+    </Teleport>
   </div>
 </template>

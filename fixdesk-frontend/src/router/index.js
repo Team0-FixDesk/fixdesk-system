@@ -92,6 +92,7 @@ const router = createRouter({
         {
           path: 'technician-requisition-list',
           component: TechnicianRequisitionListView,
+          name: 'technician-requisition-list',
           meta: { role: ['Technician'] },
         },
         {

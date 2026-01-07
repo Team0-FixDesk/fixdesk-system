@@ -1,38 +1,46 @@
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import TableComponent from '@/components/table-component.vue'
+import RepairFilterBar from '@/components/filters/repair-filter-bar-component.vue'
 import Sweetalert from 'sweetalert2'
 
 defineOptions({ name: 'StockWithdrawHistoryView' })
 
+// ==================== Router / API ====================
 const router = useRouter()
 const API_BASE = import.meta.env.VITE_API_BASE
 
-// columns
+// ==================== Table ====================
 const columns = ['รหัสใบเบิกของ', 'หน่วยงาน', 'รายละเอียด', 'สถานะการเบิก', 'ตัวดำเนินการ']
-
 const tableRows = ref([])
 
-const searchQuery = ref('')
+// ==================== Filters (ใช้กับ RepairFilterBar) ====================
+const searchInput = ref('')
 const selectedStatuses = ref([])
 const selectedDate = ref('')
 
-const showUrgency = ref(false)
-const showStatus = ref(false)
+// ==================== Helpers ====================
+function toLocalYMD(date) {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
 
-// ==================== ดึงทั้งหมด ====================
+function resetFilters() {
+  searchInput.value = ''
+  selectedStatuses.value = []
+  selectedDate.value = ''
+}
+
+// ==================== Load Data ====================
 async function loadStockForms() {
   try {
     const token = localStorage.getItem('token') || sessionStorage.getItem('token')
-
-    if (!token) {
-      console.error('No token found')
-      return
-    }
+    if (!token) return
 
     const res = await fetch(`${API_BASE}/stock-forms`, {
-      method: 'GET',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
@@ -40,86 +48,86 @@ async function loadStockForms() {
     })
 
     if (res.status === 401) {
-      throw new Error('โทเคนหมดอายุหรือไม่ถูกต้อง')
+      throw new Error('TOKEN_EXPIRED')
     }
 
     const data = await res.json()
-
     if (!res.ok) throw new Error(data.message)
 
     tableRows.value = data
-      .filter((item) => item.sf_status === 'approved' || item.sf_status === 'rejected')
-      .map((item) => [
-        item.sf_code, // 0
-        item.us_department || '-', // 1
-        'วันที่: ' +
-          new Date(item.sf_create_at).toLocaleDateString('th-TH') +
-          '<br>' +
-          'ผู้ขอเบิก: ' +
-          item.requester +
-          '<br>' +
-          'สถานที่: ' +
-          item.bd_name +
-          ' ' +
-          item.fl_name +
-          ' ' +
-          item.room_name, // 2
-        item.sf_status, // 3
-        '', // 4
-      ])
+      .filter(item =>
+        ['approved', 'rejected', 'completed'].includes(item.sf_status),
+      )
+      .map(item => ({
+        row: [
+          item.sf_code, // 0
+          item.us_department || '-', // 1
+          'วันที่: ' +
+            new Date(item.sf_create_at).toLocaleDateString('th-TH') +
+            '<br>' +
+            'ผู้ขอเบิก: ' +
+            item.requester +
+            '<br>' +
+            'สถานที่: ' +
+            item.bd_name +
+            ' ' +
+            item.fl_name +
+            ' ' +
+            item.room_name, // 2
+          item.sf_status, // 3
+          '', // 4 action
+        ],
+        meta: {
+          createdDate: new Date(item.sf_create_at),
+        },
+      }))
   } catch (err) {
-    console.error('Error:', err.message)
-
-    if (err.message.includes('โทเคน')) {
+    if (err.message === 'TOKEN_EXPIRED') {
       Sweetalert.fire({
         title: 'Session หมดอายุ',
         text: 'กรุณาเข้าสู่ระบบใหม่',
         icon: 'warning',
       })
       router.push('/login')
+    } else {
+      console.error(err)
     }
   }
 }
 
-// ==================== Filters ====================
+// ==================== Filtered Rows ====================
 const filteredRows = computed(() => {
-  const q = searchQuery.value.toLowerCase()
+  const q = searchInput.value.toLowerCase()
 
-  return tableRows.value.filter((row) => {
-    const code = row[0].toLowerCase()
-    console.log('openDetail value:', row[0])
-
-    const dept = row[1]?.toLowerCase() || ''
-    const detail = row[2]?.toLowerCase() || ''
+  return tableRows.value.filter(item => {
+    const row = item.row
     const status = row[3]
 
-    const matchSearch = code.includes(q) || dept.includes(q) || detail.includes(q)
+    const matchesSearch =
+      row[0].toLowerCase().includes(q) ||
+      row[1].toLowerCase().includes(q) ||
+      row[2].toLowerCase().includes(q)
 
-    const matchStatus =
-      selectedStatuses.value.length === 0 || selectedStatuses.value.includes(status)
+    const matchesStatus =
+      selectedStatuses.value.length === 0 ||
+      selectedStatuses.value.includes(status)
 
-    return matchSearch && matchStatus
+    const matchesDate =
+      !selectedDate.value ||
+      toLocalYMD(item.meta.createdDate) === selectedDate.value
+
+    return matchesSearch && matchesStatus && matchesDate
   })
 })
 
-function closeDropdown(e) {
-  if (!e.target.closest('.relative')) {
-    showUrgency.value = false
-    showStatus.value = false
-  }
+// ==================== Actions ====================
+function openDetail(code) {
+  router.push(`/main/stock-requisition/${code}`)
 }
 
-// ==================== ACTION ====================
-const openDetail = (sfCode) => {
-  router.push(`/main/stock-requisition/${sfCode}`)
-}
-
+// ==================== Lifecycle ====================
 onMounted(() => {
   loadStockForms()
-  document.addEventListener('click', closeDropdown)
-})
-onBeforeUnmount(() => {
-  document.removeEventListener('click', closeDropdown)
 })
 </script>
 
@@ -127,55 +135,19 @@ onBeforeUnmount(() => {
   <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-7xl">
     <h1 class="text-xl font-bold mb-6">ประวัติการเบิกของ</h1>
 
-    <!-- FILTERS -->
-    <div class="flex gap-3 mb-6 flex-wrap relative z-40">
-      <input
-        v-model="searchQuery"
-        type="text"
-        placeholder="ค้นหา"
-        class="w-[240px] h-10 px-4 rounded-lg border border-gray-300"
-      />
+    <!-- Filters -->
+    <RepairFilterBar
+      mode="stock"
+      v-model:search="searchInput"
+      v-model:statuses="selectedStatuses"
+      v-model:date="selectedDate"
+      @reset="resetFilters"
+    />
 
-      <input
-        v-model="selectedDate"
-        type="date"
-        class="h-10 px-3 rounded-lg border border-gray-300"
-      />
-
-      <!-- status -->
-      <div class="relative">
-        <button
-          @click.stop="showStatus = !showStatus"
-          class="flex items-center gap-1 border border-gray-300 rounded-lg px-4 py-2 bg-white"
-        >
-          สถานะ
-        </button>
-
-        <div
-          v-if="showStatus"
-          class="absolute mt-2 w-48 bg-white border rounded-md shadow-lg p-3 text-sm z-10"
-        >
-          <label
-            ><input type="checkbox" value="waiting" v-model="selectedStatuses" /> รออนุมัติ</label
-          >
-          <label
-            ><input type="checkbox" value="approved" v-model="selectedStatuses" />
-            อนุมัติแล้ว</label
-          >
-          <label
-            ><input type="checkbox" value="rejected" v-model="selectedStatuses" /> ไม่อนุมัติ</label
-          >
-          <label
-            ><input type="checkbox" value="completed" v-model="selectedStatuses" /> เสร็จสิ้น</label
-          >
-        </div>
-      </div>
-    </div>
-
-    <!-- TABLE -->
+    <!-- Table -->
     <TableComponent
       :columns="columns"
-      :rows="filteredRows"
+      :rows="filteredRows.map(i => i.row)"
       :perPage="10"
       :statusStockColumn="3"
       :columnAlign="['left', 'left', 'left', 'center', 'center']"

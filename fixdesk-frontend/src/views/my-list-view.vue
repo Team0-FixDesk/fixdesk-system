@@ -5,6 +5,7 @@ import TableComponent from '@/components/table-component.vue'
 import TableActions from '@/components/table-actions-component.vue'
 import RepairButton from '@/components/repair-button-component.vue'
 import Sweetalert from 'sweetalert2'
+import RepairFilterBar from '@/components/filters/repair-filter-bar-component.vue'
 
 defineOptions({ name: 'MyListView' })
 
@@ -120,17 +121,6 @@ const filteredRows = computed(() => {
   })
 })
 
-// Dropdown Controls
-function toggleUrgencyFilter() {
-  isUrgencyFilterOpen.value = !isUrgencyFilterOpen.value
-  if (isUrgencyFilterOpen.value) isStatusFilterOpen.value = false
-}
-
-function toggleStatusFilter() {
-  isStatusFilterOpen.value = !isStatusFilterOpen.value
-  if (isStatusFilterOpen.value) isUrgencyFilterOpen.value = false
-}
-
 function resetFilters() {
   selectedUrgencies.value = []
   selectedStatuses.value = []
@@ -218,109 +208,18 @@ onBeforeUnmount(() => {
   <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-7xl">
     <h1 class="text-xl font-bold text-black mb-6">รายการของฉัน</h1>
 
-    <!-- ------------------ Filters ------------------ -->
-    <div class="mb-6">
-      <div class="flex flex-wrap items-center justify-between gap-3">
-        <div class="flex flex-wrap items-center gap-3">
-          <!-- ค้นหา -->
-          <input
-            v-model="searchInput"
-            type="text"
-            placeholder="ค้นหาใบแจ้งซ่อม / หน่วยงาน / ครุภัณฑ์"
-            class="w-[260px] h-10 px-4 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500"
-          />
-
-          <!-- วันที่ -->
-          <input
-            v-model="selectedDate"
-            type="date"
-            class="h-10 px-3 rounded-lg border border-gray-300 text-gray-700"
-          />
-
-          <!-- ความเร่งด่วน -->
-          <div class="relative">
-            <button
-              @click.stop="toggleUrgencyFilter"
-              class="flex items-center gap-1 border border-gray-300 rounded-lg px-4 py-2 bg-white"
-            >
-              ความเร่งด่วน
-              <img
-                src="/icon/sidebar/chevron-down-icon.svg"
-                class="w-4 h-4 opacity-70"
-                :class="{ 'rotate-180': isUrgencyFilterOpen }"
-              />
-            </button>
-
-            <div
-              v-if="isUrgencyFilterOpen"
-              class="absolute mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg p-3 z-50 text-sm"
-            >
-              <label class="flex items-center py-1">
-                <input type="checkbox" value="low" v-model="selectedUrgencies" />
-                <span class="ml-2">ไม่เร่งด่วน</span>
-              </label>
-
-              <label class="flex items-center py-1">
-                <input type="checkbox" value="medium" v-model="selectedUrgencies" />
-                <span class="ml-2">เร่งด่วน</span>
-              </label>
-
-              <label class="flex items-center py-1">
-                <input type="checkbox" value="high" v-model="selectedUrgencies" />
-                <span class="ml-2">เร่งด่วนมาก</span>
-              </label>
-            </div>
-          </div>
-
-          <!-- สถานะ -->
-          <div class="relative">
-            <button
-              @click.stop="toggleStatusFilter"
-              class="flex items-center gap-1 border border-gray-300 rounded-lg px-4 py-2 bg-white"
-            >
-              สถานะ
-              <img
-                src="/icon/sidebar/chevron-down-icon.svg"
-                class="w-4 h-4 opacity-70"
-                :class="{ 'rotate-180': isStatusFilterOpen }"
-              />
-            </button>
-
-            <div
-              v-if="isStatusFilterOpen"
-              class="absolute mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg p-3 z-50 text-sm"
-            >
-              <label class="flex items-center py-1">
-                <input type="checkbox" value="pending" v-model="selectedStatuses" />
-                <span class="ml-2">รอดำเนินการ</span>
-              </label>
-
-              <label class="flex items-center py-1">
-                <input type="checkbox" value="in_progress" v-model="selectedStatuses" />
-                <span class="ml-2">กำลังดำเนินการ</span>
-              </label>
-
-              <label class="flex items-center py-1">
-                <input type="checkbox" value="done" v-model="selectedStatuses" />
-                <span class="ml-2">ดำเนินการเสร็จสิ้น</span>
-              </label>
-            </div>
-          </div>
-
-          <!-- ล้างตัวกรอง -->
-          <button
-            v-if="selectedStatuses.length || selectedUrgencies.length || searchInput"
-            @click="resetFilters"
-            class="text-blue-600 hover:text-blue-700 text-sm font-medium"
-          >
-            ล้างตัวกรอง
-          </button>
-        </div>
-
-        <!-- ปุ่มแจ้งซ่อม -->
+    <RepairFilterBar
+      mode="repair"
+      v-model:search="searchInput"
+      v-model:statuses="selectedStatuses"
+      v-model:urgencies="selectedUrgencies"
+      v-model:date="selectedDate"
+      @reset="resetFilters"
+    >
+      <template #right>
         <RepairButton />
-      </div>
-    </div>
+      </template>
+    </RepairFilterBar>
 
     <!-- ------------------ Table ------------------ -->
     <div class="p-3 mx-auto max-w-8xl">
