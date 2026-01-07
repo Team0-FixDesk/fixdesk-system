@@ -65,28 +65,27 @@ const repairTableRaw = computed(() => {
   }))
 })
 
-// 2. Stock Table (เพิ่ม stockTableRaw)
-const sortedStocks = computed(() => {
-  return [...stockForms.value].sort((a, b) => new Date(b.rawDate) - new Date(a.rawDate)).slice(0, 5)
-})
-
-const stockTableRows = computed(() => {
-  return sortedStocks.value.map((s) => [
-    s.related_rf_code || '-',
-    s.sf_code,
-    s.requester_department || '-',
-    getBadgeHtml(s.urgency, 'urgency'),
-    getBadgeHtml(s.status, 'status'),
-    `<button class="text-blue-600 hover:underline">รายละเอียด</button>`,
-  ])
-})
-
 // [เพิ่มใหม่]
-const stockTableRaw = computed(() => {
-  return sortedStocks.value.map((s) => ({
-    withdrawCode: s.sf_code,
-    // ...
-  }))
+const stockTableRows = computed(() => {
+  return stockForms.value.slice(0, 5).map((form) => {
+    const location = form.building_name || '-'
+    const items = form.items ? form.items.split('\n') : []
+
+    return [
+      form.sf_code, // 0
+      {
+        date: new Date(form.sf_create_at).toLocaleString('th-TH', {
+          dateStyle: 'medium',
+          timeStyle: 'short',
+        }),
+        location,
+        rf_code: form.rf_code, //  ตอนนี้จะมีค่า
+      },
+      items, //  ตอนนี้จะมีค่า
+      form.sf_status,
+      '',
+    ]
+  })
 })
 
 // --- [เพิ่มใหม่] Event Handler สำหรับคลิก Row ---
@@ -96,19 +95,10 @@ const onRepairRowClick = (item) => {
   if (id) {
     router.push({
       path: `/main/repair-detail/${id}`,
-      state: { fromTechnician: true }
+      state: { fromTechnician: true },
     })
-
   } else {
     console.warn('Invalid ID clicked:', item)
-  }
-}
-
-const onStockRowClick = (item) => {
-  const id = (typeof item === 'object' && item !== null) ? item.withdrawCode : item;
-  if (id) {
-    // router.push(`/main/stock-detail/${id}`)
-    console.log('Open stock detail:', id)
   }
 }
 
@@ -117,11 +107,11 @@ const mapUrgency = (u) =>
   ({ high: 'เร่งด่วนมาก', medium: 'เร่งด่วน', low: 'ไม่เร่งด่วน' })[u] || 'เร่งด่วน'
 const mapStatus = (s) =>
   ({ pending: 'รอดำเนินการ', in_progress: 'กำลังดำเนินการ', done: 'เสร็จสิ้น', cancel: 'ยกเลิก' })[
-  s
+    s
   ] || 'รอดำเนินการ'
 const mapStockStatus = (s) =>
   ({ waiting: 'รอดำเนินการ', approved: 'อนุมัติ', rejected: 'ปฏิเสธ', completed: 'เสร็จสิ้น' })[
-  s
+    s
   ] || '-'
 
 // Function to generate HTML badge string for TableComponent
@@ -174,9 +164,13 @@ const fetchStockForms = async () => {
     const token = localStorage.getItem('token') || sessionStorage.getItem('token')
     if (!token) return
 
-    let res = await fetch(`${API_BASE}/my-stock-forms`, {
+    const decoded = jwtDecode(token)
+    const userId = decoded.us_id
+
+    let res = await fetch(`${API_BASE}/stock-forms/${userId}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
+
     if (!res.ok && res.status === 404) {
       res = await fetch(`${API_BASE}/stock-forms`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -197,6 +191,18 @@ const fetchStockForms = async () => {
   } finally {
     loadingStock.value = false
   }
+}
+function truncateItem(text, maxWords = 5) {
+  if (!text) return ''
+  const [name] = text.split(' x')
+  const words = name.split(' ')
+  return words.length > maxWords ? words.slice(0, maxWords).join(' ') + '...' : name
+}
+
+function extractQuantity(item) {
+  if (!item) return 1
+  const match = item.match(/x\s*(\d+)/i)
+  return match ? Number(match[1]) : 1
 }
 
 // --- Stats for Cards ---
@@ -253,6 +259,9 @@ onMounted(() => {
   fetchStockForms()
   fetchUserProfile()
 })
+const openDetail = (rfCode) => {
+  router.push(`/main/repair-detail/${rfCode}`)
+}
 </script>
 
 <template>
@@ -275,22 +284,34 @@ onMounted(() => {
             <h2 class="text-xl font-bold text-gray-900">งานที่ได้รับมอบหมายล่าสุด</h2>
             <p class="text-sm text-gray-500">5 รายการล่าสุด</p>
           </div>
-          <button @click="router.push('/main/technician-repair-list')" class="text-sm text-blue-600 hover:underline">
+          <button
+            @click="router.push('/main/technician-repair-list')"
+            class="text-sm text-blue-600 hover:underline"
+          >
             ดูทั้งหมด
           </button>
         </div>
 
-        <TableComponent :columns="['เลขใบงาน', 'หัวข้อ', 'หน่วยงาน', 'สถานที่', 'ความเร่งด่วน', 'สถานะ']"
-          :rows="repairTableRows" :rawRows="repairTableRaw" :perPage="5" mode="view-only" :idColumnIndex="0"
-          @detail="(id) => onRepairRowClick(id)" />
+        <TableComponent
+          :columns="['เลขใบงาน', 'หัวข้อ', 'หน่วยงาน', 'สถานที่', 'ความเร่งด่วน', 'สถานะ']"
+          :rows="repairTableRows"
+          :rawRows="repairTableRaw"
+          :perPage="5"
+          mode="view-only"
+          :idColumnIndex="0"
+          @detail="(id) => onRepairRowClick(id)"
+        />
       </div>
 
-      <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 flex flex-col justify-center items-center">
+      <div
+        class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 flex flex-col justify-center items-center"
+      >
         <h2 class="text-lg font-bold text-gray-800 mb-6 self-start">สัดส่วนงานทั้งหมด</h2>
         <div class="relative w-48 h-48">
           <div class="w-full h-full rounded-full" :style="donutChart"></div>
           <div
-            class="absolute top-1/2 left-1/2 w-32 h-32 bg-white rounded-full -translate-x-1/2 -translate-y-1/2 flex items-center justify-center">
+            class="absolute top-1/2 left-1/2 w-32 h-32 bg-white rounded-full -translate-x-1/2 -translate-y-1/2 flex items-center justify-center"
+          >
             <span class="text-gray-400 text-xs">ภาพรวม</span>
           </div>
         </div>
@@ -317,9 +338,43 @@ onMounted(() => {
         <p class="text-sm text-gray-500">5 รายการล่าสุด</p>
       </div>
 
-      <TableComponent :columns="['อ้างอิงใบงาน', 'รหัสใบเบิก', 'หน่วยงาน', 'ความเร่งด่วน', 'สถานะ', 'จัดการ']"
-        :rows="stockTableRows" :rawRows="stockTableRaw" :perPage="5" mode="view-only"
-        @detail="(item) => onStockRowClick(item)" />
+      <TableComponent
+        :columns="['รหัสรายการเบิกของ', 'รายละเอียด', 'รายการของเบิก', 'สถานะงาน', 'ตัวดำเนินการ']"
+        :rows="stockTableRows"
+        :perPage="5"
+        :statusStockColumn="3"
+        :columnAlign="['left', 'left', 'left', 'center']"
+      >
+        <!-- รายการของ -->
+        <template #cell-2="{ row }">
+          <div class="space-y-1 text-sm">
+            <div v-for="(item, i) in row[2]" :key="i" class="flex justify-between">
+              <span class="truncate">{{ truncateItem(item) }}</span>
+              <span class="text-gray-500">x{{ extractQuantity(item) }}</span>
+            </div>
+          </div>
+        </template>
+
+        <!-- รายละเอียด -->
+        <template #cell-1="{ row }">
+          <div class="text-sm space-y-1">
+            <div>วันที่เบิก: {{ row[1].date }}</div>
+            <div>รหัสใบแจ้งซ่อม: {{ row[1].rf_code }}</div>
+          </div>
+        </template>
+
+        <!-- ปุ่ม -->
+        <template #cell-4="{ row }">
+          <div class="flex justify-center">
+            <button
+              @click="openDetail(row[1].rf_code)"
+              class="flex items-center gap-2 px-2 py-2 rounded-md bg-blue-500 text-white hover:bg-blue-600"
+            >
+              <img src="/icon/info-icon.svg" class="h-4 w-4" />
+            </button>
+          </div>
+        </template>
+      </TableComponent>
     </div>
   </div>
 </template>
