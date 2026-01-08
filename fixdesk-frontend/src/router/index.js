@@ -122,7 +122,7 @@ const router = createRouter({
         {
           path: 'create-report',
           component: CreateReportView,
-          meta: { role: ['Admin', 'Technician', 'Manager'] },
+          meta: { role: ['Admin', 'Manager'] }, public: true
         },
         {
           path: 'repair-detail/:code',
