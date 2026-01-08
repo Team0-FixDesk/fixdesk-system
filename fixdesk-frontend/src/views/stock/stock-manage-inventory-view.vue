@@ -62,8 +62,11 @@ const fetchCategories = async () => {
     if (!res.ok) throw new Error(`โหลดหมวดหมู่ไม่สำเร็จ (${res.status})`)
 
     const data = await res.json()
-    // ใช้ชื่อหมวดหมู่ (ct_name) โดยตรง
-    typeOptions.value = (data || []).map((cat) => cat.ct_name)
+    // เก็บทั้ง value (ct_id) และ label (ct_name) สำหรับ dropdown
+    typeOptions.value = (data || []).map((cat) => ({
+      value: String(cat.ct_id),
+      label: cat.ct_name
+    }))
 
     categoriesLoaded.value = true
   } catch (err) {
@@ -194,6 +197,165 @@ onBeforeUnmount(() => {
 const showAddModal = ref(false)
 const showStatusFilter = ref(false)
 const showTypeFilter = ref(false)
+const showManageCategoryModal = ref(false)
+const manageCategoryList = ref([])
+
+// --- Category Management Functions ---
+function openManageCategoryModal() {
+  // โหลดรายการหมวดหมู่ใหม่
+  manageCategoryList.value = typeOptions.value.map(opt => ({
+    id: opt.value,
+    name: opt.label
+  }))
+  showManageCategoryModal.value = true
+  showTypeFilter.value = false
+}
+
+function closeManageCategoryModal() {
+  showManageCategoryModal.value = false
+}
+
+async function handleAddCategory() {
+  const { value: name } = await Swal.fire({
+    title: 'เพิ่มหมวดหมู่ใหม่',
+    input: 'text',
+    inputLabel: 'ชื่อหมวดหมู่',
+    inputPlaceholder: 'เช่น อุปกรณ์ไฟฟ้า',
+    showCancelButton: true,
+    confirmButtonText: 'บันทึก',
+    cancelButtonText: 'ยกเลิก',
+    confirmButtonColor: '#2563eb',
+    inputValidator: (value) => {
+      if (!value || !value.trim()) return 'กรุณากรอกชื่อหมวดหมู่'
+      return null
+    },
+  })
+  if (!name) return
+
+  try {
+    const res = await fetch(`${API_BASE}/category`, {
+      method: 'POST',
+      headers: {
+        ...getAuthHeaders(),
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ ct_name: name.trim() }),
+    })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.message || 'เพิ่มหมวดหมู่ไม่สำเร็จ')
+
+    // รีโหลดข้อมูล
+    categoriesLoaded.value = false
+    await fetchCategories()
+    manageCategoryList.value = typeOptions.value.map(opt => ({
+      id: opt.value,
+      name: opt.label
+    }))
+
+    Swal.fire({
+      icon: 'success',
+      title: 'สำเร็จ',
+      text: 'เพิ่มหมวดหมู่เรียบร้อยแล้ว',
+      timer: 2000,
+      showConfirmButton: false
+    })
+  } catch (err) {
+    console.error('Add category error:', err)
+    Swal.fire('ผิดพลาด', err.message, 'error')
+  }
+}
+
+async function handleEditCategory(cat) {
+  const { value: name } = await Swal.fire({
+    title: 'แก้ไขหมวดหมู่',
+    input: 'text',
+    inputLabel: 'ชื่อหมวดหมู่',
+    inputValue: cat.name,
+    showCancelButton: true,
+    confirmButtonText: 'บันทึก',
+    cancelButtonText: 'ยกเลิก',
+    confirmButtonColor: '#2563eb',
+    inputValidator: (value) => {
+      if (!value || !value.trim()) return 'กรุณากรอกชื่อหมวดหมู่'
+      return null
+    },
+  })
+  if (!name || name.trim() === cat.name) return
+
+  try {
+    const res = await fetch(`${API_BASE}/category/${cat.id}`, {
+      method: 'PUT',
+      headers: {
+        ...getAuthHeaders(),
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ ct_name: name.trim() }),
+    })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.message || 'แก้ไขหมวดหมู่ไม่สำเร็จ')
+
+    // รีโหลดข้อมูล
+    categoriesLoaded.value = false
+    await fetchCategories()
+    await fetchAllStock()
+    manageCategoryList.value = typeOptions.value.map(opt => ({
+      id: opt.value,
+      name: opt.label
+    }))
+
+    Swal.fire({
+      icon: 'success',
+      title: 'สำเร็จ',
+      text: 'แก้ไขหมวดหมู่เรียบร้อยแล้ว',
+      timer: 2000,
+      showConfirmButton: false
+    })
+  } catch (err) {
+    console.error('Edit category error:', err)
+    Swal.fire('ผิดพลาด', err.message, 'error')
+  }
+}
+
+async function handleDeleteCategory(cat) {
+  const result = await Swal.fire({
+    title: 'ยืนยันการลบ',
+    text: `ต้องการลบหมวดหมู่ "${cat.name}" หรือไม่?`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'ลบ',
+    cancelButtonText: 'ยกเลิก',
+    confirmButtonColor: '#dc2626',
+  })
+  if (!result.isConfirmed) return
+
+  try {
+    const res = await fetch(`${API_BASE}/category/${cat.id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.message || 'ลบหมวดหมู่ไม่สำเร็จ')
+
+    // รีโหลดข้อมูล
+    categoriesLoaded.value = false
+    await fetchCategories()
+    manageCategoryList.value = typeOptions.value.map(opt => ({
+      id: opt.value,
+      name: opt.label
+    }))
+
+    Swal.fire({
+      icon: 'success',
+      title: 'สำเร็จ',
+      text: 'ลบหมวดหมู่เรียบร้อยแล้ว',
+      timer: 2000,
+      showConfirmButton: false
+    })
+  } catch (err) {
+    console.error('Delete category error:', err)
+    Swal.fire('ผิดพลาด', err.message, 'error')
+  }
+}
 
 // --- File Upload State ---
 const filePreview = ref([])
@@ -822,23 +984,34 @@ const openEditModal = async (pdIdFromTable) => {
             </button>
             <div
               v-if="showTypeFilter"
-              class="absolute mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg p-3 text-sm text-gray-700 z-10 max-h-60 overflow-y-auto"
+              class="absolute mt-2 w-56 bg-white border border-gray-200 rounded-md shadow-lg p-3 text-sm text-gray-700 z-10 max-h-72 overflow-y-auto"
             >
+              <!-- ปุ่มจัดการหมวดหมู่ -->
+              <button
+                @click="openManageCategoryModal"
+                class="w-full flex items-center gap-2 px-2 py-2 mb-2 text-blue-600 hover:bg-blue-50 rounded-md border border-blue-200"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                จัดการหมวดหมู่
+              </button>
+              <hr class="my-2">
               <div v-if="typeOptions.length === 0" class="text-gray-400 text-sm p-2">
                 ไม่มีข้อมูล
               </div>
               <label
                 v-for="category in typeOptions"
-                :key="category"
+                :key="category.value"
                 class="flex items-center py-1 hover:bg-gray-50 cursor-pointer"
               >
                 <input
                   type="checkbox"
-                  :value="category"
+                  :value="category.label"
                   v-model="selectedTypes"
                   class="w-4 h-4 text-blue-600 border-gray-300 rounded"
                 />
-                <span class="ml-2">{{ category }}</span>
+                <span class="ml-2">{{ category.label }}</span>
               </label>
             </div>
           </div>
@@ -1431,6 +1604,83 @@ const openEditModal = async (pdIdFromTable) => {
               </button>
             </div>
           </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal จัดการหมวดหมู่ -->
+    <div
+      v-if="showManageCategoryModal"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      @click.self="closeManageCategoryModal"
+    >
+      <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 max-h-[80vh] flex flex-col">
+        <!-- Header -->
+        <div class="flex items-center justify-between p-4 border-b">
+          <h2 class="text-lg font-bold text-gray-800">จัดการหมวดหมู่</h2>
+          <button @click="closeManageCategoryModal" class="text-gray-400 hover:text-gray-600">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Body -->
+        <div class="p-4 overflow-y-auto flex-1">
+          <!-- ปุ่มเพิ่มหมวดหมู่ -->
+          <button
+            @click="handleAddCategory"
+            class="w-full flex items-center justify-center gap-2 px-4 py-2 mb-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            เพิ่มหมวดหมู่ใหม่
+          </button>
+
+          <!-- รายการหมวดหมู่ -->
+          <div v-if="manageCategoryList.length === 0" class="text-center text-gray-400 py-8">
+            ไม่มีข้อมูลหมวดหมู่
+          </div>
+          <ul v-else class="space-y-2">
+            <li
+              v-for="cat in manageCategoryList"
+              :key="cat.id"
+              class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100"
+            >
+              <span class="text-gray-700">{{ cat.name }}</span>
+              <div class="flex gap-2">
+                <button
+                  @click="handleEditCategory(cat)"
+                  class="p-1.5 text-blue-600 hover:bg-blue-100 rounded"
+                  title="แก้ไข"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </button>
+                <button
+                  @click="handleDeleteCategory(cat)"
+                  class="p-1.5 text-red-600 hover:bg-red-100 rounded"
+                  title="ลบ"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </div>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Footer -->
+        <div class="p-4 border-t">
+          <button
+            @click="closeManageCategoryModal"
+            class="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            ปิด
+          </button>
         </div>
       </div>
     </div>
