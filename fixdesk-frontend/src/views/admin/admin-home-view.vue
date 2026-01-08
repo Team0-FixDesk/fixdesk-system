@@ -2,12 +2,8 @@
 import CardHomeComponent from '@/components/card-home-component.vue'
 import repairButtonComponent from '@/components/repair-button-component.vue'
 import TableComponent from '@/components/table-component.vue'
-import TableActions from '@/components/table-actions-component.vue'
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import Sweetalert from 'sweetalert2'
-
-const openMenuId = ref(null)
 
 const router = useRouter()
 
@@ -158,36 +154,6 @@ const handleCardClick = (item) => {
 /* --- Actions --- */
 const goToRepairDetail = (ticketId) => {
   router.push(`/main/repair-detail/${ticketId}`)
-}
-
-async function deleteRepair(ticketId) {
-  const result = await Sweetalert.fire({
-    title: 'ลบรายการ?',
-    text: `ต้องการลบหมายเลข ${ticketId}?`,
-    icon: 'warning',
-    showCancelButton: true,
-    confirmButtonText: 'ลบ',
-    cancelButtonText: 'ยกเลิก',
-  })
-  if (!result.isConfirmed) return
-
-  try {
-    const token = localStorage.getItem('token') || sessionStorage.getItem('token')
-    const res = await fetch(`${import.meta.env.VITE_API_BASE}/admin/repairs/${ticketId}`, {
-      method: 'DELETE',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    })
-    const body = await res.json()
-    if (!res.ok) throw new Error(body.message)
-
-    repairRequests.value = repairRequests.value.filter((r) => r.meta.rf_code !== ticketId)
-    Sweetalert.fire('สำเร็จ', 'ลบเรียบร้อย', 'success')
-  } catch (err) {
-    Sweetalert.fire('ผิดพลาด', err.message, 'error')
-  }
 }
 
 onMounted(fetchRepairRequests)

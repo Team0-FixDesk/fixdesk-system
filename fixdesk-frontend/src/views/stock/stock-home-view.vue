@@ -11,7 +11,7 @@ defineOptions({ name: 'StockHomeView' })
 
 // ==================== Router / API ====================
 const router = useRouter()
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
+const API_BASE = import.meta.env.VITE_API_BASE
 
 function getAuthHeaders() {
   const token = localStorage.getItem('token') || sessionStorage.getItem('token')

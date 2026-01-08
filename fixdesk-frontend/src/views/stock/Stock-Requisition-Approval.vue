@@ -9,7 +9,7 @@ const router = useRouter()
 
 defineOptions({ name: 'StockWithdrawApproveView' })
 
-const API = 'http://localhost:3000'
+const API = import.meta.env.VITE_API_BASE
 
 const token = localStorage.getItem('token') || sessionStorage.getItem('token')
 

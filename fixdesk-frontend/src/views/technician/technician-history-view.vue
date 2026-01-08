@@ -3,7 +3,6 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 
 import TableComponent from '@/components/table-component.vue'
-import TableActionsComponent from '@/components/table-actions-component.vue'
 
 const router = useRouter()
 const API_BASE = import.meta.env.VITE_API_BASE
@@ -17,8 +16,6 @@ const tableColumns = [
 ]
 
 const tableRows = ref([])
-const openMenuId = ref(null)
-
 const searchInput = ref('')
 
 // โหลดข้อมูล

@@ -9,7 +9,7 @@ import { usePhoneFormat } from '@/composables/usePhoneFormat'
 const { toRaw, toDisplay} = usePhoneFormat()
 
 defineOptions({ name: 'AdminUserInfoView' })
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
+const API_BASE = import.meta.env.VITE_API_BASE
 
 // Build authorization headers for API requests สร้าง Authorization Header สำหรับเรียก API
 const getAuthHeaders = () => {
