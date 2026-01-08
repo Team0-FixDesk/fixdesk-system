@@ -2,11 +2,13 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import RepairStatusTimeline from '@/components/status-timeline-component.vue'
-import assignJobModalComponent from '@/components/assign-job-modal-component.vue'
-import AcceptJobModalComponent from '@/components/accept-job-madal-component.vue'
+import assignJobModalComponent from '@/components/modal/assign-job-modal-component.vue'
+import AcceptJobModalComponent from '@/components/modal/accept-job-modal-component.vue'
 import Swal from 'sweetalert2'
+import { usePhoneFormat } from '@/composables/usePhoneFormat'
+const { toDisplay } = usePhoneFormat()
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
+const API_BASE = import.meta.env.VITE_API_BASE
 const route = useRoute()
 const router = useRouter()
 
@@ -27,12 +29,29 @@ function openActionPopup() {
     // 1. ถ้ารอรับงาน -> เปิด Modal รับงาน
     showAcceptPopup.value = true
   } else if (status === 'in_progress') {
-    // 2. ถ้ากำลังทำ -> เปิด Modal เปลี่ยนสถานะ (หรือ Action อื่น)
-    handleChangeStatus()
+    // 2. ถ้ากำลังทำ -> เปิด Modal เลือกสถานะ
+    showStatusPopup.value = true
   }
 }
 
-function handleChangeStatus() {
+// Popup เลือกสถานะ
+const showStatusPopup = ref(false)
+
+function closeStatusPopup() {
+  showStatusPopup.value = false
+}
+
+function handleSelectStatus(statusType) {
+  if (statusType === 'done') {
+    showStatusPopup.value = false
+    confirmCloseJob()
+  } else if (statusType === 'outsource') {
+    showStatusPopup.value = false
+    confirmOutsource()
+  }
+}
+
+function confirmCloseJob() {
   Swal.fire({
     title: 'เปลี่ยนสถานะ',
     text: 'คุณต้องการเปลี่ยนสถานะเป็น "เสร็จสิ้น" หรือไม่?',
@@ -40,13 +59,17 @@ function handleChangeStatus() {
     showCancelButton: true,
     confirmButtonText: 'ใช่, เสร็จสิ้น',
     cancelButtonText: 'ยกเลิก',
+    confirmButtonColor: '#10b981',
   }).then(async (result) => {
     if (result.isConfirmed) {
-      // ยิง API เปลี่ยนสถานะเป็น done (ตัวอย่าง)
       try {
-        const res = await fetch(`${API_BASE}/technician/jobs/${repairCode}/status`, {
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token')
+        const res = await fetch(`${API_BASE}/technician/close-job/${repairCode}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' }, // + Token header
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
           body: JSON.stringify({ status: 'done' }),
         })
         if (res.ok) {
@@ -55,6 +78,40 @@ function handleChangeStatus() {
         }
       } catch (e) {
         console.error(e)
+        Swal.fire('ผิดพลาด', 'ไม่สามารถปิดงานได้', 'error')
+      }
+    }
+  })
+}
+
+function confirmOutsource() {
+  Swal.fire({
+    title: 'จ้างช่างภายนอก',
+    text: 'คุณต้องการส่งงานให้ช่างภายนอกหรือไม่?',
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'ใช่, ส่งงาน',
+    cancelButtonText: 'ยกเลิก',
+    confirmButtonColor: '#f59e0b',
+  }).then(async (result) => {
+    if (result.isConfirmed) {
+      try {
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token')
+        const res = await fetch(`${API_BASE}/technician/close-job/${repairCode}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ status: 'outsource' }),
+        })
+        if (res.ok) {
+          Swal.fire('สำเร็จ', 'ส่งงานให้ช่างภายนอกเรียบร้อย', 'success')
+          fetchRepairDetail()
+        }
+      } catch (e) {
+        console.error(e)
+        Swal.fire('ผิดพลาด', 'ไม่สามารถส่งงานได้', 'error')
       }
     }
   })
@@ -160,6 +217,8 @@ function getUserStatusBadge(status) {
       return `<span class="inline-flex justify-center items-center w-28 sm:w-36 h-7 sm:h-8 px-3 rounded-full bg-amber-50 text-amber-500 font-semibold text-xs sm:text-sm">รอดำเนินการ</span>`
     case 'in_progress':
       return `<span class="inline-flex justify-center items-center w-28 sm:w-36 h-7 sm:h-8 px-3 rounded-full bg-blue-100 text-blue-600 font-semibold text-xs sm:text-sm">กำลังดำเนินการ</span>`
+    case 'outsource':
+      return `<span class="inline-flex justify-center items-center w-28 sm:w-36 h-7 sm:h-8 px-3 rounded-full bg-purple-100 text-purple-600 font-semibold text-xs sm:text-sm">จ้างช่างภายนอก</span>`
     case 'done':
       return `<span class="inline-flex justify-center items-center w-28 sm:w-36 h-7 sm:h-8 px-3 rounded-full bg-green-100 text-green-600 font-semibold text-xs sm:text-sm">ดำเนินการเสร็จสิ้น</span>`
     default:
@@ -320,10 +379,177 @@ onMounted(() => {
 
   fetchRepairDetail()
 })
+
+// ปุ่มยืนยันการเบิก + ฟอร์มใน modal
+const showWithdrawModal = ref(false)
+// ==== JWT Decode (เพิ่มส่วนนี้เข้าไปในไฟล์) ====
+function parseJwt(token) {
+  try {
+    const base64Url = token.split('.')[1]
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join(''),
+    )
+    return JSON.parse(jsonPayload)
+  } catch (err) {
+    console.error('ไม่สามารถ decode token ได้:', err)
+    return {}
+  }
+}
+
+const withdrawForm = ref({
+  requester_name: '',
+  unit: '',
+  date: '',
+  repair_type_id: '',
+  repair_type_name: '',
+  location: '',
+  urgency: '',
+  reason: '',
+  repair_code: '',
+})
+
+// ดึงข้อมูล user ที่ล็อกอินจาก token
+function getCurrentUser() {
+  const token = localStorage.getItem('token') || sessionStorage.getItem('token')
+  if (!token) return {}
+
+  const payload = parseJwt(token) || {}
+
+  // ถ้า backend ใส่ข้อมูลไว้ใน payload.user ให้ดึงออกมาด้วย
+  const user = payload.user || payload
+
+  return user
+}
+
+// เปิด modal และเติมค่าเริ่มต้นจาก user ที่ล็อกอิน + ใบแจ้งซ่อม
+function openWithdrawModal() {
+  const user = getCurrentUser()
+
+  const nameTh =
+    user.us_first_name_th && user.us_last_name_th
+      ? `${user.us_first_name_th} ${user.us_last_name_th}`
+      : user.fullname || user.name || user.us_user_name || ''
+
+  const department = user.us_department || user.department || user.dep_name || ''
+
+  withdrawForm.value = {
+    requester_name: nameTh,
+    unit: department,
+    date: new Date().toISOString().slice(0, 10),
+
+    repair_type_id: '', // <-- ตั้งว่างก่อน
+    location: `${repair.value?.building_name || ''} / ${repair.value?.floor_name || ''} / ${repair.value?.room_name || ''}`,
+    urgency: repair.value?.rf_urgency || 'medium',
+    reason: '',
+    repair_code: repair.value?.rf_code || repairCode || '',
+  }
+
+  // -------- AUTO SELECT ----------
+  // 1) ถ้ามี rf_tt_id (กรณีเก็บเป็น ID)
+  if (repair.value?.rf_tt_id) {
+    withdrawForm.value.repair_type_id = repair.value.rf_tt_id
+  } else {
+    // 2) ถ้าเก็บเป็นชื่อ
+    const match = technicianTypes.value.find((t) => t.tt_name === repair.value?.repair_type_name)
+    withdrawForm.value.repair_type_id = match ? match.tt_id : ''
+  }
+
+  showWithdrawModal.value = true
+}
+
+const showWithdrawButton = computed(() => {
+  if (!repair.value) return false
+
+  const status = repair.value.rf_user_status
+
+  // ไม่ให้แสดงถ้าเป็น pending หรือ done
+  if (status === 'pending' || status === 'done') return false
+
+  // ต้องมาจากหน้า technician-repair-list เท่านั้น
+  if (!history.state?.fromTechnician) return false
+
+  return true
+})
+
+function closeWithdrawModal() {
+  showWithdrawModal.value = false
+}
+
+async function submitWithdrawForm() {
+  try {
+    // TODO: ยิง API ถ้ามี
+    // await fetch(...)
+
+    showWithdrawModal.value = false
+
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      showConfirmButton: false,
+      timer: 2500,
+      timerProgressBar: true,
+      didOpen: (toast) => {
+        toast.addEventListener('mouseenter', Swal.stopTimer)
+        toast.addEventListener('mouseleave', Swal.resumeTimer)
+      },
+    })
+
+    Toast.fire({
+      icon: 'success',
+      title: 'ยืนยันการเบิกเรียบร้อย',
+    })
+  } catch (err) {
+    console.error(err)
+    Swal.fire('ผิดพลาด', 'ไม่สามารถยืนยันการเบิกได้', 'error')
+  }
+}
+
+const technicianTypes = ref([])
+
+async function fetchTechnicianTypes() {
+  try {
+    const res = await fetch(`${API_BASE}/technician-types`) // <-- ชื่อ endpoint ตามที่คุณตั้ง
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.message || 'โหลดประเภทงานซ่อมไม่สำเร็จ')
+
+    // คาดว่า data = [{ tt_id, tt_name }, ...]
+    technicianTypes.value = data
+  } catch (err) {
+    console.error('โหลดประเภทงานซ่อมไม่สำเร็จ:', err)
+  }
+}
+
+function handleRepairFrom(code) {
+  // เก็บรหัสใบแจ้งซ่อมไว้ใน sessionStorage แล้วไปหน้า technician-stock-list
+  try {
+    sessionStorage.setItem('selected_rf_code', String(code))
+  } catch (e) {
+    console.warn('Cannot store selected_rf_code', e)
+  }
+  router.push('/main/technician-stock-list')
+}
+
+onMounted(() => {
+  const state = history.state
+  if (state) {
+    if (state.fromAdmin) canAssign.value = true
+    if (state.fromTechnician) canAccept.value = true
+  }
+  if (history.state && history.state.fromAdmin) {
+    canAssign.value = true
+  }
+
+  fetchRepairDetail()
+  fetchTechnicianTypes() // 👈 เพิ่มบรรทัดนี้
+})
 </script>
 
 <template>
-  <div class="bg-gray-50 min-h-screen py-6 sm:py-10 space-y-6 sm:space-y-8 px-3 sm:px-6 lg:px-8">
+  <div class="bg-gray-50 min-h-screen px-3 sm:px-6 lg:px-8">
     <!-- Loading -->
     <div v-if="isLoading" class="text-center text-gray-500 py-16 text-base sm:text-lg">
       กำลังโหลดข้อมูล...
@@ -462,8 +688,8 @@ onMounted(() => {
                   >
                     <img src="/icon/prop-icon.svg" class="w-6 h-6 sm:w-7 sm:h-7" />
                   </div>
-                  <div>
-                    <span class="text-sm sm:text-base leading-tight text-gray-500 block"
+                  <div class="break-word">
+                    <span class="text-sm sm:text-base leading-tight text-gray-500 block "
                       >หมายเลขครุภัณฑ์:</span
                     >
                     <span
@@ -577,18 +803,45 @@ onMounted(() => {
 
           <!-- กล่องรายการเบิก -->
           <div class="bg-white border border-gray-200 rounded-xl p-4 sm:p-6 shadow-sm">
-            <h2 class="text-lg font-semibold text-gray-800 mb-4">รายการเบิก</h2>
-            <div v-if="repair?.stock_items?.length" class="space-y-2">
+            <div class="flex items-center justify-between mb-4 border-b border-gray-300 pb-2 mb-4">
+              <h2 class="text-lg font-semibold text-gray-800">รายการเบิก</h2>
+            </div>
+
+            <div v-if="repair?.stock_items?.length" class="space-y-3 h-[280px] overflow-y-auto">
               <div
                 v-for="(item, i) in repair.stock_items"
                 :key="i"
-                class="flex justify-between border-b pb-1 text-gray-700"
+                class="flex p-1 items-center"
+                :class="{
+                  'border-b border-gray-200': i < repair.stock_items.length - 1,
+                }"
               >
-                <span>{{ item.name }}</span>
-                <span>{{ item.quantity }} ชิ้น</span>
+                <!-- รายละเอียดสินค้า -->
+                <div class="flex-1 leading-tight">
+                  <p class="text-gray-800 font-semibold text-sm">
+                    {{ item.name }}
+                  </p>
+
+                  <p class="text-xs text-gray-500">
+                    หมายเลขวัสดุ/ครุภัณฑ์:
+                    <span class="text-gray-700 font-medium">
+                      {{ item.assetCode || '-' }}
+                    </span>
+                  </p>
+                </div>
+
+                <!-- จำนวนที่เบิก -->
+                <div class="text-right">
+                  <p class="text-xs text-gray-500">จำนวนที่เบิก</p>
+                  <p class="text-sm text-gray-400">
+                    {{ item.qty }}
+                    <span class="text-sm text-gray-500">ชิ้น</span>
+                  </p>
+                </div>
               </div>
             </div>
-            <div v-else class="text-center text-gray-400 text-sm sm:text-base py-8">
+
+            <div v-else class="text-center text-gray-400 text-sm sm:text-base py-8 h-[250px]">
               - ไม่มีรายการเบิก -
             </div>
           </div>
@@ -606,7 +859,8 @@ onMounted(() => {
             <div class="space-y-2 text-gray-700 text-sm sm:text-base">
               <p><span class="text-gray-500">ชื่อ:</span> {{ repair?.reporter?.name || '-' }}</p>
               <p>
-                <span class="text-gray-500">เบอร์โทร:</span> {{ repair?.reporter?.phone || '-' }}
+                <span class="text-gray-500">เบอร์โทร:</span>
+                {{ repair?.reporter?.phone ? toDisplay(repair.reporter.phone) : '-' }}
               </p>
               <p>
                 <span class="text-gray-500">หน่วยงาน:</span>
@@ -634,21 +888,121 @@ onMounted(() => {
               >
                 {{ isAssigned ? 'มอบหมายแล้ว' : 'มอบหมายงาน' }}
               </button>
-              <button
-                v-if="canAccept && repair?.rf_user_status !== 'done'"
-                @click="openActionPopup"
-                :class="[
-                  'px-3 py-2 text-sm font-medium rounded-lg shadow-sm transition flex items-center gap-2 ml-auto text-white',
-                  repair?.rf_user_status === 'pending'
-                    ? 'bg-teal-700 hover:bg-teal-900 px-7' /* สีฟ้ารับงาน */
-                    : 'bg-amber-500 hover:bg-amber-600' /* สีเหลืองเปลี่ยนสถานะ */,
-                ]"
-              >
-                {{ repair?.rf_user_status === 'pending' ? 'รับงาน' : 'เปลี่ยนสถานะ' }}
-              </button>
             </div>
 
             <RepairStatusTimeline :timeline-steps="repair?.timeline || []" />
+          </div>
+
+          <!-- ปุ่มเบิก และ ปุ่มเปลี่ยนสถานะ ด้านล่างกล่องสถานะ -->
+          <div v-if="showWithdrawButton || (canAccept && repair?.rf_user_status !== 'done')">
+            <div
+              :class="[
+                'grid gap-4',
+                showWithdrawButton ? 'grid-cols-2' : 'grid-cols-1'
+              ]"
+            >
+              <!-- ปุ่มเบิกวัสดุ/อุปกรณ์ (ซ้าย) -->
+              <button
+                v-if="showWithdrawButton"
+                type="button"
+                class="w-full px-6 py-3.5 text-sm sm:text-base font-semibold rounded-xl shadow-md transition-all duration-200 flex items-center justify-center gap-3 hover:shadow-lg hover:-translate-y-0.5 bg-blue-600 hover:bg-blue-700 text-white"
+                @click="handleRepairFrom(repair?.rf_code)"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                </svg>
+                เบิกวัสดุ/อุปกรณ์
+              </button>
+
+              <!-- ปุ่มรับงาน/เปลี่ยนสถานะ/ปิดงาน -->
+              <div v-if="canAccept && repair?.rf_user_status !== 'done'" class="relative">
+                <button
+                  @click="repair?.rf_user_status === 'pending' ? openActionPopup() : (repair?.rf_user_status === 'outsource' ? confirmCloseJob() : (showStatusPopup ? closeStatusPopup() : openActionPopup()))"
+                  :class="[
+                    'w-full px-6 py-3.5 text-sm sm:text-base font-semibold rounded-xl shadow-md transition-all duration-200 flex items-center justify-center gap-3 text-white hover:shadow-lg hover:-translate-y-0.5',
+                    repair?.rf_user_status === 'pending'
+                      ? 'bg-teal-500 hover:bg-teal-600'
+                      : repair?.rf_user_status === 'outsource'
+                        ? 'bg-green-600 hover:bg-green-700'
+                        : 'bg-amber-500 hover:bg-amber-600',
+                  ]"
+                >
+                  <!-- Icon รับงาน (pending) -->
+                  <svg v-if="repair?.rf_user_status === 'pending'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <!-- Icon ปิดงาน (outsource) -->
+                  <svg v-else-if="repair?.rf_user_status === 'outsource'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                  </svg>
+                  <!-- Icon เปลี่ยนสถานะ (in_progress) -->
+                  <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  {{ repair?.rf_user_status === 'pending' ? 'รับงาน' : (repair?.rf_user_status === 'outsource' ? 'ปิดงาน' : 'เปลี่ยนสถานะ') }}
+                </button>
+
+                <!-- Popup เลือกสถานะ (dropdown) -->
+                <div
+                  v-if="showStatusPopup"
+                  class="absolute bottom-full mb-2 right-0 w-72 bg-white border border-gray-200 rounded-xl shadow-xl z-50"
+                >
+                  <!-- หน้าเลือกตัวเลือก -->
+                  <div class="p-3">
+                    <div class="flex items-center gap-2 mb-3 pb-2 border-b border-gray-100">
+                      <div class="w-7 h-7 rounded-full bg-amber-100 flex items-center justify-center">
+                        <svg class="w-3.5 h-3.5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                      </div>
+                      <div>
+                        <h3 class="text-xs font-bold text-gray-800">เปลี่ยนสถานะงาน</h3>
+                      </div>
+                      <button @click="closeStatusPopup" class="ml-auto p-1 hover:bg-gray-100 rounded transition">
+                        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+
+                    <div class="space-y-1.5">
+                      <!-- ปิดงาน -->
+                      <button
+                        @click="handleSelectStatus('done')"
+                        class="w-full flex items-center gap-2.5 p-2.5 rounded-lg hover:bg-green-50 transition-all duration-200 group"
+                      >
+                        <div class="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center group-hover:bg-green-200 transition">
+                          <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                        <div class="text-left">
+                          <p class="text-sm font-medium text-gray-800 group-hover:text-green-700">ปิดงาน</p>
+                          <p class="text-xs text-gray-400">ดำเนินการเสร็จสิ้นแล้ว</p>
+                        </div>
+                      </button>
+
+                      <!-- จ้างช่างภายนอก (ไม่แสดงถ้าสถานะเป็น outsource อยู่แล้ว) -->
+                      <button
+                        v-if="repair?.rf_user_status !== 'outsource'"
+                        @click="handleSelectStatus('outsource')"
+                        class="w-full flex items-center gap-2.5 p-2.5 rounded-lg hover:bg-amber-50 transition-all duration-200 group"
+                      >
+                        <div class="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center group-hover:bg-amber-200 transition">
+                          <svg class="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                          </svg>
+                        </div>
+                        <div class="text-left">
+                          <p class="text-sm font-medium text-gray-800 group-hover:text-amber-700">จ้างช่างภายนอก</p>
+                          <p class="text-xs text-gray-400">ส่งต่องานให้ผู้รับเหมา</p>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -720,6 +1074,148 @@ onMounted(() => {
       </div>
     </div>
   </div>
+  <!-- Modal ฟอร์มยืนยันการเบิก -->
+  <div
+    v-if="showWithdrawModal"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-3 sm:px-4 overflow-y-auto"
+    @click.self="closeWithdrawModal"
+  >
+    <div
+      class="bg-white rounded-2xl shadow-xl w-full max-w-5xl mx-auto my-6 sm:my-10 p-5 sm:p-8 relative max-h-[90vh] overflow-y-auto"
+    >
+      <!-- หัวข้อ -->
+      <div class="mb-4 sm:mb-6">
+        <h2 class="text-xl sm:text-2xl font-bold text-gray-800">ฟอร์มขอเบิกวัสดุ / อุปกรณ์</h2>
+        <p class="text-gray-500 text-xs sm:text-sm mt-1">กรอกข้อมูลส่วนตัวของผู้ขอเบิกให้ครบถ้วน</p>
+      </div>
+
+      <form @submit.prevent="submitWithdrawForm" class="space-y-4 sm:space-y-5">
+        <!-- หมายเลขใบแจ้งซ่อม -->
+        <div class="flex flex-col gap-1">
+          <label class="text-sm text-gray-700 font-medium"> หมายเลขใบแจ้งซ่อม </label>
+          <input
+            v-model="withdrawForm.repair_code"
+            type="text"
+            class="rounded-lg border border-gray-300 px-3 py-2 text-sm bg-gray-100 cursor-not-allowed text-gray-700"
+            disabled
+          />
+        </div>
+
+        <!-- แถว 1 -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          <div class="flex flex-col gap-1">
+            <label class="text-sm text-gray-700 font-medium"> ชื่อผู้ทำรายการเบิก </label>
+            <input
+              v-model="withdrawForm.requester_name"
+              type="text"
+              class="rounded-lg border border-gray-300 px-3 py-2 text-sm bg-gray-100 cursor-not-allowed text-gray-700"
+              placeholder="กรอกชื่อ-นามสกุล"
+              required
+              disabled
+            />
+          </div>
+
+          <div class="flex flex-col gap-1">
+            <label class="text-sm text-gray-700 font-medium"> หน่วยงาน / สังกัด </label>
+            <input
+              v-model="withdrawForm.unit"
+              type="text"
+              class="rounded-lg border border-gray-300 px-3 py-2 text-sm bg-gray-100 cursor-not-allowed text-gray-700"
+              placeholder="เช่น งานคอมพิวเตอร์"
+              required
+              disabled
+            />
+          </div>
+
+          <div class="flex flex-col gap-1">
+            <label class="text-sm text-gray-700 font-medium">
+              วันที่ทำการเบิก <span class="text-red-600">*</span>
+            </label>
+            <input
+              v-model="withdrawForm.date"
+              type="date"
+              class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              required
+            />
+          </div>
+        </div>
+
+        <!-- แถว 2 -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          <div class="flex flex-col gap-1">
+            <label class="text-sm text-gray-700 font-medium">
+              ประเภทงานซ่อม <span class="text-red-600">*</span>
+            </label>
+            <select
+              v-model="withdrawForm.repair_type_id"
+              class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700"
+            >
+              <option disabled value="">กรุณาเลือกประเภทงานซ่อม</option>
+              <option v-for="type in technicianTypes" :key="type.tt_id" :value="type.tt_id">
+                {{ type.tt_name }}
+              </option>
+            </select>
+          </div>
+
+          <div class="flex flex-col gap-1">
+            <label class="text-sm text-gray-700 font-medium"> สถานที่ </label>
+            <input
+              v-model="withdrawForm.location"
+              type="text"
+              class="rounded-lg border border-gray-300 px-3 py-2 text-sm bg-gray-100 cursor-not-allowed text-gray-700"
+              placeholder="อาคาร / ชั้น / ห้อง"
+              disabled
+            />
+          </div>
+
+          <div class="flex flex-col gap-1">
+            <label class="text-sm text-gray-700 font-medium">
+              ความเร่งด่วน <span class="text-red-600">*</span>
+            </label>
+            <select
+              v-model="withdrawForm.urgency"
+              class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option disabled value="">เลือกระดับความเร่งด่วน</option>
+              <option value="high">เร่งด่วนมาก</option>
+              <option value="medium">เร่งด่วน</option>
+              <option value="low">ไม่เร่งด่วน</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- แถว 3: หมายเหตุ -->
+        <div class="flex flex-col gap-1">
+          <label class="text-sm text-gray-900 font-semibold"> หมายเหตุ </label>
+          <p class="text-neutral-400 text-xs mb-2">กรอกรายละเอียดเพิ่มเติม (ถ้ามี)</p>
+          <textarea
+            v-model="withdrawForm.reason"
+            rows="3"
+            class="rounded-lg border border-gray-300 px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400"
+            placeholder="กรุณาใส่หมายเหตุ"
+          ></textarea>
+        </div>
+
+        <!-- ปุ่ม -->
+        <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 mt-4">
+          <button
+            type="button"
+            class="px-4 py-2 rounded-lg border border-gray-300 text-sm text-gray-600 hover:bg-gray-100 w-full sm:w-auto"
+            @click="closeWithdrawModal"
+          >
+            ยกเลิก
+          </button>
+          <button
+            type="submit"
+            class="px-5 py-2 rounded-lg text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-sm w-full sm:w-auto"
+          >
+            ยืนยันการเบิก
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <assignJobModalComponent
     v-if="showAssignPopup"
     :repairId="repairCode"
@@ -733,4 +1229,5 @@ onMounted(() => {
     @close="showAcceptPopup = false"
     @success="handleAcceptSuccess"
   />
+
 </template>

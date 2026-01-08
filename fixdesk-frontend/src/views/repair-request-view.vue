@@ -2,11 +2,13 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
+import { usePhoneFormat } from '@/composables/usePhoneFormat'
+const { toDisplay} = usePhoneFormat()
 
 defineOptions({ name: 'RepairRequestView' })
 
 const router = useRouter()
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
+const API_BASE = import.meta.env.VITE_API_BASE
 
 const isSubmitting = ref(false)
 const formData = ref({
@@ -131,14 +133,14 @@ function processFiles(files) {
       animation: false,
       showConfirmButton: false,
       timer: 2000,
-      timerProgressBar: true
+      timerProgressBar: true,
     })
     Toast.fire({
       title: 'ไฟล์เกินกำหนด',
       text: `สามารถอัพโหลดได้สูงสุด ${maxFiles} ไฟล์`,
       icon: 'warning',
       background: '#fef3c7',
-      color: '#92400e'
+      color: '#92400e',
     })
     return
   }
@@ -165,14 +167,14 @@ function processFiles(files) {
       animation: false,
       showConfirmButton: false,
       timer: 2500,
-      timerProgressBar: true
+      timerProgressBar: true,
     })
     Toast.fire({
       title: 'ประเภทไฟล์ไม่ถูกต้อง',
       text: 'รองรับเฉพาะไฟล์รูปภาพ (jpg, png, gif, webp) และวิดีโอ (mp4, avi, mov, wmv)',
       icon: 'error',
       background: '#fee2e2',
-      color: '#dc2626'
+      color: '#dc2626',
     })
     return
   }
@@ -188,14 +190,14 @@ function processFiles(files) {
       animation: false,
       showConfirmButton: false,
       timer: 2000,
-      timerProgressBar: true
+      timerProgressBar: true,
     })
     Toast.fire({
       title: 'ไฟล์ใหญ่เกินไป',
       text: 'ขนาดไฟล์ต้องไม่เกิน 50MB',
       icon: 'error',
       background: '#fee2e2',
-      color: '#dc2626'
+      color: '#dc2626',
     })
     return
   }
@@ -279,7 +281,7 @@ onMounted(() => {
   const payload = parseJwt(token)
   formData.value.reporterName =
     `${payload.us_prefix_th || ''}${payload.us_first_name_th || ''} ${payload.us_last_name_th || ''}`.trim()
-  formData.value.phoneNumber = payload.us_tel || ''
+  formData.value.phoneNumber = toDisplay(payload.us_tel || '')
   formData.value.department = payload.us_department || ''
 
   fetchTechnicianTypes()
@@ -296,14 +298,14 @@ async function handleSubmit() {
       animation: false,
       showConfirmButton: false,
       timer: 2500,
-      timerProgressBar: true
+      timerProgressBar: true,
     })
     Toast.fire({
       title: 'ข้อมูลไม่ครบถ้วน',
       text: 'กรุณากรอกข้อมูลให้ครบถ้วนตามที่กำหนด',
       icon: 'warning',
       background: '#fef3c7',
-      color: '#92400e'
+      color: '#92400e',
     })
     return
   }
@@ -316,14 +318,14 @@ async function handleSubmit() {
       animation: false,
       showConfirmButton: false,
       timer: 2500,
-      timerProgressBar: true
+      timerProgressBar: true,
     })
     Toast.fire({
       title: 'ยังไม่ได้เลือกความเร่งด่วน',
       text: 'กรุณาเลือกระดับความเร่งด่วนก่อนส่งแบบฟอร์ม',
       icon: 'warning',
       background: '#fef3c7',
-      color: '#92400e'
+      color: '#92400e',
     })
     return
   }
@@ -410,14 +412,14 @@ async function handleSubmit() {
       didOpen: (toast) => {
         toast.addEventListener('mouseenter', Swal.stopTimer)
         toast.addEventListener('mouseleave', Swal.resumeTimer)
-      }
+      },
     })
     Toast.fire({
       title: 'ส่งแบบฟอร์มสำเร็จ!',
       text: 'ระบบได้บันทึกใบแจ้งซ่อมของคุณเรียบร้อยแล้ว',
       icon: 'success',
       background: '#f0f9ff',
-      color: '#1e3a8a'
+      color: '#1e3a8a',
     })
 
     router.push('/main/my-list')
@@ -432,16 +434,16 @@ async function handleSubmit() {
       animation: false,
       showConfirmButton: false,
       timer: 3000,
-      timerProgressBar: true
+      timerProgressBar: true,
     })
     Toast.fire({
       title: 'เกิดข้อผิดพลาด!',
       text: 'ไม่สามารถส่งแบบฟอร์มได้ กรุณาลองใหม่อีกครั้ง',
       icon: 'error',
       background: '#fee2e2',
-      color: '#dc2626'
+      color: '#dc2626',
     })
-  }finally {
+  } finally {
     isSubmitting.value = false
   }
 }
@@ -893,7 +895,7 @@ function validateField(field) {
 
         <!-- ปุ่มบันทึก -->
         <div class="flex justify-center sm:justify-end mt-8">
-           <!-- ปุ่มยกเลิก -->
+          <!-- ปุ่มยกเลิก -->
           <button
             type="button"
             :disabled="isSubmitting"

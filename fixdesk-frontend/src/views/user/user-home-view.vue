@@ -8,7 +8,7 @@ import RepairStatusTimeline from '@/components/status-timeline-component.vue'
 import cardHomeComponent from '@/components/card-home-component.vue'
 
 // ค่าพื้นฐานของ API
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
+const API_BASE = import.meta.env.VITE_API_BASE
 
 // ตัวแปรข้อมูลผู้ใช้
 const realUserName = ref('ผู้ใช้งาน')
@@ -20,26 +20,26 @@ const statsItems = ref([
     value: 0,
     label: 'แจ้งซ่อมทั้งหมด',
     unit: 'รายการ',
-    colorClass: 'text-blue-600',
+    colorClass: 'text-violet-500',
     filterStatus: '',
   },
   {
     value: 0,
-    label: 'รอดำเนินการ',
+    label: 'รอดำเนินการทั้งหมด',
     unit: 'รายการ',
-    colorClass: 'text-orange-500',
+    colorClass: 'text-amber-500',
     filterStatus: 'pending',
   },
   {
     value: 0,
-    label: 'กำลังดำเนินการ',
+    label: 'กำลังดำเนินการทั้งหมด',
     unit: 'รายการ',
-    colorClass: 'text-indigo-600',
+    colorClass: 'text-blue-600',
     filterStatus: 'in_progress',
   },
   {
     value: 0,
-    label: 'ซ่อมเสร็จสิ้น',
+    label: 'ดำเนินการเสร็จสิ้นทั้งหมด',
     unit: 'รายการ',
     colorClass: 'text-green-600',
     filterStatus: 'done',
@@ -53,6 +53,7 @@ const onCardClick = (item) => {
     query: { status: item.filterStatus },
   })
 }
+const selectedRepairDetail = ref(null)
 
 // ตัวแปรสถานะหลักของหน้า
 const router = useRouter()
@@ -115,58 +116,6 @@ async function fetchRepairStats() {
 function formatDateTH(dateStr) {
   if (!dateStr) return '-'
   return new Date(dateStr).toLocaleDateString('th-TH')
-}
-
-function getUrgencyLabel(u) {
-  switch (u) {
-    case 'high':
-      return 'เร่งด่วนมาก'
-    case 'medium':
-      return 'เร่งด่วน'
-    case 'low':
-      return 'ไม่เร่งด่วน'
-    default:
-      return '-'
-  }
-}
-
-function getUrgencyClass(u) {
-  switch (u) {
-    case 'high':
-      return 'bg-red-100 text-red-600'
-    case 'medium':
-      return 'bg-amber-50 text-amber-500'
-    case 'low':
-      return 'bg-green-100 text-green-600'
-    default:
-      return 'bg-gray-100 text-gray-500'
-  }
-}
-
-function getStatusLabel(s) {
-  switch (s) {
-    case 'pending':
-      return 'รอดำเนินการ'
-    case 'in_progress':
-      return 'กำลังดำเนินการ'
-    case 'done':
-      return 'ดำเนินการเสร็จสิ้น'
-    default:
-      return 'ยกเลิก'
-  }
-}
-
-function getStatusClass(s) {
-  switch (s) {
-    case 'pending':
-      return 'bg-amber-50 text-amber-500'
-    case 'in_progress':
-      return 'bg-blue-100 text-blue-600'
-    case 'done':
-      return 'bg-green-100 text-green-600'
-    default:
-      return 'bg-gray-100 text-gray-500'
-  }
 }
 
 async function fetchUserProfile() {
@@ -243,7 +192,7 @@ async function loadTimelineForCode(code) {
     const res = await fetch(`${API_BASE}/repair-requests/${code}`)
     const data = await res.json()
     if (!res.ok) throw new Error(data.message || 'โหลดข้อมูลไม่สำเร็จ')
-
+    selectedRepairDetail.value = data
     selectedTimelineSteps.value = buildTimelineFromRepair(data)
   } catch (err) {
     console.error('โหลด timeline ไม่สำเร็จ:', err)
@@ -253,11 +202,6 @@ async function loadTimelineForCode(code) {
   }
 }
 
-async function handleSelectRepair(e) {
-  const code = e.target.value
-  selectedTrackingCode.value = code
-  await loadTimelineForCode(code)
-}
 
 function formatDateTimeTH(value) {
   if (!value) return null
@@ -313,66 +257,31 @@ function buildTimelineFromRepair(repairData) {
   return timelineSteps
 }
 
-const getBadgeHtml = (text, type) => {
-  let colorClass = 'bg-gray-100 text-gray-600'
-
-  if (type === 'urgency') {
-    if (text === 'high') {
-      text = 'เร่งด่วนมาก'
-      colorClass = 'bg-red-100 text-red-600'
-    } else if (text === 'medium') {
-      text = 'เร่งด่วน'
-      colorClass = 'bg-amber-50 text-amber-500'
-    } else if (text === 'low') {
-      text = 'ไม่เร่งด่วน'
-      colorClass = 'bg-green-100 text-green-600'
-    }
-  } else if (type === 'status') {
-    if (text === 'pending') {
-      text = 'รอดำเนินการ'
-      colorClass = 'bg-amber-50 text-amber-500'
-    } else if (text === 'in_progress') {
-      text = 'กำลังดำเนินการ'
-      colorClass = 'bg-blue-100 text-blue-600'
-    } else if (text === 'done') {
-      text = 'ดำเนินการเสร็จสิ้น'
-      colorClass = 'bg-green-100 text-green-600'
-    } else {
-      text = 'ยกเลิก'
-      colorClass = 'bg-gray-100 text-gray-500'
-    }
-  }
-
-  return `<span class="inline-flex min-w-[80px] justify-center items-center px-3 py-1 rounded-full font-semibold ${colorClass}">${text}</span>`
-}
 
 // 2. Computed สำหรับ Rows ที่จะแสดง (แปลง recentRepairs ให้เป็น Array ของ Array)
 const tableRows = computed(() => {
-  return recentRepairs.value.map((item) => [
+  return allMyRepairs.value.map((item) => [
     formatDateTH(item.rf_create_at),
     item.rf_code,
     item.tt_name || '-',
-    item.building_name ? `อาคาร ${item.building_name}` : '-',
-    getBadgeHtml(item.rf_urgency, 'urgency'),
-    getBadgeHtml(item.rf_user_status, 'status'),
+    item.rf_urgency,
+    item.rf_user_status,
   ])
 })
 
 // 3. Computed สำหรับ Raw Rows (เพื่อให้ TableComponent รู้ ID เวลากด)
 const tableRawRows = computed(() => {
-  return recentRepairs.value.map((item) => ({
-    rf_code: item.rf_code, // [สำคัญ] ต้องมี field นี้เพื่อให้ TableComponent ส่ง ID กลับมาได้
-    // ... field อื่นๆ ถ้าจำเป็น
+  return allMyRepairs.value.map((item) => ({
+    rf_code: item.rf_code,
   }))
 })
 
 /* --- [เพิ่มใหม่] Event Handler เมื่อกด Row --- */
 const onRowClick = (idOrItem) => {
-  // รับค่า ID (String) หรือ Object แล้วดึง ID
   const code = typeof idOrItem === 'object' && idOrItem !== null ? idOrItem.rf_code : idOrItem
-
   if (code) {
-    goToDetail(code) // เรียกฟังก์ชันเดิมที่มีอยู่แล้ว
+    selectedTrackingCode.value = code // อัปเดต Dropdown
+    loadTimelineForCode(code) // โหลดข้อมูลทันที
   }
 }
 
@@ -381,15 +290,13 @@ onMounted(() => {
   fetchUserProfile()
   fetchRecentRepairs()
 })
-
-const goToDetail = (code) => router.push(`/main/repair-detail/${code}`)
 </script>
 
 <template>
   <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-8xl">
     <div class="flex justify-between items-center mb-6">
       <div>
-        <h1 class="text-2xl font-bold text-gray-800">สวัสดีคุณ {{ realUserName }}</h1>
+        <h1 class="text-2xl font-bold text-gray-800">สวัสดีคุณ{{ realUserName }}</h1>
         <p class="text-md text-gray-600 mt-1">{{ userDepartment }}</p>
       </div>
       <repairButton />
@@ -403,23 +310,19 @@ const goToDetail = (code) => router.push(`/main/repair-detail/${code}`)
       <div class="col-span-8 bg-white rounded-xl border border-slate-200 shadow-sm p-5">
         <div class="border-b border-slate-200 pb-2 mb-4">
           <h2 class="text-xl font-bold mb-1">รายการที่ฉันแจ้งซ่อม</h2>
-          <p class="text-xs text-gray-500">ระบบแสดงข้อมูล 5 รายการล่าสุด</p>
+          <p class="text-xs text-gray-500">7 รายการแจ้งซ่อมล่าสุด (เรียงจากวันที่แจ้ง)</p>
         </div>
 
         <TableComponent
-          :columns="[
-            'วันที่',
-            'หมายเลขแจ้งซ่อม',
-            'ประเภทงาน',
-            'สถานที่',
-            'ความเร่งด่วน',
-            'สถานะงาน',
-          ]"
+          :columns="['วันที่', 'หมายเลขแจ้งซ่อม', 'ประเภทงาน', 'ความเร่งด่วน', 'สถานะ']"
           :rows="tableRows"
           :rawRows="tableRawRows"
-          :perPage="5"
-          mode="view-only"
+          :perPage="7"
+          mode="user"
           :idColumnIndex="1"
+          :urgencyColumn="3"
+          :statusColumn="4"
+          :activeId="selectedTrackingCode"
           @detail="onRowClick"
         />
       </div>
@@ -427,29 +330,63 @@ const goToDetail = (code) => router.push(`/main/repair-detail/${code}`)
       <div class="col-span-4 bg-white rounded-xl border border-slate-200 shadow-sm p-5">
         <div class="border-b border-slate-200 pb-3 mb-4">
           <div class="flex justify-between items-center mb-1">
-            <h2 class="text-xl font-bold">กำลังดำเนินการ</h2>
-            <select
-              class="rounded-sm px-2 py-1 text-xs bg-white text-gray-700"
-              :value="selectedTrackingCode"
-              @change="handleSelectRepair"
-            >
-              <option value="" disabled>เลือกงาน</option>
-              <option v-for="r in allMyRepairs" :key="r.rf_code" :value="r.rf_code">
-                {{ r.rf_code }}
-              </option>
-            </select>
+            <h2 class="text-xl font-bold">ตรวจสอบสถานะ</h2>
           </div>
-          <p class="text-xs text-gray-500 mt-1">
-            กำลังติดตามงานของ
-            <span v-if="selectedTrackingCode" class="font-semibold"
-              >#{{ selectedTrackingCode }}</span
-            >
-            <span v-else>-</span>
-          </p>
+          <div>
+            <p class="text-sm text-gray-500 mt-1">
+              หมายเลขแจ้งซ่อม:
+              <span v-if="selectedTrackingCode" class="font-semibold text-indigo-600">
+                #{{ selectedTrackingCode }}
+              </span>
+              <span v-else>-</span>
+            </p>
+            <p class="text-sm text-gray-500">
+              <span class="font-medium">ประเภท: </span>
+              <span
+                v-if="selectedRepairDetail"
+                class="text-sm font-semibold text-gray-600 break-words"
+                >{{ selectedRepairDetail.repair_type_name }}</span
+              >
+              <span v-else>-</span>
+            </p>
+
+            <p class="text-sm text-gray-500">
+              <span class="font-medium">สถานที่: </span>
+              <span
+                v-if="selectedRepairDetail"
+                class="text-sm font-semibold text-gray-600 break-words"
+              >
+                อาคาร {{ selectedRepairDetail.building_name }} ห้อง
+                {{ selectedRepairDetail.room_name }}
+              </span>
+              <span v-else>-</span>
+            </p>
+            <p class="text-sm text-gray-500 mt-1">
+              หัวข้อปัญหา:
+              <span
+                v-if="selectedRepairDetail"
+                class="text-sm font-semibold text-gray-600 break-words"
+              >
+                {{ selectedRepairDetail.rf_problem }}
+              </span>
+              <span v-else class="text-sm font-semibold text-gray-800">-</span>
+            </p>
+
+            <p class="text-sm text-gray-500 mt-1">
+              รายละเอียด/อาการ:
+              <span
+                v-if="selectedRepairDetail"
+                class="text-sm font-semibold text-gray-600 break-words"
+              >
+                {{ selectedRepairDetail.rf_detail }}
+              </span>
+              <span v-else class="text-sm font-semibold text-gray-800">-</span>
+            </p>
+          </div>
         </div>
 
         <div>
-          <p v-if="isTimelineLoading" class="text-xs text-gray-400 text-center py-4">
+          <p v-if="isTimelineLoading" class="text-sm text-gray-400 text-center py-4">
             กำลังโหลดสถานะการดำเนินงาน...
           </p>
           <RepairStatusTimeline v-else :timeline-steps="selectedTimelineSteps" />
@@ -458,3 +395,13 @@ const goToDetail = (code) => router.push(`/main/repair-detail/${code}`)
     </div>
   </div>
 </template>
+<style scoped>
+/* เจาะจงเข้าไปแก้ขนาดตัวอักษรใน TableComponent */
+:deep(td),
+:deep(th) {
+  font-size: 0.875rem !important; /* เท่ากับ text-xs */
+  line-height: 1rem !important;
+  padding-top: 0.5rem; /* ปรับระยะห่างแนวตั้งให้แคบลงด้วย (ถ้าต้องการ) */
+  padding-bottom: 0.5rem;
+}
+</style>

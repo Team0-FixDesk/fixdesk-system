@@ -3,11 +3,12 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
 import TableComponent from '@/components/table-component.vue'
+import TableActionsComponent from '@/components/table-actions-component.vue'
 
 defineOptions({ name: 'AdminManageLocationView' })
 
 const router = useRouter()
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
+const API_BASE = import.meta.env.VITE_API_BASE
 
 // Helper function to get auth headers
 const getAuthHeaders = () => {
@@ -59,7 +60,7 @@ const addForm = ref({
   name: '',
   building_id: '',
   floor_id: '',
-  bulk_mode: false,
+  bulk_mode: true,
   building_mode: 'existing',
   floor_mode: 'existing',
   new_building_name: '',
@@ -224,14 +225,14 @@ async function fetchAllDataAlternative() {
       animation: false,
       showConfirmButton: false,
       timer: 3000,
-      timerProgressBar: true
+      timerProgressBar: true,
     })
     Toast.fire({
       title: 'เกิดข้อผิดพลาด',
       text: 'ไม่สามารถโหลดข้อมูลสถานที่ได้',
       icon: 'error',
       background: '#fee2e2',
-      color: '#dc2626'
+      color: '#dc2626',
     })
   }
 }
@@ -382,30 +383,40 @@ function extractNumber(str) {
 }
 
 // แก้ไข tableRows ให้มี ID เป็นคอลัมน์แรก
+// Table rows (ใช้ TableComponent ใหม่)
 const tableRows = computed(() => {
-  return displayData.value.map((item) => [
-    item.id.toString(), // คอลัมน์ 0: ID (ซ่อนในโหมด location)
-    item.building, // คอลัมน์ 1: อาคาร
-    item.floor, // คอลัมน์ 2: ชั้น
-    item.room, // คอลัมน์ 3: ห้อง
-    'actions', // คอลัมน์ 4: การจัดการ
-  ])
+  return displayData.value.map((item) => {
+    return [
+      item.id, // 0: primary ID
+      item.building, // 1: อาคาร
+      item.floor, // 2: ชั้น
+      item.room, // 3: ห้อง
+      '', // 4: action (slot)
+    ]
+  })
 })
+const openMenuId = ref(null)
 
 // เปลี่ยน columns ให้มี 5 คอลัมน์ แต่จะซ่อนคอลัมน์แรก
-const columns = ['อาคาร', 'ชั้น', 'ห้อง', 'การจัดการ'] // ลบ 'ID' ออก
+const columns = ['', 'อาคาร', 'ชั้น', 'ห้อง', 'การจัดการ']
 
-// Raw rows for TableComponent meta data
-const rawRows = computed(() => {
-  return displayData.value.map((item) => ({
-    id: item.id,
-    type: item.type,
-    name: item.name,
-    code: item.id.toString(), // ตรงกับ row[0]
-    building: item.building,
-    floor: item.floor,
-    room: item.room,
-  }))
+// Computed: กรองชั้นตามอาคารที่เลือก หรือแสดงชั้นที่ไม่ซ้ำ
+const filteredFloors = computed(() => {
+  if (selectedBuilding.value) {
+    // ถ้าเลือกอาคาร → แสดงเฉพาะชั้นของอาคารนั้น
+    return floors.value.filter((f) => f.building_id == selectedBuilding.value)
+  } else {
+    // ถ้าไม่เลือกอาคาร → แสดงชั้นที่ไม่ซ้ำกัน (unique by floor_name)
+    const uniqueFloors = []
+    const seenNames = new Set()
+    for (const floor of floors.value) {
+      if (!seenNames.has(floor.floor_name)) {
+        seenNames.add(floor.floor_name)
+        uniqueFloors.push(floor)
+      }
+    }
+    return uniqueFloors
+  }
 })
 
 // Filter functions
@@ -502,7 +513,7 @@ function openAddModal() {
     name: '',
     building_id: '',
     floor_id: '',
-    bulk_mode: false,
+    bulk_mode: true,
     building_mode: 'existing',
     floor_mode: 'existing',
     new_building_name: '',
@@ -590,14 +601,14 @@ async function confirmDelete(username) {
       didOpen: (toast) => {
         toast.addEventListener('mouseenter', Swal.stopTimer)
         toast.addEventListener('mouseleave', Swal.resumeTimer)
-      }
+      },
     })
     Toast.fire({
       title: 'สำเร็จ!',
       text: 'ลบห้องเรียบร้อยแล้ว',
       icon: 'success',
       background: '#f0f9ff',
-      color: '#1e3a8a'
+      color: '#1e3a8a',
     })
 
     await refreshData()
@@ -609,14 +620,14 @@ async function confirmDelete(username) {
       animation: false,
       showConfirmButton: false,
       timer: 3000,
-      timerProgressBar: true
+      timerProgressBar: true,
     })
     Toast.fire({
       title: 'เกิดข้อผิดพลาด',
       text: err.message || 'เกิดข้อผิดพลาดในการลบข้อมูล',
       icon: 'error',
       background: '#fee2e2',
-      color: '#dc2626'
+      color: '#dc2626',
     })
   }
 }
@@ -716,14 +727,14 @@ async function saveSingleLocation() {
       didOpen: (toast) => {
         toast.addEventListener('mouseenter', Swal.stopTimer)
         toast.addEventListener('mouseleave', Swal.resumeTimer)
-      }
+      },
     })
     await Toast.fire({
       icon: 'success',
       title: 'สำเร็จ!',
       text: 'เพิ่มข้อมูลเรียบร้อยแล้ว',
       background: '#f0f9ff',
-      color: '#1e3a8a'
+      color: '#1e3a8a',
     })
 
     await refreshData()
@@ -834,14 +845,14 @@ async function bulkCreateLocation() {
       didOpen: (toast) => {
         toast.addEventListener('mouseenter', Swal.stopTimer)
         toast.addEventListener('mouseleave', Swal.resumeTimer)
-      }
+      },
     })
     await Toast.fire({
       icon: 'success',
       title: 'สำเร็จ!',
       text: 'สร้างสถานที่เรียบร้อยแล้ว',
       background: '#f0f9ff',
-      color: '#1e3a8a'
+      color: '#1e3a8a',
     })
 
     await refreshData()
@@ -909,14 +920,14 @@ async function saveEditLocation() {
       didOpen: (toast) => {
         toast.addEventListener('mouseenter', Swal.stopTimer)
         toast.addEventListener('mouseleave', Swal.resumeTimer)
-      }
+      },
     })
     await Toast.fire({
       icon: 'success',
       title: 'สำเร็จ!',
       text: 'แก้ไขข้อมูลห้องเรียบร้อยแล้ว',
       background: '#f0f9ff',
-      color: '#1e3a8a'
+      color: '#1e3a8a',
     })
 
     await refreshData()
@@ -1088,7 +1099,7 @@ onBeforeUnmount(() => {
                 <span class="ml-2">ทุกชั้น</span>
               </label>
               <label
-                v-for="floor in floors"
+                v-for="floor in filteredFloors"
                 :key="floor.floor_id"
                 class="flex items-center py-1 hover:bg-gray-50 rounded px-2"
               >
@@ -1129,14 +1140,29 @@ onBeforeUnmount(() => {
         <TableComponent
           :columns="columns"
           :rows="tableRows"
-          :rawRows="rawRows"
           :perPage="10"
           :idColumnIndex="0"
-          mode="location"
+          :hiddenColumns="[0]"
+          :column-align="['left', 'left', 'left', 'left', 'center']"
           @detail="openViewModal"
           @edit="openEditModal"
           @delete="confirmDelete"
-        />
+        >
+          <!-- slot: action column -->
+          <template #cell-4="{ row }">
+            <TableActionsComponent
+              role="admin"
+              :row-id="row[0]"
+              :open-menu-id="openMenuId"
+              :row="row"
+              :status="null"
+              @toggle-menu="openMenuId = $event"
+              @detail="openViewModal(row[0])"
+              @edit="openEditModal(row[0])"
+              @delete="confirmDelete(row[0])"
+            />
+          </template>
+        </TableComponent>
       </div>
     </div>
 
@@ -1260,24 +1286,6 @@ onBeforeUnmount(() => {
         <div class="space-y-4 mb-6">
           <label
             class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400"
-            :class="!addForm.bulk_mode ? 'border-blue-600 bg-blue-50' : 'border-gray-200'"
-          >
-            <input
-              type="radio"
-              v-model="addForm.bulk_mode"
-              :value="false"
-              class="w-5 h-5 text-blue-600 mt-1"
-            />
-            <div class="ml-3">
-              <div class="flex items-center gap-2">
-                <span class="font-semibold text-gray-800">เพิ่มทีละระดับ</span>
-              </div>
-              <p class="text-xs text-gray-500 mt-1">เลือกเพิ่ม อาคาร, ชั้น หรือ ห้อง ทีละอย่าง</p>
-            </div>
-          </label>
-
-          <label
-            class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400"
             :class="addForm.bulk_mode ? 'border-blue-600 bg-blue-50' : 'border-gray-200'"
           >
             <input
@@ -1294,6 +1302,24 @@ onBeforeUnmount(() => {
                 >
               </div>
               <p class="text-xs text-gray-500 mt-1">สร้างอาคาร + ชั้น + ห้อง ในครั้งเดียว</p>
+            </div>
+          </label>
+
+          <label
+            class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400"
+            :class="!addForm.bulk_mode ? 'border-blue-600 bg-blue-50' : 'border-gray-200'"
+          >
+            <input
+              type="radio"
+              v-model="addForm.bulk_mode"
+              :value="false"
+              class="w-5 h-5 text-blue-600 mt-1"
+            />
+            <div class="ml-3">
+              <div class="flex items-center gap-2">
+                <span class="font-semibold text-gray-800">เพิ่มทีละระดับ</span>
+              </div>
+              <p class="text-xs text-gray-500 mt-1">เลือกเพิ่ม อาคาร, ชั้น หรือ ห้อง ทีละอย่าง</p>
             </div>
           </label>
         </div>

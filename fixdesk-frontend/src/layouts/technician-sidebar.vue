@@ -28,7 +28,7 @@ const menus = [
   {
     icon: '/icon/sidebar/stock-icon.svg',
     label: 'รายการเบิกของฉัน',
-    path: '/main/technician-my-stock',
+    path: '/main/technician-requisition-list',
   },
 ]
 </script>

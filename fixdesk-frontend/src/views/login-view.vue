@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { jwtDecode } from 'jwt-decode'
 
 const router = useRouter()
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
+const API_BASE = import.meta.env.VITE_API_BASE
 const LOGIN_URL = `${API_BASE}/auth/login`
 
 const username = ref('')
@@ -30,7 +30,7 @@ const handleLogin = async (e) => {
     })
 
     const data = await res.json()
-    console.log('📬 ผลลัพธ์จาก backend (login):', data)
+    console.log('ผลลัพธ์จาก backend (login):', data)
     if (!res.ok) throw new Error(data.message || 'เข้าสู่ระบบไม่สำเร็จ')
     const storage = rememberMe.value ? localStorage : sessionStorage
 

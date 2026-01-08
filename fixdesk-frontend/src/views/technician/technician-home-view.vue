@@ -7,7 +7,7 @@ import TableComponent from '@/components/table-component.vue'
 import { jwtDecode } from 'jwt-decode' // ตรวจสอบว่ามีบรรทัดนี้
 
 const router = useRouter()
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
+const API_BASE = import.meta.env.VITE_API_BASE
 
 // --- State ---
 const repairRequests = ref([])
@@ -65,28 +65,27 @@ const repairTableRaw = computed(() => {
   }))
 })
 
-// 2. Stock Table (เพิ่ม stockTableRaw)
-const sortedStocks = computed(() => {
-  return [...stockForms.value].sort((a, b) => new Date(b.rawDate) - new Date(a.rawDate)).slice(0, 5)
-})
-
-const stockTableRows = computed(() => {
-  return sortedStocks.value.map((s) => [
-    s.related_rf_code || '-',
-    s.sf_code,
-    s.requester_department || '-',
-    getBadgeHtml(s.urgency, 'urgency'),
-    getBadgeHtml(s.status, 'status'),
-    `<button class="text-blue-600 hover:underline">รายละเอียด</button>`,
-  ])
-})
-
 // [เพิ่มใหม่]
-const stockTableRaw = computed(() => {
-  return sortedStocks.value.map((s) => ({
-    withdrawCode: s.sf_code,
-    // ...
-  }))
+const stockTableRows = computed(() => {
+  return stockForms.value.slice(0, 5).map((form) => {
+    const location = form.building_name || '-'
+    const items = form.items ? form.items.split('\n') : []
+
+    return [
+      form.sf_code, // 0
+      {
+        date: new Date(form.sf_create_at).toLocaleString('th-TH', {
+          dateStyle: 'medium',
+          timeStyle: 'short',
+        }),
+        location,
+        rf_code: form.rf_code, //  ตอนนี้จะมีค่า
+      },
+      items, //  ตอนนี้จะมีค่า
+      form.sf_status,
+      '',
+    ]
+  })
 })
 
 // --- [เพิ่มใหม่] Event Handler สำหรับคลิก Row ---
@@ -94,17 +93,12 @@ const onRepairRowClick = (item) => {
   const id = typeof item === 'object' && item !== null ? item.ticketId : item
 
   if (id) {
-    router.push(`/main/repair-detail/${id}`)
+    router.push({
+      path: `/main/repair-detail/${id}`,
+      state: { fromTechnician: true },
+    })
   } else {
     console.warn('Invalid ID clicked:', item)
-  }
-}
-
-const onStockRowClick = (item) => {
-  const id = (typeof item === 'object' && item !== null) ? item.withdrawCode : item;
-  if (id) {
-    // router.push(`/main/stock-detail/${id}`)
-    console.log('Open stock detail:', id)
   }
 }
 
@@ -170,9 +164,13 @@ const fetchStockForms = async () => {
     const token = localStorage.getItem('token') || sessionStorage.getItem('token')
     if (!token) return
 
-    let res = await fetch(`${API_BASE}/my-stock-forms`, {
+    const decoded = jwtDecode(token)
+    const userId = decoded.us_id
+
+    let res = await fetch(`${API_BASE}/stock-forms/${userId}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
+
     if (!res.ok && res.status === 404) {
       res = await fetch(`${API_BASE}/stock-forms`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -194,31 +192,43 @@ const fetchStockForms = async () => {
     loadingStock.value = false
   }
 }
+function truncateItem(text, maxWords = 5) {
+  if (!text) return ''
+  const [name] = text.split(' x')
+  const words = name.split(' ')
+  return words.length > maxWords ? words.slice(0, maxWords).join(' ') + '...' : name
+}
+
+function extractQuantity(item) {
+  if (!item) return 1
+  const match = item.match(/x\s*(\d+)/i)
+  return match ? Number(match[1]) : 1
+}
 
 // --- Stats for Cards ---
 const isToday = (d) => new Date(d).toDateString() === new Date().toDateString()
 const statItems = computed(() => [
   {
     value: repairRequests.value.filter((r) => isToday(r.rawDate)).length,
-    label: 'งานมอบหมายใหม่ (วันนี้)',
-    colorClass: 'text-blue-600',
+    label: 'งานมอบหมายใหม่วันนี้',
+    colorClass: 'text-amber-500',
     filterStatus: 'today',
   },
   {
     value: repairRequests.value.filter((r) => r.rf_user_status === 'in_progress').length,
     label: 'กำลังดำเนินการ',
-    colorClass: 'text-orange-500',
+    colorClass: 'text-blue-600',
     filterStatus: 'in_progress',
   },
   {
     value: repairRequests.value.filter((r) => r.rf_user_status === 'done').length,
-    label: 'เสร็จสิ้น (ทั้งหมด)',
+    label: 'ดำเนินการเสร็จสิ้นทั้งหมด',
     colorClass: 'text-green-600',
     filterStatus: 'done',
   },
   {
     value: repairRequests.value.filter((r) => r.rf_user_status === 'cancel').length,
-    label: 'ยกเลิก',
+    label: 'งานที่ยกเลิก',
     colorClass: 'text-red-600',
     filterStatus: 'cancel',
   },
@@ -249,6 +259,9 @@ onMounted(() => {
   fetchStockForms()
   fetchUserProfile()
 })
+const openDetail = (rfCode) => {
+  router.push(`/main/repair-detail/${rfCode}`)
+}
 </script>
 
 <template>
@@ -285,7 +298,8 @@ onMounted(() => {
           :rawRows="repairTableRaw"
           :perPage="5"
           mode="view-only"
-          :idColumnIndex="0"  @detail="(id) => onRepairRowClick(id)"
+          :idColumnIndex="0"
+          @detail="(id) => onRepairRowClick(id)"
         />
       </div>
 
@@ -325,13 +339,42 @@ onMounted(() => {
       </div>
 
       <TableComponent
-        :columns="['อ้างอิงใบงาน', 'รหัสใบเบิก', 'หน่วยงาน', 'ความเร่งด่วน', 'สถานะ', 'จัดการ']"
+        :columns="['รหัสรายการเบิกของ', 'รายละเอียด', 'รายการของเบิก', 'สถานะงาน', 'ตัวดำเนินการ']"
         :rows="stockTableRows"
-        :rawRows="stockTableRaw"
         :perPage="5"
-        mode="view-only"
-        @detail="(item) => onStockRowClick(item)"
-      />
+        :statusStockColumn="3"
+        :columnAlign="['left', 'left', 'left', 'center']"
+      >
+        <!-- รายการของ -->
+        <template #cell-2="{ row }">
+          <div class="space-y-1 text-sm">
+            <div v-for="(item, i) in row[2]" :key="i" class="flex justify-between">
+              <span class="truncate">{{ truncateItem(item) }}</span>
+              <span class="text-gray-500">x{{ extractQuantity(item) }}</span>
+            </div>
+          </div>
+        </template>
+
+        <!-- รายละเอียด -->
+        <template #cell-1="{ row }">
+          <div class="text-sm space-y-1">
+            <div>วันที่เบิก: {{ row[1].date }}</div>
+            <div>รหัสใบแจ้งซ่อม: {{ row[1].rf_code }}</div>
+          </div>
+        </template>
+
+        <!-- ปุ่ม -->
+        <template #cell-4="{ row }">
+          <div class="flex justify-center">
+            <button
+              @click="openDetail(row[1].rf_code)"
+              class="flex items-center gap-2 px-2 py-2 rounded-md bg-blue-500 text-white hover:bg-blue-600"
+            >
+              <img src="/icon/info-icon.svg" class="h-4 w-4" />
+            </button>
+          </div>
+        </template>
+      </TableComponent>
     </div>
   </div>
 </template>
