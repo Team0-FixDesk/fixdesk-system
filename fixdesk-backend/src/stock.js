@@ -39,7 +39,7 @@ module.exports = function StockRoutes(db) {
       ct.ct_name,
       pd.pd_quantity,
       un.units_name,
-      pd.pd_updated_at, 
+      pd.pd_updated_at,
       pd.pd_upload_image
     FROM products pd
     LEFT JOIN categories ct ON pd.pd_category_id = ct.ct_id
@@ -111,8 +111,8 @@ module.exports = function StockRoutes(db) {
 
         // 4. บันทึกข้อมูลสินค้า โดยใช้ ID ที่ได้มา (finalUnitId)
         const insertProductQuery = `
-        INSERT INTO products 
-        (pd_asset_code, pd_name, pd_category_id, pd_quantity, pd_unit_id, pd_upload_image, pd_updated_at) 
+        INSERT INTO products
+        (pd_asset_code, pd_name, pd_category_id, pd_quantity, pd_unit_id, pd_upload_image, pd_updated_at)
         VALUES (?, ?, ?, ?, ?, ?, NOW())
       `;
 
@@ -240,8 +240,8 @@ module.exports = function StockRoutes(db) {
       }
 
       if (results[0].count > 0) {
-        return res.status(400).json({ 
-          message: `ไม่สามารถลบได้ เนื่องจากมีสินค้า ${results[0].count} รายการใช้หมวดหมู่นี้อยู่` 
+        return res.status(400).json({
+          message: `ไม่สามารถลบได้ เนื่องจากมีสินค้า ${results[0].count} รายการใช้หมวดหมู่นี้อยู่`
         });
       }
 
@@ -491,7 +491,7 @@ module.exports = function StockRoutes(db) {
       sf.sf_code,
       sf.sf_status,
       sf.sf_create_at,
-      
+
       -- ผู้เบิก
       u.us_department,
       CONCAT(u.us_first_name_th, ' ', u.us_last_name_th) AS requester,
