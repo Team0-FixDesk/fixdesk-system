@@ -157,6 +157,108 @@ module.exports = function StockRoutes(db) {
     });
   });
 
+  // เพิ่มหมวดหมู่ใหม่
+  router.post("/category", authMiddleware, async (req, res) => {
+    const { ct_name } = req.body;
+    if (!ct_name || !ct_name.trim()) {
+      return res.status(400).json({ message: "กรุณากรอกชื่อหมวดหมู่" });
+    }
+
+    // ตรวจสอบชื่อซ้ำ
+    const checkQuery = "SELECT COUNT(*) as count FROM categories WHERE LOWER(ct_name) = LOWER(?)";
+    db.query(checkQuery, [ct_name.trim()], (err, results) => {
+      if (err) {
+        console.error("Error checking category:", err);
+        return res.status(500).json({ message: "เกิดข้อผิดพลาด" });
+      }
+
+      if (results[0].count > 0) {
+        return res.status(400).json({ message: "หมวดหมู่นี้มีอยู่แล้ว" });
+      }
+
+      // เพิ่มหมวดหมู่ใหม่
+      const insertQuery = "INSERT INTO categories (ct_name) VALUES (?)";
+      db.query(insertQuery, [ct_name.trim()], (err, result) => {
+        if (err) {
+          console.error("Error inserting category:", err);
+          return res.status(500).json({ message: "เพิ่มหมวดหมู่ไม่สำเร็จ" });
+        }
+        res.status(201).json({
+          message: "เพิ่มหมวดหมู่สำเร็จ",
+          ct_id: result.insertId,
+          ct_name: ct_name.trim()
+        });
+      });
+    });
+  });
+
+  // แก้ไขหมวดหมู่
+  router.put("/category/:id", authMiddleware, async (req, res) => {
+    const { id } = req.params;
+    const { ct_name } = req.body;
+
+    if (!ct_name || !ct_name.trim()) {
+      return res.status(400).json({ message: "กรุณากรอกชื่อหมวดหมู่" });
+    }
+
+    // ตรวจสอบชื่อซ้ำ (ยกเว้นตัวเอง)
+    const checkQuery = "SELECT COUNT(*) as count FROM categories WHERE LOWER(ct_name) = LOWER(?) AND ct_id != ?";
+    db.query(checkQuery, [ct_name.trim(), id], (err, results) => {
+      if (err) {
+        console.error("Error checking category:", err);
+        return res.status(500).json({ message: "เกิดข้อผิดพลาด" });
+      }
+
+      if (results[0].count > 0) {
+        return res.status(400).json({ message: "หมวดหมู่นี้มีอยู่แล้ว" });
+      }
+
+      const updateQuery = "UPDATE categories SET ct_name = ? WHERE ct_id = ?";
+      db.query(updateQuery, [ct_name.trim(), id], (err, result) => {
+        if (err) {
+          console.error("Error updating category:", err);
+          return res.status(500).json({ message: "แก้ไขหมวดหมู่ไม่สำเร็จ" });
+        }
+        if (result.affectedRows === 0) {
+          return res.status(404).json({ message: "ไม่พบหมวดหมู่นี้" });
+        }
+        res.json({ message: "แก้ไขหมวดหมู่สำเร็จ" });
+      });
+    });
+  });
+
+  // ลบหมวดหมู่
+  router.delete("/category/:id", authMiddleware, async (req, res) => {
+    const { id } = req.params;
+
+    // ตรวจสอบว่ามีสินค้าใช้หมวดหมู่นี้อยู่หรือไม่
+    const checkQuery = "SELECT COUNT(*) as count FROM products WHERE pd_category_id = ?";
+    db.query(checkQuery, [id], (err, results) => {
+      if (err) {
+        console.error("Error checking products:", err);
+        return res.status(500).json({ message: "เกิดข้อผิดพลาด" });
+      }
+
+      if (results[0].count > 0) {
+        return res.status(400).json({ 
+          message: `ไม่สามารถลบได้ เนื่องจากมีสินค้า ${results[0].count} รายการใช้หมวดหมู่นี้อยู่` 
+        });
+      }
+
+      const deleteQuery = "DELETE FROM categories WHERE ct_id = ?";
+      db.query(deleteQuery, [id], (err, result) => {
+        if (err) {
+          console.error("Error deleting category:", err);
+          return res.status(500).json({ message: "ลบหมวดหมู่ไม่สำเร็จ" });
+        }
+        if (result.affectedRows === 0) {
+          return res.status(404).json({ message: "ไม่พบหมวดหมู่นี้" });
+        }
+        res.json({ message: "ลบหมวดหมู่สำเร็จ" });
+      });
+    });
+  });
+
   router.get("/units", (req, res) => {
     const query = `SELECT units_id, units_name FROM units ORDER BY units_name ASC`;
 
