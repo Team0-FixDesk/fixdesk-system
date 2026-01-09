@@ -8,7 +8,7 @@ import Swal from 'sweetalert2'
 import { usePhoneFormat } from '@/composables/usePhoneFormat'
 const { toDisplay } = usePhoneFormat()
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
+const API_BASE = import.meta.env.VITE_API_BASE
 const route = useRoute()
 const router = useRouter()
 

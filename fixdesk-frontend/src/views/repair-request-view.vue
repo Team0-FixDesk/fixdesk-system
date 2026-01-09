@@ -3,12 +3,12 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
 import { usePhoneFormat } from '@/composables/usePhoneFormat'
-const { toDisplay, toRaw } = usePhoneFormat()
+const { toDisplay} = usePhoneFormat()
 
 defineOptions({ name: 'RepairRequestView' })
 
 const router = useRouter()
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
+const API_BASE = import.meta.env.VITE_API_BASE
 
 const isSubmitting = ref(false)
 const formData = ref({

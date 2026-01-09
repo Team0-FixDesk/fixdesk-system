@@ -15,24 +15,6 @@ function getAuthHeaders() {
   }
 }
 
-// JWT Decode
-function parseJwt(token) {
-  try {
-    const base64Url = token.split('.')[1]
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
-    const jsonPayload = decodeURIComponent(
-      atob(base64)
-        .split('')
-        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-        .join(''),
-    )
-    return JSON.parse(jsonPayload)
-  } catch (err) {
-    console.error('ไม่สามารถ decode token ได้:', err)
-    return {}
-  }
-}
-
 defineOptions({ name: 'StockManageInventoryView' })
 
 // --- Table Columns หัวตาราง ---
@@ -47,12 +29,10 @@ const columns = [
   'ตัวดำเนินการ',
 ]
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
-
+const API_BASE = import.meta.env.VITE_API_BASE
 // --- Dropdown หมวดหมู่ ---
 const typeOptions = ref([])
 const categoriesLoaded = ref(false)
-const categoryFilter = ref([])
 
 const fetchCategories = async () => {
   try {
@@ -76,7 +56,6 @@ const fetchCategories = async () => {
 
 // --- Maps / Table Rows ---
 const allRows = ref([]) // เก็บข้อมูลดิบทั้งหมด
-const assetToIdMap = ref({})
 const pdIdToCategoryIdMap = ref({})
 const pdIdToImageMap = ref({})
 const stockStatusMap = ref({}) // map: pdId -> 'in_stock' | 'low_stock' | 'out_of_stock'
