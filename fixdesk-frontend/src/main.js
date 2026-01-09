@@ -1,8 +1,14 @@
 import './assets/main.css'
 import 'flowbite'
 
+// FontAwesome
+import '@fortawesome/fontawesome-free/css/all.css'
+
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
+
+// SweetAlert2
+import Swal from 'sweetalert2'
 
 // ECharts และ vue-echarts
 import { use } from "echarts/core"
@@ -33,6 +39,9 @@ use([
 ])
 
 const app = createApp(App)
+
+// ตั้งค่า SweetAlert2 global
+app.config.globalProperties.$swal = Swal
 
 app.use(createPinia())
 app.use(router)

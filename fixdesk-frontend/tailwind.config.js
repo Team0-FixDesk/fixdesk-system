@@ -7,8 +7,9 @@ export default {
   ],
   theme: {
     fontFamily: {
-      sans: ['Inter', 'Noto Sans Thai', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', 'sans-serif'],
+      sans: ['Inter', 'Noto Sans Thai', 'Sarabun', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', 'sans-serif'],
       inter: ['Inter', 'Noto Sans Thai', 'sans-serif'],
+      sarabun: ['Sarabun', 'Noto Sans Thai', 'sans-serif'],
     },
     extend: {
       colors: {

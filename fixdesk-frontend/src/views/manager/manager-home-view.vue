@@ -116,11 +116,10 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import CardHomeComponent from '@/components/card-home-component.vue'
 
 defineOptions({ name: 'ManagerHomeView' })
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
+const API_BASE = import.meta.env.VITE_API_BASE
 
 // Loading and Error States
 const isLoading = ref(true)
