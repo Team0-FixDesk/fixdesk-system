@@ -1,26 +1,31 @@
 <script setup>
+/* ===================== Imports ===================== */
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { jwtDecode } from 'jwt-decode'
 
-const router = useRouter()
+/* ===================== Config ===================== */
 const API_BASE = import.meta.env.VITE_API_BASE
 const LOGIN_URL = `${API_BASE}/auth/login`
 
+/* ===================== Router ===================== */
+const router = useRouter()
+
+/* ===================== State ===================== */
 const username = ref('')
 const password = ref('')
 const errorMessage = ref('')
 const isLoading = ref(false)
 const rememberMe = ref(false)
 
+/* ===================== Actions ===================== */
 // LOGIN FUNCTION
-const handleLogin = async (e) => {
-  e.preventDefault()
+const handleLogin = async () => {
   errorMessage.value = ''
   isLoading.value = true
-  console.log('กำลังเข้าสู่ระบบที่:', LOGIN_URL)
+
   try {
-    const res = await fetch(LOGIN_URL, {
+    const response = await fetch(LOGIN_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -29,36 +34,31 @@ const handleLogin = async (e) => {
       }),
     })
 
-    const data = await res.json()
-    console.log('ผลลัพธ์จาก backend (login):', data)
-    if (!res.ok) throw new Error(data.message || 'เข้าสู่ระบบไม่สำเร็จ')
+    const data = await response.json()
+    if (!response.ok) {
+      throw new Error(data.message || 'LOGIN_FAILED')
+    }
+
     const storage = rememberMe.value ? localStorage : sessionStorage
 
     // เก็บ token
     storage.setItem('token', data.token)
 
-    // decode token เพื่ออ่านข้อมูลผู้ใช้
+    // decode token
     const payload = jwtDecode(data.token)
-    console.log('ข้อมูลใน token:', payload)
 
-    // เก็บข้อมูลผู้ใช้ใน localStorage เผื่อหน้าอื่นต้องใช้
+    // เก็บข้อมูลผู้ใช้ (ไม่ใช่ข้อมูลลับ)
     const sessionUser = {
       id: payload.us_id,
       username: payload.us_user_name,
-      prefix: payload.us_prefix_th,
-      firstName: payload.us_first_name_th,
-      lastName: payload.us_last_name_th,
-      firstNameEN: payload.us_first_name_en,
-      lastNameEN: payload.us_last_name_en,
       fullName: `${payload.us_prefix_th || ''}${payload.us_first_name_th || ''} ${payload.us_last_name_th || ''}`,
-      tel: payload.us_tel,
       department: payload.us_department,
       role: payload.role_name,
-
     }
+
     storage.setItem('session_user', JSON.stringify(sessionUser))
 
-    // redirect ตาม role_name
+    // redirect ตาม role
     switch (payload.role_name) {
       case 'Admin':
         router.push('/main/admin-home')
@@ -76,11 +76,12 @@ const handleLogin = async (e) => {
         router.push('/main/user-home')
         break
     }
-  } catch (err) {
-    console.error('Login error:', err)
-    if (err.message.includes('ชื่อผู้ใช้')) {
+  } catch (error) {
+    console.error('Login failed:', error.message)
+
+    if (error.message.includes('ชื่อผู้ใช้')) {
       errorMessage.value = 'ไม่พบชื่อผู้ใช้นี้ในระบบ'
-    } else if (err.message.includes('รหัสผ่าน')) {
+    } else if (error.message.includes('รหัสผ่าน')) {
       errorMessage.value = 'รหัสผ่านไม่ถูกต้อง'
     } else {
       errorMessage.value = 'เข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่อีกครั้ง'
@@ -93,43 +94,53 @@ const handleLogin = async (e) => {
 
 <template>
   <div
-    class="min-h-screen flex items-center justify-center bg-gray-100 bg-cover bg-center px-4"
-    style="background-image: url('/background-login.png')"
+    class="min-h-screen flex items-center justify-center bg-gradient-to-b from-blue-50 to-blue-200 bg-center px-4"
   >
     <div
       class="relative bg-white/95 rounded-xl shadow-xl w-full max-w-md sm:max-w-xl lg:max-w-3xl flex flex-col lg:flex-row items-center gap-8 p-10"
     >
       <!-- โลโก้ -->
       <div class="flex flex-col items-center justify-center flex-1">
-        <img alt="92 Tech logo" class="hidden md:block absolute top-4 left-4 w-10" src="/icon/92Tech-logo.png" />
-        <img alt="App logo" class="w-48 h-auto" src="/icon/Logo.png" />
+        <img
+          alt="92 Tech logo"
+          class="hidden md:block absolute top-4 left-4 w-10"
+          src="/icon/92Tech-logo.png"
+        />
+        <img alt="FixDesk logo" class="w-48 h-auto" src="/icon/Logo.png" />
       </div>
+
       <!-- ฟอร์มล็อกอิน -->
       <div class="flex-1 flex flex-col items-center">
-        <h1 class="text-3xl font-bold text-[#1E48D1] mb-6">LOGIN</h1>
+        <h1 class="text-3xl font-bold text-[#1E48D1] mb-6">เข้าสู่ระบบ</h1>
+
         <form class="flex flex-col gap-4 w-full max-w-sm" @submit.prevent="handleLogin">
           <input
             v-model="username"
             type="text"
+            aria-label="ชื่อผู้ใช้"
             placeholder="ชื่อผู้ใช้"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 text-base"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 text-base placeholder-gray-400"
             required
           />
+
           <input
             v-model="password"
             type="password"
+            aria-label="รหัสผ่าน"
             placeholder="รหัสผ่าน"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 text-base"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 text-base placeholder-gray-400"
             required
           />
+
           <label class="flex items-center gap-2 text-sm text-gray-700">
             <input
-              type="checkbox"
               v-model="rememberMe"
+              type="checkbox"
               class="h-4 w-4 rounded border-gray-300 text-[#1E48D1] focus:ring-[#1E48D1]"
             />
-            <span>จำฉันไว้ (Remember me)</span>
+            <span>จำฉันไว้</span>
           </label>
+
           <button
             type="submit"
             :disabled="isLoading"
@@ -138,20 +149,14 @@ const handleLogin = async (e) => {
             {{ isLoading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ' }}
           </button>
         </form>
-        <!-- แสดงข้อความ error -->
-        <p
-          v-if="errorMessage"
-          class="text-red-600 text-center text-sm font-medium mt-3 bg-red-50 px-3 py-2 rounded-md"
-        >
-          {{ errorMessage }}
-        </p>
+
+        <!-- Error message (reserved space) -->
+        <div class="min-h-[1.25rem] mt-3">
+          <p v-if="errorMessage" class="text-red-600 text-center text-sm font-medium">
+            {{ errorMessage }}
+          </p>
+        </div>
       </div>
     </div>
   </div>
 </template>
-
-<style scoped>
-input::placeholder {
-  color: #a0aec0;
-}
-</style>

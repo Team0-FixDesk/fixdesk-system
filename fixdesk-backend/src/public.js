@@ -18,6 +18,7 @@ module.exports = function PublicRoutes(db) {
         rf.rf_create_at,
         u.us_first_name_th AS reporter_firstname,
         u.us_last_name_th AS reporter_lastname,
+        u.us_department AS reporter_department,
         b.bd_name AS building_name,
         f.fl_name AS floor_name,
         r.room_name AS room_name
