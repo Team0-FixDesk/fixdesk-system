@@ -14,19 +14,25 @@
     "format": "prettier --write src/"
   },
   "dependencies": {
+    "@fortawesome/fontawesome-free": "^7.1.0",
     "@fullcalendar/core": "^6.1.19",
     "@fullcalendar/daygrid": "^6.1.19",
+    "apexcharts": "^5.3.6",
     "axios": "^1.13.2",
     "date-holidays": "^3.26.5",
+    "dom-to-image-more": "^3.7.2",
     "echarts": "^6.0.0",
     "flowbite": "^3.1.2",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.0.0",
     "jwt-decode": "^4.0.0",
     "multer": "^2.0.2",
     "pinia": "^3.0.3",
     "sweetalert2": "^11.26.3",
     "vue": "^3.5.22",
     "vue-echarts": "^8.0.1",
-    "vue-router": "^4.5.1"
+    "vue-router": "^4.5.1",
+    "vue3-apexcharts": "^1.10.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.33.0",

@@ -9,7 +9,7 @@ import { usePhoneFormat } from '@/composables/usePhoneFormat'
 const { toRaw, toDisplay} = usePhoneFormat()
 
 defineOptions({ name: 'AdminUserInfoView' })
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
+const API_BASE = import.meta.env.VITE_API_BASE
 
 // Build authorization headers for API requests สร้าง Authorization Header สำหรับเรียก API
 const getAuthHeaders = () => {
@@ -1260,7 +1260,7 @@ async function handleDeleteTechType(item) {
         <!-- Header with icon -->
         <div class="flex items-center gap-3 mb-6">
           <div class="bg-green-100 p-3 rounded-full">
-            <img src="/icon/alert/add-user-icon.svg" alt="Add User" class="w-8 h-8" />
+            <img src="/icon/user-icon.svg" alt="Add User" class="w-8 h-8" />
           </div>
           <h2 class="text-xl font-bold text-gray-800">เพิ่มผู้ใช้งาน</h2>
         </div>
@@ -1532,7 +1532,7 @@ async function handleDeleteTechType(item) {
         <!-- Header with icon -->
         <div class="flex items-center gap-3 mb-6">
           <div class="bg-orange-100 p-3 rounded-full">
-            <img src="/icon/alert/edit-user-icon.svg" alt="Edit User" class="w-8 h-8" />
+            <img src="/icon/user-icon.svg" alt="Edit User" class="w-8 h-8" />
           </div>
           <h2 class="text-xl font-bold text-gray-800">แก้ไขข้อมูลผู้ใช้</h2>
         </div>

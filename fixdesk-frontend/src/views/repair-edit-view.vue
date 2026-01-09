@@ -12,7 +12,7 @@ defineOptions({ name: 'RepairEditView' })
 const route = useRoute()
 const router = useRouter()
 const repairCode = route.params.code
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
+const API_BASE = import.meta.env.VITE_API_BASE
 
 const isSubmitting = ref(false)
 const formData = ref({

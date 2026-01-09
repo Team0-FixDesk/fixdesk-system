@@ -9,6 +9,7 @@ import MainLayout from '../layouts/main-layout.vue'
 // SHARED
 import RepairRequestView from '../views/repair-request-view.vue'
 import MyListView from '../views/my-list-view.vue'
+import CreateReportView from '../views/create-report-view.vue'
 
 // USER
 import UserHomeView from '../views/user/user-home-view.vue'
@@ -32,7 +33,6 @@ import TechnicianRepairListView from '../views/technician/technician-repair-list
 import TechnicianHistoryView from '../views/technician/technician-history-view.vue'
 import TechnicianStockListView from '../views/technician/technician-stock-list-view.vue'
 import TechnicianRequisitionListView from '../views/technician/technician-requisition-list-view.vue'
-import TechnicianRequisitionDetailView from '@/views/technician/technician-requisition-detail-view.vue'
 
 // STOCK
 import StockHomeView from '../views/stock/stock-home-view.vue'
@@ -95,13 +95,6 @@ const router = createRouter({
           name: 'technician-requisition-list',
           meta: { role: ['Technician'] },
         },
-        {
-          path: 'technician-requisition-detail/:code',
-          name: 'TechnicianRequisitionDetail',
-          component: TechnicianRequisitionDetailView,
-          meta: { role: ['Technician'] },
-        },
-
         { path: 'stock-home', component: StockHomeView, meta: { role: ['Stock'] } },
         {
           path: 'stock-withdraw-list',
@@ -132,6 +125,11 @@ const router = createRouter({
           path: 'my-list',
           component: MyListView,
           meta: { role: ['User', 'Admin', 'Technician', 'Manager', 'Stock'] },
+        },
+        {
+          path: 'create-report',
+          component: CreateReportView,
+          meta: { role: ['Admin', 'Manager'] }, public: true
         },
         {
           path: 'repair-detail/:code',

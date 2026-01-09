@@ -1,195 +1,374 @@
-<template>
-  <div class="bg-white rounded-xl shadow-md p-12 mx-auto max-w-8xl container mx-auto px-5 py-6">
-
-    <!-- Header -->
-    <div class="flex justify-between items-center mb-6">
-      <div>
-        <h1 class="text-2xl font-bold text-gray-800">หน้าแรก</h1>
-      </div>
-      <button @click="$router.push('/main/repair-request')" class="bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded-md flex items-center">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-        </svg>
-        แจ้งซ่อม
-      </button>
-    </div>
-
-
-    <!-- Stats cards -->
-    <div class="flex justify-center items-center gap-6 mb-6 flex-wrap">
-      <!-- Card 1 (click -> manage inventory) -->
-      <div
-        class="bg-white rounded-lg border p-6 text-center shadow-sm hover:shadow-md cursor-pointer flex flex-col items-center justify-center w-[20%]"
-        role="button"
-        tabindex="0"
-        @click="$router.push('/main/stock-manage-inventory')"
-        @keyup.enter="$router.push('/main/stock-manage-inventory')"
-      >
-          <h2 class="text-2xl font-bold text-blue-600">{{ itemsCount }} รายการ</h2>
-        <p class="text-gray-600 text-sm">จำนวนรายการ</p>
-      </div>
-
-      <!-- Card 2 (click -> manage inventory) -->
-      <div
-        class="bg-white rounded-lg border p-6 text-center shadow-sm hover:shadow-md cursor-pointer flex flex-col items-center justify-center w-[20%]"
-        role="button"
-        tabindex="0"
-        @click="$router.push('/main/stock-manage-inventory')"
-        @keyup.enter="$router.push('/main/stock-manage-inventory')"
-      >
-          <h2 class="text-2xl font-bold text-orange-500">{{ itemsNew }} รายการ</h2>
-        <p class="text-gray-600 text-sm">ของเข้าใหม่วันนี้</p>
-      </div>
-
-      <!-- Card 3 (click -> withdraw list) -->
-      <div
-        class="bg-white rounded-lg border p-6 text-center shadow-sm hover:shadow-md cursor-pointer flex flex-col items-center justify-center w-[20%]"
-        role="button"
-        tabindex="0"
-        @click="$router.push('/main/stock-withdraw-list')"
-        @keyup.enter="$router.push('/main/stock-withdraw-list')"
-      >
-          <h2 class="text-2xl font-bold text-green-600">{{ itemRequestWaiting }} รายการ</h2>
-        <p class="text-gray-600 text-sm">คำขอเบิกรออนุมัติ</p>
-      </div>
-
-      <!-- Card 4 (click -> withdraw list) -->
-      <div
-        class="bg-white rounded-lg border p-6 text-center shadow-sm hover:shadow-md cursor-pointer flex flex-col items-center justify-center w-[20%]"
-        role="button"
-        tabindex="0"
-        @click="$router.push('/main/stock-withdraw-list')"
-        @keyup.enter="$router.push('/main/stock-withdraw-list')"
-      >
-          <h2 class="text-2xl font-bold text-red-600">{{ itemRequestDeclined }} รายการ</h2>
-        <p class="text-gray-600 text-sm">คำขอเบิกไม่อนุมัติ</p>
-      </div>
-    </div>
-
-    <!-- Charts box -->
-    <div class="flex gap-4">
-      <div class="bg-white rounded-xl border pt-4 px-6 flex-[1.4]">
-        <div class="flex justify-between items-center">
-          <div>
-            <h1 class="text-2xl font-bold text-gray-800">ภาพรวมสต็อก (กราฟ)</h1>
-            <p class="text-gray-600">รายการของที่เบิก</p>
-          </div>
-        </div>
-        <!-- Charts -->
-
-
-
-      </div>
-
-      <!-- x5 Recent Requests -->
-      <div class="bg-white rounded-xl border pt-4 px-6 flex-[1]">
-        <div>
-          <h1 class="text-2xl font-bold text-gray-800">คำขอเบิก (รออนุมัติ)</h1>
-          <p class="text-gray-600">รายการของที่เบิก (5 รายการล่าสุด)</p>
-        </div>
-        <hr class="border-t-2 border-gray-300 my-4 -mx-6" />
-        <div v-for="(item, index) in recentRequests" :key="item.sf_id || index" class="mb-4">
-          <span class="inline-block px-3 py-1 rounded-full" style="background-color:#D9EFFF; color:#0072C3; font-size:0.875rem; font-weight:500;">{{ item.sf_code || "SF-0000-000" }}</span>
-          <p class="text-gray-600 text-sm text-xl"><b>{{ item.related_rf_code ? `RF: ${item.related_rf_code}` : (item.building_name || '[สถานที่]') }}</b></p>
-          <p class="text-[16px] text-[#A1A1A1]">สถานะ: {{ item.sf_status || '[สถานะ]' }} • {{ item.building_name || '[อาคาร]' }}</p>
-          <p class="text-[16px] text-[#A1A1A1]">ขอเมื่อ {{ item.displayDate || "00/00/0000" }} {{ item.displayTime || "00:00:00"}}</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- End Page -->
-  </div>
-</template>
-
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import ApexChart from 'vue3-apexcharts'
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
-
-// Pull With Auth
-function getAuthHeaders() {
-  const token = localStorage.getItem('token') || sessionStorage.getItem('token')
-  return {
-    Authorization: `Bearer ${token}`,
-  }
-}
-
-// For Display
-const itemsCount = ref(0)
-const itemsNew = ref(0)
-const itemRequestWaiting = ref(0)
-const itemRequestDeclined = ref(0)
-const recentRequests = ref([])
-
-// Dropdown state (moved into script-setup)
-const open = ref(false)
-const selected = ref('7 วัน')
+import TableComponent from '@/components/table-component.vue'
+import repairButton from '@/components/repair-button-component.vue'
+import CardHomeComponent from '@/components/card-home-component.vue'
 
 defineOptions({ name: 'StockHomeView' })
 
-async function fetchCounts() {
-  // Try-Catch Update Auth +Error
-  try {
-    const res = await fetch(`${API_BASE}/show-stock`, { headers: getAuthHeaders() })
-    if (res.ok) {
-      const products = await res.json()
-      if (Array.isArray(products)) {
-        itemsCount.value = products.length
+// ==================== Router / API ====================
+const router = useRouter()
+const API_BASE = import.meta.env.VITE_API_BASE
 
-        const today = new Date().toISOString().slice(0, 10)
-        itemsNew.value = products.filter((p) => p.pd_updated_at && p.pd_updated_at.slice(0, 10) === today).length
-      }
+function getAuthHeaders() {
+  const token = localStorage.getItem('token') || sessionStorage.getItem('token')
+  return { Authorization: `Bearer ${token}` }
+}
+
+// ==================== State ====================
+const products = ref([])
+const stockForms = ref([])
+const tableRows = ref([])
+const loading = ref(false)
+
+// 🔀 สวิตช์กราฟ
+const chartMode = ref('request') // 'request' | 'stock'
+
+// ==================== Navigation ====================
+function openDetail(code) {
+  router.push(`/main/stock-requisition/${code}`)
+}
+
+// ==================== Table ====================
+const columns = ['รหัสใบเบิก', 'รายละเอียด', 'ตัวจัดการ']
+
+// ==================== Load Dashboard ====================
+async function fetchDashboard() {
+  loading.value = true
+  try {
+    const resProducts = await fetch(`${API_BASE}/show-stock`, {
+      headers: getAuthHeaders(),
+    })
+    if (resProducts.ok) products.value = await resProducts.json()
+
+    const resForms = await fetch(`${API_BASE}/stock-forms`, {
+      headers: getAuthHeaders(),
+    })
+    if (resForms.ok) {
+      stockForms.value = await resForms.json()
+
+      tableRows.value = stockForms.value
+        .filter((i) => i.sf_status === 'waiting')
+        .sort((a, b) => new Date(b.sf_create_at) - new Date(a.sf_create_at))
+        .slice(0, 5)
+        .map((item) => ({
+          row: [
+            item.sf_code,
+            'วันที่: ' +
+              new Date(item.sf_create_at).toLocaleDateString('th-TH') +
+              '<br>ผู้ขอเบิก: ' +
+              item.requester +
+              '<br>หน่วยงาน: ' +
+              item.us_department,
+            '',
+          ],
+        }))
     }
   } catch (err) {
-    console.error('เกิดข้อผิดพลาดในการค้นหาข้อมูล:', err)
-  }
-
-  try {
-    // Keep counts for current user
-    const res2 = await fetch(`${API_BASE}/technician/my-stock-forms`, { headers: getAuthHeaders() })
-    if (res2.ok) {
-      const forms = await res2.json()
-      if (Array.isArray(forms)) {
-        itemRequestWaiting.value = forms.filter((f) => f.sf_status === 'waiting').length
-        itemRequestDeclined.value = forms.filter((f) => f.sf_status === 'rejected').length
-      }
-    }
-
-    // Fetch ข้อมูล Stock ใหม่สุดจากทั้งหมด
-    const allRes = await fetch(`${API_BASE}/stock-forms`, { headers: getAuthHeaders() })
-    if (allRes.ok) {
-      const allForms = await allRes.json()
-      if (Array.isArray(allForms)) {
-        recentRequests.value = allForms
-          .slice()
-          .sort((a, b) => new Date(b.sf_create_at) - new Date(a.sf_create_at))
-          .slice(0, 5)
-          .map((f) => ({
-            // normalize fields used by template
-            sf_id: f.sf_id,
-            sf_code: f.sf_code,
-            sf_status: f.sf_status,
-            sf_create_at: f.sf_create_at,
-            building_name: f.bd_name || f.building_name || null,
-            floor_name: f.fl_name || null,
-            room_name: f.room_name || null,
-            requester: f.requester || null,
-            displayDate: f.sf_create_at ? new Date(f.sf_create_at).toLocaleDateString() : null,
-            displayTime: f.sf_create_at ? new Date(f.sf_create_at).toLocaleTimeString() : null,
-          }))
-      }
-    }
-  } catch (err) {
-    console.error('เกิดข้อผิดพลาดในการค้นหาข้อมูล:', err)
+    console.error(err)
+  } finally {
+    loading.value = false
   }
 }
 
-onMounted(() => {
-  fetchCounts()
+// ==================== Cards ====================
+const today = new Date()
+
+const statItems = computed(() => [
+  {
+    value: products.value.length,
+    label: 'จำนวนรายการ',
+    colorClass: 'text-blue-600',
+  },
+  {
+    value: products.value.filter(
+      (p) => p.pd_updated_at && new Date(p.pd_updated_at).toDateString() === today.toDateString(),
+    ).length,
+    label: 'ของเข้าใหม่วันนี้',
+    colorClass: 'text-green-600',
+  },
+  {
+    value: stockForms.value.filter((f) => f.sf_status === 'waiting').length,
+    label: 'รออนุมัติ',
+    colorClass: 'text-amber-500',
+  },
+  {
+    value: stockForms.value.filter((f) => f.sf_status === 'rejected').length,
+    label: 'ไม่อนุมัติ',
+    colorClass: 'text-red-600',
+  },
+])
+
+// ==================== Helpers ====================
+function getLast7Days() {
+  const days = []
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date()
+    d.setDate(d.getDate() - i)
+    days.push(new Date(d))
+  }
+  return days
+}
+
+const last7Days = computed(() => getLast7Days())
+
+// ==================== REQUEST TREND ====================
+const requestSeries = computed(() => {
+  const waiting = []
+  const approved = []
+  const rejected = []
+
+  last7Days.value.forEach((day) => {
+    const items = stockForms.value.filter(
+      (f) => new Date(f.sf_create_at).toDateString() === day.toDateString(),
+    )
+    waiting.push(items.filter((i) => i.sf_status === 'waiting').length)
+    approved.push(items.filter((i) => i.sf_status === 'approved').length)
+    rejected.push(items.filter((i) => i.sf_status === 'rejected').length)
+  })
+
+  return [
+    { name: 'รออนุมัติ', data: waiting },
+    { name: 'อนุมัติแล้ว', data: approved },
+    { name: 'ไม่อนุมัติ', data: rejected },
+  ]
 })
 
-function choose(option) {
-  selected.value = option
-  open.value = false
-}
+// ==================== STOCK TREND ====================
+const stockSeries = computed(() => {
+  const inStock = []
+  const outStock = []
+  const lowStock = []
+
+  const lowThreshold = 5
+
+  last7Days.value.forEach((day) => {
+    // รับเข้า (อัปเดตสินค้า)
+    inStock.push(
+      products.value.filter(
+        (p) => p.pd_updated_at && new Date(p.pd_updated_at).toDateString() === day.toDateString(),
+      ).length,
+    )
+
+    // เบิกออก (approved)
+    outStock.push(
+      stockForms.value.filter(
+        (f) =>
+          f.sf_status === 'approved' &&
+          new Date(f.sf_create_at).toDateString() === day.toDateString(),
+      ).length,
+    )
+
+    // ใกล้หมด (snapshot)
+    lowStock.push(
+      products.value.filter((p) => p.pd_quantity > 0 && p.pd_quantity <= lowThreshold).length,
+    )
+  })
+
+  return [
+    { name: 'รับเข้า', data: inStock },
+    { name: 'เบิกออก', data: outStock },
+    { name: 'ใกล้หมด', data: lowStock },
+  ]
+})
+
+// ==================== CHART OPTIONS ====================
+const chartOptions = computed(() => ({
+  chart: {
+    type: 'bar',
+    stacked: true,
+    toolbar: { show: false },
+    fontFamily: 'Inter, sans-serif',
+  },
+
+  colors:
+    chartMode.value === 'request'
+      ? ['#F59E0B', '#2563EB', '#EF4444']
+      : ['#22C55E', '#EF4444', '#F59E0B'],
+
+  legend: {
+    show: true,
+    position: 'bottom',
+    horizontalAlign: 'center',
+
+    formatter: (seriesName) => {
+      // ===== โหมดคำขอเบิก =====
+      if (chartMode.value === 'request') {
+        if (seriesName === 'รออนุมัติ') return '🟡 รอการพิจารณาอนุมัติ'
+        if (seriesName === 'อนุมัติแล้ว') return '🔵 อนุมัติแล้ว'
+        if (seriesName === 'ไม่อนุมัติ') return '🔴 ไม่อนุมัติ'
+      }
+
+      // ===== โหมดคลัง =====
+      if (chartMode.value === 'stock') {
+        if (seriesName === 'รับเข้า') return '🟢 รับเข้าสู่คลัง'
+        if (seriesName === 'เบิกออก') return '🔴 เบิกออกจากคลัง'
+        if (seriesName === 'ใกล้หมด') return '🟡 รายการใกล้หมด'
+      }
+
+      return seriesName
+    },
+
+    markers: {
+      width: 10,
+      height: 10,
+      radius: 10,
+    },
+
+    itemMargin: {
+      horizontal: 12,
+      vertical: 6,
+    },
+
+    fontSize: '14px',
+  },
+
+  xaxis: {
+    categories: last7Days.value.map((d) =>
+      d.toLocaleDateString('th-TH', { weekday: 'short', day: 'numeric' }),
+    ),
+  },
+
+  plotOptions: {
+    bar: {
+      borderRadius: 6,
+      columnWidth: '50%',
+    },
+  },
+
+  tooltip: {
+    y: {
+      formatter: (v) => `${v} รายการ`,
+    },
+  },
+}))
+
+// ==================== Lifecycle ====================
+onMounted(fetchDashboard)
 </script>
+
+<template>
+  <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-8xl">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-6">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800">ภาพรวมการเบิก และการคลังในระบบ</h1>
+        <p class="text-sm text-gray-500 mt-1">สำหรับเจ้าหน้าที่จัดการคลัง</p>
+      </div>
+      <repairButton />
+    </div>
+
+    <!-- Cards -->
+    <div class="mb-8">
+      <CardHomeComponent :items="statItems" />
+    </div>
+
+    <div class="flex gap-4">
+      <!-- Chart -->
+      <div class="bg-white rounded-lg border p-6 flex-[1.4]">
+        <!-- Toggle -->
+        <div class="flex justify-between items-center mb-4">
+          <div>
+            <h1 class="text-xl font-bold text-gray-800">
+              {{
+                chartMode === 'request'
+                  ? 'แนวโน้มคำขอเบิก (7 วันล่าสุด)'
+                  : 'แนวโน้มการคลัง (7 วันล่าสุด)'
+              }}
+            </h1>
+            <p class="text-gray-600 text-sm">
+              {{
+                chartMode === 'request'
+                  ? 'แสดงจำนวนคำขอเบิกแยกตามสถานะ'
+                  : 'แสดงความเคลื่อนไหวของคลังแยกตามสถานะ'
+              }}
+            </p>
+          </div>
+
+          <!-- Segmented Switch -->
+          <div class="flex bg-gray-100 rounded-lg p-1">
+            <button
+              class="px-4 py-1 text-sm rounded-md transition"
+              :class="chartMode === 'request' ? 'bg-white shadow text-blue-600' : 'text-gray-500'"
+              @click="chartMode = 'request'"
+            >
+              คำขอเบิก
+            </button>
+            <button
+              class="px-4 py-1 text-sm rounded-md transition"
+              :class="chartMode === 'stock' ? 'bg-white shadow text-blue-600' : 'text-gray-500'"
+              @click="chartMode = 'stock'"
+            >
+              คลังสินค้า
+            </button>
+          </div>
+        </div>
+
+        <ApexChart
+          height="320"
+          :options="chartOptions"
+          :series="chartMode === 'request' ? requestSeries : stockSeries"
+        />
+        <!-- Color Legend -->
+        <div class="flex flex-wrap gap-6 mt-4 text-sm text-gray-600">
+          <!-- ===== Request Mode ===== -->
+          <template v-if="chartMode === 'request'">
+            <div class="flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full bg-amber-500"></span>
+              <span>รอการพิจารณาอนุมัติ</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full bg-blue-600"></span>
+              <span>อนุมัติแล้ว</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full bg-red-500"></span>
+              <span>ไม่อนุมัติ</span>
+            </div>
+          </template>
+
+          <!-- ===== Stock Mode ===== -->
+          <template v-else>
+            <div class="flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full bg-green-500"></span>
+              <span>รับเข้าสู่คลัง</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full bg-red-500"></span>
+              <span>เบิกออกจากคลัง</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full bg-amber-500"></span>
+              <span>รายการที่ใกล้หมด</span>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="bg-white rounded-lg border p-6 flex-[1]">
+        <h1 class="text-xl font-bold text-gray-800">รายการคำขอเบิกที่รออนุมัติ</h1>
+        <p class="text-gray-600 mb-4">5 รายการล่าสุด</p>
+
+        <TableComponent
+          :columns="columns"
+          :rows="tableRows.map((i) => i.row)"
+          :perPage="5"
+          :columnAlign="['left', 'left', 'center']"
+        >
+          <template #cell-2="{ row }">
+            <button
+              @click="openDetail(row[0])"
+              class="flex items-center justify-center p-2 rounded-md bg-[#1E48D1] hover:bg-[#163A9B]"
+            >
+              <img src="/icon/info-icon.svg" class="h-4 w-4" />
+            </button>
+          </template>
+        </TableComponent>
+      </div>
+    </div>
+  </div>
+</template>

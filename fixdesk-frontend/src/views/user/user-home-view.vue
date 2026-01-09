@@ -8,7 +8,7 @@ import RepairStatusTimeline from '@/components/status-timeline-component.vue'
 import cardHomeComponent from '@/components/card-home-component.vue'
 
 // ค่าพื้นฐานของ API
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
+const API_BASE = import.meta.env.VITE_API_BASE
 
 // ตัวแปรข้อมูลผู้ใช้
 const realUserName = ref('ผู้ใช้งาน')

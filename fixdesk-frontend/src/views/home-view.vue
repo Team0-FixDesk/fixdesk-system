@@ -5,8 +5,7 @@ import axios from 'axios'
 
 const router = useRouter()
 // ====== CONFIG API URL ======
-// 👉 เปลี่ยนให้ตรงกับ Backend ของคุณได้เลย
-const API_URL = 'http://localhost:3000/public/search'
+const API_BASE = import.meta.env.VITE_API_BASE
 
 const keyword = ref('')
 const loading = ref(false)
@@ -74,7 +73,7 @@ const onSearch = async () => {
   searched.value = true
 
   try {
-    const res = await axios.get(API_URL, {
+    const res = await axios.get(`${API_BASE}/public/search`, {
       params: { keyword: keyword.value },
     })
 
