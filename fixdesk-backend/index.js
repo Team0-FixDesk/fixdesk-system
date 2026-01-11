@@ -4,23 +4,24 @@ const cors = require("cors");
 const mysql = require("mysql2");
 const bcrypt = require("bcrypt");
 const path = require("path");
-const fs = require("fs");
 const { authMiddleware, signToken } = require("./auth");
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-const db = mysql.createConnection({
+const DB_CONFIG = {
   host: process.env.DB_HOST || "localhost",
   user: process.env.DB_USER || "root",
   password: process.env.DB_PASSWORD || "",
   database: process.env.DB_NAME || "fixdesk_db",
   port: process.env.DB_PORT ? Number(process.env.DB_PORT) : 3306,
   charset: "utf8mb4",
-});
+};
 
-// Database Connection
+const db = mysql.createConnection(DB_CONFIG);
+
+
 db.connect((err) => {
   if (err) {
     console.error("Database connection failed:", err);
@@ -71,17 +72,21 @@ app.post("/auth/login", (req, res) => {
     `;
 
   db.query(query, [user_name], async (err, results) => {
-    if (err)
-      return res
-        .status(500)
-        .json({ message: "เกิดข้อผิดพลาด", error: err.message });
+    if (err) {
+      console.error("[AUTH][LOGIN]", err.message);
+      return res.status(500).json({
+        message: "Internal Server Error",
+      });
+    }
+
     if (!results.length)
       return res.status(401).json({ message: "ชื่อผู้ใช้ไม่ถูกต้อง" });
 
     const user = results[0];
     const match = await bcrypt.compare(password, user.us_user_pass);
+
     if (!match) return res.status(401).json({ message: "รหัสผ่านไม่ถูกต้อง" });
-    // ใส่ข้อมูลทั้งหมดใน token
+
     const payload = {
       us_id: user.us_id,
       us_user_name: user.us_user_name,

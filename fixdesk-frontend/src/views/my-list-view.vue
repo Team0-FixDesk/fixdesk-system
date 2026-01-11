@@ -1,20 +1,25 @@
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+/* ===================== Imports ===================== */
+import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import Sweetalert from 'sweetalert2'
+
 import TableComponent from '@/components/table-component.vue'
 import TableActions from '@/components/table-actions-component.vue'
 import RepairButton from '@/components/repair-button-component.vue'
-import Sweetalert from 'sweetalert2'
 import RepairFilterBar from '@/components/filters/repair-filter-bar-component.vue'
+
+import { useAuthToken } from '@/composables/useAuthToken'
+
 
 defineOptions({ name: 'MyListView' })
 
-// Router & Config
+/* ===================== Router & Config ===================== */
 const router = useRouter()
 const route = useRoute()
 const API_BASE = import.meta.env.VITE_API_BASE
 
-// Table Structure
+/* ===================== Table Structure ===================== */
 const tableColumns = [
   'หมายเลขแจ้งซ่อม',
   'ประเภทงาน',
@@ -27,68 +32,65 @@ const tableColumns = [
 const tableRows = ref([])
 const openMenuId = ref(null)
 
-// Filters & Search
+
+const { token, userId, isAuthenticated, logout } = useAuthToken()
+
+/* ===================== Filters ===================== */
 const searchInput = ref('')
 const selectedStatuses = ref([])
 const selectedUrgencies = ref([])
 const selectedDate = ref('')
 
-const isStatusFilterOpen = ref(false)
-const isUrgencyFilterOpen = ref(false)
-
-// Utils: Decode JWT for userId
-function parseJwt(token) {
-  try {
-    const payload = token.split('.')[1]
-    const json = atob(payload.replace(/-/g, '+').replace(/_/g, '/'))
-    return JSON.parse(decodeURIComponent(escape(json)))
-  } catch {
-    return {}
-  }
+/* ===================== Utils ===================== */
+function extractThaiDate(cell) {
+  const match = cell.match(/วันที่แจ้ง:\s*([\d/]+)/)
+  return match ? match[1] : null
 }
 
-// Load My Repairs
+/* ===================== Data Loader ===================== */
 async function loadMyRepairs() {
+  if (!isAuthenticated.value) {
+    logout()
+    return
+  }
+
   try {
-    const token = localStorage.getItem('token') || sessionStorage.getItem('token')
-    if (!token) return
+    const response = await fetch(`${API_BASE}/my-repairs/${userId.value}`, {
+      headers: {
+        Authorization: `Bearer ${token.value}`,
+      },
+    })
 
-    const userId = parseJwt(token).us_id
-    const response = await fetch(`${API_BASE}/my-repairs/${userId}`)
     const data = await response.json()
+    if (!response.ok) {
+      throw new Error(data.message || 'LOAD_FAILED')
+    }
 
-    if (!response.ok) throw new Error(data.message || 'โหลดข้อมูลล้มเหลว')
-
-    // Map to table rows
     tableRows.value = data.map((repair) => {
       const location = repair.bd_name
         ? `${repair.bd_name} ${repair.fl_name} ${repair.room_name}`
         : '-'
 
       return [
-        repair.rf_code || '-', // 1 หมายเลข
-        repair.tt_name || '-', // 2 ประเภทงาน
+        repair.rf_code,
+        repair.tt_name,
         'วันที่แจ้ง: ' +
           new Date(repair.rf_create_at).toLocaleDateString('th-TH') +
-          '</br>' +
+          '<br>' +
           'สถานที่: ' +
-          location, // 3 สถานที่
-        repair.rf_urgency, // 4 ความเร่งด่วน (key)
-        repair.rf_user_status, // 5 สถานะงาน (key)
-        '', // 6 actions column
+          location,
+        repair.rf_urgency,
+        repair.rf_user_status,
+        '',
       ]
     })
-  } catch (err) {
-    console.error('โหลดข้อมูลไม่สำเร็จ:', err)
+  } catch (error) {
+    console.error('Load my repairs failed:', error.message)
   }
 }
 
-function extractThaiDate(cell) {
-  const match = cell.match(/วันที่แจ้ง:\s*([\d/]+)/)
-  return match ? match[1] : null
-}
 
-// Computed: Filtered Rows
+/* ===================== Computed ===================== */
 const filteredRows = computed(() => {
   const search = searchInput.value.toLowerCase()
   const dateFilter = selectedDate.value
@@ -121,19 +123,12 @@ const filteredRows = computed(() => {
   })
 })
 
+/* ===================== Actions ===================== */
 function resetFilters() {
   selectedUrgencies.value = []
   selectedStatuses.value = []
   searchInput.value = ''
   selectedDate.value = ''
-}
-
-// Handle click outside dropdown
-function handleOutsideClick(event) {
-  if (!event.target.closest('.relative')) {
-    isStatusFilterOpen.value = false
-    isUrgencyFilterOpen.value = false
-  }
 }
 
 // Navigation handlers
@@ -142,6 +137,10 @@ const openEdit = (code) => router.push(`/main/repair-edit/${code}`)
 
 // Delete Repair
 async function deleteRepair(repairCode) {
+  if (!isAuthenticated.value) {
+    logout()
+    return
+  }
   const confirm = await Sweetalert.fire({
     title: 'ลบรายการนี้?',
     text: `คุณต้องการลบใบแจ้งซ่อมหมายเลข ${repairCode} หรือไม่?`,
@@ -164,7 +163,7 @@ async function deleteRepair(repairCode) {
     const data = await response.json()
     if (!response.ok) throw new Error(data.message)
 
-    tableRows.value = tableRows.value.filter((row) => row[1] !== repairCode)
+    tableRows.value = tableRows.value.filter((row) => row[0] !== repairCode)
 
     Sweetalert.fire({
       toast: true,
@@ -188,19 +187,13 @@ async function deleteRepair(repairCode) {
   }
 }
 
-// Lifecycle
+/* ===================== Lifecycle ===================== */
 onMounted(() => {
   loadMyRepairs()
-  document.addEventListener('click', handleOutsideClick)
-
-  // Pre-filter จาก query status เช่น ?status=pending
+  // pre-filter จาก query เช่น ?status=pending
   if (route.query.status && ['pending', 'in_progress', 'done'].includes(route.query.status)) {
     selectedStatuses.value = [route.query.status]
   }
-})
-
-onBeforeUnmount(() => {
-  document.removeEventListener('click', handleOutsideClick)
 })
 </script>
 
