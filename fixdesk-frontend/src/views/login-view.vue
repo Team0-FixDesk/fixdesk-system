@@ -1,14 +1,12 @@
 <script setup>
-/* ===================== Imports ===================== */
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { jwtDecode } from 'jwt-decode'
 
 /* ===================== Config ===================== */
 const API_BASE = import.meta.env.VITE_API_BASE
-const LOGIN_URL = `${API_BASE}/auth/login`
+const LOGIN_URL = `${API_BASE}/login`
 
-/* ===================== Router ===================== */
 const router = useRouter()
 
 /* ===================== State ===================== */

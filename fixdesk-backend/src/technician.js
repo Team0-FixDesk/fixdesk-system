@@ -1,5 +1,5 @@
 const express = require("express");
-const { authMiddleware } = require("../auth");
+const { authMiddleware } = require("../auth.middleware");
 
 module.exports = function TechnicianRoutes(db) {
   const router = express.Router();
