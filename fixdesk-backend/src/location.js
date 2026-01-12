@@ -1,8 +1,13 @@
 const express = require("express");
 const { authMiddleware } = require("../auth.middleware");
+const multer = require("multer");
+const XLSX = require("xlsx");
+
 
 module.exports = function LocationRoutes(db) {
   const router = express.Router();
+  const upload = multer({ storage: multer.memoryStorage() });
+
 
   // เรียกข้อมูลตึกหรืออาคาร
   router.get("/buildings", (req, res) => {
@@ -589,6 +594,86 @@ module.exports = function LocationRoutes(db) {
       });
     });
   });
+  // =====================================================
+  // 🔥 IMPORT LOCATION FROM EXCEL (.xlsx)
+  // =====================================================
+  router.post(
+    "/locations/import/xlsx",
+    authMiddleware,
+    upload.single("file"),
+    async (req, res) => {
+      if (!req.file) {
+        return res.status(400).json({ message: "กรุณาอัปโหลดไฟล์ Excel" });
+      }
 
+      const conn = await db.promise().getConnection();
+
+      try {
+        await conn.beginTransaction();
+
+        const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(sheet);
+
+        for (const row of rows) {
+          const buildingName = row.building_name?.trim();
+          const floorName = row.floor_name?.trim();
+          const roomName = row.room_name?.trim();
+          if (!buildingName || !floorName || !roomName) continue;
+
+          // BUILDING
+          const [b] = await conn.query(
+            "SELECT bd_id FROM building WHERE LOWER(bd_name)=LOWER(?)",
+            [buildingName]
+          );
+          const bd_id =
+            b.length === 0
+              ? (
+                await conn.query(
+                  "INSERT INTO building (bd_name) VALUES (?)",
+                  [buildingName]
+                )
+              )[0].insertId
+              : b[0].bd_id;
+
+          // FLOOR
+          const [f] = await conn.query(
+            "SELECT fl_id FROM floor WHERE LOWER(fl_name)=LOWER(?) AND fl_bd_id=?",
+            [floorName, bd_id]
+          );
+          const fl_id =
+            f.length === 0
+              ? (
+                await conn.query(
+                  "INSERT INTO floor (fl_name, fl_bd_id) VALUES (?, ?)",
+                  [floorName, bd_id]
+                )
+              )[0].insertId
+              : f[0].fl_id;
+
+          // ROOM
+          const [rm] = await conn.query(
+            "SELECT room_id FROM room WHERE LOWER(room_name)=LOWER(?) AND room_fl_id=?",
+            [roomName, fl_id]
+          );
+          if (rm.length === 0) {
+            await conn.query(
+              "INSERT INTO room (room_name, room_fl_id) VALUES (?, ?)",
+              [roomName, fl_id]
+            );
+          }
+        }
+
+        await conn.commit();
+        res.json({ message: "นำเข้าข้อมูลสถานที่จาก Excel สำเร็จ" });
+      } catch (err) {
+        await conn.rollback();
+        console.error("IMPORT ERROR:", err);
+        res.status(500).json({ message: "Import Excel ล้มเหลว" });
+      } finally {
+        conn.release();
+      }
+    }
+  );
   return router;
 };
