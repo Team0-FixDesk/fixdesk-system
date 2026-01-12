@@ -1,5 +1,5 @@
 const express = require("express");
-const { authMiddleware } = require("../auth");
+const { authMiddleware } = require("../auth.middleware");
 const bcrypt = require("bcrypt");
 
 module.exports = function UserRoutes(db) {
