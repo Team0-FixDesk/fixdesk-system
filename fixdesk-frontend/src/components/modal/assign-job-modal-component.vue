@@ -103,12 +103,25 @@ async function confirmAssign() {
 
   loadingAssign.value = true
   try {
+    // ดึง user id จาก token
+    let assignedBy = null;
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    if (token) {
+      try {
+        const decoded = (await import('jwt-decode')).default(token);
+        assignedBy = decoded.us_id || decoded.id;
+      } catch (err) {
+        assignedBy = null;
+      }
+    }
+
     const res = await fetch(`${API_BASE}/assign-repair`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify({
         rf_code: props.repairId,
         technician_id: selectedTechnician.value,
+        ra_assigned_by: assignedBy, // ส่ง id ผู้มอบหมายไปด้วย
       }),
     })
 
@@ -116,7 +129,6 @@ async function confirmAssign() {
 
     if (!res.ok) {
       const msg = resBody.message || 'มอบหมายงานไม่สำเร็จ'
-      // ถ้า Backend บอกว่ามอบหมายไปแล้ว ให้ถือว่า Success แบบมีเตือน
       if (msg.includes('มอบหมายแล้ว') || msg.includes('ถูกมอบหมายแล้ว')) {
         const Toast = Swal.mixin({
           toast: true,
@@ -133,7 +145,7 @@ async function confirmAssign() {
           background: '#e0f2fe',
           color: '#0277bd'
         })
-        emit('success') // แจ้งแม่ว่าให้รีโหลดข้อมูล
+        emit('success')
         emit('close')
         return
       }
@@ -158,8 +170,8 @@ async function confirmAssign() {
       background: '#f0f9ff',
       color: '#1e3a8a'
     })
-    emit('success') // แจ้งแม่ว่าสำเร็จ
-    emit('close')   // ปิด Modal
+    emit('success')
+    emit('close')
 
   } catch (err) {
     const Toast = Swal.mixin({
