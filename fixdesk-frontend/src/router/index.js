@@ -10,6 +10,7 @@ import MainLayout from '../layouts/main-layout.vue'
 import RepairRequestView from '../views/repair-request-view.vue'
 import MyListView from '../views/my-list-view.vue'
 import CreateReportView from '../views/create-report-view.vue'
+import manageReportView from '../views/manage-report-view.vue'
 
 // USER
 import UserHomeView from '../views/user/user-home-view.vue'
@@ -20,11 +21,9 @@ import AdminCheckRequestView from '../views/admin/admin-check-request-view.vue'
 import AdminUserInfoView from '../views/admin/admin-user-info-view.vue'
 import AdminSummaryView from '../views/admin/admin-summary-view.vue'
 import AdminManageLocationView from '../views/admin/admin-manage-location-view.vue'
-import AdminReportView from '../views/admin/admin-report-view.vue'
 
 // MANAGER
 import ManagerHomeView from '../views/manager/manager-home-view.vue'
-import ManagerReportView from '../views/manager/manager-report-view.vue'
 import ManagerSummaryView from '../views/manager/manager-summary-view.vue'
 
 //TECHNICIAN
@@ -67,10 +66,7 @@ const router = createRouter({
           component: AdminManageLocationView,
           meta: { role: ['Admin'] },
         },
-        { path: 'admin-report', component: AdminReportView, meta: { role: ['Admin'] } },
-
         { path: 'manager-home', component: ManagerHomeView, meta: { role: ['Manager'] } },
-        { path: 'manager-report', component: ManagerReportView, meta: { role: ['Manager'] } },
         { path: 'manager-summary', component: ManagerSummaryView, meta: { role: ['Manager'] } },
 
         { path: 'technician-home', component: TechnicianHomeView, meta: { role: ['Technician'] } },
@@ -125,6 +121,11 @@ const router = createRouter({
           path: 'my-list',
           component: MyListView,
           meta: { role: ['User', 'Admin', 'Technician', 'Manager', 'Stock'] },
+        },
+        {
+          path: 'manage-report',
+          component: manageReportView,
+          meta: { role: ['Admin', 'Manager'] },
         },
         {
           path: 'create-report',
