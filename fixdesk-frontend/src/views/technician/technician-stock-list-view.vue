@@ -1,17 +1,20 @@
 <script setup>
-defineOptions({ name: 'TechnicianStockListView' })
+defineOptions({ name: 'TechnicianStockListView' }) //
 
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
-import ProductCardComponent from '@/components/product-card-component.vue'
-import ConfirmWithdrawComponent from '@/components/modal/confirm-withdraw-component.vue'
 import Swal from 'sweetalert2'
 
+// Components
+import ProductCardComponent from '@/components/product-card-component.vue'
+import ConfirmWithdrawComponent from '@/components/modal/confirm-withdraw-component.vue'
+
 const router = useRouter()
-const API_BASE = import.meta.env.VITE_API_BASE
+const API_BASE_URL = import.meta.env.VITE_API_BASE //
+
 // --- State Management ---
-const stockItems = ref([])
-const categoryOptions = ref([])
+const stockItemList = ref([]) //
+const categoryOptionList = ref([]) //
 const isLoading = ref(false)
 
 // --- Filters ---
@@ -19,101 +22,146 @@ const searchKeyword = ref('')
 const isCategoryFilterVisible = ref(false)
 const sortQuantity = ref(null)
 const isStatusFilterVisible = ref(false)
-const selectedCategories = ref([])
-const selectedStatuses = ref([])
+const selectedCategoryList = ref([]) //
+const selectedStatusList = ref([]) //
 
-import { jwtDecode } from 'jwt-decode'
-
+// --- User Profile ---
 const currentUserName = ref('')
 const currentDepartment = ref('')
 
+/**
+ * ดึงข้อมูลโปรไฟล์จาก Session
+ */
 const loadTechnicianProfile = () => {
   const user = JSON.parse(
-    localStorage.getItem('session_user') || sessionStorage.getItem('session_user'),
-  )
-  if (!user) return
+    sessionStorage.getItem('session_user') || localStorage.getItem('session_user')
+  ) //
+
+  if (!user) {
+    return
+  }
 
   currentUserName.value = user.fullName || ''
   currentDepartment.value = user.department || ''
 }
 
-const repairJobList = ref([])
+// --- Repair Jobs ---
+const repairJobList = ref([]) //
+const selectedRepairCode = ref(null)
+
+/**
+ * จำกัดจำนวนตัวอักษรเพื่อการแสดงผล
+ */
 const limitWords = (text, maxChars = 20) => {
-  if (!text) return ''
+  if (!text) {
+    return ''
+  }
+
   return text.length > maxChars ? text.slice(0, maxChars) + '...' : text
 }
 
-const fetchRepairJobs = async () => {
+/**
+ * ดึงรายการใบแจ้งซ่อมจาก API
+ */
+const fetchRepairJobList = async () => {
   try {
-    const res = await fetch(`${API_BASE}/technician/repairs`, {
+    const response = await fetch(`${API_BASE_URL}/technician/repairs`, {
       headers: getAuthHeaders(),
     })
 
-    if (!res.ok) throw new Error('โหลดรายการใบแจ้งซ่อมล้มเหลว')
+    if (!response.ok) {
+      throw new Error('โหลดรายการใบแจ้งซ่อมล้มเหลว')
+    }
 
-    const data = await res.json()
-
-    repairJobList.value = data.map((r) => ({
-      rf_code: r.rf_code,
-      rf_title: r.rf_problem ?? r.rf_title ?? 'ไม่ระบุ',
+    const data = await response.json()
+    repairJobList.value = data.map((item) => ({
+      rf_code: item.rf_code,
+      rf_title: item.rf_problem ?? item.rf_title ?? 'ไม่ระบุ',
     }))
-  } catch (err) {
-    console.error(err)
+  } catch (error) {
+    console.error(error)
   }
 }
 
-// --- Utility ---
+// --- Utility Functions ---
+/**
+ * จัดการ Auth Headers
+ */
 function getAuthHeaders() {
-  const token = localStorage.getItem('token') || sessionStorage.getItem('token')
-  return { Authorization: `Bearer ${token}` }
+  const token = sessionStorage.getItem('token') || localStorage.getItem('token')
+  
+  return { Authorization: `Bearer ${token}` } //
 }
 
-const calculateStockStatusKey = (qty) => {
-  if (qty <= 0) return 'out_of_stock'
-  if (qty < 10) return 'low_stock'
+const calculateStockStatusKey = (quantity) => {
+  if (quantity <= 0) {
+    return 'out_of_stock'
+  }
+  
+  if (quantity < 10) {
+    return 'low_stock'
+  }
+  
   return 'in_stock'
 }
 
-const calculateStockStatusLabel = (qty) => {
-  if (qty <= 0) return 'สินค้าหมด'
-  if (qty < 10) return 'สินค้าใกล้หมด'
+const calculateStockStatusLabel = (quantity) => {
+  if (quantity <= 0) {
+    return 'สินค้าหมด'
+  }
+  
+  if (quantity < 10) {
+    return 'สินค้าใกล้หมด'
+  }
+  
   return 'พร้อมใช้งาน'
 }
 
-// --- API ---
-const fetchCategoryOptions = async () => {
+// --- API Inventory ---
+/**
+ * ดึงข้อมูลหมวดหมู่สินค้า
+ */
+const fetchCategoryOptionList = async () => {
   try {
-    const res = await fetch(`${API_BASE}/category`, { headers: getAuthHeaders() })
-    if (!res.ok) throw new Error('Load categories fail')
+    const response = await fetch(`${API_BASE_URL}/category`, { headers: getAuthHeaders() })
+    
+    if (!response.ok) {
+      throw new Error('Load categories fail')
+    }
 
-    const data = await res.json()
-    categoryOptions.value = data.map((c) => c.ct_name)
-  } catch (err) {
-    console.error(err)
+    const data = await response.json()
+    categoryOptionList.value = data.map((item) => item.ct_name)
+  } catch (error) {
+    console.error(error)
   }
 }
 
-const fetchInventoryItems = async () => {
+/**
+ * ดึงข้อมูลรายการสินค้าทั้งหมดในคลัง
+ */
+const fetchStockItemList = async () => {
   isLoading.value = true
+  
   try {
-    const token = localStorage.getItem('token') || sessionStorage.getItem('token')
+    const token = sessionStorage.getItem('token') || localStorage.getItem('token')
+    
     if (!token) {
       Swal.fire('แจ้งเตือน', 'กรุณาเข้าสู่ระบบก่อนใช้งาน', 'warning')
       router.push('/login')
       return
     }
 
-    const res = await fetch(`${API_BASE}/show-stock`, { headers: getAuthHeaders() })
+    const response = await fetch(`${API_BASE_URL}/show-stock`, { headers: getAuthHeaders() })
 
-    if (res.status === 401) {
-      localStorage.removeItem('token')
+    if (response.status === 401) {
       sessionStorage.removeItem('token')
+      localStorage.removeItem('token')
       router.push('/login')
       return
     }
 
-    const data = await res.json()
-    stockItems.value = data.map((item) => ({
+    const data = await response.json()
+    stockItemList.value = data.map((item) => ({
       id: item.pd_id,
       name: item.pd_name,
       serialNumber: item.pd_asset_code || '-',
@@ -121,33 +169,33 @@ const fetchInventoryItems = async () => {
       quantity: item.pd_quantity,
       unit: item.units_name || 'ชิ้น',
       imageUrl: item.pd_upload_image
-        ? `${API_BASE}/uploads/${item.pd_upload_image}`
+        ? `${API_BASE_URL}/uploads/${item.pd_upload_image}`
         : 'https://via.placeholder.com/300?text=No+Image',
       status: calculateStockStatusLabel(item.pd_quantity),
       filterStatus: calculateStockStatusKey(item.pd_quantity),
     }))
-  } catch (err) {
-    console.error(err)
+  } catch (error) {
+    console.error(error)
     Swal.fire('ผิดพลาด', 'ไม่สามารถดึงข้อมูลสินค้าได้', 'error')
   } finally {
     isLoading.value = false
   }
 }
 
-// --- FILTERS ---
-const filteredStockItems = computed(() => {
-  let result = stockItems.value.filter((item) => {
-    const q = searchKeyword.value.toLowerCase()
+// --- Filter Logic ---
+const filteredStockItemList = computed(() => {
+  let result = stockItemList.value.filter((item) => {
+    const query = searchKeyword.value.toLowerCase()
     const matchSearch =
-      item.name.toLowerCase().includes(q) || item.serialNumber.toLowerCase().includes(q)
+      item.name.toLowerCase().includes(query) || item.serialNumber.toLowerCase().includes(query)
 
-    const matchCat =
-      selectedCategories.value.length === 0 || selectedCategories.value.includes(item.category)
+    const matchCategory =
+      selectedCategoryList.value.length === 0 || selectedCategoryList.value.includes(item.category)
 
     const matchStatus =
-      selectedStatuses.value.length === 0 || selectedStatuses.value.includes(item.filterStatus)
+      selectedStatusList.value.length === 0 || selectedStatusList.value.includes(item.filterStatus)
 
-    return matchSearch && matchCat && matchStatus
+    return matchSearch && matchCategory && matchStatus
   })
 
   if (sortQuantity.value === 'asc') {
@@ -160,41 +208,52 @@ const filteredStockItems = computed(() => {
 })
 
 const toggleSortQuantity = () => {
-  if (sortQuantity.value === null) sortQuantity.value = 'desc'
-  else if (sortQuantity.value === 'desc') sortQuantity.value = 'asc'
-  else sortQuantity.value = null
+  if (sortQuantity.value === null) {
+    sortQuantity.value = 'desc'
+  } else if (sortQuantity.value === 'desc') {
+    sortQuantity.value = 'asc'
+  } else {
+    sortQuantity.value = null
+  }
 }
 
-// --- Repair Code ---
-const selectedRepairCode = ref(null)
-
-// --- Lifecycle ---
-onMounted(() => {
-  try {
-    const code = sessionStorage.getItem('selected_rf_code')
-    if (code) selectedRepairCode.value = code
-  } catch {}
-  fetchRepairJobs()
-  loadTechnicianProfile()
-
-  fetchCategoryOptions()
-  fetchInventoryItems()
-})
-
-onBeforeUnmount(() => {
-  try {
-    sessionStorage.removeItem('selected_rf_code')
-  } catch {}
-  selectedRepairCode.value = null
-})
-
-// --- CART SYSTEM ---
-const cartItems = ref([])
+// --- Cart System ---
+const cartItemList = ref([]) //
 const isCartOpen = ref(false)
 const cartBtn = ref(null)
-
-// SideBar steps → list | confirm
 const cartStep = ref('list')
+
+const cartQtyById = computed(() => {
+  const quantityMap = new Map()
+  
+  for (const item of cartItemList.value) {
+    quantityMap.set(item.id, (quantityMap.get(item.id) || 0) + item.qty)
+  }
+  
+  return quantityMap
+})
+
+const getBaseQty = (id) => {
+  const stockItem = stockItemList.value.find((item) => item.id === id)
+  
+  return stockItem ? Number(stockItem.quantity || 0) : 0
+}
+
+const getAvailableQty = (id) => {
+  const baseQty = getBaseQty(id)
+  const inCartQty = cartQtyById.value.get(id) || 0
+  
+  return Math.max(0, baseQty - inCartQty)
+}
+
+const bounceCart = () => {
+  if (!cartBtn.value) {
+    return
+  }
+  
+  cartBtn.value.classList.add('cart-bounce')
+  setTimeout(() => cartBtn.value.classList.remove('cart-bounce'), 300)
+}
 
 const addToCart = (payload) => {
   let product = null
@@ -203,12 +262,15 @@ const addToCart = (payload) => {
     product = payload
   } else if (typeof payload === 'number' || typeof payload === 'string') {
     const id = Number(payload)
-    product = stockItems.value.find((x) => x.id === id) || null
+    product = stockItemList.value.find((item) => item.id === id) || null
   }
 
-  if (!product) return
+  if (!product) {
+    return
+  }
 
   const available = getAvailableQty(product.id)
+  
   if (available <= 0) {
     Swal.fire({
       icon: 'warning',
@@ -218,49 +280,47 @@ const addToCart = (payload) => {
     return
   }
 
-  const f = cartItems.value.find((i) => i.id === product.id)
-  if (f) f.qty++
-  else cartItems.value.push({ ...product, qty: 1 })
+  const foundItem = cartItemList.value.find((item) => item.id === product.id)
+  
+  if (foundItem) {
+    foundItem.qty++
+  } else {
+    cartItemList.value.push({ ...product, qty: 1 })
+  }
 
   bounceCart()
 }
 
 const removeFromCart = (id) => {
-  cartItems.value = cartItems.value.filter((i) => i.id !== id)
+  cartItemList.value = cartItemList.value.filter((item) => item.id !== id)
 }
 
-const bounceCart = () => {
-  if (!cartBtn.value) return
-  cartBtn.value.classList.add('cart-bounce')
-  setTimeout(() => cartBtn.value.classList.remove('cart-bounce'), 300)
-}
+const totalInCart = computed(() => cartItemList.value.reduce((sum, item) => sum + item.qty, 0))
 
-const totalInCart = computed(() => cartItems.value.reduce((s, i) => s + i.qty, 0))
-
-// --- Confirm withdraw (step 2) ---
+// --- Withdrawal Process ---
 const isProcessingWithdraw = ref(false)
 
 const confirmWithdraw = async (formData) => {
-  if (cartItems.value.length === 0) return
-
-  const payload = {
-    repair_code: formData.repairCode, // อ่านจากฟอร์ม (readonly)
-    requester_name: formData.requesterName, // อ่านจากฟอร์ม (readonly)
-    department: formData.department, // อ่านจากฟอร์ม (readonly)
-    withdraw_date: formData.withdrawDate, // วันที่ที่ user กรอกจริง
-    items: cartItems.value.map((i) => ({
-      id: i.id,
-      qty: i.qty,
-    })),
+  if (cartItemList.value.length === 0) {
+    return
   }
 
-  console.log('PAYLOAD ที่จะส่ง:', payload)
+  const payload = {
+    repair_code: formData.repairCode,
+    requester_name: formData.requesterName,
+    department: formData.department,
+    withdraw_date: formData.withdrawDate,
+    items: cartItemList.value.map((item) => ({
+      id: item.id,
+      qty: item.qty,
+    })),
+  }
 
   isProcessingWithdraw.value = true
 
   try {
-    const token = localStorage.getItem('token') || sessionStorage.getItem('token')
-    const res = await fetch(`${API_BASE}/withdraw`, {
+    const token = sessionStorage.getItem('token') || localStorage.getItem('token')
+    const response = await fetch(`${API_BASE_URL}/withdraw`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -269,63 +329,65 @@ const confirmWithdraw = async (formData) => {
       body: JSON.stringify(payload),
     })
 
-    const body = await res.json()
-    if (!res.ok) throw new Error(body.message)
+    const responseBody = await response.json()
+    
+    if (!response.ok) {
+      throw new Error(responseBody.message)
+    }
 
     Swal.fire('สำเร็จ', 'เบิกสินค้าเรียบร้อย', 'success')
 
-    cartItems.value = []
+    cartItemList.value = []
     isCartOpen.value = false
     cartStep.value = 'list'
-
-    // เคลียร์ “กำลังเบิกของสำหรับใบแจ้งซ่อม”
     selectedRepairCode.value = null
+    
     try {
       sessionStorage.removeItem('selected_rf_code')
     } catch {}
 
-    // โหลดคลังใหม่
-    await fetchInventoryItems()
-
-    await fetchInventoryItems()
+    await fetchStockItemList()
     router.push({ name: 'technician-requisition-list' })
-  } catch (err) {
-    Swal.fire('ผิดพลาด', err.message, 'error')
+  } catch (error) {
+    Swal.fire('ผิดพลาด', error.message, 'error')
   } finally {
     isProcessingWithdraw.value = false
   }
 }
 
-const cartQtyById = computed(() => {
-  const m = new Map()
-  for (const it of cartItems.value) {
-    m.set(it.id, (m.get(it.id) || 0) + it.qty)
-  }
-  return m
+// --- Lifecycle Hooks ---
+onMounted(() => {
+  try {
+    const code = sessionStorage.getItem('selected_rf_code')
+    if (code) {
+      selectedRepairCode.value = code
+    }
+  } catch {}
+  
+  fetchRepairJobList()
+  loadTechnicianProfile()
+  fetchCategoryOptionList()
+  fetchStockItemList()
 })
 
-const getBaseQty = (id) => {
-  const s = stockItems.value.find((x) => x.id === id)
-  return s ? Number(s.quantity || 0) : 0
-}
-
-const getAvailableQty = (id) => {
-  const base = getBaseQty(id)
-  const inCart = cartQtyById.value.get(id) || 0
-  return Math.max(0, base - inCart)
-}
+onBeforeUnmount(() => {
+  try {
+    sessionStorage.removeItem('selected_rf_code')
+  } catch {}
+  
+  selectedRepairCode.value = null
+})
 </script>
 
 <template>
   <div
     class="bg-white rounded-xl shadow-md p-12 mx-auto max-w-8xl container px-5 py-6 min-h-screen"
   >
-    <!-- HEADER -->
     <div class="flex justify-between items-center mb-6">
       <h1 class="text-2xl font-bold text-black">รายการคลังสินค้า</h1>
 
       <button
-        @click="fetchInventoryItems"
+        @click="fetchStockItemList"
         class="text-gray-500 hover:text-blue-600 transition"
         title="รีเฟรชข้อมูล"
       >
@@ -346,12 +408,9 @@ const getAvailableQty = (id) => {
       </button>
     </div>
 
-    <!-- FILTER BAR -->
     <div class="mb-6">
       <div class="flex flex-wrap md:flex-nowrap items-start md:items-center justify-between gap-4">
-        <!-- SEARCH + FILTERS -->
         <div class="flex flex-wrap items-center gap-3 flex-grow relative">
-          <!-- Search -->
           <input
             v-model="searchKeyword"
             type="text"
@@ -359,7 +418,6 @@ const getAvailableQty = (id) => {
             class="text-gray-700 w-full md:w-[400px] h-10 px-4 rounded-lg border border-gray-300 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
           />
 
-          <!-- Category Filter -->
           <div class="relative">
             <button
               @click.stop="isCategoryFilterVisible = !isCategoryFilterVisible"
@@ -377,19 +435,19 @@ const getAvailableQty = (id) => {
               v-if="isCategoryFilterVisible"
               class="absolute left-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg p-3 z-20 max-h-60 overflow-y-auto"
             >
-              <div v-if="categoryOptions.length === 0" class="text-gray-400 text-sm p-2">
+              <div v-if="categoryOptionList.length === 0" class="text-gray-400 text-sm p-2">
                 ไม่มีข้อมูล
               </div>
 
               <label
-                v-for="category in categoryOptions"
+                v-for="category in categoryOptionList"
                 :key="category"
                 class="flex items-center py-1 hover:bg-gray-50 cursor-pointer"
               >
                 <input
                   type="checkbox"
                   :value="category"
-                  v-model="selectedCategories"
+                  v-model="selectedCategoryList"
                   class="w-4 h-4 text-blue-600 border-gray-300 rounded"
                 />
                 <span class="ml-2 text-gray-700">{{ category }}</span>
@@ -397,7 +455,6 @@ const getAvailableQty = (id) => {
             </div>
           </div>
 
-          <!-- Sort -->
           <button
             @click="toggleSortQuantity"
             class="flex items-center gap-1 border border-gray-300 rounded-lg px-4 py-2 bg-white text-gray-700 hover:bg-gray-50"
@@ -454,7 +511,6 @@ const getAvailableQty = (id) => {
             </svg>
           </button>
 
-          <!-- Status Filter -->
           <div class="relative">
             <button
               @click.stop="isStatusFilterVisible = !isStatusFilterVisible"
@@ -476,7 +532,7 @@ const getAvailableQty = (id) => {
                 <input
                   type="checkbox"
                   value="in_stock"
-                  v-model="selectedStatuses"
+                  v-model="selectedStatusList"
                   class="w-4 h-4 text-green-600 border-gray-300 rounded"
                 />
                 <span class="ml-2 text-gray-700">พร้อมใช้งาน</span>
@@ -486,7 +542,7 @@ const getAvailableQty = (id) => {
                 <input
                   type="checkbox"
                   value="low_stock"
-                  v-model="selectedStatuses"
+                  v-model="selectedStatusList"
                   class="w-4 h-4 text-orange-500 border-gray-300 rounded"
                 />
                 <span class="ml-2 text-gray-700">ใกล้หมด</span>
@@ -496,7 +552,7 @@ const getAvailableQty = (id) => {
                 <input
                   type="checkbox"
                   value="out_of_stock"
-                  v-model="selectedStatuses"
+                  v-model="selectedStatusList"
                   class="w-4 h-4 text-red-600 border-gray-300 rounded"
                 />
                 <span class="ml-2 text-gray-700">สินค้าหมด</span>
@@ -505,7 +561,6 @@ const getAvailableQty = (id) => {
           </div>
         </div>
 
-        <!-- CART BUTTON -->
         <div class="flex-none">
           <button
             ref="cartBtn"
@@ -517,20 +572,18 @@ const getAvailableQty = (id) => {
             "
             class="inline-flex items-center h-10 px-4 bg-blue-600 text-white rounded-lg"
           >
-            <img src="/icon/cart.png" alt="" class="h-7 w-7" /> ตระกร้า {{ totalInCart }}
+            <img src="/icon/cart.png" alt="" class="h-7 w-7" /> ตะกร้า {{ totalInCart }}
           </button>
         </div>
       </div>
     </div>
 
-    <!-- LOADING -->
     <div v-if="isLoading" class="text-center py-20 text-gray-500">กำลังโหลดข้อมูล...</div>
 
-    <!-- PRODUCT GRID -->
     <div v-else>
       <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         <ProductCardComponent
-          v-for="item in filteredStockItems"
+          v-for="item in filteredStockItemList"
           :key="item.id"
           :product="{ ...item, quantity: getAvailableQty(item.id) }"
           @add="($event) => addToCart($event ?? item)"
@@ -538,7 +591,7 @@ const getAvailableQty = (id) => {
       </div>
 
       <div
-        v-if="filteredStockItems.length === 0"
+        v-if="filteredStockItemList.length === 0"
         class="flex flex-col items-center justify-center py-20 text-gray-400"
       >
         <svg
@@ -559,11 +612,7 @@ const getAvailableQty = (id) => {
       </div>
     </div>
 
-    <!-- ======================= -->
-    <!--       CART SIDEBAR      -->
-    <!-- ======================= -->
     <div v-if="isCartOpen" class="fixed inset-0 z-50">
-      <!-- overlay -->
       <div
         class="absolute inset-0 bg-black/40"
         @click="
@@ -574,9 +623,7 @@ const getAvailableQty = (id) => {
         "
       ></div>
 
-      <!-- sidebar -->
       <div class="absolute right-0 top-0 h-full w-auto bg-white shadow-2xl flex flex-col">
-        <!-- header -->
         <div class="px-5 py-4 border-b flex items-center justify-between">
           <h2 class="text-lg font-semibold">
             <span v-if="cartStep === 'list'">ตะกร้าสินค้า</span>
@@ -596,11 +643,8 @@ const getAvailableQty = (id) => {
           </button>
         </div>
 
-        <!-- content -->
         <div class="flex-1 overflow-y-auto px-5 py-4">
-          <!-- STEP 1 -->
           <div v-if="cartStep === 'list'">
-            <!-- เลือกใบแจ้งซ่อม -->
             <div class="mb-5">
               <label class="text-sm text-gray-700 mb-1 block">ใบแจ้งซ่อม *</label>
 
@@ -619,12 +663,12 @@ const getAvailableQty = (id) => {
                 </option>
               </select>
             </div>
-            <div v-if="cartItems.length === 0" class="text-gray-400 text-center mt-20">
+            <div v-if="cartItemList.length === 0" class="text-gray-400 text-center mt-20">
               ไม่มีสินค้าในตะกร้า
             </div>
 
             <div
-              v-for="item in cartItems"
+              v-for="item in cartItemList"
               :key="item.id"
               class="flex gap-3 p-3 border rounded-xl hover:shadow-sm transition mb-4"
             >
@@ -634,7 +678,6 @@ const getAvailableQty = (id) => {
                 <p class="font-medium text-gray-800">{{ item.name }}</p>
                 <p class="text-sm text-gray-400">{{ item.category }}</p>
 
-                <!-- qty -->
                 <div class="flex items-center gap-2 mt-2">
                   <button
                     @click="
@@ -674,7 +717,6 @@ const getAvailableQty = (id) => {
                 </div>
               </div>
 
-              <!-- delete -->
               <button
                 @click="removeFromCart(item.id)"
                 class="text-red-500 hover:text-red-600 bg-red-500 h-8 justify-center border rounded-md"
@@ -684,10 +726,9 @@ const getAvailableQty = (id) => {
             </div>
           </div>
 
-          <!-- STEP 2 -->
           <ConfirmWithdrawComponent
             v-if="cartStep === 'confirm'"
-            :items="cartItems"
+            :items="cartItemList"
             :total="totalInCart"
             :loading="isProcessingWithdraw"
             :requester-name="currentUserName"
@@ -698,13 +739,11 @@ const getAvailableQty = (id) => {
           />
         </div>
 
-        <!-- footer -->
         <div class="p-5 border-t">
-          <!-- ไปหน้า confirm -->
           <button
             v-if="cartStep === 'list'"
             class="w-full py-3 rounded-xl transition font-semibold text-white disabled:bg-gray-300 disabled:text-gray-600 bg-blue-600 hover:bg-blue-700"
-            :disabled="!selectedRepairCode || cartItems.length === 0"
+            :disabled="!selectedRepairCode || cartItemList.length === 0"
             @click="cartStep = 'confirm'"
           >
             ดำเนินการต่อ
@@ -713,7 +752,6 @@ const getAvailableQty = (id) => {
       </div>
     </div>
 
-    <!-- Repair code notice -->
     <div
       v-if="selectedRepairCode"
       class="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-blue-100 border border-blue-300 text-blue-800 px-4 py-3 rounded-lg shadow-md flex items-center gap-3"
