@@ -2,11 +2,12 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import TableComponent from '@/components/table-component.vue'
 import TableActions from '@/components/table-actions-component.vue'
+import ImportUserModal from '@/components/import-user-excel-component.vue'
 
 import Sweetalert from 'sweetalert2'
 
 import { usePhoneFormat } from '@/composables/usePhoneFormat'
-const { toRaw, toDisplay} = usePhoneFormat()
+const { toRaw, toDisplay } = usePhoneFormat()
 
 defineOptions({ name: 'AdminUserInfoView' })
 const API_BASE = import.meta.env.VITE_API_BASE
@@ -26,6 +27,7 @@ const showRoleFilter = ref(false)
 const showTechFilter = ref(false)
 const userIdByUsername = ref({})
 const openMenuId = ref(null)
+const showImportModal = ref(false)
 
 async function fetchUsers() {
   try {
@@ -95,7 +97,6 @@ const toast = Sweetalert.mixin({
   timer: 3000,
   timerProgressBar: true,
 })
-
 
 //ฟิลเตอร์
 const roleFilterOptions = ref([]) // list บทบาททั้งหมดจาก DB
@@ -958,12 +959,12 @@ async function handleDeleteTechType(item) {
 
 <template>
   <!-- ตาราง -->
-  <div class="bg-white bg-white rounded-xl shadow-md p-8 mx-auto max-w-7xl">
-    <h1 class="text-lg sm:text-xl font-bold text-black mb-6">จัดการผู้ใช้งานระบบ</h1>
+  <div class="p-8 mx-auto bg-white shadow-md rounded-xl max-w-7xl">
+    <h1 class="mb-6 text-lg font-bold text-black sm:text-xl">จัดการผู้ใช้งานระบบ</h1>
     <!-- ฟิลเตอร์ -->
     <div class="mb-6">
-      <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-4">
-        <div class="flex flex-wrap items-center gap-3 relative z-40">
+      <div class="flex flex-col gap-4 mb-4 md:flex-row md:items-center md:justify-between">
+        <div class="relative z-40 flex flex-wrap items-center gap-3">
           <!-- ค้นหา -->
           <input
             v-model="searchQuery"
@@ -975,19 +976,19 @@ async function handleDeleteTechType(item) {
           <div class="relative">
             <button
               @click.stop="toggleRoleFilter"
-              class="h-10 flex items-center gap-2 border border-gray-300 rounded-lg px-4 py-2 bg-white text-gray-700"
+              class="flex items-center h-10 gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg"
             >
               บทบาท
               <img
                 src="/icon/sidebar/chevron-down-icon.svg"
-                class="w-4 h-4 opacity-70 transition-transform duration-200"
+                class="w-4 h-4 transition-transform duration-200 opacity-70"
                 :class="{ 'rotate-180': showRoleFilter }"
               />
             </button>
 
             <div
               v-if="showRoleFilter"
-              class="absolute mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg p-3 text-sm text-gray-700 z-10"
+              class="absolute z-10 w-48 p-3 mt-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-md shadow-lg"
             >
               <label v-for="role in roleFilterOptions" :key="role" class="flex items-center py-1">
                 <input
@@ -1004,37 +1005,37 @@ async function handleDeleteTechType(item) {
           <div class="relative">
             <button
               @click.stop="toggleTechFilter"
-              class="h-10 flex items-center gap-2 border border-gray-300 rounded-lg px-4 py-2 bg-white text-gray-700"
+              class="flex items-center h-10 gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg"
             >
               ตำแหน่ง
               <img
                 src="/icon/sidebar/chevron-down-icon.svg"
-                class="w-4 h-4 opacity-70 transition-transform duration-200"
+                class="w-4 h-4 transition-transform duration-200 opacity-70"
                 :class="{ 'rotate-180': showTechFilter }"
               />
             </button>
 
             <div
               v-if="showTechFilter"
-              class="absolute mt-2 w-56 bg-white border border-gray-200 rounded-md shadow-lg p-3 text-sm text-gray-700 z-10"
+              class="absolute z-10 w-56 p-3 mt-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-md shadow-lg"
             >
-              <div class="max-h-56 overflow-y-auto">
+              <div class="overflow-y-auto max-h-56">
                 <label v-for="t in technicianFilterOptions" :key="t" class="flex items-center py-1">
                   <input
                     type="checkbox"
-                    :value="t"
-                    v-model="selectedTechTypes"
-                    class="w-4 h-4 text-blue-600 border-gray-300"
+                    v-model="allSelected"
+                    class="text-blue-600 cursor-pointer"
                   />
+
                   <span class="ml-2">{{ t }}</span>
                 </label>
               </div>
 
-              <div class="mt-2 pt-2 border-t border-gray-200">
+              <div class="pt-2 mt-2 border-t border-gray-200">
                 <button
                   type="button"
                   @click.stop="openManageTechModal"
-                  class="w-full flex items-center justify-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700"
+                  class="flex items-center justify-center w-full gap-1 text-xs font-medium text-blue-600 hover:text-blue-700"
                 >
                   <img src="/icon/plus-icon.svg" class="w-3 h-3" />
                   จัดการตำแหน่งช่าง
@@ -1046,21 +1047,31 @@ async function handleDeleteTechType(item) {
           <button
             v-if="selectedRoles.length || selectedTechTypes.length"
             @click="clearFilters"
-            class="text-blue-600 hover:text-blue-700 text-sm font-medium"
+            class="text-sm font-medium text-blue-600 hover:text-blue-700"
           >
             ล้างตัวกรอง
           </button>
         </div>
-        <!-- ปุ่มเพิ่ม -->
-        <button
-          @click="openAddModal"
-          class="inline-flex items-center justify-center sm:justify-start w-full sm:w-auto h-10 px-4 rounded-lg bg-[#1E48D1] hover:bg-[#1539a9] text-white font-medium shadow-sm transition"
-        >
-          <img src="/icon/plus-icon.svg" class="w-4 h-4" />
-          เพิ่มผู้ใช้
-        </button>
+        <div class="flex flex-col gap-2 sm:flex-row">
+          <!-- ปุ่ม import -->
+          <button
+            class="inline-flex items-center justify-center sm:justify-start w-full sm:w-auto h-10 px-4 rounded-lg bg-[#1E48D1] hover:bg-[#1539a9] text-white font-medium shadow-sm transition"
+            @click="showImportModal = true"
+          >
+            <img src="/icon/plus-icon.svg" class="w-4 h-4" />
+            import
+          </button>
+          <!-- ปุ่มเพิ่ม -->
+          <button
+            @click="openAddModal"
+            class="inline-flex items-center justify-center sm:justify-start w-full sm:w-auto h-10 px-4 rounded-lg bg-[#1E48D1] hover:bg-[#1539a9] text-white font-medium shadow-sm transition"
+          >
+            <img src="/icon/plus-icon.svg" class="w-4 h-4" />
+            เพิ่มผู้ใช้
+          </button>
+        </div>
       </div>
-      <div class="-mx-2 sm:mx-0 overflow-x-auto">
+      <div class="-mx-2 overflow-x-auto sm:mx-0">
         <TableComponent
           :columns="columns"
           :rows="
@@ -1074,7 +1085,7 @@ async function handleDeleteTechType(item) {
             ])
           "
           :perPage="10"
-          :columnAlign="['left','left','left','left','left','center']"
+          :columnAlign="['left', 'left', 'left', 'left', 'left', 'center']"
         >
           <!-- ใส่ SLOT ให้ column ตัวดำเนินการ -->
           <template #cell-5="{ row }">
@@ -1096,7 +1107,7 @@ async function handleDeleteTechType(item) {
     <!-- View User Modal (เหมือน Edit เป๊ะ แต่ disabled ทั้งหมด) -->
     <div
       v-if="showViewModal"
-      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-2 sm:px-0"
+      class="fixed inset-0 z-50 flex items-center justify-center px-2 bg-black bg-opacity-50 sm:px-0"
       @click.self="closeViewModal"
     >
       <div
@@ -1104,12 +1115,12 @@ async function handleDeleteTechType(item) {
       >
         <!-- Header with icon -->
         <div class="flex items-center gap-3 mb-6">
-          <div class="bg-blue-100 p-3 rounded-full">
+          <div class="p-3 bg-blue-100 rounded-full">
             <img src="/icon/user-info.svg" alt="View User" class="w-8 h-8" />
           </div>
           <h2 class="text-xl font-bold text-gray-800">รายละเอียดผู้ใช้งาน</h2>
         </div>
-        <p class="text-gray-600 text-sm mb-6">แสดงข้อมูลผู้ใช้ในระบบ (ไม่สามารถแก้ไขได้)</p>
+        <p class="mb-6 text-sm text-gray-600">แสดงข้อมูลผู้ใช้ในระบบ (ไม่สามารถแก้ไขได้)</p>
         <form>
           <!-- ชื่อผู้ใช้ -->
           <div class="mb-3">
@@ -1118,7 +1129,7 @@ async function handleDeleteTechType(item) {
               v-model="viewForm.us_user_name"
               type="text"
               disabled
-              class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed"
+              class="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md cursor-not-allowed"
             />
           </div>
           <!-- คำนำหน้า -->
@@ -1127,7 +1138,7 @@ async function handleDeleteTechType(item) {
             <select
               v-model="viewForm.us_ttn_id"
               disabled
-              class="w-full px-3 py-2 border rounded-md appearance-none bg-gray-100 text-gray-500 cursor-not-allowed border-gray-300"
+              class="w-full px-3 py-2 text-gray-500 bg-gray-100 border border-gray-300 rounded-md appearance-none cursor-not-allowed"
             >
               <option
                 v-for="opt in titleOptions"
@@ -1140,14 +1151,14 @@ async function handleDeleteTechType(item) {
             </select>
           </div>
           <!-- ชื่อ - นามสกุล (ภาษาไทย) -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3 mt-3">
+          <div class="grid grid-cols-1 gap-3 mt-3 mb-3 sm:grid-cols-2">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1.5"> ชื่อ (ไทย) </label>
               <input
                 v-model="viewForm.us_first_name_th"
                 type="text"
                 disabled
-                class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed"
+                class="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md cursor-not-allowed"
               />
             </div>
             <div>
@@ -1156,12 +1167,12 @@ async function handleDeleteTechType(item) {
                 v-model="viewForm.us_last_name_th"
                 type="text"
                 disabled
-                class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed"
+                class="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md cursor-not-allowed"
               />
             </div>
           </div>
           <!-- ชื่อ - นามสกุล (ภาษาอังกฤษ) -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+          <div class="grid grid-cols-1 gap-3 mb-3 sm:grid-cols-2">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1.5"
                 >ชื่อ (ภาษาอังกฤษ)</label
@@ -1170,7 +1181,7 @@ async function handleDeleteTechType(item) {
                 v-model="viewForm.us_first_name_en"
                 type="text"
                 disabled
-                class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed"
+                class="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md cursor-not-allowed"
               />
             </div>
             <div>
@@ -1181,7 +1192,7 @@ async function handleDeleteTechType(item) {
                 v-model="viewForm.us_last_name_en"
                 type="text"
                 disabled
-                class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed"
+                class="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md cursor-not-allowed"
               />
             </div>
           </div>
@@ -1192,7 +1203,7 @@ async function handleDeleteTechType(item) {
               v-model="viewForm.us_phone"
               type="tel"
               disabled
-              class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed"
+              class="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md cursor-not-allowed"
             />
           </div>
           <!-- หน่วยงาน -->
@@ -1202,7 +1213,7 @@ async function handleDeleteTechType(item) {
               v-model="viewForm.us_department"
               type="text"
               disabled
-              class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed"
+              class="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md cursor-not-allowed"
             />
           </div>
           <!-- บทบาท - ตำแหน่งช่าง (เหมือน Edit แต่ disabled) -->
@@ -1212,7 +1223,7 @@ async function handleDeleteTechType(item) {
               <select
                 v-model="viewForm.us_role_id"
                 disabled
-                class="w-full px-3 py-2 border rounded-md appearance-none bg-gray-100 text-gray-500 cursor-not-allowed border-gray-300"
+                class="w-full px-3 py-2 text-gray-500 bg-gray-100 border border-gray-300 rounded-md appearance-none cursor-not-allowed"
               >
                 <option value="" disabled>เลือกบทบาท</option>
                 <option v-for="role in roleOptions" :key="role.value" :value="role.value">
@@ -1225,7 +1236,7 @@ async function handleDeleteTechType(item) {
               <select
                 v-model="viewForm.us_tt_id"
                 disabled
-                class="w-full px-3 py-2 border rounded-md appearance-none bg-gray-100 text-gray-500 cursor-not-allowed border-gray-300"
+                class="w-full px-3 py-2 text-gray-500 bg-gray-100 border border-gray-300 rounded-md appearance-none cursor-not-allowed"
               >
                 <option value="">
                   {{ addForm.us_role_id === '2' ? 'เลือกตำแหน่ง' : 'ไม่ระบุ' }}
@@ -1241,7 +1252,7 @@ async function handleDeleteTechType(item) {
             <button
               type="button"
               @click="closeViewModal"
-              class="px-5 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-md font-medium transition"
+              class="px-5 py-2 font-medium text-gray-700 transition bg-gray-200 rounded-md hover:bg-gray-300"
             >
               ปิด
             </button>
@@ -1253,21 +1264,21 @@ async function handleDeleteTechType(item) {
     <!-- Modal เพิ่มผู้ใช้งาน -->
     <div
       v-if="showAddModal"
-      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
       @click.self="closeAddModal"
     >
       <div class="bg-white rounded-lg p-8 w-full max-w-2xl shadow-xl max-h-[90vh] overflow-y-auto">
         <!-- Header with icon -->
         <div class="flex items-center gap-3 mb-6">
-          <div class="bg-green-100 p-3 rounded-full">
+          <div class="p-3 bg-green-100 rounded-full">
             <img src="/icon/user-icon.svg" alt="Add User" class="w-8 h-8" />
           </div>
           <h2 class="text-xl font-bold text-gray-800">เพิ่มผู้ใช้งาน</h2>
         </div>
-        <p class="text-gray-600 text-sm mb-6">กรอกข้อมูลเพื่อสร้างบัญชีผู้ใช้ใหม่ในระบบ</p>
+        <p class="mb-6 text-sm text-gray-600">กรอกข้อมูลเพื่อสร้างบัญชีผู้ใช้ใหม่ในระบบ</p>
         <form @submit.prevent="confirmAddUser">
           <!-- ชื่อผู้ใช้ และ รหัสผ่าน -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+          <div class="grid grid-cols-1 gap-3 mb-3 sm:grid-cols-2">
             <div>
               <label class="block text-sm font-medium mb-1.5">
                 ชื่อผู้ใช้ <span class="text-red-500">*</span>
@@ -1282,7 +1293,7 @@ async function handleDeleteTechType(item) {
                 ]"
                 placeholder="กรอกชื่อผู้ใช้"
               />
-              <p v-if="addErrors.username" class="text-red-500 text-sm mt-1">
+              <p v-if="addErrors.username" class="mt-1 text-sm text-red-500">
                 {{ addErrors.username }}
               </p>
             </div>
@@ -1300,7 +1311,7 @@ async function handleDeleteTechType(item) {
                 ]"
                 placeholder="กรอกรหัสผ่าน"
               />
-              <p v-if="addErrors.password" class="text-red-500 text-sm mt-1">
+              <p v-if="addErrors.password" class="mt-1 text-sm text-red-500">
                 {{ addErrors.password }}
               </p>
             </div>
@@ -1327,12 +1338,12 @@ async function handleDeleteTechType(item) {
                 {{ opt.label }}
               </option>
             </select>
-            <p v-if="addErrors.ttn" class="text-red-500 text-sm mt-1">
+            <p v-if="addErrors.ttn" class="mt-1 text-sm text-red-500">
               {{ addErrors.ttn }}
             </p>
           </div>
           <!-- ชื่อ - นามสกุล (ภาษาไทย) -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3 mt-3">
+          <div class="grid grid-cols-1 gap-3 mt-3 mb-3 sm:grid-cols-2">
             <div>
               <label class="block text-sm font-medium mb-1.5">
                 ชื่อ (ไทย) <span class="text-red-500">*</span>
@@ -1347,7 +1358,7 @@ async function handleDeleteTechType(item) {
                 ]"
                 placeholder="กรอกชื่อ"
               />
-              <p v-if="addErrors.firstTh" class="text-red-500 text-sm mt-1">
+              <p v-if="addErrors.firstTh" class="mt-1 text-sm text-red-500">
                 {{ addErrors.firstTh }}
               </p>
             </div>
@@ -1365,13 +1376,13 @@ async function handleDeleteTechType(item) {
                 ]"
                 placeholder="กรอกนามสกุล"
               />
-              <p v-if="addErrors.lastTh" class="text-red-500 text-sm mt-1">
+              <p v-if="addErrors.lastTh" class="mt-1 text-sm text-red-500">
                 {{ addErrors.lastTh }}
               </p>
             </div>
           </div>
           <!-- ชื่อ - นามสกุล (ภาษาอังกฤษ) -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+          <div class="grid grid-cols-1 gap-3 mb-3 sm:grid-cols-2">
             <div>
               <label class="block text-sm font-medium mb-1.5"
                 >ชื่อ (ภาษาอังกฤษ) <span class="text-red-500">*</span></label
@@ -1386,7 +1397,7 @@ async function handleDeleteTechType(item) {
                 ]"
                 placeholder="First Name"
               />
-              <p v-if="addErrors.firstEn" class="text-red-500 text-sm mt-1">
+              <p v-if="addErrors.firstEn" class="mt-1 text-sm text-red-500">
                 {{ addErrors.firstEn }}
               </p>
             </div>
@@ -1404,20 +1415,20 @@ async function handleDeleteTechType(item) {
                 ]"
                 placeholder="Last Name"
               />
-              <p v-if="addErrors.lastEn" class="text-red-500 text-sm mt-1">
+              <p v-if="addErrors.lastEn" class="mt-1 text-sm text-red-500">
                 {{ addErrors.lastEn }}
               </p>
             </div>
           </div>
           <!-- เบอร์โทร และ หน่วยงาน -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+          <div class="grid grid-cols-1 gap-3 mb-3 sm:grid-cols-2">
             <div>
               <label class="block text-sm font-medium mb-1.5"
                 >เบอร์โทร <span class="text-red-500">*</span></label
               >
               <input
                 v-model="addForm.us_phone"
-                @input="addForm.us_phone = toDisplay(addForm.us_phone); clearAddError('phone')"
+                @input=" addForm.us_phone = toDisplay(addForm.us_phone); clearAddError('phone') "
                 type="tel"
                 :class="[
                   'w-full px-3 py-2 border rounded-md',
@@ -1425,7 +1436,8 @@ async function handleDeleteTechType(item) {
                 ]"
                 placeholder="กรอกเบอร์โทร"
               />
-              <p v-if="addErrors.phone" class="text-red-500 text-sm mt-1">
+
+              <p v-if="addErrors.phone" class="mt-1 text-sm text-red-500">
                 {{ addErrors.phone }}
               </p>
             </div>
@@ -1443,7 +1455,7 @@ async function handleDeleteTechType(item) {
                 placeholder="กรอกหน่วยงาน"
                 @input="clearAddError('department')"
               />
-              <p v-if="addErrors.department" class="text-red-500 text-sm mt-1">
+              <p v-if="addErrors.department" class="mt-1 text-sm text-red-500">
                 {{ addErrors.department }}
               </p>
             </div>
@@ -1456,7 +1468,10 @@ async function handleDeleteTechType(item) {
               </label>
               <select
                 v-model="addForm.us_role_id"
-                @change="handleAddRoleChange(); clearAddError('role')"
+                @change="
+                  handleAddRoleChange();
+                  clearAddError('role')
+                "
                 :class="[
                   'w-full px-3 py-2 border rounded-md bg-white',
                   addErrors.role ? 'border-red-500' : 'border-gray-300',
@@ -1467,7 +1482,7 @@ async function handleDeleteTechType(item) {
                   {{ role.label }}
                 </option>
               </select>
-              <p v-if="addErrors.role" class="text-red-500 text-sm mt-1">
+              <p v-if="addErrors.role" class="mt-1 text-sm text-red-500">
                 {{ addErrors.role }}
               </p>
             </div>
@@ -1496,14 +1511,14 @@ async function handleDeleteTechType(item) {
                   {{ opt.label }}
                 </option>
               </select>
-              <p v-if="addErrors.techType" class="text-red-500 text-sm mt-1">
+              <p v-if="addErrors.techType" class="mt-1 text-sm text-red-500">
                 {{ addErrors.techType }}
               </p>
             </div>
           </div>
 
           <!-- ปุ่มต่าง ๆ -->
-          <div class="flex flex-col sm:flex-row gap-3 mt-6">
+          <div class="flex flex-col gap-3 mt-6 sm:flex-row">
             <button
               type="button"
               @click="closeAddModal"
@@ -1525,18 +1540,18 @@ async function handleDeleteTechType(item) {
     <!-- Edit User Modal -->
     <div
       v-if="showEditModal"
-      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
       @click.self="closeEditModal"
     >
       <div class="bg-white rounded-lg p-8 w-full max-w-2xl shadow-xl max-h-[90vh] overflow-y-auto">
         <!-- Header with icon -->
         <div class="flex items-center gap-3 mb-6">
-          <div class="bg-orange-100 p-3 rounded-full">
+          <div class="p-3 bg-orange-100 rounded-full">
             <img src="/icon/user-icon.svg" alt="Edit User" class="w-8 h-8" />
           </div>
           <h2 class="text-xl font-bold text-gray-800">แก้ไขข้อมูลผู้ใช้</h2>
         </div>
-        <p class="text-gray-600 text-sm mb-6">คุณต้องการบันทึกการแก้ไขข้อมูลผู้ใช้หรือไม่</p>
+        <p class="mb-6 text-sm text-gray-600">คุณต้องการบันทึกการแก้ไขข้อมูลผู้ใช้หรือไม่</p>
         <form @submit.prevent="confirmEditUser">
           <!-- ชื่อผู้ใช้ -->
           <div class="mb-3">
@@ -1547,7 +1562,7 @@ async function handleDeleteTechType(item) {
               v-model="editForm.us_user_name"
               type="text"
               disabled
-              class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-500 cursor-not-allowed"
+              class="w-full px-3 py-2 text-gray-500 bg-gray-100 border border-gray-300 rounded-md cursor-not-allowed"
             />
           </div>
           <!-- คำนำหน้า -->
@@ -1572,12 +1587,12 @@ async function handleDeleteTechType(item) {
                 {{ opt.label }}
               </option>
             </select>
-            <p v-if="editErrors.ttn" class="text-red-500 text-sm mt-1">
+            <p v-if="editErrors.ttn" class="mt-1 text-sm text-red-500">
               {{ editErrors.ttn }}
             </p>
           </div>
           <!-- ชื่อ - นามสกุล (ภาษาไทย) -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3 mt-3">
+          <div class="grid grid-cols-1 gap-3 mt-3 mb-3 sm:grid-cols-2">
             <div>
               <label class="block text-sm font-medium mb-1.5">
                 ชื่อ (ไทย) <span class="text-red-500">*</span>
@@ -1592,7 +1607,7 @@ async function handleDeleteTechType(item) {
                 placeholder="กรอกชื่อ"
                 @input="clearEditError('firstTh')"
               />
-              <p v-if="editErrors.firstTh" class="text-red-500 text-sm mt-1">
+              <p v-if="editErrors.firstTh" class="mt-1 text-sm text-red-500">
                 {{ editErrors.firstTh }}
               </p>
             </div>
@@ -1610,13 +1625,13 @@ async function handleDeleteTechType(item) {
                 placeholder="กรอกนามสกุล"
                 @input="clearEditError('lastTh')"
               />
-              <p v-if="editErrors.lastTh" class="text-red-500 text-sm mt-1">
+              <p v-if="editErrors.lastTh" class="mt-1 text-sm text-red-500">
                 {{ editErrors.lastTh }}
               </p>
             </div>
           </div>
           <!-- ชื่อ - นามสกุล (ภาษาอังกฤษ) -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+          <div class="grid grid-cols-1 gap-3 mb-3 sm:grid-cols-2">
             <div>
               <label class="block text-sm font-medium mb-1.5">ชื่อ (ภาษาอังกฤษ)</label>
               <input
@@ -1629,7 +1644,7 @@ async function handleDeleteTechType(item) {
                 placeholder="First Name"
                 @input="clearEditError('firstEn')"
               />
-              <p v-if="editErrors.firstEn" class="text-red-500 text-sm mt-1">
+              <p v-if="editErrors.firstEn" class="mt-1 text-sm text-red-500">
                 {{ editErrors.firstEn }}
               </p>
             </div>
@@ -1645,18 +1660,21 @@ async function handleDeleteTechType(item) {
                 placeholder="Last Name"
                 @input="clearEditError('lastEn')"
               />
-              <p v-if="editErrors.lastEn" class="text-red-500 text-sm mt-1">
+              <p v-if="editErrors.lastEn" class="mt-1 text-sm text-red-500">
                 {{ editErrors.lastEn }}
               </p>
             </div>
           </div>
           <!-- เบอร์โทร และ หน่วยงาน -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+          <div class="grid grid-cols-1 gap-3 mb-3 sm:grid-cols-2">
             <div>
               <label class="block text-sm font-medium mb-1.5">เบอร์โทร</label>
               <input
                 v-model="editForm.us_phone"
-                @input="editForm.us_phone = toDisplay(editForm.us_phone); clearEditError('phone')"
+                @input="
+                  editForm.us_phone = toDisplay(editForm.us_phone);
+                  clearEditError('phone')
+                "
                 type="tel"
                 :class="[
                   'w-full px-3 py-2 border rounded-md',
@@ -1664,7 +1682,7 @@ async function handleDeleteTechType(item) {
                 ]"
                 placeholder="กรอกเบอร์โทร"
               />
-              <p v-if="editErrors.phone" class="text-red-500 text-sm mt-1">
+              <p v-if="editErrors.phone" class="mt-1 text-sm text-red-500">
                 {{ editErrors.phone }}
               </p>
             </div>
@@ -1682,7 +1700,7 @@ async function handleDeleteTechType(item) {
                 placeholder="กรอกหน่วยงาน"
                 @input="clearEditError('department')"
               />
-              <p v-if="editErrors.department" class="text-red-500 text-sm mt-1">
+              <p v-if="editErrors.department" class="mt-1 text-sm text-red-500">
                 {{ editErrors.department }}
               </p>
             </div>
@@ -1695,7 +1713,10 @@ async function handleDeleteTechType(item) {
               </label>
               <select
                 v-model="editForm.us_role_id"
-                @change="handleEditRoleChange(); clearEditError('role')"
+                @change="
+                  handleEditRoleChange();
+                  clearEditError('role')
+                "
                 :class="[
                   'w-full px-3 py-2 border rounded-md bg-white',
                   editErrors.role ? 'border-red-500' : 'border-gray-300',
@@ -1706,7 +1727,7 @@ async function handleDeleteTechType(item) {
                   {{ role.label }}
                 </option>
               </select>
-              <p v-if="editErrors.role" class="text-red-500 text-sm mt-1">
+              <p v-if="editErrors.role" class="mt-1 text-sm text-red-500">
                 {{ editErrors.role }}
               </p>
             </div>
@@ -1743,13 +1764,13 @@ async function handleDeleteTechType(item) {
                   {{ opt.label }}
                 </option>
               </select>
-              <p v-if="editErrors.techType" class="text-red-500 text-sm mt-1">
+              <p v-if="editErrors.techType" class="mt-1 text-sm text-red-500">
                 {{ editErrors.techType }}
               </p>
             </div>
           </div>
           <!-- ปุ่มต่าง ๆ -->
-          <div class="flex gap-3 flex-col sm:flex-row mt-6">
+          <div class="flex flex-col gap-3 mt-6 sm:flex-row">
             <button
               type="button"
               @click="closeEditModal"
@@ -1771,13 +1792,13 @@ async function handleDeleteTechType(item) {
     <!-- Manage Technician Types Modal -->
     <div
       v-if="showManageTechModal"
-      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-2 sm:px-0"
+      class="fixed inset-0 z-50 flex items-center justify-center px-2 bg-black bg-opacity-50 sm:px-0"
       @click.self="closeManageTechModal"
     >
       <div class="bg-white rounded-lg p-8 w-full max-w-lg max-h-[100vh] overflow-y-auto">
         <div class="flex items-center justify-between mb-4">
           <div class="flex items-center gap-3">
-            <div class="bg-blue-100 p-2 rounded-full">
+            <div class="p-2 bg-blue-100 rounded-full">
               <img src="/icon/user-info.svg" alt="Tech Type" class="w-6 h-6" />
             </div>
             <h2 class="text-lg font-bold text-black">จัดการตำแหน่งช่าง</h2>
@@ -1785,25 +1806,25 @@ async function handleDeleteTechType(item) {
           <button
             type="button"
             @click="handleAddTechType"
-            class="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-md bg-blue-700 text-white hover:bg-blue-900"
+            class="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-white bg-blue-700 rounded-md hover:bg-blue-900"
           >
             <img src="/icon/plus-icon.svg" class="w-3 h-3" />
             เพิ่มตำแหน่ง
           </button>
         </div>
-        <p class="text-gray-600 text-xs mb-3">เพิ่ม / แก้ไข / ลบชื่อตำแหน่งช่างในระบบ</p>
-        <div class="space-y-1 max-h-72 overflow-y-auto">
+        <p class="mb-3 text-xs text-gray-600">เพิ่ม / แก้ไข / ลบชื่อตำแหน่งช่างในระบบ</p>
+        <div class="space-y-1 overflow-y-auto max-h-72">
           <div
             v-for="item in manageTechList"
             :key="item.id"
-            class="flex items-center justify-between border rounded-md px-4 py-2 text-sm"
+            class="flex items-center justify-between px-4 py-2 text-sm border rounded-md"
           >
             <span class="text-gray-800">{{ item.name }}</span>
             <div class="flex items-center gap-2">
               <button
                 type="button"
                 @click="handleEditTechType(item)"
-                class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center justify-center bg-yellow-400 hover:bg-yellow-500 text-white rounded-md transition cursor-pointer"
+                class="flex items-center justify-center w-8 h-8 text-white transition bg-yellow-400 rounded-md cursor-pointer sm:w-9 sm:h-8 hover:bg-yellow-500"
                 title="แก้ไข"
               >
                 <img src="/icon/edit-icon.svg" class="w-4 h-4" />
@@ -1811,7 +1832,7 @@ async function handleDeleteTechType(item) {
               <button
                 type="button"
                 @click="handleDeleteTechType(item)"
-                class="w-8 h-8 sm:w-9 sm:h-8 flex items-center justify-center justify-center bg-red-500 hover:bg-red-600 text-white rounded-md transition cursor-pointer"
+                class="flex items-center justify-center w-8 h-8 text-white transition bg-red-500 rounded-md cursor-pointer sm:w-9 sm:h-8 hover:bg-red-600"
                 title="ลบ"
               >
                 <img src="/icon/bin-icon.svg" class="w-4 h-4" />
@@ -1824,11 +1845,11 @@ async function handleDeleteTechType(item) {
           </p>
         </div>
 
-        <div class="mt-4 flex justify-end">
+        <div class="flex justify-end mt-4">
           <button
             type="button"
             @click="closeManageTechModal"
-            class="px-4 py-2 text-sm rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50"
+            class="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50"
           >
             ปิด
           </button>
@@ -1836,4 +1857,8 @@ async function handleDeleteTechType(item) {
       </div>
     </div>
   </div>
+  <ImportUserModal
+   v-if="showImportModal"
+   @close="showImportModal = false"
+   @refresh="fetchUsers()" />
 </template>
