@@ -336,7 +336,7 @@ module.exports = function TechnicianRoutes(db) {
         rf.rf_tech_image_after = ?`;
       queryParams = [tech_summary || null, tech_image_after || null, rf_code, techId];
     } else if (targetStatus === 'outsource') {
-      updateFields = `rf.rf_user_status = 'outsource'`;
+      updateFields = `rf.rf_user_status = 'outsource', rf.rf_is_outsourced = 1`;
       queryParams = [rf_code, techId];
     }
 
