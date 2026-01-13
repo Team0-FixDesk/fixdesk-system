@@ -1,96 +1,167 @@
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+/* =========================
+  Imports (external)
+========================= */
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+
+/* =========================
+  Imports (internal components)
+========================= */
 import TableComponent from '@/components/table-component.vue'
 import TableActions from '@/components/table-actions-component.vue'
 import AssignJobModalComponent from '@/components/modal/assign-job-modal-component.vue'
 import RepairFilterBar from '@/components/filters/repair-filter-bar-component.vue'
 
-// Filters (ใช้กับ RepairFilterBar)
+/* =========================
+  Constants
+========================= */
+const API_BASE = import.meta.env.VITE_API_BASE
+
+const STORAGE_KEYS = {
+  token: 'token',
+}
+
+const TABLE_COLUMNS = [
+  'หมายเลขแจ้งซ่อม',
+  'รายละเอียด',
+  'ความเร่งด่วน',
+  'สถานะงาน',
+  'การดำเนินการ',
+]
+
+const TH_LOCALE = 'th-TH'
+
+/* =========================
+  Router
+========================= */
+const router = useRouter()
+
+/* =========================
+  State (Filters for RepairFilterBar)
+  (ชื่อคงเดิมเพราะ template ใช้งานอยู่)
+========================= */
 const searchInput = ref('')
 const selectedUrgencies = ref([])
 const selectedStatuses = ref([])
 const selectedDate = ref('')
 
-// Router
-const router = useRouter()
-const API_BASE = import.meta.env.VITE_API_BASE
-
+/* =========================
+  State (UI / Modal)
+========================= */
 const showAssignModal = ref(false)
 const assignRepairId = ref(null)
-
-const tableColumns = ['หมายเลขแจ้งซ่อม', 'รายละเอียด', 'ความเร่งด่วน', 'สถานะงาน', 'การดำเนินการ']
-
-const tableRows = ref([])
 const openMenuId = ref(null)
 
-function toLocalYMD(date) {
-  const y = date.getFullYear()
-  const m = String(date.getMonth() + 1).padStart(2, '0')
-  const d = String(date.getDate()).padStart(2, '0')
-  return `${y}-${m}-${d}`
+/* =========================
+  State (Table)
+========================= */
+const tableColumns = TABLE_COLUMNS
+const tableRows = ref([])
+
+/* =========================
+  Helpers (reusable functions)
+========================= */
+function getAuthToken() {
+  return sessionStorage.getItem(STORAGE_KEYS.token) || localStorage.getItem(STORAGE_KEYS.token)
 }
 
+function toLocalYmd(date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
 
-// Load Data
-async function loadAdminRepairs() {
-  try {
-    // // ดึง token
-    const token = localStorage.getItem('token') || sessionStorage.getItem('token')
+function formatThaiDate(dateInput) {
+  const date = new Date(dateInput)
+  if (Number.isNaN(date.getTime())) return '-'
+  return date.toLocaleDateString(TH_LOCALE)
+}
 
-    if (!token) {
-      console.error('ไม่พบโทเคน — ผู้ใช้ยังไม่ได้ล็อกอิน')
-      return
-    }
+function buildRepairDetailHtml(repair) {
+  const reporterName = `${repair.us_first_name ?? ''} ${repair.us_last_name ?? ''}`.trim()
 
-    // // เรียก API พร้อมแนบ token
-    const response = await fetch(`${API_BASE}/admin/repairs`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-    })
+  // NOTE: TableComponent น่าจะ render เป็น HTML (จึงคง </br> ตามของเดิมเพื่อไม่กระทบ UI)
+  return (
+    'วันที่แจ้ง: ' +
+    formatThaiDate(repair.rf_create_at) +
+    '</br>' +
+    'ชื่อผู้แจ้ง: ' +
+    reporterName +
+    '</br>' +
+    'หน่วยงาน: ' +
+    (repair.department_name ?? '-') +
+    '</br>' +
+    'ประเภทแจ้งซ่อม : ' +
+    (repair.tt_name ?? '-')
+  )
+}
 
-    const data = await response.json()
+async function fetchAdminRepairs() {
+  const token = getAuthToken()
+  if (!token) {
+    console.error('Token not found. User may not be logged in.')
+    return []
+  }
 
-    // // ตรวจสอบสถานะ
-    if (!response.ok) {
-      throw new Error(data.message || 'โหลดข้อมูลล้มเหลว')
-    }
+  const response = await fetch(`${API_BASE}/admin/repairs`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  })
 
-    // // แปลงข้อมูลเป็น row
-    tableRows.value = data.map((repair) => ({
-      row: [
-        repair.rf_code,
-        'วันที่แจ้ง: ' +
-          new Date(repair.rf_create_at).toLocaleDateString('th-TH') +
-          '</br>' +
-          'ชื่อผู้แจ้ง: ' +
-          `${repair.us_first_name} ${repair.us_last_name}` +
-          '</br>' +
-          'หน่วยงาน: ' +
-          repair.department_name +
-          '</br>' +
-          'ประเภทแจ้งซ่อม : ' +
-          repair.tt_name,
-        repair.rf_urgency,
-        repair.rf_user_status,
-        '',
-      ],
-      meta: {
-        ...repair,
-        createdDate: new Date(repair.rf_create_at),
-      },
-    }))
-  } catch (err) {
-    console.error('โหลดข้อมูลไม่สำเร็จ:', err)
+  const payload = await response.json().catch(() => null)
+
+  if (!response.ok) {
+    const message = payload?.message || 'Failed to load repairs.'
+    throw new Error(message)
+  }
+
+  // รองรับทั้งแบบเป็น array ตรง ๆ หรือห่อด้วย data
+  if (Array.isArray(payload)) return payload
+  if (Array.isArray(payload?.data)) return payload.data
+
+  return []
+}
+
+function mapRepairToTableRow(repair) {
+  const createdDate = new Date(repair.rf_create_at)
+
+  return {
+    row: [
+      repair.rf_code,
+      buildRepairDetailHtml(repair),
+      repair.rf_urgency,
+      repair.rf_user_status,
+      '',
+    ],
+    meta: {
+      ...repair,
+      createdDate: Number.isNaN(createdDate.getTime()) ? new Date(0) : createdDate,
+    },
   }
 }
 
-// Computed: Filtered Rows
+/* =========================
+  Data loader (template ใช้งานชื่อ loadAdminRepairs)
+========================= */
+async function loadAdminRepairs() {
+  try {
+    const repairs = await fetchAdminRepairs()
+    tableRows.value = repairs.map(mapRepairToTableRow)
+  } catch (error) {
+    console.error('Failed to load admin repairs:', error?.message || error)
+  }
+}
+
+/* =========================
+  Computed: Filtered Rows
+========================= */
 const filteredRows = computed(() => {
-  const search = searchInput.value.toLowerCase()
+  const search = (searchInput.value || '').toLowerCase()
 
   return tableRows.value.filter((item) => {
     const row = item.row
@@ -100,46 +171,44 @@ const filteredRows = computed(() => {
     const matchesSearch = row.join(' ').toLowerCase().includes(search)
 
     const matchesUrgency =
-      selectedUrgencies.value.length === 0 ||
-      selectedUrgencies.value.includes(urgency)
+      selectedUrgencies.value.length === 0 || selectedUrgencies.value.includes(urgency)
 
     const matchesStatus =
-      selectedStatuses.value.length === 0 ||
-      selectedStatuses.value.includes(status)
+      selectedStatuses.value.length === 0 || selectedStatuses.value.includes(status)
 
     const matchesDate =
-      !selectedDate.value ||
-      toLocalYMD(item.meta.createdDate) === selectedDate.value
+      !selectedDate.value || toLocalYmd(item.meta.createdDate) === selectedDate.value
 
     return matchesSearch && matchesUrgency && matchesStatus && matchesDate
   })
 })
 
-
-
-function resetFilters() {
+/* =========================
+  Actions (event handlers)
+  (ชื่อคงเดิมเพราะ template เรียกใช้)
+========================= */
+const resetFilters = () => {
   searchInput.value = ''
   selectedUrgencies.value = []
   selectedStatuses.value = []
   selectedDate.value = ''
 }
 
-// Actions
-function openDetail(code) {
+const openDetail = (code) => {
   router.push(`/main/repair-detail/${code}`)
 }
 
-function openAssignModal(row) {
+const openAssignModal = (row) => {
   assignRepairId.value = row[0]
   showAssignModal.value = true
 }
 
-// Lifecycle
+/* =========================
+  Lifecycle
+========================= */
 onMounted(() => {
   loadAdminRepairs()
 })
-
-onBeforeUnmount(() => {})
 </script>
 
 <template>

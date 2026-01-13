@@ -1,34 +1,146 @@
 <script setup>
+/* =========================
+  Imports (external)
+========================= */
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+
+/* =========================
+  Imports (components)
+========================= */
 import CardHomeComponent from '@/components/card-home-component.vue'
 import repairButtonComponent from '@/components/repair-button-component.vue'
 import TableComponent from '@/components/table-component.vue'
-import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+
+/* =========================
+  Imports (composables)
+========================= */
 import { useUserProfile } from '@/composables/useUserProfile.js'
 import { useAuthToken } from '@/composables/useAuthToken'
 
+/* =========================
+  Constants
+========================= */
+const API_BASE = import.meta.env.VITE_API_BASE
+const TH_LOCALE = 'th-TH'
+
+const STATUS = {
+  inProgress: 'in_progress',
+  done: 'done',
+  completed: 'completed',
+  cancel: 'cancel',
+  cancelled: 'cancelled',
+}
+
+/* =========================
+  Router
+========================= */
 const router = useRouter()
 
-/* --- API state --- */
+/* =========================
+  Composables
+========================= */
+const { token, isAuthenticated, logout } = useAuthToken()
+const { displayName, displayDepartment, fetchUserProfile } = useUserProfile(API_BASE)
+
+/* =========================
+  State
+========================= */
 const repairRequests = ref([])
 const loading = ref(false)
 const error = ref(null)
 
-const API_BASE = import.meta.env.VITE_API_BASE
+/**
+ * today / in_progress / completed_7days / cancelled_7days
+ * null = show all
+ */
+const currentFilter = ref(null)
 
-const { displayName, displayDepartment, fetchUserProfile } = useUserProfile(API_BASE)
+/* =========================
+  Helpers (date)
+========================= */
+function toDateSafe(input) {
+  const d = new Date(input)
+  return Number.isNaN(d.getTime()) ? new Date(0) : d
+}
 
-/* --- Filter state --- */
-const currentFilter = ref(null) // today / in_progress / completed_7days / cancelled_7days
+function isSameDay(a, b) {
+  return a.toDateString() === b.toDateString()
+}
 
-/* --- Fetch API --- */
-const fetchRepairRequests = async () => {
+function isWithinLastDays(date, days) {
+  const now = new Date()
+  const diffMs = Math.abs(now - date)
+  return diffMs / (1000 * 60 * 60 * 24) <= days
+}
+
+function formatThaiDate(input) {
+  const d = toDateSafe(input)
+  if (d.getTime() === 0) return '-'
+  return d.toLocaleDateString(TH_LOCALE)
+}
+
+/* =========================
+  Helpers (status)
+========================= */
+function isCompletedStatus(status) {
+  return status === STATUS.done || status === STATUS.completed
+}
+
+function isCancelledStatus(status) {
+  return status === STATUS.cancel || status === STATUS.cancelled
+}
+
+/* =========================
+  Mapper
+========================= */
+function buildDetailHtml(r) {
+  const reporterName = `${r.us_first_name || ''} ${r.us_last_name || ''}`.trim()
+
+  // NOTE: คงรูปแบบ </br> เดิมไว้เพื่อไม่กระทบ UI ของ TableComponent
+  return (
+    'วันที่แจ้ง: ' +
+    formatThaiDate(r.rf_create_at) +
+    '</br>' +
+    'ชื่อผู้แจ้ง: ' +
+    reporterName +
+    '</br>' +
+    'หน่วยงาน: ' +
+    (r.department_name || '-')
+  )
+}
+
+function mapRepairToRow(r) {
+  const rawDate = toDateSafe(r.rf_create_at)
+
+  return {
+    row: [
+      r.rf_code,
+      r.tt_name,
+      buildDetailHtml(r),
+      r.rf_urgency,
+      r.rf_user_status,
+      '',
+    ],
+    meta: r,
+    rawDate,
+  }
+}
+
+function normalizeRepairs(payload) {
+  if (Array.isArray(payload)) return payload
+  if (Array.isArray(payload?.data)) return payload.data
+  return []
+}
+
+/* =========================
+  API
+========================= */
+async function fetchRepairRequests() {
   loading.value = true
   error.value = null
 
   try {
-    const { token, isAuthenticated, logout } = useAuthToken()
-
     if (!isAuthenticated.value) {
       logout()
       return
@@ -42,87 +154,77 @@ const fetchRepairRequests = async () => {
       },
     })
 
-    if (!response.ok) throw new Error('โหลดข้อมูลล้มเหลว')
+    const payload = await response.json().catch(() => null)
 
-    const data = await response.json()
+    if (!response.ok) {
+      throw new Error(payload?.message || 'โหลดข้อมูลล้มเหลว')
+    }
 
-    repairRequests.value = data.map((r) => ({
-      row: [
-        r.rf_code,
-        r.tt_name,
-        'วันที่แจ้ง: ' +
-          new Date(r.rf_create_at).toLocaleDateString('th-TH') +
-          '</br>' +
-          'ชื่อผู้แจ้ง: ' +
-          `${r.us_first_name || ''} ${r.us_last_name || ''}`.trim() +
-          '</br>' +
-          'หน่วยงาน: ' +
-          r.department_name,
-        r.rf_urgency,
-        r.rf_user_status,
-        '',
-      ],
-      meta: r,
-      rawDate: new Date(r.rf_create_at),
-    }))
-  } catch (err) {
-    error.value = err.message
+    const repairs = normalizeRepairs(payload)
+    repairRequests.value = repairs.map(mapRepairToRow)
+  } catch (e) {
+    error.value = e?.message || 'เกิดข้อผิดพลาด'
   } finally {
     loading.value = false
   }
 }
 
-/* --- Helper --- */
-const isToday = (req) => {
-  const today = new Date()
-  return req.rawDate.toDateString() === today.toDateString()
+/* =========================
+  Filter helpers (ใช้ใน computed)
+========================= */
+function isToday(item) {
+  return isSameDay(item.rawDate, new Date())
 }
 
-const isWithin7Days = (req) => {
-  const today = new Date()
-  const diff = Math.abs(today - req.rawDate)
-  return diff / (1000 * 60 * 60 * 24) <= 7
+function isWithin7Days(item) {
+  return isWithinLastDays(item.rawDate, 7)
 }
 
-/* --- Filtered Rows --- */
+/* =========================
+  Computed: Filtered Rows
+========================= */
 const filteredRequests = computed(() => {
-  if (!currentFilter.value) return repairRequests.value
+  const filterKey = currentFilter.value
+  if (!filterKey) return repairRequests.value
 
   return repairRequests.value.filter((item) => {
-    const status = item.meta.rf_user_status
+    const status = item.meta?.rf_user_status
 
-    switch (currentFilter.value) {
+    switch (filterKey) {
       case 'today':
         return isToday(item)
       case 'in_progress':
-        return status === 'in_progress'
+        return status === STATUS.inProgress
       case 'completed_7days':
-        return (status === 'done' || status === 'completed') && isWithin7Days(item)
+        return isCompletedStatus(status) && isWithin7Days(item)
       case 'cancelled_7days':
-        return (status === 'cancel' || status === 'cancelled') && isWithin7Days(item)
+        return isCancelledStatus(status) && isWithin7Days(item)
       default:
         return true
     }
   })
 })
 
-/* --- Table component rows --- */
+/* Table rows for display */
 const rowsForDisplay = computed(() => filteredRequests.value.map((item) => item.row))
 
-/* --- Stats --- */
+/* =========================
+  Computed: Stats
+========================= */
+const allTasks = computed(() => repairRequests.value.filter((r) => r.meta?.rf_user_status).length)
+
 const todayTasks = computed(() => repairRequests.value.filter((r) => isToday(r)).length)
+
 const progressTasks = computed(
-  () => repairRequests.value.filter((r) => r.meta.rf_user_status === 'in_progress').length,
+  () => repairRequests.value.filter((r) => r.meta?.rf_user_status === STATUS.inProgress).length,
 )
+
 const completedTasks = computed(
   () =>
     repairRequests.value.filter(
-      (r) =>
-        (r.meta.rf_user_status === 'done' || r.meta.rf_user_status === 'completed') &&
-        isWithin7Days(r),
+      (r) => isCompletedStatus(r.meta?.rf_user_status) && isWithin7Days(r),
     ).length,
 )
-const allTasks = computed(() => repairRequests.value.filter((r) => r.meta.rf_user_status).length)
 
 const statItems = computed(() => [
   {
@@ -150,15 +252,20 @@ const statItems = computed(() => [
   },
 ])
 
-const handleCardClick = (item) => {
-  currentFilter.value = item.filterKey
+/* =========================
+  Actions (template ใช้งานชื่อเดิม)
+========================= */
+function handleCardClick(item) {
+  currentFilter.value = item?.filterKey ?? null
 }
 
-/* --- Actions --- */
-const goToRepairDetail = (ticketId) => {
+function goToRepairDetail(ticketId) {
   router.push(`/main/repair-detail/${ticketId}`)
 }
 
+/* =========================
+  Lifecycle
+========================= */
 onMounted(() => {
   fetchRepairRequests()
   fetchUserProfile()
