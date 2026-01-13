@@ -457,6 +457,8 @@ module.exports = function RepairFormRoutes(db) {
       rf.rf_user_status,
       rf.rf_prop_number,
       rf.rf_image,
+      rf.rf_tech_summary,
+      rf.rf_is_outsourced,
 
       -- ประเภทงาน / สถานที่
       t.tt_id AS repair_type_id,
@@ -473,10 +475,14 @@ module.exports = function RepairFormRoutes(db) {
       u.us_phone AS reporter_phone,
       u.us_department AS reporter_department,
 
-      -- ผู้รับผิดชอบงานหลัก
+      -- ผู้รับผิดชอบงานหลัก (หัวหน้าทีม)
       tech.us_id AS main_technician_id,
       CONCAT(tn_tech.ttn_title_th, tech.us_first_name_th, ' ', tech.us_last_name_th) AS main_technician_name,
-      tt_tech.tt_name AS main_technician_position
+      tt_tech.tt_name AS main_technician_position,
+
+      -- ผู้รับแจ้งซ่อม (คนที่มอบหมายงาน)
+      assigner.us_id AS assigner_id,
+      CONCAT(tn.ttn_title_th, assigner.us_first_name_th, ' ', assigner.us_last_name_th) AS assigner_name
 
     FROM repair_form rf
     LEFT JOIN room r ON rf.rf_room_id = r.room_id
@@ -484,24 +490,32 @@ module.exports = function RepairFormRoutes(db) {
     LEFT JOIN building b ON f.fl_bd_id = b.bd_id
     LEFT JOIN technician_type t ON rf.rf_tt_id = t.tt_id
 
-    -- ผู้แจ้ง
+    -- Join ผู้แจ้ง
     LEFT JOIN user u ON rf.rf_us_id = u.us_id
     LEFT JOIN title_name tn ON u.us_ttn_id = tn.ttn_id
 
-    -- หัวหน้าทีม
+    -- Join การมอบหมายงาน (เฉพาะหัวหน้าทีม เพื่อเอาชื่อช่างหลัก)
     LEFT JOIN repair_assignment ra ON rf.rf_id = ra.ra_rf_id AND ra.ra_is_lead = 1
+    
+    -- Join ช่าง (หัวหน้าทีม)
     LEFT JOIN user tech ON ra.ra_us_id = tech.us_id
     LEFT JOIN title_name tn_tech ON tech.us_ttn_id = tn_tech.ttn_id
     LEFT JOIN technician_type tt_tech ON tech.us_tt_id = tt_tech.tt_id
+
+    -- Join ผู้รับแจ้งซ่อม (คนที่กด Assign งาน)
+    LEFT JOIN user assigner ON ra.ra_assigned_by = assigner.us_id
 
     WHERE rf.rf_code = ?
   `;
 
     db.query(sql, [code], (err, results) => {
-      if (err)
+      if (err) {
+        console.error("SQL Error (Get Repair Detail):", err); // Log Error ให้เห็นชัดๆ
         return res
           .status(500)
           .json({ message: "เกิดข้อผิดพลาด", error: err.message });
+      }
+      
       if (results.length === 0)
         return res.status(404).json({ message: "ไม่พบใบแจ้งซ่อมนี้" });
 
@@ -519,6 +533,8 @@ module.exports = function RepairFormRoutes(db) {
         rf_done_at: r.rf_done_at || null,
         rf_prop_number: r.rf_prop_number || "-",
         rf_image: r.rf_image ? JSON.parse(r.rf_image) : null,
+        rf_tech_summary: r.rf_tech_summary || "-",
+        rf_is_outsourced: r.rf_is_outsourced || 0,
 
         repair_type_id: r.repair_type_id,
         repair_type_name: r.repair_type_name,
@@ -535,11 +551,16 @@ module.exports = function RepairFormRoutes(db) {
           department: r.reporter_department,
         },
 
+        assigner: {
+          id: r.assigner_id,
+          name: r.assigner_name || "-",
+        },
+
         main_technician: r.main_technician_name || "-",
         tech_position: r.main_technician_position || "-",
       };
 
-      // ➊ ดึง stock items
+      // ดึงรายการเบิก (Stock Items) ต่อ
       const stockQuery = `
       SELECT
         pd.pd_id,
@@ -554,8 +575,10 @@ module.exports = function RepairFormRoutes(db) {
     `;
 
       db.query(stockQuery, [r.rf_id], (err2, stockRows) => {
-        if (err2)
-          return res.status(500).json({ message: "โหลดรายการเบิกล้มเหลว" });
+        if (err2) {
+            console.error("Stock Query Error:", err2);
+            return res.status(500).json({ message: "โหลดรายการเบิกล้มเหลว" });
+        }
 
         const stockItems = stockRows.map((i) => ({
           id: i.pd_id,
@@ -643,7 +666,7 @@ module.exports = function RepairFormRoutes(db) {
   // --- ปรับ /assign-repair (มอบหมายช่างเดี่ยว) ---
   router.post("/assign-repair", authMiddleware, (req, res) => {
     // เพราะถ้า Admin มอบหมายเอง แสดงว่าตั้งใจให้คนนี้เป็นคนรับผิดชอบหลัก
-    const { rf_code, technician_id, is_lead = true } = req.body;
+    const { rf_code, technician_id, is_lead = true, assigned_by, ra_assigned_by } = req.body;
 
     if (!rf_code || !technician_id) {
       return res.status(400).json({
@@ -758,9 +781,15 @@ module.exports = function RepairFormRoutes(db) {
                 // 4) ถ้ายังไม่ถูกมอบหมาย ให้ insert แถวใหม่
                 const now = new Date();
 
+                // รองรับทั้ง assigned_by และ ra_assigned_by (กรณี frontend ส่ง key ไม่ตรง)
+                // ถ้าไม่ได้ส่ง assigned_by/ra_assigned_by มา ให้ fallback เป็น req.user.us_id (user ที่ login)
+                let assignById = typeof ra_assigned_by !== 'undefined' ? ra_assigned_by : assigned_by;
+                if (!assignById) {
+                  assignById = req.user && (req.user.us_id || req.user.id) || null;
+                }
                 db.query(
-                  "INSERT INTO repair_assignment (ra_rf_id, ra_us_id, ra_is_lead, ra_assigned_at) VALUES (?, ?, ?, ?)",
-                  [rfId, techId, isLeadFlag, now],
+                  "INSERT INTO repair_assignment (ra_rf_id, ra_us_id, ra_is_lead, ra_assigned_at, ra_assigned_by) VALUES (?, ?, ?, ?, ?)",
+                  [rfId, techId, isLeadFlag, now, assignById],
                   (insErr) => {
                     if (insErr) {
                       console.error("Error inserting assignment:", insErr);
