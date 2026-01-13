@@ -26,6 +26,12 @@ const props = defineProps({
     type: Boolean,
     default: true,
   },
+
+  /* 🔑 คุมว่าจะแสดง filter ความเร่งด่วนไหม */
+  showUrgencies: {
+    type: Boolean,
+    default: true,
+  },
 })
 
 const emit = defineEmits([
@@ -115,7 +121,7 @@ function toggleValue(list, value, emitName) {
         />
 
         <!-- Urgency (เฉพาะ Repair) -->
-        <div v-if="isRepair" class="relative">
+        <div v-if="isRepair && showUrgencies" class="relative">
           <button
             @click.stop="toggleUrgency"
             class="flex items-center gap-1 border border-gray-300 rounded-lg
