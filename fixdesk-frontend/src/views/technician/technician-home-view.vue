@@ -300,6 +300,7 @@ const openDetail = (rfCode) => {
           mode="view-only"
           :idColumnIndex="0"
           @detail="(id) => onRepairRowClick(id)"
+          :columnAlign="['left', 'left', 'left', 'left', 'center', 'center']"
         />
       </div>
 
