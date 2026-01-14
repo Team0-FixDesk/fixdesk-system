@@ -169,9 +169,16 @@ onMounted(() => {
   <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-8xl">
     <!-- Header -->
     <div class="flex justify-between items-center mb-6">
-      <div>
-        <h1 class="text-2xl font-bold text-gray-800">หน้าหลักผู้ดูแลระบบ สวัสดีคุณ{{ displayName }} - {{ displayDepartment }}</h1>
-        <p class="text-sm text-gray-600">ตรวจสอบสถานะและดำเนินการงานแจ้งซ่อม</p>
+      <div class="">
+        <p class="text-2xl font-extrabold text-gray-900">
+          หน้าหลักผู้ดูแลระบบ สวัสดีคุณ {{ displayName }}
+        </p>
+
+        <p class="text-lg font-semibold text-gray-700">
+          {{ displayDepartment }}
+        </p>
+
+        <p class="text-sm text-gray-500">ตรวจสอบสถานะและดำเนินการงานแจ้งซ่อม</p>
       </div>
 
       <div class="flex space-x-2">
