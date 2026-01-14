@@ -169,7 +169,7 @@ onMounted(() => {
   <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-8xl">
     <!-- Header -->
     <div class="flex justify-between items-center mb-6">
-      <div class="">
+      <div>
         <p class="text-2xl font-extrabold text-gray-900">
           หน้าหลักผู้ดูแลระบบ สวัสดีคุณ {{ displayName }}
         </p>

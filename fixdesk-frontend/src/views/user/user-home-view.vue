@@ -243,8 +243,8 @@ onMounted(() => {
   <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-8xl">
     <div class="flex justify-between items-center mb-6">
       <div>
-        <h1 class="text-2xl font-bold text-gray-800">สวัสดีคุณ{{ displayName }}</h1>
-        <p class="text-md text-gray-600 mt-1">{{ displayDepartment }}</p>
+        <h1 class="text-2xl font-extrabold text-gray-900">สวัสดีคุณ{{ displayName }}</h1>
+        <p class="text-lg font-semibold text-gray-700">{{ displayDepartment }}</p>
       </div>
       <repairButton />
     </div>
