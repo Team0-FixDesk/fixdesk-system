@@ -1,12 +1,28 @@
 <script setup>
 import { ref, computed, shallowRef, onMounted } from 'vue'
 import ApexChart from 'vue3-apexcharts'
+import { useUserProfile } from '@/composables/useUserProfile'
 
 defineOptions({ name: 'ManagerHomeView' })
 
 const API_BASE = import.meta.env.VITE_API_BASE
 
-const monthLabels = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']
+const { displayName, displayDepartment, fetchUserProfile } = useUserProfile(API_BASE)
+
+const monthLabels = [
+  'ม.ค.',
+  'ก.พ.',
+  'มี.ค.',
+  'เม.ย.',
+  'พ.ค.',
+  'มิ.ย.',
+  'ก.ค.',
+  'ส.ค.',
+  'ก.ย.',
+  'ต.ค.',
+  'พ.ย.',
+  'ธ.ค.',
+]
 
 const GRID_STYLE = {
   show: true,
@@ -24,8 +40,8 @@ const STATUS_COLORS = {
 }
 
 const MONTHLY_COLORS = {
-  total: '#1D4ED8',     // งานทั้งหมด (น้ำเงิน)
-  done: '#10B981',      // เสร็จสิ้น (เขียว)
+  total: '#1D4ED8', // งานทั้งหมด (น้ำเงิน)
+  done: '#10B981', // เสร็จสิ้น (เขียว)
   outsource: '#A78BFA', // จ้างช่างภายนอก (ม่วงอ่อน)
 }
 
@@ -201,11 +217,19 @@ const summaryCards = computed(() => [
 ])
 
 function updateSummaryCards() {
-  const currentMonth = filterRepairsByMonth(allRepairs.value, selectedYear.value, selectedMonthIndex.value)
+  const currentMonth = filterRepairsByMonth(
+    allRepairs.value,
+    selectedYear.value,
+    selectedMonthIndex.value,
+  )
 
   const prevDate = new Date(selectedYear.value, selectedMonthIndex.value, 1)
   prevDate.setMonth(prevDate.getMonth() - 1)
-  const prevMonth = filterRepairsByMonth(allRepairs.value, prevDate.getFullYear(), prevDate.getMonth())
+  const prevMonth = filterRepairsByMonth(
+    allRepairs.value,
+    prevDate.getFullYear(),
+    prevDate.getMonth(),
+  )
 
   const countByStatus = (arr, status) => arr.filter((r) => r.rf_user_status === status).length
 
@@ -219,7 +243,12 @@ function updateSummaryCards() {
   const prevDone = countByStatus(prevMonth, 'done')
   const prevTotal = prevMonth.length
 
-  summaryStats.value = { total: curTotal, pending: curPending, in_progress: curInProgress, done: curDone }
+  summaryStats.value = {
+    total: curTotal,
+    pending: curPending,
+    in_progress: curInProgress,
+    done: curDone,
+  }
   summaryGrowth.value = {
     total: calcPercentChange(curTotal, prevTotal),
     pending: calcPercentChange(curPending, prevPending),
@@ -277,7 +306,11 @@ const monthlyStackedOptions = shallowRef({
         rows: [
           { label: 'งานทั้งหมด', value: `${total} รายการ`, color: MONTHLY_COLORS.total },
           { label: 'งานที่เสร็จสิ้น', value: `${done} รายการ`, color: MONTHLY_COLORS.done },
-          { label: 'งานที่จ้างช่างภายนอก', value: `${outsource} รายการ`, color: MONTHLY_COLORS.outsource },
+          {
+            label: 'งานที่จ้างช่างภายนอก',
+            value: `${outsource} รายการ`,
+            color: MONTHLY_COLORS.outsource,
+          },
         ],
         unitLabel: 'หน่วย: รายการ',
       })
@@ -416,7 +449,6 @@ const weeklyTrendOptions = shallowRef({
   yaxis: { labels: { formatter: (v) => `${Math.round(v)}` } },
 })
 
-
 const weeklyTrendSeries = ref([
   { name: 'จำนวนแจ้งซ่อม', data: new Array(7).fill(0) },
   { name: 'รอดำเนินการ', data: new Array(7).fill(0) },
@@ -427,7 +459,9 @@ const weeklyTrendSeries = ref([
 function updateWeeklyTrendChart(repairsInYear) {
   const base = filterCurrentWeek(repairsInYear)
 
-  const buckets = new Array(7).fill(0).map(() => ({ total: 0, pending: 0, in_progress: 0, done: 0 }))
+  const buckets = new Array(7)
+    .fill(0)
+    .map(() => ({ total: 0, pending: 0, in_progress: 0, done: 0 }))
   const idxOf = (date) => {
     const d = date.getDay()
     return d === 0 ? 6 : d - 1
@@ -490,7 +524,11 @@ const efficiencyChartOptions = shallowRef({
         rows: [
           { label: 'งานที่รับ', value: `${meta.total} รายการ`, color: EFFICIENCY_COLORS.rate },
           { label: 'งานที่เสร็จ', value: `${meta.done} รายการ`, color: EFFICIENCY_COLORS.rate },
-          { label: 'อัตราสำเร็จ', value: `${Number(rate).toFixed(1)}%`, color: EFFICIENCY_COLORS.rate },
+          {
+            label: 'อัตราสำเร็จ',
+            value: `${Number(rate).toFixed(1)}%`,
+            color: EFFICIENCY_COLORS.rate,
+          },
         ],
         unitLabel: 'หน่วย: รายการ / %',
       })
@@ -505,14 +543,20 @@ function buildTechnicianEfficiency(repairs) {
   const map = {}
 
   repairs.forEach((r) => {
-    const techName = r.technician_name || r.tech_name || r.rf_technician_name || r.tt_name || 'ไม่ระบุ'
+    const techName =
+      r.technician_name || r.tech_name || r.rf_technician_name || r.tt_name || 'ไม่ระบุ'
     if (!map[techName]) map[techName] = { total: 0, done: 0 }
     map[techName].total += 1
     if (r.rf_user_status === 'done') map[techName].done += 1
   })
 
   return Object.entries(map)
-    .map(([name, v]) => ({ name, total: v.total, done: v.done, rate: v.total > 0 ? (v.done / v.total) * 100 : 0 }))
+    .map(([name, v]) => ({
+      name,
+      total: v.total,
+      done: v.done,
+      rate: v.total > 0 ? (v.done / v.total) * 100 : 0,
+    }))
     .sort((a, b) => b.total - a.total)
     .slice(0, 8)
 }
@@ -527,7 +571,9 @@ function updateEfficiencyChart(repairsInYear) {
 
   efficiencyMeta.value = rows.map((r) => ({ total: r.total, done: r.done }))
   efficiencyChartOptions.value.xaxis.categories = rows.map((r) => r.name)
-  efficiencyChartSeries.value = [{ name: 'อัตราสำเร็จ', data: rows.map((r) => Number(r.rate.toFixed(1))) }]
+  efficiencyChartSeries.value = [
+    { name: 'อัตราสำเร็จ', data: rows.map((r) => Number(r.rate.toFixed(1))) },
+  ]
 }
 
 /* -----------------------------
@@ -570,10 +616,13 @@ function updateTypeChart(repairsInYear) {
   })
 
   repairsInYear.forEach((r) => {
-    if (r.tt_name && Object.prototype.hasOwnProperty.call(typeCounts, r.tt_name)) typeCounts[r.tt_name]++
+    if (r.tt_name && Object.prototype.hasOwnProperty.call(typeCounts, r.tt_name))
+      typeCounts[r.tt_name]++
   })
 
-  const sorted = Object.entries(typeCounts).sort(([, a], [, b]) => b - a).slice(0, 10)
+  const sorted = Object.entries(typeCounts)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 10)
   const labels = sorted.map(([name]) => name)
   const values = sorted.map(([, count]) => count)
 
@@ -618,11 +667,19 @@ function updateDepartmentChart(repairsInYear) {
   const deptCounts = {}
 
   repairsInYear.forEach((r) => {
-    const name = r.department_name || r.dp_name || r.rf_department_name || r.org_name || r.unit_name || 'ไม่ระบุ'
+    const name =
+      r.department_name ||
+      r.dp_name ||
+      r.rf_department_name ||
+      r.org_name ||
+      r.unit_name ||
+      'ไม่ระบุ'
     deptCounts[name] = (deptCounts[name] || 0) + 1
   })
 
-  const sorted = Object.entries(deptCounts).sort(([, a], [, b]) => b - a).slice(0, 10)
+  const sorted = Object.entries(deptCounts)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 10)
   const labels = sorted.map(([name]) => name)
   const values = sorted.map(([, count]) => count)
 
@@ -636,14 +693,18 @@ function updateDepartmentChart(repairsInYear) {
 function setStatusMode(mode) {
   if (statusMode.value === mode) return
   statusMode.value = mode
-  const repairsInYear = allRepairs.value.filter((r) => new Date(r.rf_create_at).getFullYear() === selectedYear.value)
+  const repairsInYear = allRepairs.value.filter(
+    (r) => new Date(r.rf_create_at).getFullYear() === selectedYear.value,
+  )
   updateStatusPieChart(repairsInYear)
 }
 
 function setEfficiencyMode(mode) {
   if (efficiencyMode.value === mode) return
   efficiencyMode.value = mode
-  const repairsInYear = allRepairs.value.filter((r) => new Date(r.rf_create_at).getFullYear() === selectedYear.value)
+  const repairsInYear = allRepairs.value.filter(
+    (r) => new Date(r.rf_create_at).getFullYear() === selectedYear.value,
+  )
   updateEfficiencyChart(repairsInYear)
 }
 
@@ -652,7 +713,9 @@ function setEfficiencyMode(mode) {
 ----------------------------- */
 function refreshDashboard() {
   if (!allRepairs.value.length) return
-  const repairsInYear = allRepairs.value.filter((r) => new Date(r.rf_create_at).getFullYear() === selectedYear.value)
+  const repairsInYear = allRepairs.value.filter(
+    (r) => new Date(r.rf_create_at).getFullYear() === selectedYear.value,
+  )
 
   updateSummaryCards()
   updateMonthlyStackedChart(repairsInYear)
@@ -696,7 +759,9 @@ async function fetchDashboardData() {
 
     if (availableYears.value.length > 0) selectedYear.value = availableYears.value[0]
 
-    const repairsInYear = allRepairs.value.filter((r) => new Date(r.rf_create_at).getFullYear() === selectedYear.value)
+    const repairsInYear = allRepairs.value.filter(
+      (r) => new Date(r.rf_create_at).getFullYear() === selectedYear.value,
+    )
     let latestMonth = -1
     repairsInYear.forEach((r) => {
       latestMonth = Math.max(latestMonth, new Date(r.rf_create_at).getMonth())
@@ -710,8 +775,10 @@ async function fetchDashboardData() {
     isLoading.value = false
   }
 }
-
-onMounted(fetchDashboardData)
+onMounted(() => {
+  fetchDashboardData()
+  fetchUserProfile()
+})
 </script>
 
 <template>
@@ -721,14 +788,22 @@ onMounted(fetchDashboardData)
       <div class="mb-6">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">Dashboard ผู้บริหาร</h1>
+            <h1 class="text-2xl font-bold text-gray-800">
+              หน้าหลักผู้บริหาร สวัสดีคุณ {{ displayName }}
+            </h1>
+            <p class="text-lg font-semibold text-gray-700">
+              {{ displayDepartment }}
+            </p>
             <p class="text-gray-600 mt-2">ภาพรวมการดำเนินงานระบบแจ้งซ่อม</p>
           </div>
 
           <div class="flex items-center gap-3">
             <label class="text-sm font-medium text-gray-700">เลือกปี:</label>
-            <select v-model.number="selectedYear" @change="refreshDashboard"
-              class="px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm">
+            <select
+              v-model.number="selectedYear"
+              @change="refreshDashboard"
+              class="px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm"
+            >
               <option v-for="year in availableYears" :key="year" :value="year">
                 {{ formatYearDisplay(year) }}
               </option>
@@ -747,8 +822,10 @@ onMounted(fetchDashboardData)
       <div v-else-if="error" class="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
         <div class="text-red-600 mb-2">เกิดข้อผิดพลาด</div>
         <p class="text-red-700 mb-4">{{ error }}</p>
-        <button @click="fetchDashboardData"
-          class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition">
+        <button
+          @click="fetchDashboardData"
+          class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition"
+        >
           ลองใหม่อีกครั้ง
         </button>
       </div>
@@ -765,8 +842,11 @@ onMounted(fetchDashboardData)
 
           <div class="flex items-center gap-2">
             <label class="text-sm font-medium text-gray-700">เลือกเดือน:</label>
-            <select v-model.number="selectedMonthIndex" @change="refreshDashboard"
-              class="px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm text-sm">
+            <select
+              v-model.number="selectedMonthIndex"
+              @change="refreshDashboard"
+              class="px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm text-sm"
+            >
               <option v-for="(m, idx) in monthLabels" :key="m" :value="idx">
                 {{ m }}
               </option>
@@ -776,18 +856,31 @@ onMounted(fetchDashboardData)
 
         <!-- Summary Cards -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-          <div v-for="(card, index) in summaryCards" :key="index" class="bg-white rounded-lg shadow p-6">
+          <div
+            v-for="(card, index) in summaryCards"
+            :key="index"
+            class="bg-white rounded-lg shadow p-6"
+          >
             <div class="flex items-center justify-between">
               <div>
                 <p class="text-sm font-medium text-gray-600">{{ card.label }}</p>
-                <p :class="card.colorClass + ' text-2xl font-bold'">{{ card.value }} {{ card.unit }}</p>
+                <p :class="card.colorClass + ' text-2xl font-bold'">
+                  {{ card.value }} {{ card.unit }}
+                </p>
               </div>
 
               <div class="text-right">
-                <div v-if="card.growth !== undefined" :class="[
-                  'text-sm font-medium flex items-center justify-end',
-                  card.growth > 0 ? 'text-green-600' : card.growth < 0 ? 'text-red-600' : 'text-gray-500',
-                ]">
+                <div
+                  v-if="card.growth !== undefined"
+                  :class="[
+                    'text-sm font-medium flex items-center justify-end',
+                    card.growth > 0
+                      ? 'text-green-600'
+                      : card.growth < 0
+                        ? 'text-red-600'
+                        : 'text-gray-500',
+                  ]"
+                >
                   <span v-if="card.growth > 0">↗</span>
                   <span v-else-if="card.growth < 0">↘</span>
                   <span v-else>→</span>
@@ -807,23 +900,34 @@ onMounted(fetchDashboardData)
               งานซ่อมรายเดือน - {{ formatYearDisplay(selectedYear) }}
             </h3>
 
-            <ApexChart type="bar" height="320" :options="monthlyStackedOptions" :series="monthlyStackedSeries" />
+            <ApexChart
+              type="bar"
+              height="320"
+              :options="monthlyStackedOptions"
+              :series="monthlyStackedSeries"
+            />
 
             <!-- Legend -->
             <div class="mt-4 flex flex-wrap items-center gap-4 text-sm text-gray-600">
               <span class="inline-flex items-center gap-2">
-                <span class="inline-block w-3.5 h-3.5 rounded-sm"
-                  :style="{ backgroundColor: MONTHLY_COLORS.total }"></span>
+                <span
+                  class="inline-block w-3.5 h-3.5 rounded-sm"
+                  :style="{ backgroundColor: MONTHLY_COLORS.total }"
+                ></span>
                 งานทั้งหมด
               </span>
               <span class="inline-flex items-center gap-2">
-                <span class="inline-block w-3.5 h-3.5 rounded-sm"
-                  :style="{ backgroundColor: MONTHLY_COLORS.done }"></span>
+                <span
+                  class="inline-block w-3.5 h-3.5 rounded-sm"
+                  :style="{ backgroundColor: MONTHLY_COLORS.done }"
+                ></span>
                 งานที่เสร็จสิ้น
               </span>
               <span class="inline-flex items-center gap-2">
-                <span class="inline-block w-3.5 h-3.5 rounded-sm"
-                  :style="{ backgroundColor: MONTHLY_COLORS.outsource }"></span>
+                <span
+                  class="inline-block w-3.5 h-3.5 rounded-sm"
+                  :style="{ backgroundColor: MONTHLY_COLORS.outsource }"
+                ></span>
                 งานที่จ้างช่างภายนอก
               </span>
             </div>
@@ -839,35 +943,60 @@ onMounted(fetchDashboardData)
               <h3 class="text-lg font-semibold text-gray-900">สถานะงานซ่อม</h3>
 
               <div class="flex p-1 bg-gray-100 rounded-xl">
-                <button type="button" class="px-4 py-1.5 text-sm font-medium rounded-lg transition-all duration-200"
-                  :class="statusMode === 'week' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'"
-                  @click="setStatusMode('week')">
+                <button
+                  type="button"
+                  class="px-4 py-1.5 text-sm font-medium rounded-lg transition-all duration-200"
+                  :class="
+                    statusMode === 'week'
+                      ? 'bg-white text-blue-600 shadow-sm'
+                      : 'text-gray-500 hover:text-gray-700'
+                  "
+                  @click="setStatusMode('week')"
+                >
                   สัปดาห์
                 </button>
-                <button type="button" class="px-4 py-1.5 text-sm font-medium rounded-lg transition-all duration-200"
-                  :class="statusMode === 'month' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'"
-                  @click="setStatusMode('month')">
+                <button
+                  type="button"
+                  class="px-4 py-1.5 text-sm font-medium rounded-lg transition-all duration-200"
+                  :class="
+                    statusMode === 'month'
+                      ? 'bg-white text-blue-600 shadow-sm'
+                      : 'text-gray-500 hover:text-gray-700'
+                  "
+                  @click="setStatusMode('month')"
+                >
                   เดือน
                 </button>
               </div>
             </div>
 
-            <ApexChart type="pie" height="280" :options="statusPieOptions" :series="statusPieSeries" />
+            <ApexChart
+              type="pie"
+              height="280"
+              :options="statusPieOptions"
+              :series="statusPieSeries"
+            />
 
             <div class="mt-4 flex flex-wrap items-center gap-4 text-sm text-gray-600">
               <span class="inline-flex items-center gap-2">
-                <span class="inline-block w-3.5 h-3.5 rounded-sm"
-                  :style="{ backgroundColor: STATUS_COLORS.pending }"></span>
+                <span
+                  class="inline-block w-3.5 h-3.5 rounded-sm"
+                  :style="{ backgroundColor: STATUS_COLORS.pending }"
+                ></span>
                 รอดำเนินการ
               </span>
               <span class="inline-flex items-center gap-2">
-                <span class="inline-block w-3.5 h-3.5 rounded-sm"
-                  :style="{ backgroundColor: STATUS_COLORS.in_progress }"></span>
+                <span
+                  class="inline-block w-3.5 h-3.5 rounded-sm"
+                  :style="{ backgroundColor: STATUS_COLORS.in_progress }"
+                ></span>
                 กำลังดำเนินการ
               </span>
               <span class="inline-flex items-center gap-2">
-                <span class="inline-block w-3.5 h-3.5 rounded-sm"
-                  :style="{ backgroundColor: STATUS_COLORS.done }"></span>
+                <span
+                  class="inline-block w-3.5 h-3.5 rounded-sm"
+                  :style="{ backgroundColor: STATUS_COLORS.done }"
+                ></span>
                 เสร็จสิ้น
               </span>
             </div>
@@ -882,36 +1011,49 @@ onMounted(fetchDashboardData)
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <!-- แนวโน้มการแจ้งซ่อม (สัปดาห์ปัจจุบัน) -->
           <div class="bg-white rounded-lg shadow p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">แนวโน้มการแจ้งซ่อม (สัปดาห์ปัจจุบัน)</h3>
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">
+              แนวโน้มการแจ้งซ่อม (สัปดาห์ปัจจุบัน)
+            </h3>
 
-            <ApexChart type="line" height="320" :options="weeklyTrendOptions" :series="weeklyTrendSeries" />
+            <ApexChart
+              type="line"
+              height="320"
+              :options="weeklyTrendOptions"
+              :series="weeklyTrendSeries"
+            />
 
             <div class="mt-4 flex flex-wrap items-center gap-4 text-sm text-gray-600">
               <span class="inline-flex items-center gap-2">
-                <span class="inline-block w-3.5 h-3.5 rounded-sm"
-                  :style="{ backgroundColor: TREND_COLORS.total }"></span>
+                <span
+                  class="inline-block w-3.5 h-3.5 rounded-sm"
+                  :style="{ backgroundColor: TREND_COLORS.total }"
+                ></span>
                 จำนวนแจ้งซ่อม
               </span>
               <span class="inline-flex items-center gap-2">
-                <span class="inline-block w-3.5 h-3.5 rounded-sm"
-                  :style="{ backgroundColor: TREND_COLORS.pending }"></span>
+                <span
+                  class="inline-block w-3.5 h-3.5 rounded-sm"
+                  :style="{ backgroundColor: TREND_COLORS.pending }"
+                ></span>
                 รอดำเนินการ
               </span>
               <span class="inline-flex items-center gap-2">
-                <span class="inline-block w-3.5 h-3.5 rounded-sm"
-                  :style="{ backgroundColor: TREND_COLORS.in_progress }"></span>
+                <span
+                  class="inline-block w-3.5 h-3.5 rounded-sm"
+                  :style="{ backgroundColor: TREND_COLORS.in_progress }"
+                ></span>
                 กำลังดำเนินการ
               </span>
               <span class="inline-flex items-center gap-2">
-                <span class="inline-block w-3.5 h-3.5 rounded-sm"
-                  :style="{ backgroundColor: TREND_COLORS.done }"></span>
+                <span
+                  class="inline-block w-3.5 h-3.5 rounded-sm"
+                  :style="{ backgroundColor: TREND_COLORS.done }"
+                ></span>
                 เสร็จสิ้น
               </span>
             </div>
 
-            <div class="mt-2 text-xs text-gray-500">
-              * ชี้เมาส์ที่จุดเพื่อดูรายละเอียดรายวัน
-            </div>
+            <div class="mt-2 text-xs text-gray-500">* ชี้เมาส์ที่จุดเพื่อดูรายละเอียดรายวัน</div>
           </div>
 
           <!-- ประสิทธิภาพการซ่อม -->
@@ -920,25 +1062,46 @@ onMounted(fetchDashboardData)
               <h3 class="text-lg font-semibold text-gray-900">ประสิทธิภาพการซ่อม</h3>
 
               <div class="flex p-1 bg-gray-100 rounded-xl">
-                <button type="button" class="px-4 py-1.5 text-sm font-medium rounded-lg transition-all duration-200"
-                  :class="efficiencyMode === 'week' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'"
-                  @click="setEfficiencyMode('week')">
+                <button
+                  type="button"
+                  class="px-4 py-1.5 text-sm font-medium rounded-lg transition-all duration-200"
+                  :class="
+                    efficiencyMode === 'week'
+                      ? 'bg-white text-blue-600 shadow-sm'
+                      : 'text-gray-500 hover:text-gray-700'
+                  "
+                  @click="setEfficiencyMode('week')"
+                >
                   สัปดาห์
                 </button>
-                <button type="button" class="px-4 py-1.5 text-sm font-medium rounded-lg transition-all duration-200"
-                  :class="efficiencyMode === 'month' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'"
-                  @click="setEfficiencyMode('month')">
+                <button
+                  type="button"
+                  class="px-4 py-1.5 text-sm font-medium rounded-lg transition-all duration-200"
+                  :class="
+                    efficiencyMode === 'month'
+                      ? 'bg-white text-blue-600 shadow-sm'
+                      : 'text-gray-500 hover:text-gray-700'
+                  "
+                  @click="setEfficiencyMode('month')"
+                >
                   เดือน
                 </button>
               </div>
             </div>
 
-            <ApexChart type="bar" height="320" :options="efficiencyChartOptions" :series="efficiencyChartSeries" />
+            <ApexChart
+              type="bar"
+              height="320"
+              :options="efficiencyChartOptions"
+              :series="efficiencyChartSeries"
+            />
 
             <div class="mt-4 flex flex-wrap items-center gap-4 text-sm text-gray-600">
               <span class="inline-flex items-center gap-2">
-                <span class="inline-block w-3.5 h-3.5 rounded-sm"
-                  :style="{ backgroundColor: EFFICIENCY_COLORS.rate }"></span>
+                <span
+                  class="inline-block w-3.5 h-3.5 rounded-sm"
+                  :style="{ backgroundColor: EFFICIENCY_COLORS.rate }"
+                ></span>
                 อัตราสำเร็จ
               </span>
             </div>
@@ -959,8 +1122,10 @@ onMounted(fetchDashboardData)
 
             <div class="mt-4 flex flex-wrap items-center gap-4 text-sm text-gray-600">
               <span class="inline-flex items-center gap-2">
-                <span class="inline-block w-3.5 h-3.5 rounded-sm"
-                  :style="{ backgroundColor: TYPE_COLORS.total }"></span>
+                <span
+                  class="inline-block w-3.5 h-3.5 rounded-sm"
+                  :style="{ backgroundColor: TYPE_COLORS.total }"
+                ></span>
                 จำนวนงาน
               </span>
             </div>
@@ -978,8 +1143,10 @@ onMounted(fetchDashboardData)
 
             <div class="mt-4 flex flex-wrap items-center gap-4 text-sm text-gray-600">
               <span class="inline-flex items-center gap-2">
-                <span class="inline-block w-3.5 h-3.5 rounded-sm"
-                  :style="{ backgroundColor: DEPT_COLORS.total }"></span>
+                <span
+                  class="inline-block w-3.5 h-3.5 rounded-sm"
+                  :style="{ backgroundColor: DEPT_COLORS.total }"
+                ></span>
                 จำนวนแจ้งซ่อม
               </span>
             </div>
