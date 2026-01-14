@@ -22,7 +22,7 @@ const menus = [
     label: 'จัดการสถานที่',
     path: '/main/admin-manage-location',
   },
-  { icon: '/icon/sidebar/report-icon.svg', label: 'สร้างรายงาน', path: '/main/admin-report' },
+  { icon: '/icon/sidebar/report-icon.svg', label: 'สร้างรายงาน', path: '/main/manage-report' },
 ]
 </script>
 
