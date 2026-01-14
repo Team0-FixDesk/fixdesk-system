@@ -131,8 +131,8 @@ function renderStatusStockInventoryBadge(type) {
         <tr
           v-for="(row, rowIndex) in paginatedRows"
           :key="rowIndex"
-          class="bg-white border-b hover:bg-gray-50 cursor-pointer"
-          :class="{ '!bg-gray-50': row[idColumnIndex] == activeId }"
+          class="bg-white border-b hover:bg-gray-100 cursor-pointer"
+          :class="{ '!bg-blue-50': row[idColumnIndex] == activeId }"
           @click="$emit('detail', getRowId(row))"
         >
           <td

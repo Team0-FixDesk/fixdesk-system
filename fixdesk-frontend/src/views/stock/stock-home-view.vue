@@ -6,12 +6,15 @@ import ApexChart from 'vue3-apexcharts'
 import TableComponent from '@/components/table-component.vue'
 import repairButton from '@/components/repair-button-component.vue'
 import CardHomeComponent from '@/components/card-home-component.vue'
+import { useUserProfile } from '@/composables/useUserProfile'
 
 defineOptions({ name: 'StockHomeView' })
 
 // ==================== Router / API ====================
 const router = useRouter()
 const API_BASE = import.meta.env.VITE_API_BASE
+
+const { displayName, displayDepartment, fetchUserProfile } = useUserProfile(API_BASE)
 
 function getAuthHeaders() {
   const token = localStorage.getItem('token') || sessionStorage.getItem('token')
@@ -247,7 +250,11 @@ const chartOptions = computed(() => ({
 }))
 
 // ==================== Lifecycle ====================
-onMounted(fetchDashboard)
+onMounted(() => {
+  fetchDashboard()
+  fetchUserProfile()
+})
+
 </script>
 
 <template>
@@ -255,8 +262,12 @@ onMounted(fetchDashboard)
     <!-- Header -->
     <div class="flex justify-between items-center mb-6">
       <div>
-        <h1 class="text-2xl font-bold text-gray-800">ภาพรวมการเบิก และการคลังในระบบ</h1>
-        <p class="text-sm text-gray-500 mt-1">สำหรับเจ้าหน้าที่จัดการคลัง</p>
+        <h1 class="text-2xl font-bold text-gray-800">
+          หน้าหลักเจ้าหน้าที่คลัง สวัสดีคุณ {{ displayName }}
+        </h1>
+        <p class="text-lg font-semibold text-gray-700">
+          {{ displayDepartment }}
+        </p>
       </div>
       <repairButton />
     </div>
