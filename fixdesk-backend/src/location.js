@@ -1,8 +1,13 @@
 const express = require("express");
-const { authMiddleware } = require("../auth");
+const { authMiddleware } = require("../auth.middleware");
+const multer = require("multer");
+const XLSX = require("xlsx");
+
 
 module.exports = function LocationRoutes(db) {
   const router = express.Router();
+  const upload = multer({ storage: multer.memoryStorage() });
+
 
   // เรียกข้อมูลตึกหรืออาคาร
   router.get("/buildings", (req, res) => {
@@ -590,5 +595,121 @@ module.exports = function LocationRoutes(db) {
     });
   });
 
+  // =====================================================
+  // 🔥 IMPORT LOCATION FROM EXCEL (.xlsx) – FIXED
+  // =====================================================
+  router.post(
+  "/locations/import/xlsx",
+  upload.single("file"),
+  authMiddleware,
+  async (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({ message: "กรุณาอัปโหลดไฟล์ Excel" })
+    }
+
+    try {
+      // START TRANSACTION
+      await new Promise((resolve, reject) => {
+        db.beginTransaction(err => (err ? reject(err) : resolve()))
+      })
+
+      const workbook = XLSX.read(req.file.buffer, { type: "buffer" })
+      const sheet = workbook.Sheets[workbook.SheetNames[0]]
+      const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" })
+
+      if (!rows.length) {
+        throw new Error("ไฟล์ Excel ไม่มีข้อมูล")
+      }
+
+      for (const row of rows) {
+        const buildingName = String(row.bd_name || "").trim()
+        const floorName = String(row.fl_name || "").trim()
+        const roomName = String(row.room_name || "").trim()
+
+        if (!buildingName || !floorName || !roomName) continue
+
+        // ===== BUILDING =====
+        const bRows = await new Promise((resolve, reject) => {
+          db.query(
+            "SELECT bd_id FROM building WHERE LOWER(bd_name)=LOWER(?)",
+            [buildingName],
+            (err, rows) => (err ? reject(err) : resolve(rows))
+          )
+        })
+
+        let bd_id
+        if (!bRows.length) {
+          const r = await new Promise((resolve, reject) => {
+            db.query(
+              "INSERT INTO building (bd_name) VALUES (?)",
+              [buildingName],
+              (err, result) => (err ? reject(err) : resolve(result))
+            )
+          })
+          bd_id = r.insertId
+        } else {
+          bd_id = bRows[0].bd_id
+        }
+
+        // ===== FLOOR =====
+        const fRows = await new Promise((resolve, reject) => {
+          db.query(
+            "SELECT fl_id FROM floor WHERE LOWER(fl_name)=LOWER(?) AND fl_bd_id=?",
+            [floorName, bd_id],
+            (err, rows) => (err ? reject(err) : resolve(rows))
+          )
+        })
+
+        let fl_id
+        if (!fRows.length) {
+          const r = await new Promise((resolve, reject) => {
+            db.query(
+              "INSERT INTO floor (fl_name, fl_bd_id) VALUES (?, ?)",
+              [floorName, bd_id],
+              (err, result) => (err ? reject(err) : resolve(result))
+            )
+          })
+          fl_id = r.insertId
+        } else {
+          fl_id = fRows[0].fl_id
+        }
+
+        // ===== ROOM =====
+        const roomRows = await new Promise((resolve, reject) => {
+          db.query(
+            "SELECT room_id FROM room WHERE LOWER(room_name)=LOWER(?) AND room_fl_id=?",
+            [roomName, fl_id],
+            (err, rows) => (err ? reject(err) : resolve(rows))
+          )
+        })
+
+        if (!roomRows.length) {
+          await new Promise((resolve, reject) => {
+            db.query(
+              "INSERT INTO room (room_name, room_fl_id) VALUES (?, ?)",
+              [roomName, fl_id],
+              err => (err ? reject(err) : resolve())
+            )
+          })
+        }
+      }
+
+      // COMMIT
+      await new Promise((resolve, reject) => {
+        db.commit(err => (err ? reject(err) : resolve()))
+      })
+
+      res.json({ message: "นำเข้าข้อมูลสถานที่จาก Excel สำเร็จ" })
+
+    } catch (err) {
+      db.rollback(() => {})
+      console.error("IMPORT ERROR:", err)
+      res.status(500).json({
+        message: "Import Excel ล้มเหลว",
+        error: err.message,
+      })
+    }
+  }
+) 
   return router;
 };
