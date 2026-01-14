@@ -4,6 +4,8 @@ import repairButtonComponent from '@/components/repair-button-component.vue'
 import TableComponent from '@/components/table-component.vue'
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useUserProfile } from '@/composables/useUserProfile.js'
+import { useAuthToken } from '@/composables/useAuthToken'
 
 const router = useRouter()
 
@@ -12,6 +14,10 @@ const repairRequests = ref([])
 const loading = ref(false)
 const error = ref(null)
 
+const API_BASE = import.meta.env.VITE_API_BASE
+
+const { displayName, displayDepartment, fetchUserProfile } = useUserProfile(API_BASE)
+
 /* --- Filter state --- */
 const currentFilter = ref(null) // today / in_progress / completed_7days / cancelled_7days
 
@@ -19,14 +25,19 @@ const currentFilter = ref(null) // today / in_progress / completed_7days / cance
 const fetchRepairRequests = async () => {
   loading.value = true
   error.value = null
-  try {
-    const token = localStorage.getItem('token') || sessionStorage.getItem('token')
-    if (!token) throw new Error('ไม่พบ token')
 
-    const response = await fetch(`${import.meta.env.VITE_API_BASE}/admin/repairs`, {
+  try {
+    const { token, isAuthenticated, logout } = useAuthToken()
+
+    if (!isAuthenticated.value) {
+      logout()
+      return
+    }
+
+    const response = await fetch(`${API_BASE}/admin/repairs`, {
       method: 'GET',
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${token.value}`,
         'Content-Type': 'application/json',
       },
     })
@@ -49,7 +60,7 @@ const fetchRepairRequests = async () => {
           r.department_name,
         r.rf_urgency,
         r.rf_user_status,
-        '', // action
+        '',
       ],
       meta: r,
       rawDate: new Date(r.rf_create_at),
@@ -111,16 +122,14 @@ const completedTasks = computed(
         isWithin7Days(r),
     ).length,
 )
-const cancelledTasks = computed(
-  () =>
-    repairRequests.value.filter(
-      (r) =>
-        (r.meta.rf_user_status === 'cancel' || r.meta.rf_user_status === 'cancelled') &&
-        isWithin7Days(r),
-    ).length,
-)
+const allTasks = computed(() => repairRequests.value.filter((r) => r.meta.rf_user_status).length)
 
 const statItems = computed(() => [
+  {
+    value: allTasks.value,
+    label: 'รายการแจ้งซ่อมทั้งหมด',
+    colorClass: 'text-red-500',
+  },
   {
     value: todayTasks.value,
     label: 'งานทั้งหมดวันนี้',
@@ -130,20 +139,14 @@ const statItems = computed(() => [
   {
     value: progressTasks.value,
     label: 'กำลังดำเนินการ',
-    colorClass: 'text-blue-600',
+    colorClass: 'text-blue-500',
     filterKey: 'in_progress',
   },
   {
     value: completedTasks.value,
     label: 'เสร็จสิ้น (7 วัน)',
-    colorClass: 'text-green-600',
+    colorClass: 'text-green-500',
     filterKey: 'completed_7days',
-  },
-  {
-    value: cancelledTasks.value,
-    label: 'ยกเลิก (7 วัน)',
-    colorClass: 'text-red-600',
-    filterKey: 'cancelled_7days',
   },
 ])
 
@@ -156,16 +159,26 @@ const goToRepairDetail = (ticketId) => {
   router.push(`/main/repair-detail/${ticketId}`)
 }
 
-onMounted(fetchRepairRequests)
+onMounted(() => {
+  fetchRepairRequests()
+  fetchUserProfile()
+})
 </script>
 
 <template>
   <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-8xl">
     <!-- Header -->
     <div class="flex justify-between items-center mb-6">
-      <div>
-        <h1 class="text-2xl font-bold text-gray-800">หน้าหลักผู้ดูแลระบบ</h1>
-        <p class="text-sm text-gray-600 mt-1">ภาพรวมงานแจ้งซ่อม</p>
+      <div class="">
+        <p class="text-2xl font-extrabold text-gray-900">
+          หน้าหลักผู้ดูแลระบบ สวัสดีคุณ {{ displayName }}
+        </p>
+
+        <p class="text-lg font-semibold text-gray-700">
+          {{ displayDepartment }}
+        </p>
+
+        <p class="text-sm text-gray-500">ตรวจสอบสถานะและดำเนินการงานแจ้งซ่อม</p>
       </div>
 
       <div class="flex space-x-2">
@@ -197,7 +210,7 @@ onMounted(fetchRepairRequests)
           <div class="flex justify-center">
             <button
               @click="goToRepairDetail(row[0])"
-              class="flex items-center gap-2 px-2 py-2 rounded-md bg-blue-500 text-white hover:bg-blue-600"
+              class="flex items-center gap-2 px-2 py-2 rounded-md bg-[#1E48D1] hover:bg-[#163A9B] text-white"
             >
               <img src="/icon/info-icon.svg" class="h-4 w-4" />
             </button>

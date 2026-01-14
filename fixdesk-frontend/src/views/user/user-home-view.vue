@@ -4,15 +4,18 @@ import { useRouter } from 'vue-router'
 import TableComponent from '@/components/table-component.vue'
 import repairButton from '@/components/repair-button-component.vue'
 import RepairStatusTimeline from '@/components/status-timeline-component.vue'
+import { useAuthToken } from '@/composables/useAuthToken'
+import { useUserProfile } from '@/composables/useUserProfile'
+
 // นำเข้า Component Card
 import cardHomeComponent from '@/components/card-home-component.vue'
 
 // ค่าพื้นฐานของ API
 const API_BASE = import.meta.env.VITE_API_BASE
 
-// ตัวแปรข้อมูลผู้ใช้
-const realUserName = ref('ผู้ใช้งาน')
-const userDepartment = ref('กำลังโหลดข้อมูล...')
+const { token, userId, isAuthenticated, logout } = useAuthToken()
+const { displayName, displayDepartment, fetchUserProfile } = useUserProfile(API_BASE)
+
 
 // ตัวแปรสำหรับ Card สถิติ
 const statsItems = ref([
@@ -63,38 +66,16 @@ const selectedTrackingCode = ref('')
 const selectedTimelineSteps = ref([])
 const isTimelineLoading = ref(false)
 
-// ฟังก์ชันถอดรหัส JWT
-function parseJwt(token) {
-  try {
-    const base64Url = token.split('.')[1]
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
-    const jsonPayload = decodeURIComponent(
-      atob(base64)
-        .split('')
-        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-        .join(''),
-    )
-    return JSON.parse(jsonPayload)
-  } catch {
-    return {}
-  }
-}
-
-// -------------------------------------------------------------
-// [แก้ไข] เพิ่มการหา userId จาก Token ในฟังก์ชันนี้
-// -------------------------------------------------------------
 async function fetchRepairStats() {
-  const token = localStorage.getItem('token') || sessionStorage.getItem('token')
-  if (!token) return
-
-  // ต้องแกะ userId ออกมาก่อนครับ ไม่งั้น API จะ error
-  const payload = parseJwt(token)
-  const userId = payload.us_id
+  if (!isAuthenticated.value) {
+    logout()
+    return
+  }
 
   try {
-    const res = await fetch(`${API_BASE}/repair-stats/${userId}`, {
+    const res = await fetch(`${API_BASE}/repair-stats/${userId.value}`, {
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${token.value}`,
       },
     })
 
@@ -102,13 +83,12 @@ async function fetchRepairStats() {
 
     const data = await res.json()
 
-    // อัปเดตข้อมูลเข้า Card
     statsItems.value[0].value = data.total || 0
     statsItems.value[1].value = data.pending || 0
     statsItems.value[2].value = data.in_progress || 0
     statsItems.value[3].value = data.completed || 0
   } catch (err) {
-    console.error('Error fetching stats:', err)
+    console.error(err)
   }
 }
 
@@ -118,52 +98,21 @@ function formatDateTH(dateStr) {
   return new Date(dateStr).toLocaleDateString('th-TH')
 }
 
-async function fetchUserProfile() {
-  const token = localStorage.getItem('token') || sessionStorage.getItem('token')
-  if (!token) return
-
-  const payload = parseJwt(token)
-  const userId = payload.us_id
+async function fetchRecentRepairs() {
+  if (!isAuthenticated.value) {
+    logout()
+    return
+  }
 
   try {
-    const res = await fetch(`${API_BASE}/users/${userId}`, {
-      method: 'GET',
+    const res = await fetch(`${API_BASE}/my-repairs/${userId.value}`, {
       headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token.value}`,
       },
     })
 
-    if (!res.ok) throw new Error('Failed to fetch user profile')
-
-    const userData = await res.json()
-
-    if (userData.us_first_name_th) {
-      realUserName.value = `${userData.us_first_name_th} ${userData.us_last_name_th || ''}`.trim()
-    }
-
-    if (userData.us_department) {
-      userDepartment.value = userData.us_department
-    } else {
-      userDepartment.value = 'ไม่ระบุหน่วยงาน'
-    }
-  } catch (err) {
-    console.error('โหลดข้อมูลผู้ใช้ไม่สำเร็จ:', err)
-    userDepartment.value = 'ระบบแจ้งเสียแจ้งซ่อมยินดีตอนรับ'
-  }
-}
-
-async function fetchRecentRepairs() {
-  const token = localStorage.getItem('token') || sessionStorage.getItem('token')
-  if (!token) return
-
-  const payload = parseJwt(token)
-  const userId = payload.us_id
-
-  try {
-    const res = await fetch(`${API_BASE}/my-repairs/${userId}`)
     const data = await res.json()
-    if (!res.ok) throw new Error(data.message || 'โหลดข้อมูลไม่สำเร็จ')
+    if (!res.ok) throw new Error(data.message)
 
     const sorted = data.sort((a, b) => new Date(b.rf_create_at) - new Date(a.rf_create_at))
 
@@ -201,7 +150,6 @@ async function loadTimelineForCode(code) {
     isTimelineLoading.value = false
   }
 }
-
 
 function formatDateTimeTH(value) {
   if (!value) return null
@@ -257,7 +205,6 @@ function buildTimelineFromRepair(repairData) {
   return timelineSteps
 }
 
-
 // 2. Computed สำหรับ Rows ที่จะแสดง (แปลง recentRepairs ให้เป็น Array ของ Array)
 const tableRows = computed(() => {
   return allMyRepairs.value.map((item) => [
@@ -276,7 +223,7 @@ const tableRawRows = computed(() => {
   }))
 })
 
-/* --- [เพิ่มใหม่] Event Handler เมื่อกด Row --- */
+/* --- Event Handler เมื่อกด Row --- */
 const onRowClick = (idOrItem) => {
   const code = typeof idOrItem === 'object' && idOrItem !== null ? idOrItem.rf_code : idOrItem
   if (code) {
@@ -296,8 +243,8 @@ onMounted(() => {
   <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-8xl">
     <div class="flex justify-between items-center mb-6">
       <div>
-        <h1 class="text-2xl font-bold text-gray-800">สวัสดีคุณ{{ realUserName }}</h1>
-        <p class="text-md text-gray-600 mt-1">{{ userDepartment }}</p>
+        <h1 class="text-2xl font-bold text-gray-800">สวัสดีคุณ{{ displayName }}</h1>
+        <p class="text-md text-gray-600 mt-1">{{ displayDepartment }}</p>
       </div>
       <repairButton />
     </div>
@@ -395,13 +342,3 @@ onMounted(() => {
     </div>
   </div>
 </template>
-<style scoped>
-/* เจาะจงเข้าไปแก้ขนาดตัวอักษรใน TableComponent */
-:deep(td),
-:deep(th) {
-  font-size: 0.875rem !important; /* เท่ากับ text-xs */
-  line-height: 1rem !important;
-  padding-top: 0.5rem; /* ปรับระยะห่างแนวตั้งให้แคบลงด้วย (ถ้าต้องการ) */
-  padding-bottom: 0.5rem;
-}
-</style>

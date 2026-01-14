@@ -1,5 +1,5 @@
 const express = require("express");
-const { authMiddleware } = require("../auth");
+const { authMiddleware } = require("../auth.middleware");
 const multer = require("multer"); // 1. ต้อง import multer
 const path = require("path");
 const fs = require("fs");
