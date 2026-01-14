@@ -6,7 +6,21 @@ import assignJobModalComponent from '@/components/modal/assign-job-modal-compone
 import AcceptJobModalComponent from '@/components/modal/accept-job-modal-component.vue'
 import Swal from 'sweetalert2'
 import { usePhoneFormat } from '@/composables/usePhoneFormat'
+import { useAuthToken } from '@/composables/useAuthToken'
+
 const { toDisplay } = usePhoneFormat()
+
+const { token, isAuthenticated, logout } = useAuthToken()
+
+function requireAuth() {
+  if (!isAuthenticated.value || !token.value) {
+    Swal.fire('หมดอายุการใช้งาน', 'กรุณาเข้าสู่ระบบใหม่', 'warning')
+    logout()
+    return false
+  }
+  return true
+}
+
 
 const API_BASE = import.meta.env.VITE_API_BASE
 const route = useRoute()
@@ -61,25 +75,26 @@ function confirmCloseJob() {
     cancelButtonText: 'ยกเลิก',
     confirmButtonColor: '#10b981',
   }).then(async (result) => {
-    if (result.isConfirmed) {
-      try {
-        const token = localStorage.getItem('token') || sessionStorage.getItem('token')
-        const res = await fetch(`${API_BASE}/technician/close-job/${repairCode}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({ status: 'done' }),
-        })
-        if (res.ok) {
-          Swal.fire('สำเร็จ', 'อัปเดตสถานะเรียบร้อย', 'success')
-          fetchRepairDetail()
-        }
-      } catch (e) {
-        console.error(e)
-        Swal.fire('ผิดพลาด', 'ไม่สามารถปิดงานได้', 'error')
-      }
+    if (!result.isConfirmed) return
+    if (!requireAuth()) return
+
+    try {
+      const res = await fetch(`${API_BASE}/technician/close-job/${repairCode}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token.value}`,
+        },
+        body: JSON.stringify({ status: 'done' }),
+      })
+
+      if (!res.ok) throw new Error('UPDATE_FAILED')
+
+      Swal.fire('สำเร็จ', 'อัปเดตสถานะเรียบร้อย', 'success')
+      fetchRepairDetail()
+    } catch (e) {
+      console.error(e)
+      Swal.fire('ผิดพลาด', 'ไม่สามารถปิดงานได้', 'error')
     }
   })
 }
@@ -94,25 +109,26 @@ function confirmOutsource() {
     cancelButtonText: 'ยกเลิก',
     confirmButtonColor: '#f59e0b',
   }).then(async (result) => {
-    if (result.isConfirmed) {
-      try {
-        const token = localStorage.getItem('token') || sessionStorage.getItem('token')
-        const res = await fetch(`${API_BASE}/technician/close-job/${repairCode}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({ status: 'outsource' }),
-        })
-        if (res.ok) {
-          Swal.fire('สำเร็จ', 'ส่งงานให้ช่างภายนอกเรียบร้อย', 'success')
-          fetchRepairDetail()
-        }
-      } catch (e) {
-        console.error(e)
-        Swal.fire('ผิดพลาด', 'ไม่สามารถส่งงานได้', 'error')
-      }
+    if (!result.isConfirmed) return
+    if (!requireAuth()) return
+
+    try {
+      const res = await fetch(`${API_BASE}/technician/close-job/${repairCode}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token.value}`,
+        },
+        body: JSON.stringify({ status: 'outsource' }),
+      })
+
+      if (!res.ok) throw new Error('OUTSOURCE_FAILED')
+
+      Swal.fire('สำเร็จ', 'ส่งงานให้ช่างภายนอกเรียบร้อย', 'success')
+      fetchRepairDetail()
+    } catch (e) {
+      console.error(e)
+      Swal.fire('ผิดพลาด', 'ไม่สามารถส่งงานได้', 'error')
     }
   })
 }
@@ -365,40 +381,8 @@ function buildTimelineFromRepair(repairData) {
   return timelineSteps
 }
 
-// เรียกใช้งานเมื่อโหลดหน้า
-onMounted(() => {
-  const state = history.state
-  if (state) {
-    if (state.fromAdmin) canAssign.value = true
-    if (state.fromTechnician) canAccept.value = true // เพิ่มเงื่อนไขนี้ (ต้องส่งจากหน้า List มาด้วย)
-  }
-  // เช็คว่ามีตั๋ว "fromAdmin" แนบมาใน history state หรือไม่
-  if (history.state && history.state.fromAdmin) {
-    canAssign.value = true
-  }
-
-  fetchRepairDetail()
-})
-
 // ปุ่มยืนยันการเบิก + ฟอร์มใน modal
 const showWithdrawModal = ref(false)
-// ==== JWT Decode (เพิ่มส่วนนี้เข้าไปในไฟล์) ====
-function parseJwt(token) {
-  try {
-    const base64Url = token.split('.')[1]
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
-    const jsonPayload = decodeURIComponent(
-      atob(base64)
-        .split('')
-        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-        .join(''),
-    )
-    return JSON.parse(jsonPayload)
-  } catch (err) {
-    console.error('ไม่สามารถ decode token ได้:', err)
-    return {}
-  }
-}
 
 const withdrawForm = ref({
   requester_name: '',
@@ -411,55 +395,6 @@ const withdrawForm = ref({
   reason: '',
   repair_code: '',
 })
-
-// ดึงข้อมูล user ที่ล็อกอินจาก token
-function getCurrentUser() {
-  const token = localStorage.getItem('token') || sessionStorage.getItem('token')
-  if (!token) return {}
-
-  const payload = parseJwt(token) || {}
-
-  // ถ้า backend ใส่ข้อมูลไว้ใน payload.user ให้ดึงออกมาด้วย
-  const user = payload.user || payload
-
-  return user
-}
-
-// เปิด modal และเติมค่าเริ่มต้นจาก user ที่ล็อกอิน + ใบแจ้งซ่อม
-function openWithdrawModal() {
-  const user = getCurrentUser()
-
-  const nameTh =
-    user.us_first_name_th && user.us_last_name_th
-      ? `${user.us_first_name_th} ${user.us_last_name_th}`
-      : user.fullname || user.name || user.us_user_name || ''
-
-  const department = user.us_department || user.department || user.dep_name || ''
-
-  withdrawForm.value = {
-    requester_name: nameTh,
-    unit: department,
-    date: new Date().toISOString().slice(0, 10),
-
-    repair_type_id: '', // <-- ตั้งว่างก่อน
-    location: `${repair.value?.building_name || ''} / ${repair.value?.floor_name || ''} / ${repair.value?.room_name || ''}`,
-    urgency: repair.value?.rf_urgency || 'medium',
-    reason: '',
-    repair_code: repair.value?.rf_code || repairCode || '',
-  }
-
-  // -------- AUTO SELECT ----------
-  // 1) ถ้ามี rf_tt_id (กรณีเก็บเป็น ID)
-  if (repair.value?.rf_tt_id) {
-    withdrawForm.value.repair_type_id = repair.value.rf_tt_id
-  } else {
-    // 2) ถ้าเก็บเป็นชื่อ
-    const match = technicianTypes.value.find((t) => t.tt_name === repair.value?.repair_type_name)
-    withdrawForm.value.repair_type_id = match ? match.tt_id : ''
-  }
-
-  showWithdrawModal.value = true
-}
 
 const showWithdrawButton = computed(() => {
   if (!repair.value) return false
@@ -534,17 +469,13 @@ function handleRepairFrom(code) {
 }
 
 onMounted(() => {
-  const state = history.state
-  if (state) {
-    if (state.fromAdmin) canAssign.value = true
-    if (state.fromTechnician) canAccept.value = true
-  }
-  if (history.state && history.state.fromAdmin) {
-    canAssign.value = true
-  }
+  const state = history.state || {}
+
+  canAssign.value = !!state.fromAdmin
+  canAccept.value = !!state.fromTechnician
 
   fetchRepairDetail()
-  fetchTechnicianTypes() // 👈 เพิ่มบรรทัดนี้
+  fetchTechnicianTypes()
 })
 </script>
 
@@ -689,7 +620,7 @@ onMounted(() => {
                     <img src="/icon/prop-icon.svg" class="w-6 h-6 sm:w-7 sm:h-7" />
                   </div>
                   <div class="break-word">
-                    <span class="text-sm sm:text-base leading-tight text-gray-500 block "
+                    <span class="text-sm sm:text-base leading-tight text-gray-500 block"
                       >หมายเลขครุภัณฑ์:</span
                     >
                     <span
@@ -895,12 +826,7 @@ onMounted(() => {
 
           <!-- ปุ่มเบิก และ ปุ่มเปลี่ยนสถานะ ด้านล่างกล่องสถานะ -->
           <div v-if="showWithdrawButton || (canAccept && repair?.rf_user_status !== 'done')">
-            <div
-              :class="[
-                'grid gap-4',
-                showWithdrawButton ? 'grid-cols-2' : 'grid-cols-1'
-              ]"
-            >
+            <div :class="['grid gap-4', showWithdrawButton ? 'grid-cols-2' : 'grid-cols-1']">
               <!-- ปุ่มเบิกวัสดุ/อุปกรณ์ (ซ้าย) -->
               <button
                 v-if="showWithdrawButton"
@@ -909,7 +835,12 @@ onMounted(() => {
                 @click="handleRepairFrom(repair?.rf_code)"
               >
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                  />
                 </svg>
                 เบิกวัสดุ/อุปกรณ์
               </button>
@@ -917,7 +848,15 @@ onMounted(() => {
               <!-- ปุ่มรับงาน/เปลี่ยนสถานะ/ปิดงาน -->
               <div v-if="canAccept && repair?.rf_user_status !== 'done'" class="relative">
                 <button
-                  @click="repair?.rf_user_status === 'pending' ? openActionPopup() : (repair?.rf_user_status === 'outsource' ? confirmCloseJob() : (showStatusPopup ? closeStatusPopup() : openActionPopup()))"
+                  @click="
+                    repair?.rf_user_status === 'pending'
+                      ? openActionPopup()
+                      : repair?.rf_user_status === 'outsource'
+                        ? confirmCloseJob()
+                        : showStatusPopup
+                          ? closeStatusPopup()
+                          : openActionPopup()
+                  "
                   :class="[
                     'w-full px-6 py-3.5 text-sm sm:text-base font-semibold rounded-xl shadow-md transition-all duration-200 flex items-center justify-center gap-3 text-white hover:shadow-lg hover:-translate-y-0.5',
                     repair?.rf_user_status === 'pending'
@@ -928,18 +867,51 @@ onMounted(() => {
                   ]"
                 >
                   <!-- Icon รับงาน (pending) -->
-                  <svg v-if="repair?.rf_user_status === 'pending'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <svg
+                    v-if="repair?.rf_user_status === 'pending'"
+                    class="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
                   </svg>
                   <!-- Icon ปิดงาน (outsource) -->
-                  <svg v-else-if="repair?.rf_user_status === 'outsource'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                  <svg
+                    v-else-if="repair?.rf_user_status === 'outsource'"
+                    class="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M5 13l4 4L19 7"
+                    />
                   </svg>
                   <!-- Icon เปลี่ยนสถานะ (in_progress) -->
                   <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                    />
                   </svg>
-                  {{ repair?.rf_user_status === 'pending' ? 'รับงาน' : (repair?.rf_user_status === 'outsource' ? 'ปิดงาน' : 'เปลี่ยนสถานะ') }}
+                  {{
+                    repair?.rf_user_status === 'pending'
+                      ? 'รับงาน'
+                      : repair?.rf_user_status === 'outsource'
+                        ? 'ปิดงาน'
+                        : 'เปลี่ยนสถานะ'
+                  }}
                 </button>
 
                 <!-- Popup เลือกสถานะ (dropdown) -->
@@ -950,17 +922,42 @@ onMounted(() => {
                   <!-- หน้าเลือกตัวเลือก -->
                   <div class="p-3">
                     <div class="flex items-center gap-2 mb-3 pb-2 border-b border-gray-100">
-                      <div class="w-7 h-7 rounded-full bg-amber-100 flex items-center justify-center">
-                        <svg class="w-3.5 h-3.5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      <div
+                        class="w-7 h-7 rounded-full bg-amber-100 flex items-center justify-center"
+                      >
+                        <svg
+                          class="w-3.5 h-3.5 text-amber-500"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                          />
                         </svg>
                       </div>
                       <div>
                         <h3 class="text-xs font-bold text-gray-800">เปลี่ยนสถานะงาน</h3>
                       </div>
-                      <button @click="closeStatusPopup" class="ml-auto p-1 hover:bg-gray-100 rounded transition">
-                        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                      <button
+                        @click="closeStatusPopup"
+                        class="ml-auto p-1 hover:bg-gray-100 rounded transition"
+                      >
+                        <svg
+                          class="w-4 h-4 text-gray-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12"
+                          />
                         </svg>
                       </button>
                     </div>
@@ -971,13 +968,27 @@ onMounted(() => {
                         @click="handleSelectStatus('done')"
                         class="w-full flex items-center gap-2.5 p-2.5 rounded-lg hover:bg-green-50 transition-all duration-200 group"
                       >
-                        <div class="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center group-hover:bg-green-200 transition">
-                          <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                        <div
+                          class="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center group-hover:bg-green-200 transition"
+                        >
+                          <svg
+                            class="w-4 h-4 text-green-600"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              d="M5 13l4 4L19 7"
+                            />
                           </svg>
                         </div>
                         <div class="text-left">
-                          <p class="text-sm font-medium text-gray-800 group-hover:text-green-700">ปิดงาน</p>
+                          <p class="text-sm font-medium text-gray-800 group-hover:text-green-700">
+                            ปิดงาน
+                          </p>
                           <p class="text-xs text-gray-400">ดำเนินการเสร็จสิ้นแล้ว</p>
                         </div>
                       </button>
@@ -988,13 +999,27 @@ onMounted(() => {
                         @click="handleSelectStatus('outsource')"
                         class="w-full flex items-center gap-2.5 p-2.5 rounded-lg hover:bg-amber-50 transition-all duration-200 group"
                       >
-                        <div class="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center group-hover:bg-amber-200 transition">
-                          <svg class="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                        <div
+                          class="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center group-hover:bg-amber-200 transition"
+                        >
+                          <svg
+                            class="w-4 h-4 text-amber-600"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                            />
                           </svg>
                         </div>
                         <div class="text-left">
-                          <p class="text-sm font-medium text-gray-800 group-hover:text-amber-700">จ้างช่างภายนอก</p>
+                          <p class="text-sm font-medium text-gray-800 group-hover:text-amber-700">
+                            จ้างช่างภายนอก
+                          </p>
                           <p class="text-xs text-gray-400">ส่งต่องานให้ผู้รับเหมา</p>
                         </div>
                       </button>
@@ -1229,5 +1254,4 @@ onMounted(() => {
     @close="showAcceptPopup = false"
     @success="handleAcceptSuccess"
   />
-
 </template>
