@@ -1,8 +1,9 @@
 <script setup>
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { jsPDF } from 'jspdf'
 import html2canvas from 'html2canvas'
 import { jwtDecode } from 'jwt-decode'
+import Swal from 'sweetalert2'
 
 // Refs
 const documentRef = ref(null)
@@ -32,6 +33,59 @@ const formData = ref({
   position: ''
 })
 
+// Validation State
+const errors = ref({
+  department: '',
+  documentNumber: '',
+  subject: '',
+  to: '',
+  content: '',
+  position: ''
+})
+
+// Validation Logic
+function validateField(field) {
+  switch (field) {
+    case 'department':
+      errors.value.department = formData.value.department.trim() ? '' : 'กรุณากรอกส่วนราชการ';
+      break;
+    case 'documentNumber':
+      errors.value.documentNumber = formData.value.documentNumber.trim() ? '' : 'กรุณากรอกเลขที่เอกสาร';
+      break;
+    case 'subject':
+      errors.value.subject = formData.value.subject.trim() ? '' : 'กรุณากรอกเรื่อง';
+      break;
+    case 'to':
+      errors.value.to = formData.value.to.trim() ? '' : 'กรุณากรอกชื่อผู้รับ';
+      break;
+    case 'content':
+      errors.value.content = formData.value.content.trim() ? '' : 'กรุณากรอกเนื้อเรื่อง';
+      break;
+    case 'position':
+      errors.value.position = formData.value.position.trim() ? '' : 'กรุณากรอกตำแหน่ง';
+      break;
+  }
+}
+
+// Check all fields
+function validateForm() {
+  let valid = true;
+  Object.keys(errors.value).forEach(field => {
+    validateField(field);
+    if (errors.value[field]) valid = false;
+  });
+  return valid;
+}
+
+// Watch each field for instant validation (clear error on type)
+Object.keys(formData.value).forEach(field => {
+  if (errors.value[field] !== undefined) {
+    watch(() => formData.value[field], () => {
+      if (errors.value[field]) validateField(field);
+    });
+  }
+});
+
 // Computed: Formatted Date in Thai Buddhist Era
 const formattedDate = computed(() => {
   const day = now.getDate()
@@ -43,13 +97,12 @@ const formattedDate = computed(() => {
 // Computed: Format content with indentation
 const formattedContent = computed(() => {
   if (!formData.value.content) return ''
-  // Convert tabs to proper indentation and preserve line breaks
   return formData.value.content
-    .replace(/\t/g, '&emsp;&emsp;&emsp;') // Tab = indent
-    .replace(/\n/g, '<br>') // Enter = new line
+    .replace(/\t/g, '&emsp;&emsp;&emsp;')
+    .replace(/\n/g, '<br>')
 })
 
-// Handle Tab key in textarea
+// Handle Tab key
 function handleKeydown(e) {
   if (e.key === 'Tab') {
     e.preventDefault()
@@ -57,11 +110,7 @@ function handleKeydown(e) {
     const start = textarea.selectionStart
     const end = textarea.selectionEnd
     const value = textarea.value
-
-    // Insert tab character
     formData.value.content = value.substring(0, start) + '\t' + value.substring(end)
-
-    // Move cursor after tab
     setTimeout(() => {
       textarea.selectionStart = textarea.selectionEnd = start + 1
     }, 0)
@@ -70,8 +119,21 @@ function handleKeydown(e) {
 
 // Generate PDF
 async function generatePDF() {
+  validateForm()
+  if (Object.values(errors.value).some(err => err !== '')) {
+    Swal.fire({
+      icon: 'error',
+      title: 'ข้อมูลไม่ครบถ้วน',
+      text: 'กรุณากรอกข้อมูลให้ครบถ้วนก่อนสร้าง PDF',
+    })
+    return
+  }
   if (!documentRef.value) {
-    alert('ไม่พบเอกสาร')
+    Swal.fire({
+      icon: 'error',
+      title: 'ไม่พบเอกสาร',
+      text: 'ไม่พบเอกสารที่ต้องการสร้าง PDF กรุณาลองใหม่อีกครั้ง',
+    })
     return
   }
 
@@ -80,34 +142,27 @@ async function generatePDF() {
   try {
     await nextTick()
 
-    // โคลน Element (สร้างร่างแยก)
     const originalElement = exportWrapper.value
     const clone = originalElement.cloneNode(true)
 
-    // ตั้งค่า Clone ให้อยู่นอกจอ (User มองไม่เห็น แต่ html2canvas เห็น)
     clone.style.position = 'absolute'
     clone.style.left = '-9999px'
     clone.style.top = '0'
-    clone.style.width = '794px' // บังคับความกว้าง A4
-    // ต้อง append เข้า body ก่อน html2canvas ถึงจะทำงานได้
+    clone.style.width = '794px'
     document.body.appendChild(clone)
 
+    // Manual styling fix for PDF clone (dotted lines)
     const infoValues = clone.querySelectorAll('.info-value')
-
     infoValues.forEach(el => {
-      // ลบ Border เดิมทิ้ง
       el.style.borderBottom = 'none'
-
-      // สร้างเส้นจุดไข่ปลาใหม่ด้วยกราฟิก
       el.style.backgroundImage = 'linear-gradient(to right, #000 33%, rgba(255,255,255,0) 0%)'
-      el.style.backgroundSize = '3px 1px' // ขนาดจุด (กว้าง 3px สูง 1px)
+      el.style.backgroundSize = '3px 1px'
       el.style.backgroundRepeat = 'repeat-x'
-      el.style.backgroundPosition = '0 calc(100% - 0px)'
+      el.style.backgroundPosition = '0 calc(100% - 0px)' // Adjust this value if needed for PDF vertical position
     })
 
-    // สั่ง html2canvas ถ่ายรูปจากตัว "Clone"
     const canvas = await html2canvas(clone, {
-      scale: 3, // ความคมชัด
+      scale: 3,
       useCORS: true,
       allowTaint: true,
       backgroundColor: '#ffffff',
@@ -115,10 +170,8 @@ async function generatePDF() {
       letterRendering: true
     })
 
-    // ลบตัว Clone ทิ้ง
     document.body.removeChild(clone)
 
-    // สร้าง PDF จากรูปภาพ
     const pdf = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
@@ -142,13 +195,16 @@ async function generatePDF() {
     }
   } catch (error) {
     console.error('Error generating PDF:', error)
-    alert('เกิดข้อผิดพลาดในการสร้าง PDF: ' + error.message)
+    Swal.fire({
+      icon: 'error',
+      title: 'เกิดข้อผิดพลาด',
+      text: 'ไม่สามารถสร้าง PDF ได้ กรุณาลองใหม่อีกครั้ง',
+    })
   } finally {
     isGenerating.value = false
   }
 }
 
-// Reset form
 function resetForm() {
   formData.value = {
     department: '',
@@ -159,9 +215,10 @@ function resetForm() {
     month: thaiMonths[currentMonthIndex],
     position: ''
   }
+  // Clear errors on reset
+  Object.keys(errors.value).forEach(key => errors.value[key] = '')
 }
 
-// Get user info from token
 onMounted(() => {
   const token = localStorage.getItem('token') || sessionStorage.getItem('token')
   if (token) {
@@ -186,54 +243,44 @@ onMounted(() => {
           <h2 class="text-lg font-semibold text-gray-700 mb-3 flex items-center gap-2">
             ตัวอย่างเอกสาร
           </h2>
-
           <div class="pdf-preview-wrapper">
             <div class="justify-center flex">
               <div ref="exportWrapper" class="export-wrapper">
                 <div ref="documentRef" class="pdf-document">
-
                   <div class="pdf-header">
                     <img src="/icon/Garuda.svg" alt="ครุฑ" class="garuda-icon" />
                     <h1 class="pdf-title">บันทึกข้อความ</h1>
                   </div>
-
                   <div class="pdf-info">
                     <div class="info-row">
                       <span class="info-label w-20">ส่วนราชการ</span>
                       <span class="info-value flex-1">{{ formData.department }}</span>
                     </div>
-
                     <div class="info-row">
                       <span class="info-label w-8">ที่</span>
                       <span class="info-value w-48">{{ formData.documentNumber }}</span>
-
                       <span class="info-label w-12 ml-8">วันที่</span>
                       <span class="info-value flex-1">{{ formattedDate }}</span>
                     </div>
-
                     <div class="info-row">
                       <span class="info-label w-10">เรื่อง</span>
                       <span class="info-value flex-1">
                         {{ formData.subject }} {{ formData.month ? 'ประจำเดือน' + formData.month : '' }} {{ currentYear }}
                       </span>
                     </div>
-
                     <div class="info-row">
                       <span class="info-label w-10">เรียน</span>
                       <span class="info-value flex-1">{{ formData.to }}</span>
                     </div>
                   </div>
-
                   <div class="pdf-content">
                     <div class="user-content" v-html="formattedContent"></div>
-
                     <p class="fixed-text indent mt-4">
                       งานอาคารและสถานที่ จึงขอรายงานการปฏิบัติงาน ประจำเดือน{{ formData.month }} {{ currentYear }}
                     </p>
                     <p class="fixed-text">ตามรายงานการปฏิบัติงานที่แนบท้าย</p>
                     <p class="fixed-text indent mt-2">จึงเรียนมาเพื่อโปรดทราบ</p>
                   </div>
-
                   <div class="pdf-signature mt-12">
                     <div class="signature-box text-center ml-auto w-[250px]">
                       <div class="signature-line mb-2">(ลงชื่อ)..............................................</div>
@@ -241,7 +288,6 @@ onMounted(() => {
                       <div class="signature-position">{{ formData.position }}</div>
                     </div>
                   </div>
-
                 </div>
               </div>
             </div>
@@ -256,9 +302,11 @@ onMounted(() => {
               <label class="block text-sm font-medium text-gray-700 mb-1">
                 ส่วนราชการ <span class="text-red-500">*</span>
               </label>
-              <input v-model="formData.department" type="text" required
-                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all placeholder:text-gray-400"
-                placeholder="เช่น สำนักปลัดเทศบาล ฝ่ายอำนวยการ งานอาคารและสถานที่" />
+              <input v-model="formData.department" type="text"
+                :class="['w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-gray-400', errors.department ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-blue-500']"
+                placeholder="เช่น สำนักปลัดเทศบาล ฝ่ายอำนวยการ งานอาคารและสถานที่"
+                @blur="validateField('department')" />
+              <p v-if="errors.department" class="text-xs text-red-500 mt-1">{{ errors.department }}</p>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -266,9 +314,11 @@ onMounted(() => {
                 <label class="block text-sm font-medium text-gray-700 mb-1">
                   ที่ (เลขที่เอกสาร) <span class="text-red-500">*</span>
                 </label>
-                <input v-model="formData.documentNumber" type="text" required
-                  class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all placeholder:text-gray-400"
-                  placeholder="เช่น สป.2200/2568" />
+                <input v-model="formData.documentNumber" type="text"
+                  :class="['w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-gray-400', errors.documentNumber ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-blue-500']"
+                  placeholder="เช่น สป.2200/2568"
+                  @blur="validateField('documentNumber')" />
+                <p v-if="errors.documentNumber" class="text-xs text-red-500 mt-1">{{ errors.documentNumber }}</p>
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">วันที่</label>
@@ -282,9 +332,11 @@ onMounted(() => {
                 <label class="block text-sm font-medium text-gray-700 mb-1">
                   เรื่อง <span class="text-red-500">*</span>
                 </label>
-                <input v-model="formData.subject" type="text" required
-                  class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all placeholder:text-gray-400"
-                  placeholder="รายงานการปฏิบัติงานของงานอาคารและสถานที่ ประจำเดือน..." />
+                <input v-model="formData.subject" type="text"
+                  :class="['w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-gray-400', errors.subject ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-blue-500']"
+                  placeholder="รายงานการปฏิบัติงาน..."
+                  @blur="validateField('subject')" />
+                <p v-if="errors.subject" class="text-xs text-red-500 mt-1">{{ errors.subject }}</p>
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">ประจำเดือน</label>
@@ -299,9 +351,11 @@ onMounted(() => {
               <label class="block text-sm font-medium text-gray-700 mb-1">
                 เรียน <span class="text-red-500">*</span>
               </label>
-              <input v-model="formData.to" type="text" required
-                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all placeholder:text-gray-400"
-                placeholder="นายกเทศมนตรีนครบ้านสวน" />
+              <input v-model="formData.to" type="text"
+                :class="['w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-gray-400', errors.to ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-blue-500']"
+                placeholder="นายกเทศมนตรีนครบ้านสวน"
+                @blur="validateField('to')" />
+              <p v-if="errors.to" class="text-xs text-red-500 mt-1">{{ errors.to }}</p>
             </div>
 
             <div>
@@ -309,9 +363,11 @@ onMounted(() => {
                 เนื้อเรื่อง <span class="text-red-500">*</span>
               </label>
               <p class="text-xs text-gray-500 mb-1">กด Tab เพื่อย่อหน้า, กด Enter เพื่อขึ้นบรรทัดใหม่</p>
-              <textarea v-model="formData.content" required rows="4" @keydown="handleKeydown"
-                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all resize-y placeholder:text-gray-400"
-                placeholder="ด้วย งานอาคารและสถานที่ ฝ่ายอำนวยการ สำนักปลัดเทศบาล ได้รับมอบหมายให้..."></textarea>
+              <textarea v-model="formData.content" rows="4" @keydown="handleKeydown"
+                :class="['w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 transition-all resize-y placeholder:text-gray-400', errors.content ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-blue-500']"
+                placeholder="ด้วย งานอาคารและสถานที่..."
+                @blur="validateField('content')"></textarea>
+              <p v-if="errors.content" class="text-xs text-red-500 mt-1">{{ errors.content }}</p>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -324,9 +380,11 @@ onMounted(() => {
                 <label class="block text-sm font-medium text-gray-700 mb-1">
                   ตำแหน่ง <span class="text-red-500">*</span>
                 </label>
-                <input v-model="formData.position" type="text" required
-                  class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all placeholder:text-gray-400"
-                  placeholder="ผู้ช่วยเจ้าพนักงานธุรการ" />
+                <input v-model="formData.position" type="text"
+                  :class="['w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-gray-400', errors.position ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-blue-500']"
+                  placeholder="ผู้ช่วยเจ้าพนักงานธุรการ"
+                  @blur="validateField('position')" />
+                <p v-if="errors.position" class="text-xs text-red-500 mt-1">{{ errors.position }}</p>
               </div>
             </div>
 
@@ -336,13 +394,10 @@ onMounted(() => {
                 :disabled="isGenerating">
                 <svg v-if="isGenerating" class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
                   <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
-                  </path>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
                 <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
                 <span>{{ isGenerating ? 'กำลังสร้าง...' : 'ดาวน์โหลด PDF' }}</span>
               </button>
@@ -360,55 +415,27 @@ onMounted(() => {
 </template>
 
 <style scoped>
-/* Fallback to Google Sarabun if local font not available */
+/* Keeping your existing CSS */
 @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
 
-/* TH Sarabun Font - ใช้ font ราชการไทย */
 @font-face {
   font-family: 'TH Sarabun';
-  src: local('TH Sarabun'),
-    url('/fonts/THSarabun.ttf') format('truetype');
+  src: local('TH Sarabun'), url('/fonts/THSarabun.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
 }
+/* ... rest of your existing CSS definitions for font faces ... */
 
-@font-face {
-  font-family: 'TH Sarabun';
-  src: local('TH Sarabun Bold'),
-    url('/fonts/THSarabun%20Bold.ttf') format('truetype');
-  font-weight: bold;
-  font-style: normal;
-}
-
-@font-face {
-  font-family: 'TH Sarabun';
-  src: local('TH Sarabun Italic'),
-    url('/fonts/THSarabun%20Italic.ttf') format('truetype');
-  font-weight: normal;
-  font-style: italic;
-}
-
-@font-face {
-  font-family: 'TH Sarabun';
-  src: local('TH Sarabun BoldItalic'),
-    url('/fonts/THSarabun%20BoldItalic.ttf') format('truetype');
-  font-weight: bold;
-  font-style: italic;
-}
-
-/* PDF Document Styles - แสดงเอกสาร A4 โดยตรง */
 .pdf-preview-wrapper {
   transform: scale(1);
   transform-origin: center;
   margin-bottom: 30px;
-  /* ชดเชยช่องว่างด้านล่าง */
 }
 
 .pdf-document {
   width: 794px;
   height: 1123px;
   padding: 50px 96px 50px 96px;
-  /* top right bottom left - ขอบซ้ายกว้างกว่าสำหรับเข้าเล่ม */
   font-family: 'TH Sarabun', 'Sarabun', sans-serif !important;
   font-size: 18px;
   background: #ffffff;
@@ -416,7 +443,6 @@ onMounted(() => {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
 }
 
-/* Force TH Sarabun font for all elements inside pdf-document */
 .pdf-document * {
   font-family: 'TH Sarabun', 'Sarabun', sans-serif !important;
 }
@@ -451,62 +477,35 @@ onMounted(() => {
 
 .info-row {
   display: flex;
-  align-items: flex-end; /* ให้ตัวหนังสือวางอยู่บนเส้นบรรทัดล่างสุดเสมอ */
+  align-items: flex-end;
   width: 100%;
+  height: 30px;
+  margin-bottom: 8px;
 }
 
-.info-row:first-child {
-  margin-top: 0;
-}
-
-/* จัดระเบียบบรรทัด */
-.info-row {
-  display: flex;
-  align-items: flex-end; /* บังคับให้ฐานตัวหนังสือเท่ากัน */
-  width: 100%;
-  height: 30px; /* ความสูงบรรทัดตายตัว (สำคัญมาก!) */
-  margin-bottom: 8px; /* ระยะห่างระหว่างบรรทัด */
-}
-
-/* ปรับ Label (คำนำหน้า) */
 .info-label {
   font-weight: bold;
-  height: 100%;           /* สูงเต็มบรรทัด */
+  height: 100%;
   display: flex;
-  align-items: flex-end;  /* ชิดขอบล่าง */
-  white-space: nowrap;    /* ห้ามตัดคำ */
-
-  /* ดันตัวหนังสือขึ้นจากขอบล่างเล็กน้อยเพื่อให้ตรงกับเส้น */
+  align-items: flex-end;
+  white-space: nowrap;
   padding-bottom: 5px;
 }
 
-/* ปรับ Value (ช่องกรอกข้อมูล) - พระเอกของเรา */
 .info-value {
-  flex: 1;                /* ยืดเต็มพื้นที่ */
-  height: 100%;           /* สูงเท่าบรรทัด */
+  flex: 1;
+  height: 100%;
   display: flex;
-  align-items: flex-end;  /* จัดตัวหนังสือชิดล่าง */
+  align-items: flex-end;
   min-width: 50px;
-
-  /* จัดตำแหน่งตัวหนังสือ */
   padding-left: 10px;
   padding-right: 10px;
-  padding-bottom: 5px;    /* ต้องเท่ากับ .info-label เพื่อให้บรรทัดตรงกัน */
-
-  /* --- ส่วนสำคัญ: สร้างเส้นจุดไข่ปลาด้วย Background --- */
-  /* สร้างจุดสีดำขนาด 1px เว้นระยะ */
+  padding-bottom: 5px;
   background-image: linear-gradient(to right, #000 30%, rgba(255, 255, 255, 0) 0%);
-  background-position: bottom 15px left 0; /* <--- ปรับเลข 6px ขึ้น-ลง ได้ตามใจชอบ (ยิ่งมากเส้นยิ่งลอยสูง) */
-  background-size: 3px 1px; /* กว้าง 3px (จุด+เว้นวรรค), สูง 1px (ความหนาเส้น) */
+  background-position: bottom 15px left 0;
+  background-size: 3px 1px;
   background-repeat: repeat-x;
-
-  /* ลบ Border เดิมทิ้ง */
   border-bottom: none !important;
-}
-
-/* ลบ ::after ของเดิมออกให้หมดถ้ามี */
-.info-value::after {
-  display: none;
 }
 
 .pdf-content {
