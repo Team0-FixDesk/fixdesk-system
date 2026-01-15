@@ -4,22 +4,22 @@ import { useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
 import { jwtDecode } from 'jwt-decode'
 
-// ========================
-// Components
-// ========================
+/* ========================
+   Components
+========================*/
 import TableComponent from '@/components/table-component.vue'
 import TableActionsComponent from '@/components/table-actions-component.vue'
 import AcceptJobModal from '@/components/modal/accept-job-modal-component.vue'
 
-// ========================
-// Router & API
-// ========================
+/* =========================
+   Router & API
+======================== */
 const router = useRouter()
 const API_BASE = import.meta.env.VITE_API_BASE
 
-// ========================
-// Reactive State
-// ========================
+/* =========================
+   Reactive State
+======================== */
 const tokenData = ref(null)
 const tableRows = ref([])
 const openMenuId = ref(null)
@@ -32,9 +32,9 @@ const allowedStatuses = ['pending', 'in_progress', 'outsource']
 const showAcceptPopup = ref(false)
 const currentAcceptCode = ref(null)
 
-// ========================
-// Utility Functions
-// ========================
+/* =========================
+   Utility Functions
+======================== */
 
 /**
  * โหลดข้อมูล token ของผู้ใช้งานจาก localStorage หรือ sessionStorage
@@ -60,9 +60,9 @@ function getAuthHeaders() {
   return { Authorization: `Bearer ${token}` }
 }
 
-// ========================
-// Fetch & Data Processing
-// ========================
+/* =========================
+   Fetch & Data Processing
+======================== */
 
 /**
  * ดึงรายการแจ้งซ่อมจาก API และกรองเฉพาะสถานะที่อนุญาต
@@ -109,9 +109,9 @@ function formatRow(r) {
   ]
 }
 
-// ========================
-// Computed Properties
-// ========================
+/* =========================
+   Computed Properties
+======================== */
 
 /**
  * คำนวณรายการที่ผ่านการค้นหาและกรองตามสถานะ
@@ -126,9 +126,9 @@ const filteredRows = computed(() => {
   })
 })
 
-// ========================
-// Actions
-// ========================
+/* =========================
+   Actions
+======================== */
 
 /**
  * เปิดหน้ารายละเอียดใบแจ้งซ่อม
@@ -196,9 +196,9 @@ async function handleCloseJob(code) {
   }
 }
 
-// ========================
-// Lifecycle Hooks
-// ========================
+/* =========================
+   Lifecycle Hooks
+======================== */
 onMounted(() => {
   loadTokenData()
   loadRepairs()
@@ -209,9 +209,7 @@ onMounted(() => {
   <div class="max-w-7xl mx-auto p-8 bg-white rounded-xl shadow-md">
     <h1 class="mb-6 text-xl font-bold">รายการแจ้งซ่อมสำหรับช่าง</h1>
 
-    <!-- ======================== -->
     <!-- Search & Filter Controls -->
-    <!-- ======================== -->
     <div class="flex flex-wrap gap-3 mb-6">
       <input
         v-model="searchQuery"
@@ -236,9 +234,7 @@ onMounted(() => {
       </select>
     </div>
 
-    <!-- ======================== -->
     <!-- Table Component -->
-    <!-- ======================== -->
     <TableComponent
       :columns="['รหัสใบแจ้ง', 'รายละเอียด', 'สถานะ', 'ดำเนินการ']"
       :rows="filteredRows"
@@ -262,9 +258,7 @@ onMounted(() => {
       </template>
     </TableComponent>
 
-    <!-- ======================== -->
     <!-- Accept Job Modal -->
-    <!-- ======================== -->
     <AcceptJobModal
       v-if="showAcceptPopup"
       :repairCode="currentAcceptCode"
