@@ -471,9 +471,8 @@ function closeAllPopup() {
                   <input
                     v-model="editForm.us_phone"
                     type="tel"
-                    maxlength="10"
-                    @input="editForm.us_phone = toDisplay(editForm.us_phone)"
-                    class="w-full pl-3 pr-3 py-2 border border-gray-300 rounded-lg text-black text-sm sm:text-base focus:border-black focus:ring-0 focus:outline-none transition-colors"
+                    @input="maskInput($event.target)"
+                    class="w-full pl-3 pr-3 py-2 border border-gray-300 rounded-lg text-black"
                     placeholder="กรอกเบอร์โทร"
                   />
                 </div>

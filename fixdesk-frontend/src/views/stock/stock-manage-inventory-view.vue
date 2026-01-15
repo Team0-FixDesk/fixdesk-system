@@ -10,7 +10,6 @@ defineOptions({ name: 'StockManageInventoryView' })
 
 const router = useRouter()
 
- 
 const API_BASE = import.meta.env.VITE_API_BASE
 
 const COLUMN_LIST = [
@@ -44,13 +43,13 @@ const showEditModal = ref(false)
 const isEditDragOver = ref(false)
 
 // Data Lists & Maps
-const typeOptionList = ref([]) // 
-const allRowList = ref([]) // 
-const manageCategoryList = ref([]) // 
-const filePreviewList = ref([]) // 
-const selectedStatusList = ref([]) // 
-const selectedTypeList = ref([]) // 
-const editFilePreviewList = ref([]) // 
+const typeOptionList = ref([]) //
+const allRowList = ref([]) //
+const manageCategoryList = ref([]) //
+const filePreviewList = ref([]) //
+const selectedStatusList = ref([]) //
+const selectedTypeList = ref([]) //
+const editFilePreviewList = ref([]) //
 
 const productIdToCategoryIdMap = ref({})
 const productIdToImageMap = ref({})
@@ -63,12 +62,12 @@ const editErrors = ref({})
 
 const formData = ref({
   name: '',
-  assetCode: '', 
-  categoryId: '', 
+  assetCode: '',
+  categoryId: '',
   quantity: '',
   unit: '',
   status: 'active',
-  uploadImage: null, 
+  uploadImage: null,
 })
 
 const editForm = ref({
@@ -446,10 +445,6 @@ const processFile = (files) => {
       url: url,
     },
   ]
-}
-
-const removeFile = (index) => {
-  filePreviewList.value = []
 }
 
 // --- Actions Methods ---
