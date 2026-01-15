@@ -88,7 +88,7 @@ const statItems = computed(() => [
   },
   {
     value: products.value.filter(
-      (p) => p.pd_updated_at && new Date(p.pd_updated_at).toDateString() === today.toDateString(),
+      (p) => p.pd_updated_at && isSameDay(p.pd_updated_at, today)
     ).length,
     label: 'ของเข้าใหม่วันนี้',
     colorClass: 'text-green-600',
@@ -106,6 +106,10 @@ const statItems = computed(() => [
 ])
 
 // ==================== Helpers ====================
+function isSameDay(dateString, dateObj) {
+  return new Date(dateString).toDateString() === dateObj.toDateString()
+}
+
 function getLast7Days() {
   const days = []
   for (let i = 6; i >= 0; i--) {
