@@ -32,7 +32,7 @@ export function useUserProfile(API_BASE) {
       }
     } catch (err) {
       console.error('โหลดข้อมูลผู้ใช้ไม่สำเร็จ', err)
-      error.value = err
+      error.value = err.message || 'ไม่สามารถโหลดข้อมูลผู้ใช้ได้'
     } finally {
       loading.value = false
     }

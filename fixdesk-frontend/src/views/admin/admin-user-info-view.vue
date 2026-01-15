@@ -7,7 +7,7 @@ import ImportUserModal from '@/components/import-user-excel-component.vue'
 import Sweetalert from 'sweetalert2'
 
 import { usePhoneFormat } from '@/composables/usePhoneFormat'
-const { toRaw, toDisplay } = usePhoneFormat()
+const { toRaw, toDisplay, maskInput } = usePhoneFormat()
 
 defineOptions({ name: 'AdminUserInfoView' })
 const API_BASE = import.meta.env.VITE_API_BASE
@@ -1428,7 +1428,7 @@ async function handleDeleteTechType(item) {
               >
               <input
                 v-model="addForm.us_phone"
-                @input=" addForm.us_phone = toDisplay(addForm.us_phone); clearAddError('phone') "
+                @input="(maskInput($event.target), clearAddError('phone'))"
                 type="tel"
                 :class="[
                   'w-full px-3 py-2 border rounded-md',
@@ -1468,10 +1468,7 @@ async function handleDeleteTechType(item) {
               </label>
               <select
                 v-model="addForm.us_role_id"
-                @change="
-                  handleAddRoleChange();
-                  clearAddError('role')
-                "
+                @change="(handleAddRoleChange(), clearAddError('role'))"
                 :class="[
                   'w-full px-3 py-2 border rounded-md bg-white',
                   addErrors.role ? 'border-red-500' : 'border-gray-300',
@@ -1671,10 +1668,7 @@ async function handleDeleteTechType(item) {
               <label class="block text-sm font-medium mb-1.5">เบอร์โทร</label>
               <input
                 v-model="editForm.us_phone"
-                @input="
-                  editForm.us_phone = toDisplay(editForm.us_phone);
-                  clearEditError('phone')
-                "
+                @input="(maskInput($event.target), clearEditError('phone'))"
                 type="tel"
                 :class="[
                   'w-full px-3 py-2 border rounded-md',
@@ -1713,10 +1707,7 @@ async function handleDeleteTechType(item) {
               </label>
               <select
                 v-model="editForm.us_role_id"
-                @change="
-                  handleEditRoleChange();
-                  clearEditError('role')
-                "
+                @change="(handleEditRoleChange(), clearEditError('role'))"
                 :class="[
                   'w-full px-3 py-2 border rounded-md bg-white',
                   editErrors.role ? 'border-red-500' : 'border-gray-300',
@@ -1858,7 +1849,8 @@ async function handleDeleteTechType(item) {
     </div>
   </div>
   <ImportUserModal
-   v-if="showImportModal"
-   @close="showImportModal = false"
-   @refresh="fetchUsers()" />
+    v-if="showImportModal"
+    @close="showImportModal = false"
+    @refresh="fetchUsers()"
+  />
 </template>
