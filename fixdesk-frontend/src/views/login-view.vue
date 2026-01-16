@@ -10,6 +10,7 @@ const LOGIN_URL = `${API_BASE}/login`
 const router = useRouter()
 
 /* ===================== State ===================== */
+const fieldErrors = ref({ username: '', password: '' })
 const username = ref('')
 const password = ref('')
 const errorMessage = ref('')
@@ -20,6 +21,22 @@ const rememberMe = ref(false)
 // LOGIN FUNCTION
 const handleLogin = async () => {
   errorMessage.value = ''
+
+  if (!username.value.trim() && !password.value.trim()) {
+    errorMessage.value = 'กรุณากรอกชื่อผู้ใช้และรหัสผ่าน'
+    return
+  }
+
+  if (!username.value.trim()) {
+    errorMessage.value = 'กรุณากรอกชื่อผู้ใช้'
+    return
+  }
+
+  if (!password.value.trim()) {
+    errorMessage.value = 'กรุณากรอกรหัสผ่าน'
+    return
+  }
+
   isLoading.value = true
 
   try {
@@ -118,7 +135,6 @@ const handleLogin = async () => {
             aria-label="ชื่อผู้ใช้"
             placeholder="ชื่อผู้ใช้"
             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 text-base placeholder-gray-400"
-            required
           />
 
           <input
@@ -127,7 +143,6 @@ const handleLogin = async () => {
             aria-label="รหัสผ่าน"
             placeholder="รหัสผ่าน"
             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 text-base placeholder-gray-400"
-            required
           />
 
           <label class="flex items-center gap-2 text-sm text-gray-700">
