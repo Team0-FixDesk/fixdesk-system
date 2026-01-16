@@ -955,6 +955,25 @@ async function handleDeleteTechType(item) {
     })
   }
 }
+
+function handleImportSuccess() {
+  toast.fire({
+    icon: 'success',
+    title: 'นำเข้าผู้ใช้งานเรียบร้อยแล้ว',
+    background: '#f0f9ff',
+    color: '#1e3a8a',
+  })
+  showImportModal.value = false
+}
+
+function handleImportError(message) {
+  toast.fire({
+    icon: 'error',
+    title: message || 'นำเข้าผู้ใช้งานไม่สำเร็จ',
+    background: '#fee2e2',
+    color: '#dc2626',
+  })
+}
 </script>
 
 <template>
@@ -1055,7 +1074,7 @@ async function handleDeleteTechType(item) {
         <div class="flex flex-col gap-2 sm:flex-row">
           <!-- ปุ่ม import -->
           <button
-            class="inline-flex items-center justify-center sm:justify-start w-full sm:w-auto h-10 px-4 rounded-lg bg-[#1E48D1] hover:bg-[#1539a9] text-white font-medium shadow-sm transition"
+            class="inline-flex items-center justify-center sm:justify-start w-full sm:w-auto h-10 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-900 text-white font-medium shadow-sm transition"
             @click="showImportModal = true"
           >
             <img src="/icon/plus-icon.svg" class="w-4 h-4" />
@@ -1852,5 +1871,7 @@ async function handleDeleteTechType(item) {
     v-if="showImportModal"
     @close="showImportModal = false"
     @refresh="fetchUsers()"
+    @success="handleImportSuccess"
+    @error="handleImportError"
   />
 </template>

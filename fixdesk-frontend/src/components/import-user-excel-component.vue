@@ -16,6 +16,8 @@
         @back="step = 1"
         @close="$emit('close')"
         @refresh="$emit('refresh')"
+        @success="$emit('success')"
+        @error="$emit('error', $event)"
       />
     </div>
   </div>
