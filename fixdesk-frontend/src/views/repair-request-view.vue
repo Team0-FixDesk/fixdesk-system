@@ -14,8 +14,8 @@ defineOptions({ name: 'RepairRequestView' })
 /** * การประกาศตัวแปร State และค่าคงที่
  */
 const router = useRouter()
-const API_BASE_URL = import.meta.env.VITE_API_BASE 
-const MAX_FILE_COUNT = 5 
+const API_BASE_URL = import.meta.env.VITE_API_BASE
+const MAX_FILE_COUNT = 5
 const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB
 
 const isSubmitting = ref(false)
@@ -29,9 +29,9 @@ const repairFormData = ref({
   phoneNumber: '',
   department: '',
   repairType: '',
-  repairTypeList: [], 
+  repairTypeList: [],
   building: '',
-  buildingList: [],   
+  buildingList: [],
   floor: '',
   floorList: [],
   room: '',
@@ -40,7 +40,7 @@ const repairFormData = ref({
   problemDetail: '',
   issueDescription: '',
   urgency: '',
-  uploadedFileList: [], 
+  uploadedFileList: [],
 })
 
 // ข้อมูลข้อผิดพลาดสำหรับแต่ละฟิลด์
@@ -54,9 +54,9 @@ const errorData = ref({
   urgency: '',
 })
 
-const filePreviewList = ref([]) // รายการไฟล์สำหรับแสดง Preview 
+const filePreviewList = ref([]) // รายการไฟล์สำหรับแสดง Preview
 
-// ระดับความเร่งด่วน (Constant List) 
+// ระดับความเร่งด่วน (Constant List)
 const URGENCY_LEVEL_LIST = [
   { label: 'เร่งด่วนมาก', value: 'high', border: 'border-red-600', bg: 'bg-red-600' },
   { label: 'เร่งด่วน', value: 'medium', border: 'border-amber-400', bg: 'bg-amber-400' },
@@ -67,7 +67,7 @@ const URGENCY_LEVEL_LIST = [
  */
 
 // ดึงข้อมูลประเภทงานซ่อม
-async function fetchRepairTypeList() { 
+async function fetchRepairTypeList() {
   try {
     const response = await fetch(`${API_BASE_URL}/technician-types`)
     if (!response.ok) throw new Error('โหลดข้อมูลประเภทไม่สำเร็จ')
@@ -263,7 +263,7 @@ function prevPreview() {
 }
 
 // ถอดรหัส Token
-function decodeJwtToken(token) { 
+function decodeJwtToken(token) {
   try {
     const base64Url = token.split('.')[1]
     const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
@@ -356,7 +356,7 @@ async function submitRepairRequest() {
 
     const userPayload = decodeJwtToken(token)
     let response
-    
+
     if (repairFormData.value.uploadedFileList.length > 0) {
       const formDataToSend = new FormData()
       formDataToSend.append('us_id', userPayload.us_id)
@@ -367,7 +367,7 @@ async function submitRepairRequest() {
       formDataToSend.append('problem_detail', repairFormData.value.problemDetail)
       formDataToSend.append('issue_description', repairFormData.value.issueDescription)
       formDataToSend.append('urgency', repairFormData.value.urgency || 'medium')
-      
+
       repairFormData.value.uploadedFileList.forEach((file) => {
         formDataToSend.append('files', file)
       })
@@ -522,7 +522,7 @@ function validateField(field) {
             <label class="text-sm sm:text-base font-medium text-black">
               ลงชื่อผู้แจ้ง <span class="text-red-600">*</span>
             </label>
-            <p class="text-neutral-400 text-xs mb-2">กรอกชื่อ–นามสกุลของผู้ที่ทำการแจ้งปัญหา</p>
+            <p class="text-neutral-400 text-xs mb-2">ชื่อ–นามสกุลของผู้ที่ทำการแจ้งปัญหา</p>
             <input
               v-model="repairFormData.reporterName"
               type="text"
@@ -535,7 +535,7 @@ function validateField(field) {
             <label class="text-sm sm:text-base font-medium text-black">
               เบอร์โทรศัพท์ <span class="text-red-600">*</span>
             </label>
-            <p class="text-neutral-400 text-xs mb-2">กรอกเบอร์โทรศัพท์ที่สามารถติดต่อกลับได้</p>
+            <p class="text-neutral-400 text-xs mb-2">เบอร์โทรศัพท์ที่สามารถติดต่อกลับได้</p>
             <input
               v-model="repairFormData.phoneNumber"
               type="text"
@@ -550,7 +550,7 @@ function validateField(field) {
             <label class="text-sm sm:text-base font-medium text-black">
               หน่วยงาน <span class="text-red-600">*</span>
             </label>
-            <p class="text-neutral-400 text-xs mb-2">กรอกชื่อหน่วยงานหรือแผนกที่สังกัด</p>
+            <p class="text-neutral-400 text-xs mb-2">ชื่อหน่วยงานหรือแผนกที่สังกัด</p>
             <input
               v-model="repairFormData.department"
               type="text"
@@ -586,7 +586,7 @@ function validateField(field) {
 
           <div>
             <label class="text-base font-medium text-black">หมายเลขครุภัณฑ์</label>
-            <p class="text-neutral-400 text-xs mb-2">กรอกหมายเลขครุภัณฑ์ (ถ้ามี)</p>
+            <p class="text-neutral-400 text-xs mb-2">หมายเลขครุภัณฑ์ (ถ้ามี)</p>
             <input
               v-model="repairFormData.assetCode"
               type="text"
@@ -815,7 +815,7 @@ function validateField(field) {
         <button @click="closePreview" class="absolute -top-4 -right-4 w-10 h-10 bg-black bg-opacity-50 rounded-full text-white text-2xl hover:text-gray-300 z-10">×</button>
         <img v-if="filePreviewList[currentPreviewIndex]?.isImage" :src="filePreviewList[currentPreviewIndex]?.url" class="max-w-full max-h-full object-contain" />
         <video v-else-if="filePreviewList[currentPreviewIndex]?.isVideo" :src="filePreviewList[currentPreviewIndex]?.url" controls autoplay class="max-w-full max-h-full" :key="currentPreviewIndex"></video>
-        
+
         <button v-if="filePreviewList.length > 1 && currentPreviewIndex > 0" @click="prevPreview" class="absolute -left-6 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-black bg-opacity-50 rounded-full text-white text-2xl">‹</button>
         <button v-if="filePreviewList.length > 1 && currentPreviewIndex < filePreviewList.length - 1" @click="nextPreview" class="absolute -right-6 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-black bg-opacity-50 rounded-full text-white text-2xl">›</button>
 

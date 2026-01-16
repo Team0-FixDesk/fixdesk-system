@@ -17,6 +17,12 @@ const errorMessage = ref('')
 const searched = ref(false)
 const results = ref([])
 
+// Pagination
+const currentPage = ref(1)
+const pageSize = 5
+const totalItems = ref(0)
+const totalPages = ref(1)
+
 /* ===================== Constants ===================== */
 const STATUS_TEXT_MAP = {
   pending: 'รอดำเนินการ',
@@ -47,27 +53,50 @@ const getStepColor = (currentStep, targetStep) => {
 }
 
 /* ===================== Actions ===================== */
-const handleSearch = async () => {
+const handleSearch = async (page = 1) => {
   if (!keyword.value.trim()) return
 
   loading.value = true
   errorMessage.value = ''
   searched.value = true
+  currentPage.value = page
 
   try {
     const response = await axios.get(`${API_BASE}/public/search`, {
-      params: { keyword: keyword.value },
+      params: {
+        keyword: keyword.value,
+        page: currentPage.value,
+        limit: pageSize,
+      },
     })
 
-    results.value = (response.data || []).map((item) => ({
+    results.value = (response.data.data || []).map((item) => ({
       ...item,
       step: convertStatusToStep(item.rf_user_status),
     }))
+
+    totalItems.value = response.data.total
+    totalPages.value = Math.ceil(totalItems.value / pageSize)
+
+    // เปลี่ยนหน้าแล้ว scroll กลับขึ้นบน
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   } catch (error) {
     console.error('Search failed:', error.message)
     errorMessage.value = 'เกิดข้อผิดพลาดในการค้นหา'
   } finally {
     loading.value = false
+  }
+}
+
+const goPrevPage = () => {
+  if (currentPage.value > 1) {
+    handleSearch(currentPage.value - 1)
+  }
+}
+
+const goNextPage = () => {
+  if (currentPage.value < totalPages.value) {
+    handleSearch(currentPage.value + 1)
   }
 }
 
@@ -95,9 +124,7 @@ const goToLogin = () => {
 
     <!-- Hero Section -->
     <section class="mt-6 mb-12 text-center">
-      <h1 class="text-3xl font-bold text-slate-800 tracking-tight">
-        ตรวจสอบสถานะงานซ่อม
-      </h1>
+      <h1 class="text-3xl font-bold text-slate-800 tracking-tight">ตรวจสอบสถานะงานซ่อม</h1>
       <p class="text-lg text-slate-500 mt-2">
         ค้นหารายการแจ้งซ่อม ติดตามสถานะแบบเรียลไทม์ สะดวก รวดเร็ว
       </p>
@@ -113,29 +140,27 @@ const goToLogin = () => {
         <input
           v-model="keyword"
           type="text"
-          @keyup.enter="handleSearch"
-          class="flex-1 px-5 py-2 rounded-2xl border border-slate-300 focus:ring-2 focus:ring-blue-400 transition"
+          @keyup.enter="handleSearch(1)"
+          class="flex-1 px-5 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-400 transition"
         />
 
         <button
-          @click="handleSearch"
-          class="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl shadow-md transition active:scale-[0.97]"
+          @click="handleSearch(1)"
+          class="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-md transition active:scale-[0.97]"
         >
           ค้นหา
         </button>
       </div>
 
       <div class="mt-3 text-sm text-slate-400">
-        ตัวอย่างการค้นหา: RF00000000000, สมชาย ใจดี, แผนก IT
+        ตัวอย่างการค้นหา: RFXXXXXXXXXXX, สมชาย ใจดี, แผนก IT
       </div>
     </div>
 
     <!-- Results Section -->
     <div class="w-full max-w-4xl">
       <!-- Loading -->
-      <div v-if="loading" class="text-center py-10 text-slate-500 animate-pulse">
-        กำลังค้นหา...
-      </div>
+      <div v-if="loading" class="text-center py-10 text-slate-500 animate-pulse">กำลังค้นหา...</div>
 
       <!-- Error -->
       <div
@@ -155,7 +180,7 @@ const goToLogin = () => {
 
       <!-- Found -->
       <p v-if="results.length > 0" class="text-slate-500 mb-3 text-md">
-        พบ {{ results.length }} รายการ
+        พบ {{ totalItems }} รายการ
       </p>
 
       <div
@@ -164,9 +189,7 @@ const goToLogin = () => {
         class="bg-white p-7 shadow-lg rounded-3xl border border-slate-200 hover:shadow-xl transition mb-6"
       >
         <div class="flex justify-between items-start">
-          <p class="text-md font-semibold text-slate-700">
-            เลขแจ้งซ่อม: {{ item.rf_code }}
-          </p>
+          <p class="text-md font-semibold text-slate-700">เลขแจ้งซ่อม: {{ item.rf_code }}</p>
 
           <span
             class="px-3 py-1 text-sm rounded-full"
@@ -183,11 +206,9 @@ const goToLogin = () => {
           </p>
           <p>
             <strong class="text-slate-800">หน่วยงาน:</strong>
-            {{ item.reporter_department}}
+            {{ item.reporter_department }}
           </p>
-          <p>
-            <strong class="text-slate-800">ปัญหา:</strong> {{ item.rf_problem }}
-          </p>
+          <p><strong class="text-slate-800">ปัญหา:</strong> {{ item.rf_problem }}</p>
           <p class="text-slate-500">
             <strong class="text-slate-700">สถานที่:</strong>
             {{ item.building_name }} {{ item.floor_name }} {{ item.room_name }}
@@ -203,6 +224,28 @@ const goToLogin = () => {
           <span :class="getStepColor(item.step, 3)">● ดำเนินการเสร็จสิ้น</span>
         </div>
       </div>
+      <!-- Pagination -->
+      <div v-if="totalPages > 1" class="flex justify-center items-center gap-4 mt-10">
+        <button
+          @click="goPrevPage"
+          :disabled="currentPage === 1"
+          class="w-24 px-4 py-2 text-slate-700 rounded-xl border text-sm font-medium transition disabled:opacity-40 disabled:cursor-not-allowed bg-white hover:bg-slate-100"
+        >
+          ก่อนหน้า
+        </button>
+
+        <span class="text-slate-600 text-sm font-medium">
+          หน้า {{ currentPage }} จาก {{ totalPages }}
+        </span>
+
+        <button
+          @click="goNextPage"
+          :disabled="currentPage === totalPages"
+          class="w-24 px-4 py-2 text-slate-700 rounded-xl border text-sm font-medium transition disabled:opacity-40 disabled:cursor-not-allowed bg-white hover:bg-slate-100"
+        >
+          ถัดไป
+        </button>
+      </div>
     </div>
 
     <footer class="mt-16 text-slate-400 text-sm pb-10">
@@ -210,4 +253,3 @@ const goToLogin = () => {
     </footer>
   </div>
 </template>
-

@@ -3,14 +3,35 @@ const express = require("express");
 module.exports = function PublicRoutes(db) {
   const router = express.Router();
 
-  // ค้นหาใบแจ้งซ่อมแบบ Public (ไม่ต้อง token)
   router.get("/search", (req, res) => {
     const keyword = req.query.keyword || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
     if (!keyword.trim()) {
-      return res.json([]); // ถ้าไม่มี keyword ไม่ต้องหาอะไร
+      return res.json({
+        data: [],
+        total: 0,
+      });
     }
 
-    const sql = `
+    const like = `%${keyword}%`;
+
+    // query นับจำนวนทั้งหมด
+    const countSql = `
+      SELECT COUNT(*) AS total
+      FROM repair_form rf
+      LEFT JOIN user u ON rf.rf_us_id = u.us_id
+      WHERE 
+        rf.rf_code LIKE ?
+        OR u.us_first_name_th LIKE ?
+        OR u.us_last_name_th LIKE ?
+        OR u.us_department LIKE ?
+    `;
+
+    // query ข้อมูลตามหน้า
+    const dataSql = `
       SELECT 
         rf.rf_code,
         rf.rf_problem,
@@ -28,22 +49,37 @@ module.exports = function PublicRoutes(db) {
       LEFT JOIN floor f ON r.room_fl_id = f.fl_id
       LEFT JOIN building b ON f.fl_bd_id = b.bd_id
       WHERE 
-        rf.rf_code LIKE ? 
+        rf.rf_code LIKE ?
         OR u.us_first_name_th LIKE ?
         OR u.us_last_name_th LIKE ?
         OR u.us_department LIKE ?
       ORDER BY rf.rf_create_at DESC
-      LIMIT 20
+      LIMIT ? OFFSET ?
     `;
 
-    const like = `%${keyword}%`;
-
-    db.query(sql, [like, like, like, like], (err, results) => {
+    db.query(countSql, [like, like, like, like], (err, countResult) => {
       if (err) {
-        console.error("Public search error:", err);
+        console.error("Count error:", err);
         return res.status(500).json({ message: "เกิดข้อผิดพลาด" });
       }
-      res.json(results);
+
+      const total = countResult[0].total;
+
+      db.query(
+        dataSql,
+        [like, like, like, like, limit, offset],
+        (err, dataResult) => {
+          if (err) {
+            console.error("Data error:", err);
+            return res.status(500).json({ message: "เกิดข้อผิดพลาด" });
+          }
+
+          res.json({
+            data: dataResult,
+            total,
+          });
+        }
+      );
     });
   });
 
