@@ -17,6 +17,8 @@ const props = defineProps({
 
   columnAlign: { type: Array, default: () => [] },
   hiddenColumns: { type: Array, default: () => [] }, // คอลัมน์ที่ต้องการซ่อน เช่น [0]
+
+  idColumnAsLink: { type: Boolean, default: true },// กำหนดให้คอลัมน์ ID เป็นลิงก์หรือไม่
 })
 const openMenuId = ref(null)
 const currentPage = ref(1)
@@ -115,64 +117,40 @@ function renderStatusStockInventoryBadge(type) {
     <table class="min-w-[640px] w-full text-xs sm:text-sm border-collapse">
       <thead class="bg-gray-100 border-b border-gray-300">
         <tr>
-          <th
-            v-for="(column, columnIndex) in columns"
-            :key="columnIndex"
-            v-show="!hiddenColumns.includes(columnIndex)"
+          <th v-for="(column, columnIndex) in columns" :key="columnIndex" v-show="!hiddenColumns.includes(columnIndex)"
             class="px-3 py-3 font-semibold text-gray-700 sticky top-0 z-[5] bg-gray-100"
-            :class="getAlignClass(columnIndex)"
-          >
+            :class="getAlignClass(columnIndex)">
             {{ column }}
           </th>
         </tr>
       </thead>
 
       <tbody>
-        <tr
-          v-for="(row, rowIndex) in paginatedRows"
-          :key="rowIndex"
+        <tr v-for="(row, rowIndex) in paginatedRows" :key="rowIndex"
           class="bg-white border-b hover:bg-gray-100 cursor-pointer"
-          :class="{ '!bg-blue-50': row[idColumnIndex] == activeId }"
-          @click="$emit('detail', getRowId(row))"
-        >
-          <td
-            v-for="(cell, cellIndex) in row"
-            :key="cellIndex"
-            v-show="!hiddenColumns.includes(cellIndex)"
-            class="px-3 py-2"
-            :class="getAlignClass(cellIndex)"
-          >
+          :class="{ '!bg-blue-50': row[idColumnIndex] == activeId }" @click="$emit('detail', getRowId(row))">
+          <td v-for="(cell, cellIndex) in row" :key="cellIndex" v-show="!hiddenColumns.includes(cellIndex)"
+            class="px-3 py-2" :class="getAlignClass(cellIndex)">
+            <!-- ไฮไลต์คอลัมน์แรกเป็นลิงก์ -->
+            <span v-if="cellIndex === props.idColumnIndex && props.idColumnAsLink"
+              class="text-blue-600 underline cursor-pointer hover:text-blue-800"
+              @click.stop="$emit('detail', getRowId(row))" v-html="cell"></span>
             <!-- URGENCY BADGE -->
-            <span v-if="cellIndex === props.urgencyColumn" v-html="renderUrgencyBadge(cell)"></span>
+            <span v-else-if="cellIndex === props.urgencyColumn" v-html="renderUrgencyBadge(cell)"></span>
 
             <!-- STATUS BADGE -->
-            <span
-              v-else-if="cellIndex === props.statusColumn"
-              v-html="renderStatusBadge(cell)"
-            ></span>
+            <span v-else-if="cellIndex === props.statusColumn" v-html="renderStatusBadge(cell)"></span>
 
             <!-- STATUS STOCK BADGE -->
-            <span
-              v-else-if="cellIndex === props.statusStockColumn"
-              v-html="renderStatusStockBadge(cell)"
-            ></span>
+            <span v-else-if="cellIndex === props.statusStockColumn" v-html="renderStatusStockBadge(cell)"></span>
 
-            <span
-              v-else-if="cellIndex === props.statusStockinventoryColumn"
-              v-html="renderStatusStockInventoryBadge(cell)"
-            ></span>
+            <span v-else-if="cellIndex === props.statusStockinventoryColumn"
+              v-html="renderStatusStockInventoryBadge(cell)"></span>
 
             <!-- SLOT (ใช้สำหรับ Actions) -->
-            <slot
-              v-else-if="$slots[`cell-${cellIndex}`]"
-              :name="`cell-${cellIndex}`"
-              :row="row"
-              :cell="cell"
-              :rowIndex="rowIndex"
-              :columnIndex="cellIndex"
-              :openMenuId="openMenuId"
-              @toggle-menu="(id) => (openMenuId = id)"
-            ></slot>
+            <slot v-else-if="$slots[`cell-${cellIndex}`]" :name="`cell-${cellIndex}`" :row="row" :cell="cell"
+              :rowIndex="rowIndex" :columnIndex="cellIndex" :openMenuId="openMenuId"
+              @toggle-menu="(id) => (openMenuId = id)"></slot>
 
             <!-- DEFAULT CELL -->
             <span v-else v-html="cell"></span>
@@ -188,16 +166,10 @@ function renderStatusStockInventoryBadge(type) {
 
         <button @click="currentPage--" :disabled="currentPage === 1" class="px-3 py-2">‹</button>
 
-        <button
-          v-for="page in totalPages"
-          :key="page"
-          @click="currentPage = page"
-          class="px-3 py-2"
-          :class="{
-            'bg-blue-100 text-blue-600': currentPage === page,
-            'bg-white text-gray-700': currentPage !== page,
-          }"
-        >
+        <button v-for="page in totalPages" :key="page" @click="currentPage = page" class="px-3 py-2" :class="{
+          'bg-blue-100 text-blue-600': currentPage === page,
+          'bg-white text-gray-700': currentPage !== page,
+        }">
           {{ page }}
         </button>
 
@@ -205,11 +177,7 @@ function renderStatusStockInventoryBadge(type) {
           ›
         </button>
 
-        <button
-          @click="currentPage = totalPages"
-          :disabled="currentPage === totalPages"
-          class="px-3 py-2"
-        >
+        <button @click="currentPage = totalPages" :disabled="currentPage === totalPages" class="px-3 py-2">
           »
         </button>
       </div>

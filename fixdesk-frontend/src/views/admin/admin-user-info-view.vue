@@ -1105,6 +1105,8 @@ function handleImportError(message) {
           "
           :perPage="10"
           :columnAlign="['left', 'left', 'left', 'left', 'left', 'center']"
+          :id-column-as-link="false"
+          @detail="openViewModal"
         >
           <!-- ใส่ SLOT ให้ column ตัวดำเนินการ -->
           <template #cell-5="{ row }">

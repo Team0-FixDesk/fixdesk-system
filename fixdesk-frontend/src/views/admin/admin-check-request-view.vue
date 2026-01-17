@@ -232,6 +232,8 @@ onMounted(() => {
       :urgencyColumn="2"
       :statusColumn="3"
       :columnAlign="['left', 'left', 'center', 'center', 'center']"
+      :id-column-index="0"
+      @detail="openDetail"
     >
       <!-- คอลัมน์ Action (index 7) -->
       <template #cell-4="{ row, rowIndex }">
