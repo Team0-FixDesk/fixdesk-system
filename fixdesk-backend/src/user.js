@@ -23,6 +23,7 @@ module.exports = function UserRoutes(db) {
       u.us_role_id,
       r.role_name,
       u.us_tt_id,
+      u.us_job_title,
       t.tt_name AS technician_type,
       CONCAT(tn.ttn_title_th, '', u.us_first_name_th, ' ', u.us_last_name_th) AS full_name,
       -- จำนวนใบแจ้งซ่อมที่ผู้ใช้เป็นผู้แจ้ง
@@ -115,6 +116,7 @@ module.exports = function UserRoutes(db) {
         u.us_department,
         u.us_role_id,
         u.us_tt_id,
+        u.us_job_title,
         r.role_name,
         t.tt_name AS technician_type,
         tn.ttn_title_th AS title_name
@@ -151,13 +153,15 @@ module.exports = function UserRoutes(db) {
       us_department,
       us_role_id,
       us_tt_id,
+      us_job_title,
     } = req.body;
     if (
       !us_user_name ||
       !us_user_pass ||
       !us_first_name_th ||
       !us_last_name_th ||
-      !us_role_id
+      !us_role_id || 
+      !us_job_title
     )
       return res.status(400).json({ message: "กรุณากรอกข้อมูลให้ครบ" });
     // ตรวจชื่อนามสกุลยต้องเป็นภาษาไทย
@@ -196,9 +200,9 @@ module.exports = function UserRoutes(db) {
           us_first_name_th, us_last_name_th,
           us_first_name_en, us_last_name_en,
           us_phone, us_department,
-          us_role_id, us_tt_id
+          us_role_id, us_tt_id, us_job_title
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
 
       const params = [
@@ -213,6 +217,7 @@ module.exports = function UserRoutes(db) {
         us_department || null,
         us_role_id,
         us_tt_id || null,
+        us_job_title || null,
       ];
 
       db.query(query, params, (err, result) => {
@@ -234,55 +239,84 @@ module.exports = function UserRoutes(db) {
   });
 
   // แก้ไขข้อมูลบัญชีผู้ใช้
-  router.put("/users/:id", authMiddleware, (req, res) => {
-    const id = Number(req.params.id);
-    if (!Number.isFinite(id))
-      return res.status(400).json({ message: "id ไม่ถูกต้อง" });
+router.put("/users/:id", authMiddleware, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id))
+    return res.status(400).json({ message: "id ไม่ถูกต้อง" });
 
-    const {
-      us_ttn_id,
-      us_first_name_th,
-      us_last_name_th,
-      us_first_name_en,
-      us_last_name_en,
-      us_phone,
-      us_department,
-      us_role_id,
-      us_tt_id,
-    } = req.body;
+  const {
+    us_ttn_id,
+    us_first_name_th,
+    us_last_name_th,
+    us_first_name_en,
+    us_last_name_en,
+    us_phone,
+    us_department,
+    us_role_id,
+    us_tt_id,
+    us_job_title,
+    us_user_name,      // เพิ่ม
+    us_user_pass,      // เพิ่ม
+  } = req.body;
 
-    const query = `
-      UPDATE user
-      SET
-        us_ttn_id=?, us_first_name_th=?, us_last_name_th=?,
-        us_first_name_en=?, us_last_name_en=?,
-        us_phone=?, us_department=?, us_role_id=?, us_tt_id=?
-      WHERE us_id=?`;
+  // ตรวจสอบ username ซ้ำ (ถ้ามีการเปลี่ยน)
+  if (us_user_name) {
+    const [dup] = await db.promise().query(
+      "SELECT us_id FROM user WHERE us_user_name = ? AND us_id != ?",
+      [us_user_name, id]
+    );
+    if (dup.length)
+      return res.status(409).json({ message: "ชื่อผู้ใช้ซ้ำในระบบ" });
+  }
 
-    const params = [
-      us_ttn_id || null,
-      us_first_name_th,
-      us_last_name_th,
-      us_first_name_en || null,
-      us_last_name_en || null,
-      us_phone || null,
-      us_department || null,
-      us_role_id,
-      us_tt_id || null,
-      id,
-    ];
-    db.query(query, params, (err, result) => {
-      if (err)
-        return res
-          .status(500)
-          .json({ message: "อัปเดตไม่สำเร็จ", error: err.message });
-      res.json({ updated: result.affectedRows });
-    });
+  // เตรียม SQL และ params
+  let sql = `
+    UPDATE user
+    SET
+      us_ttn_id=?, us_first_name_th=?, us_last_name_th=?,
+      us_first_name_en=?, us_last_name_en=?,
+      us_phone=?, us_department=?, us_role_id=?, us_tt_id=?, us_job_title=?
+  `;
+  const params = [
+    us_ttn_id || null,
+    us_first_name_th,
+    us_last_name_th,
+    us_first_name_en || null,
+    us_last_name_en || null,
+    us_phone || null,
+    us_department || null,
+    us_role_id,
+    us_tt_id || null,
+    us_job_title || null,
+  ];
+
+  // เพิ่ม username
+  if (us_user_name) {
+    sql += `, us_user_name=?`;
+    params.push(us_user_name);
+  }
+
+  // เพิ่ม password (hash ก่อน)
+  if (us_user_pass) {
+    const bcrypt = require("bcrypt");
+    const hashed = await bcrypt.hash(us_user_pass, 10);
+    sql += `, us_user_pass=?`;
+    params.push(hashed);
+  }
+
+  sql += ` WHERE us_id=?`;
+  params.push(id);
+
+  db.query(sql, params, (err, result) => {
+    if (err)
+      return res
+        .status(500)
+        .json({ message: "อัปเดตไม่สำเร็จ", error: err.message });
+    res.json({ updated: result.affectedRows });
   });
+});
 
-  // ----------------------------------------------------------------------
-  // [จุดแก้ไข] ลบบัญชีผู้ใช้อิง id
-  // ----------------------------------------------------------------------
+  //ลบบัญชีผู้ใช้อิง id
   router.delete("/users/:id", authMiddleware, (req, res) => {
     const id = Number(req.params.id);
     if (!Number.isFinite(id))
@@ -328,7 +362,6 @@ module.exports = function UserRoutes(db) {
       });
     });
   });
-  // ----------------------------------------------------------------------
 
   // แก้ไขข้อมูลผู้ใช้ (ส่วนตัว)
   router.put("/edit-personal/:id", async (req, res) => {
@@ -475,7 +508,8 @@ module.exports = function UserRoutes(db) {
           !phoneRegex.test(u.phone) ||
           !u.department ||
           !u.role_name ||
-          !u.title_name
+          !u.title_name ||
+          !u.job_title
         ) {
           throw new Error("Missing required fields");
         }
@@ -488,6 +522,7 @@ module.exports = function UserRoutes(db) {
         const us_last_name_en = u.last_name_en;
         const us_phone = u.phone;
         const us_department = u.department;
+        const us_job_title = u.job_title;
 
         
         const [roleRows] = await db
@@ -553,8 +588,9 @@ module.exports = function UserRoutes(db) {
           us_first_name_en,
           us_last_name_en,
           us_role_id,
-          us_tt_id
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          us_tt_id,
+          us_job_title
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             us_user_name,
             hashedPassword,
@@ -567,6 +603,7 @@ module.exports = function UserRoutes(db) {
             us_last_name_en,
             us_role_id,
             us_tt_id,
+            us_job_title
           ]
         );
 
