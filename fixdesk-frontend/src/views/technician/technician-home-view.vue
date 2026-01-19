@@ -115,7 +115,7 @@ const mapStockStatus = (s) =>
   ] || '-'
 
 // Function to generate HTML badge string for TableComponent
-const getBadgeHtml = (text, type) => {
+function getBadgeHtml(text, type) {
   let colorClass = 'bg-gray-100 text-gray-600'
 
   if (type === 'urgency') {
@@ -265,10 +265,10 @@ const openDetail = (rfCode) => {
 </script>
 
 <template>
-  <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-8xl">
+  <div class="p-8 mx-auto bg-white shadow-md rounded-xl max-w-8xl">
     <div class="mb-6">
       <h1 class="text-2xl font-bold text-gray-800">{{ technicianName }}</h1>
-      <p class="text-sm text-gray-600 mt-1">
+      <p class="mt-1 text-sm text-gray-600">
         ตรวจสอบสถานะงานซ่อมและจัดการรายการเบิกจ่ายวัสดุอุปกรณ์
       </p>
     </div>
@@ -277,9 +277,9 @@ const openDetail = (rfCode) => {
       <CardHomeComponent :items="statItems" @click="onCardClick" />
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-      <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 lg:col-span-2">
-        <div class="flex justify-between items-center mb-4">
+    <div class="grid grid-cols-1 gap-6 mb-8 lg:grid-cols-3">
+      <div class="p-5 bg-white border border-gray-200 shadow-sm rounded-2xl lg:col-span-2">
+        <div class="flex items-center justify-between mb-4">
           <div>
             <h2 class="text-xl font-bold text-gray-900">งานที่ได้รับมอบหมายล่าสุด</h2>
             <p class="text-sm text-gray-500">5 รายการล่าสุด</p>
@@ -305,35 +305,35 @@ const openDetail = (rfCode) => {
       </div>
 
       <div
-        class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 flex flex-col justify-center items-center"
+        class="flex flex-col items-center justify-center p-6 bg-white border border-gray-200 shadow-sm rounded-2xl"
       >
-        <h2 class="text-lg font-bold text-gray-800 mb-6 self-start">สัดส่วนงานทั้งหมด</h2>
+        <h2 class="self-start mb-6 text-lg font-bold text-gray-800">สัดส่วนงานทั้งหมด</h2>
         <div class="relative w-48 h-48">
           <div class="w-full h-full rounded-full" :style="donutChart"></div>
           <div
-            class="absolute top-1/2 left-1/2 w-32 h-32 bg-white rounded-full -translate-x-1/2 -translate-y-1/2 flex items-center justify-center"
+            class="absolute flex items-center justify-center w-32 h-32 -translate-x-1/2 -translate-y-1/2 bg-white rounded-full top-1/2 left-1/2"
           >
-            <span class="text-gray-400 text-xs">ภาพรวม</span>
+            <span class="text-xs text-gray-400">ภาพรวม</span>
           </div>
         </div>
-        <div class="mt-6 grid grid-cols-2 gap-x-4 gap-y-2 text-xs w-full">
+        <div class="grid w-full grid-cols-2 mt-6 text-xs gap-x-4 gap-y-2">
           <div class="flex items-center">
-            <span class="w-3 h-3 rounded bg-green-600 mr-2"></span>เสร็จสิ้น
+            <span class="w-3 h-3 mr-2 bg-green-600 rounded"></span>เสร็จสิ้น
           </div>
           <div class="flex items-center">
-            <span class="w-3 h-3 rounded bg-orange-500 mr-2"></span>กำลังทำ
+            <span class="w-3 h-3 mr-2 bg-orange-500 rounded"></span>กำลังทำ
           </div>
           <div class="flex items-center">
-            <span class="w-3 h-3 rounded bg-red-600 mr-2"></span>ยกเลิก
+            <span class="w-3 h-3 mr-2 bg-red-600 rounded"></span>ยกเลิก
           </div>
           <div class="flex items-center">
-            <span class="w-3 h-3 rounded bg-blue-700 mr-2"></span>อื่นๆ
+            <span class="w-3 h-3 mr-2 bg-blue-700 rounded"></span>อื่นๆ
           </div>
         </div>
       </div>
     </div>
 
-    <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+    <div class="p-6 bg-white border border-gray-200 shadow-sm rounded-2xl">
       <div class="mb-4">
         <h2 class="text-xl font-bold text-gray-900">รายการเบิกของล่าสุด</h2>
         <p class="text-sm text-gray-500">5 รายการล่าสุด</p>
@@ -358,7 +358,7 @@ const openDetail = (rfCode) => {
 
         <!-- รายละเอียด -->
         <template #cell-1="{ row }">
-          <div class="text-sm space-y-1">
+          <div class="space-y-1 text-sm">
             <div>วันที่เบิก: {{ row[1].date }}</div>
             <div>รหัสใบแจ้งซ่อม: {{ row[1].rf_code }}</div>
           </div>
@@ -369,9 +369,9 @@ const openDetail = (rfCode) => {
           <div class="flex justify-center">
             <button
               @click="openDetail(row[1].rf_code)"
-              class="flex items-center gap-2 px-2 py-2 rounded-md bg-blue-500 text-white hover:bg-blue-600"
+              class="flex items-center gap-2 px-2 py-2 text-white bg-blue-500 rounded-md hover:bg-blue-600"
             >
-              <img src="/icon/info-icon.svg" class="h-4 w-4" />
+              <img src="/icon/info-icon.svg" class="w-4 h-4" />
             </button>
           </div>
         </template>

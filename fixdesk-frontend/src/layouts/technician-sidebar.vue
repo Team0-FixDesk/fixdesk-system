@@ -51,7 +51,7 @@ const menus = [
         FIXDESK
       </span>
     </div>
-    <!-- เมนูหลัก -->
+    <!-- เมนูหลัก -->ผ
     <nav class="flex flex-col gap-3 mt-6 px-2 flex-1">
       <RouterLink
         v-for="(menu, index) in menus"

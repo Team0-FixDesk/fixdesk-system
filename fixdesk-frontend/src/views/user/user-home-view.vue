@@ -16,7 +16,6 @@ const API_BASE = import.meta.env.VITE_API_BASE
 const { token, userId, isAuthenticated, logout } = useAuthToken()
 const { displayName, displayDepartment, fetchUserProfile } = useUserProfile(API_BASE)
 
-
 // ตัวแปรสำหรับ Card สถิติ
 const statsItems = ref([
   {
@@ -257,14 +256,15 @@ onMounted(() => {
       <div class="col-span-8 bg-white rounded-xl border border-slate-200 shadow-sm p-5">
         <div class="border-b border-slate-200 pb-2 mb-4">
           <h2 class="text-xl font-bold mb-1">รายการที่ฉันแจ้งซ่อม</h2>
-          <p class="text-xs text-gray-500">7 รายการแจ้งซ่อมล่าสุด (เรียงจากวันที่แจ้ง)</p>
+          <p class="text-xs text-gray-500">7 รายการแจ้งซ่อมล่าสุด (เรียงจากวันที่แจ้ง) สามารถกดรายการแจ้งซ่อมในตารางเพื่อดูรายละเอียด</p>
         </div>
 
         <TableComponent
-          :columns="['วันที่', 'หมายเลขแจ้งซ่อม', 'ประเภทงาน', 'ความเร่งด่วน', 'สถานะ']"
+          :columns="['วันที่', 'หมายเลขแจ้งซ่อม', 'ประเภทงาน', 'ความเร่งด่วน', 'สถานะงาน']"
           :rows="tableRows"
           :rawRows="tableRawRows"
           :perPage="7"
+          :columnAlign="['left', 'left', 'left', 'center', 'center']"
           mode="user"
           :idColumnIndex="1"
           :urgencyColumn="3"

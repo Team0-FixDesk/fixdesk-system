@@ -1,41 +1,55 @@
 <script setup>
+/** * การนำเข้า Library และ Component
+ */
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
+import { usePhoneFormat } from '@/composables/usePhoneFormat'
 
-import { usePhoneFormat } from "@/composables/usePhoneFormat";
-const { toDisplay } = usePhoneFormat();
-
-
+/**
+ * การกำหนด Options / Props
+ */
 defineOptions({ name: 'RepairEditView' })
 
+/**
+ * การประกาศตัวแปรและค่าคงที่
+ */
 const route = useRoute()
 const router = useRouter()
+const { toDisplay } = usePhoneFormat()
+
 const repairCode = route.params.code
-const API_BASE = import.meta.env.VITE_API_BASE
+const API_BASE_URL = import.meta.env.VITE_API_BASE
+const MAX_FILE_COUNT = 5
+const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB
 
 const isSubmitting = ref(false)
-const formData = ref({
+const isDragOver = ref(false)
+const showPreviewModal = ref(false)
+const currentPreviewIndex = ref(0)
+
+// ข้อมูลหลักในฟอร์มแจ้งซ่อม
+const repairFormData = ref({
   reporterName: '',
   phoneNumber: '',
   department: '',
   repairType: '',
-  repairTypeOptions: [],
+  repairTypeList: [],
   building: '',
-  buildingOptions: [],
+  buildingList: [],
   floor: '',
-  floorOptions: [],
+  floorList: [],
   room: '',
-  roomOptions: [],
+  roomList: [],
   assetCode: '',
   problemDetail: '',
   issueDescription: '',
   urgency: '',
-  uploadedFiles: [],
+  uploadedFileList: [],
 })
 
-/* errors สำหรับแต่ละช่อง (เหมือนหน้าสร้าง) */
-const errors = ref({
+// ข้อมูลข้อผิดพลาดของแต่ละฟิลด์
+const errorData = ref({
   repairType: '',
   building: '',
   floor: '',
@@ -45,22 +59,27 @@ const errors = ref({
   urgency: '',
 })
 
-const filePreview = ref([]) // list ไฟล์ไว้โชว์
-const maxFiles = 5
-const isDragOver = ref(false)
+const filePreviewList = ref([]) // รายการไฟล์สำหรับแสดงผล Preview
+const existingFileList = ref([]) // รายการ Path ไฟล์เดิมที่มีอยู่ในระบบ
 
-const showPreviewModal = ref(false)
-const currentPreviewIndex = ref(0)
+// ระดับความเร่งด่วน
+const URGENCY_LEVEL_LIST = [
+  { label: 'เร่งด่วนมาก', value: 'high', border: 'border-red-600', bg: 'bg-red-600' },
+  { label: 'เร่งด่วน', value: 'medium', border: 'border-amber-400', bg: 'bg-amber-400' },
+  { label: 'ไม่เร่งด่วน', value: 'low', border: 'border-green-600', bg: 'bg-green-600' },
+]
 
-/** เก็บ path ของไฟล์เดิมที่ยังคงอยู่ใน DB (จาก rf_image) */
-const existingFiles = ref([]) // ex: ['/uploads/repair/RF_xxx.jpg', ...]
+/**
+ *  ส่วนของฟังก์ชัน
+ */
 
-async function fetchTechnicianTypes() {
+// ดึงข้อมูลประเภทงานซ่อม
+async function fetchRepairTypeList() {
   try {
-    const res = await fetch(`${API_BASE}/technician-types`)
-    if (!res.ok) throw new Error('โหลดข้อมูลประเภทไม่สำเร็จ')
-    const data = await res.json()
-    formData.value.repairTypeOptions = data.map((item) => ({
+    const response = await fetch(`${API_BASE_URL}/technician-types`)
+    if (!response.ok) throw new Error('โหลดข้อมูลประเภทไม่สำเร็จ')
+    const data = await response.json()
+    repairFormData.value.repairTypeList = data.map((item) => ({
       id: Number(item.tt_id),
       name: item.tt_name,
     }))
@@ -69,12 +88,13 @@ async function fetchTechnicianTypes() {
   }
 }
 
-async function fetchBuildings() {
+// ดึงข้อมูลอาคาร
+async function fetchBuildingList() {
   try {
-    const res = await fetch(`${API_BASE}/buildings`)
-    if (!res.ok) throw new Error('โหลดข้อมูลอาคารไม่สำเร็จ')
-    const data = await res.json()
-    formData.value.buildingOptions = data.map((b) => ({
+    const response = await fetch(`${API_BASE_URL}/buildings`)
+    if (!response.ok) throw new Error('โหลดข้อมูลอาคารไม่สำเร็จ')
+    const data = await response.json()
+    repairFormData.value.buildingList = data.map((b) => ({
       id: Number(b.building_id),
       name: b.building_name,
     }))
@@ -83,13 +103,14 @@ async function fetchBuildings() {
   }
 }
 
-async function fetchFloors(buildingId) {
+// ดึงข้อมูลชั้นตามอาคารที่เลือก
+async function fetchFloorList(buildingId) {
   if (!buildingId) return
   try {
-    const res = await fetch(`${API_BASE}/floors/${buildingId}`)
-    if (!res.ok) throw new Error('โหลดข้อมูลชั้นไม่สำเร็จ')
-    const data = await res.json()
-    formData.value.floorOptions = data.map((f) => ({
+    const response = await fetch(`${API_BASE_URL}/floors/${buildingId}`)
+    if (!response.ok) throw new Error('โหลดข้อมูลชั้นไม่สำเร็จ')
+    const data = await response.json()
+    repairFormData.value.floorList = data.map((f) => ({
       id: Number(f.floor_id),
       name: f.floor_name,
     }))
@@ -98,13 +119,14 @@ async function fetchFloors(buildingId) {
   }
 }
 
-async function fetchRooms(floorId) {
+// ดึงข้อมูลห้องตามชั้นที่เลือก
+async function fetchRoomList(floorId) {
   if (!floorId) return
   try {
-    const res = await fetch(`${API_BASE}/rooms/${floorId}`)
-    if (!res.ok) throw new Error('โหลดข้อมูลห้องไม่สำเร็จ')
-    const data = await res.json()
-    formData.value.roomOptions = data.map((r) => ({
+    const response = await fetch(`${API_BASE_URL}/rooms/${floorId}`)
+    if (!response.ok) throw new Error('โหลดข้อมูลห้องไม่สำเร็จ')
+    const data = await response.json()
+    repairFormData.value.roomList = data.map((r) => ({
       id: Number(r.room_id),
       name: r.room_name,
     }))
@@ -113,56 +135,52 @@ async function fetchRooms(floorId) {
   }
 }
 
-// File Upload
-function handleFileUpload(event) {
-  const files = Array.from(event.target.files)
-  processFiles(files)
+// จัดการการอัปโหลดไฟล์ผ่านการเลือกไฟล์
+function onFileUpload(event) {
+  const fileList = Array.from(event.target.files)
+  processFileList(fileList)
 }
 
-function handleDragOver(event) {
+function onDragOver(event) {
   event.preventDefault()
   isDragOver.value = true
 }
 
-function handleDragLeave(event) {
+function onDragLeave(event) {
   event.preventDefault()
   isDragOver.value = false
 }
 
-function handleDrop(event) {
+function onDrop(event) {
   event.preventDefault()
   isDragOver.value = false
-
-  const files = Array.from(event.dataTransfer.files)
-  if (files.length > 0) {
-    processFiles(files)
+  const fileList = Array.from(event.dataTransfer.files)
+  if (fileList.length > 0) {
+    processFileList(fileList)
   }
 }
 
-function processFiles(files) {
-  // เช็คจำนวนไฟล์
-  if (formData.value.uploadedFiles.length + files.length > maxFiles) {
-    // Toast notification
+// ตรวจสอบและประมวลผลไฟล์
+function processFileList(fileList) {
+  // ตรวจสอบจำนวนไฟล์สูงสุด
+  if (repairFormData.value.uploadedFileList.length + fileList.length > MAX_FILE_COUNT) {
     const Toast = Swal.mixin({
       toast: true,
       position: 'top-end',
-      animation: false,
       showConfirmButton: false,
       timer: 2000,
-      timerProgressBar: true
+      timerProgressBar: true,
     })
     Toast.fire({
       title: 'ไฟล์เกินกำหนด',
-      text: `สามารถอัพโหลดได้สูงสุด ${maxFiles} ไฟล์`,
+      text: `สามารถอัพโหลดได้สูงสุด ${MAX_FILE_COUNT} ไฟล์`,
       icon: 'warning',
-      background: '#fef3c7',
-      color: '#92400e'
     })
     return
   }
 
-  // เช็คประเภทไฟล์
-  const allowedTypes = [
+  // ตรวจสอบประเภทไฟล์ที่อนุญาต
+  const allowedTypeList = [
     'image/jpeg',
     'image/jpg',
     'image/png',
@@ -173,65 +191,55 @@ function processFiles(files) {
     'video/mov',
     'video/wmv',
   ]
-  const invalidFiles = files.filter((file) => !allowedTypes.includes(file.type))
+  const invalidFileList = fileList.filter((file) => !allowedTypeList.includes(file.type))
 
-  if (invalidFiles.length > 0) {
-    // Toast notification
+  if (invalidFileList.length > 0) {
     const Toast = Swal.mixin({
       toast: true,
       position: 'top-end',
-      animation: false,
       showConfirmButton: false,
       timer: 2500,
-      timerProgressBar: true
+      timerProgressBar: true,
     })
     Toast.fire({
       title: 'ประเภทไฟล์ไม่ถูกต้อง',
-      text: 'รองรับเฉพาะไฟล์รูปภาพ (jpg, png, gif, webp) และวิดีโอ (mp4, avi, mov, wmv)',
+      text: 'รองรับเฉพาะไฟล์รูปภาพและวิดีโอที่กำหนด',
       icon: 'error',
-      background: '#fee2e2',
-      color: '#dc2626'
     })
     return
   }
 
-  // เช็คขนาดไฟล์ (50MB)
-  const maxSize = 50 * 1024 * 1024
-  const oversizedFiles = files.filter((file) => file.size > maxSize)
-  if (oversizedFiles.length > 0) {
-    // Toast notification
+  // ตรวจสอบขนาดไฟล์
+  const oversizedFileList = fileList.filter((file) => file.size > MAX_FILE_SIZE)
+  if (oversizedFileList.length > 0) {
     const Toast = Swal.mixin({
       toast: true,
       position: 'top-end',
-      animation: false,
       showConfirmButton: false,
       timer: 2000,
-      timerProgressBar: true
+      timerProgressBar: true,
     })
     Toast.fire({
       title: 'ไฟล์ใหญ่เกินไป',
       text: 'ขนาดไฟล์ต้องไม่เกิน 50MB',
       icon: 'error',
-      background: '#fee2e2',
-      color: '#dc2626'
     })
     return
   }
 
-  // เพิ่มไฟล์ใหม่และสร้าง preview
-  files.forEach((file) => {
-    formData.value.uploadedFiles.push(file)
-
+  // สร้างรายการ Preview และเก็บไฟล์ลงใน State
+  fileList.forEach((file) => {
+    repairFormData.value.uploadedFileList.push(file)
     const reader = new FileReader()
     reader.onload = (e) => {
-      filePreview.value.push({
+      filePreviewList.value.push({
         name: file.name,
         size: file.size,
         type: file.type,
         url: e.target.result,
         isImage: file.type.startsWith('image/'),
         isVideo: file.type.startsWith('video/'),
-        fromServer: false, // ไฟล์ใหม่
+        fromServer: false,
         serverPath: null,
         fileRef: file,
       })
@@ -240,35 +248,32 @@ function processFiles(files) {
   })
 }
 
-// ลบไฟล์ (ทั้งไฟล์เก่าและใหม่)
-function removeFile(index) {
-  const item = filePreview.value[index]
+// ลบไฟล์ออกจากรายการ (ทั้งไฟล์ใหม่และไฟล์เดิมจากเซิร์ฟเวอร์)
+function deleteFile(index) {
+  const item = filePreviewList.value[index]
 
-  // ถ้าเป็นไฟล์เดิมจาก server
+  // กรณีเป็นไฟล์เดิมจากเซิร์ฟเวอร์
   if (item?.fromServer && item.serverPath) {
     const filename = item.serverPath.split('/').pop()
-
-    // เรียก backend เพื่อลบไฟล์บน disk (optional)
-    fetch(`${API_BASE}/delete-file/${filename}`, {
+    fetch(`${API_BASE_URL}/delete-file/${filename}`, {
       method: 'DELETE',
     }).catch((err) => {
       console.error('ลบไฟล์บนเซิร์ฟเวอร์ไม่สำเร็จ:', err)
     })
-
-    // เอา path นี้ออกจาก existingFiles (ถือว่าไม่เก็บแล้ว)
-    existingFiles.value = existingFiles.value.filter((p) => p !== item.serverPath)
+    existingFileList.value = existingFileList.value.filter((p) => p !== item.serverPath)
   }
 
-  // ถ้าเป็นไฟล์ใหม่
+  // กรณีเป็นไฟล์ที่เพิ่มมาใหม่
   if (!item?.fromServer && item.fileRef) {
-    formData.value.uploadedFiles = formData.value.uploadedFiles.filter((f) => f !== item.fileRef)
+    repairFormData.value.uploadedFileList = repairFormData.value.uploadedFileList.filter(
+      (f) => f !== item.fileRef,
+    )
   }
 
-  // ลบออกจาก preview เสมอ
-  filePreview.value.splice(index, 1)
+  filePreviewList.value.splice(index, 1)
 }
 
-// Modal Preview
+// จัดการ Modal Preview
 function openPreview(index) {
   currentPreviewIndex.value = index
   showPreviewModal.value = true
@@ -279,7 +284,7 @@ function closePreview() {
 }
 
 function nextPreview() {
-  if (currentPreviewIndex.value < filePreview.value.length - 1) {
+  if (currentPreviewIndex.value < filePreviewList.value.length - 1) {
     currentPreviewIndex.value++
   }
 }
@@ -290,15 +295,8 @@ function prevPreview() {
   }
 }
 
-// Urgency Options
-const urgencyLevels = [
-  { label: 'เร่งด่วนมาก', value: 'high', border: 'border-red-600', bg: 'bg-red-600' },
-  { label: 'เร่งด่วน', value: 'medium', border: 'border-amber-400', bg: 'bg-amber-400' },
-  { label: 'ไม่เร่งด่วน', value: 'low', border: 'border-green-600', bg: 'bg-green-600' },
-]
-
-// JWT Decode
-function parseJwt(token) {
+// ถอดรหัส Token เพื่อดึงข้อมูลผู้ใช้
+function decodeJwt(token) {
   try {
     const base64Url = token.split('.')[1]
     const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
@@ -315,80 +313,58 @@ function parseJwt(token) {
   }
 }
 
-// Fetch Repair Detail
+// ดึงข้อมูลรายละเอียดการแจ้งซ่อมเดิม
 async function fetchRepairDetail() {
   try {
-    const res = await fetch(`${API_BASE}/repair-requests/${repairCode}`)
-    if (!res.ok) throw new Error('โหลดข้อมูลไม่สำเร็จ')
-    const data = await res.json()
+    const response = await fetch(`${API_BASE_URL}/repair-requests/${repairCode}`)
+    if (!response.ok) throw new Error('โหลดข้อมูลไม่สำเร็จ')
+    const data = await response.json()
 
     const typeId = data.repair_type_id ? Number(data.repair_type_id) : ''
     const buildingId = data.building_id ? Number(data.building_id) : ''
     const floorId = data.floor_id ? Number(data.floor_id) : ''
     const roomId = data.room_id ? Number(data.room_id) : ''
 
-    await fetchFloors(buildingId)
-    await fetchRooms(floorId)
+    await fetchFloorList(buildingId)
+    await fetchRoomList(floorId)
 
-    formData.value.repairType = typeId
-    formData.value.building = buildingId
-    formData.value.floor = floorId
-    formData.value.room = roomId
-    formData.value.assetCode = data.rf_prop_number || ''
-    formData.value.problemDetail = data.rf_problem || ''
-    formData.value.issueDescription = data.rf_detail || ''
-    formData.value.urgency = data.rf_urgency || 'medium'
+    repairFormData.value.repairType = typeId
+    repairFormData.value.building = buildingId
+    repairFormData.value.floor = floorId
+    repairFormData.value.room = roomId
+    repairFormData.value.assetCode = data.rf_prop_number || ''
+    repairFormData.value.problemDetail = data.rf_problem || ''
+    repairFormData.value.issueDescription = data.rf_detail || ''
+    repairFormData.value.urgency = data.rf_urgency || 'medium'
 
-    // ดึงรูปเดิมจาก rf_image
     const images = Array.isArray(data.rf_image) ? data.rf_image : []
-    existingFiles.value = images // เก็บ path ของไฟล์ที่ยังอยู่ใน DB
+    existingFileList.value = images
 
-    // เคลียร์ preview เดิม แล้วเติมไฟล์จาก server เข้าไป
-    filePreview.value = []
-
+    filePreviewList.value = []
     images.forEach((path) => {
       const filename = path.split('/').pop()
       const isVideo = /\.(mp4|avi|mov|wmv)$/i.test(path)
-
-      filePreview.value.push({
+      filePreviewList.value.push({
         name: filename,
         size: null,
         type: isVideo ? 'video/*' : 'image/*',
-        url: `${API_BASE}${path}`, // ex: http://localhost:3000/uploads/repair/xxx.jpg
+        url: `${API_BASE_URL}${path}`,
         isImage: !isVideo,
         isVideo,
-        fromServer: true, // flag ว่ามาจาก server
+        fromServer: true,
         serverPath: path,
         fileRef: null,
       })
     })
-
-    console.log('โหลดข้อมูลใบแจ้งซ่อมสำเร็จ:', formData.value)
   } catch (err) {
     console.error('โหลดข้อมูลใบแจ้งซ่อมไม่สำเร็จ:', err)
   }
 }
 
-onMounted(async () => {
-  const token = localStorage.getItem('token') || sessionStorage.getItem('token')
-  if (token) {
-    const payload = parseJwt(token)
-    formData.value.reporterName =
-      `${payload.us_prefix_th || ''}${payload.us_first_name_th || ''} ${payload.us_last_name_th || ''}`.trim()
-formData.value.phoneNumber = toDisplay(payload.us_tel || '');
-    formData.value.department = payload.us_department || ''
-  }
-
-  await Promise.all([fetchTechnicianTypes(), fetchBuildings()])
-  await fetchRepairDetail()
-})
-
-// Validation
-function validateForm() {
-  let valid = true
-
-  // เคลียร์ข้อความเก่า
-  errors.value = {
+// ตรวจสอบความถูกต้องของข้อมูลในฟอร์ม
+function validateFormData() {
+  let isValid = true
+  errorData.value = {
     repairType: '',
     building: '',
     floor: '',
@@ -398,99 +374,76 @@ function validateForm() {
     urgency: '',
   }
 
-  if (!formData.value.repairType) {
-    errors.value.repairType = 'กรุณาเลือกประเภทงานซ่อม'
-    valid = false
+  if (!repairFormData.value.repairType) {
+    errorData.value.repairType = 'กรุณาเลือกประเภทงานซ่อม'
+    isValid = false
   }
-  if (!formData.value.building) {
-    errors.value.building = 'กรุณาเลือกอาคาร'
-    valid = false
+  if (!repairFormData.value.building) {
+    errorData.value.building = 'กรุณาเลือกอาคาร'
+    isValid = false
   }
-  if (!formData.value.floor) {
-    errors.value.floor = 'กรุณาเลือกชั้น'
-    valid = false
+  if (!repairFormData.value.floor) {
+    errorData.value.floor = 'กรุณาเลือกชั้น'
+    isValid = false
   }
-  if (!formData.value.room) {
-    errors.value.room = 'กรุณาเลือกห้อง'
-    valid = false
+  if (!repairFormData.value.room) {
+    errorData.value.room = 'กรุณาเลือกห้อง'
+    isValid = false
   }
-  if (!formData.value.problemDetail.trim()) {
-    errors.value.problemDetail = 'กรุณากรอกหัวข้อปัญหา'
-    valid = false
+  if (!repairFormData.value.problemDetail.trim()) {
+    errorData.value.problemDetail = 'กรุณากรอกหัวข้อปัญหา'
+    isValid = false
   }
-  if (!formData.value.issueDescription.trim()) {
-    errors.value.issueDescription = 'กรุณากรอกสาเหตุ/อาการเสีย'
-    valid = false
+  if (!repairFormData.value.issueDescription.trim()) {
+    errorData.value.issueDescription = 'กรุณากรอกสาเหตุ/อาการเสีย'
+    isValid = false
   }
 
-  return valid
+  return isValid
 }
 
-// validate ทีละช่อง ใช้กับ @input / @change
-function validateField(field) {
-  switch (field) {
+// ตรวจสอบความถูกต้องรายฟิลด์
+function validateField(fieldName) {
+  switch (fieldName) {
     case 'repairType':
-      errors.value.repairType = formData.value.repairType ? '' : 'กรุณาเลือกประเภทงานซ่อม'
+      errorData.value.repairType = repairFormData.value.repairType ? '' : 'กรุณาเลือกประเภทงานซ่อม'
       break
     case 'building':
-      errors.value.building = formData.value.building ? '' : 'กรุณาเลือกอาคาร'
+      errorData.value.building = repairFormData.value.building ? '' : 'กรุณาเลือกอาคาร'
       break
     case 'floor':
-      errors.value.floor = formData.value.floor ? '' : 'กรุณาเลือกชั้น'
+      errorData.value.floor = repairFormData.value.floor ? '' : 'กรุณาเลือกชั้น'
       break
     case 'room':
-      errors.value.room = formData.value.room ? '' : 'กรุณาเลือกห้อง'
+      errorData.value.room = repairFormData.value.room ? '' : 'กรุณาเลือกห้อง'
       break
     case 'problemDetail':
-      errors.value.problemDetail = formData.value.problemDetail.trim() ? '' : 'กรุณากรอกหัวข้อปัญหา'
+      errorData.value.problemDetail = repairFormData.value.problemDetail.trim()
+        ? ''
+        : 'กรุณากรอกหัวข้อปัญหา'
       break
     case 'issueDescription':
-      errors.value.issueDescription = formData.value.issueDescription.trim()
+      errorData.value.issueDescription = repairFormData.value.issueDescription.trim()
         ? ''
         : 'กรุณากรอกสาเหตุ/อาการเสีย'
       break
   }
 }
 
-// Submit Logic
-async function handleSubmit() {
-  // เช็กช่อง * อื่น ๆ
-  if (!validateForm()) {
-    // Toast notification
+// ส่งข้อมูลบันทึกการแก้ไข
+async function submitRepairEdit() {
+  if (!validateFormData()) {
     const Toast = Swal.mixin({
       toast: true,
       position: 'top-end',
-      animation: false,
       showConfirmButton: false,
       timer: 2500,
-      timerProgressBar: true
+      timerProgressBar: true,
     })
     Toast.fire({
       title: 'ข้อมูลไม่ครบถ้วน',
-      text: 'กรุณากรอกข้อมูลให้ครบถ้วนตามที่กำหนด',
+      text: 'กรุณากรอกข้อมูลให้ครบถ้วน',
       icon: 'warning',
-      background: '#fef3c7',
-      color: '#92400e'
-    })
-    return
-  }
-  // เช็กความเร่งด่วนก่อน
-  if (!formData.value.urgency) {
-    // Toast notification
-    const Toast = Swal.mixin({
-      toast: true,
-      position: 'top-end',
-      animation: false,
-      showConfirmButton: false,
-      timer: 2500,
-      timerProgressBar: true
-    })
-    Toast.fire({
-      title: 'ยังไม่ได้เลือกความเร่งด่วน',
-      text: 'กรุณาเลือกระดับความเร่งด่วนก่อนส่งแบบฟอร์ม',
-      icon: 'warning',
-      background: '#fef3c7',
-      color: '#92400e'
     })
     return
   }
@@ -503,100 +456,80 @@ async function handleSubmit() {
     confirmButtonText: 'ยืนยัน',
     cancelButtonText: 'ยกเลิก',
     confirmButtonColor: '#1E48D1',
-    cancelButtonColor: '#9CA3AF',
   })
 
   if (!confirm.isConfirmed) return
 
   Swal.fire({
     title: 'กำลังบันทึก...',
-    text: 'กรุณารอสักครู่',
     allowOutsideClick: false,
     didOpen: () => Swal.showLoading(),
   })
 
   try {
     isSubmitting.value = true
-
     const token = localStorage.getItem('token') || sessionStorage.getItem('token')
     if (!token) throw new Error('Token not found')
 
-    const payload = parseJwt(token)
-
-    // ใช้ FormData เพื่อรองรับไฟล์
+    const userPayload = decodeJwt(token)
     const formDataToSend = new FormData()
-    formDataToSend.append('us_id', payload.us_id)
-    formDataToSend.append('phone_number', formData.value.phoneNumber)
-    formDataToSend.append('repair_type_id', formData.value.repairType)
-    formDataToSend.append('room_id', formData.value.room)
-    formDataToSend.append('asset_code', formData.value.assetCode || '')
-    formDataToSend.append('problem_detail', formData.value.problemDetail)
-    formDataToSend.append('issue_description', formData.value.issueDescription)
-    formDataToSend.append('urgency', formData.value.urgency || 'medium')
+    formDataToSend.append('us_id', userPayload.us_id)
+    formDataToSend.append('phone_number', repairFormData.value.phoneNumber)
+    formDataToSend.append('repair_type_id', repairFormData.value.repairType)
+    formDataToSend.append('room_id', repairFormData.value.room)
+    formDataToSend.append('asset_code', repairFormData.value.assetCode || '')
+    formDataToSend.append('problem_detail', repairFormData.value.problemDetail)
+    formDataToSend.append('issue_description', repairFormData.value.issueDescription)
+    formDataToSend.append('urgency', repairFormData.value.urgency || 'medium')
+    formDataToSend.append('existing_files', JSON.stringify(existingFileList.value || []))
 
-    // ส่งรายการไฟล์เดิมที่ "ยังเก็บไว้"
-    formDataToSend.append('existing_files', JSON.stringify(existingFiles.value || []))
-
-    // แนบไฟล์ใหม่
-    formData.value.uploadedFiles.forEach((file) => {
+    repairFormData.value.uploadedFileList.forEach((file) => {
       formDataToSend.append('files', file)
     })
 
-    const res = await fetch(`${API_BASE}/repair-requests-with-files/${repairCode}`, {
+    const response = await fetch(`${API_BASE_URL}/repair-requests-with-files/${repairCode}`, {
       method: 'PUT',
       body: formDataToSend,
     })
 
-    const data = await res.json()
-    if (!res.ok) throw new Error(data.message || 'บันทึกข้อมูลไม่สำเร็จ')
+    const data = await response.json()
+    if (!response.ok) throw new Error(data.message || 'บันทึกข้อมูลไม่สำเร็จ')
 
     Swal.close()
-    // Toast notification
     const toast = Swal.mixin({
       toast: true,
       position: 'top-end',
-      animation: false,
       showConfirmButton: false,
       timer: 2500,
       timerProgressBar: true,
-      didOpen: (toast) => {
-        toast.addEventListener('mouseenter', Swal.stopTimer)
-        toast.addEventListener('mouseleave', Swal.resumeTimer)
-      }
     })
     toast.fire({
       title: 'บันทึกสำเร็จ!',
       text: 'แก้ไขใบแจ้งซ่อมเรียบร้อยแล้ว',
       icon: 'success',
-      background: '#D1FAE5',
-      color: '#065F46'
     })
-
     router.push('/main/my-list')
   } catch (err) {
-    console.error('บันทึกไม่สำเร็จ:', err)
     Swal.close()
-    // Toast notification for error
     const Toast = Swal.mixin({
       toast: true,
       position: 'top-end',
-      animation: false,
       showConfirmButton: false,
       timer: 3000,
-      timerProgressBar: true
+      timerProgressBar: true,
     })
     Toast.fire({
       title: 'บันทึกไม่สำเร็จ',
       text: err.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล',
       icon: 'error',
-      background: '#fee2e2',
-      color: '#dc2626'
     })
   } finally {
     isSubmitting.value = false
   }
 }
-async function handleCancel() {
+
+// ยกเลิกการแก้ไข
+async function cancelRepairEdit() {
   const confirm = await Swal.fire({
     title: 'ยกเลิกการแก้ไขข้อมูล?',
     text: 'ข้อมูลที่กรอกจะไม่ถูกบันทึก',
@@ -605,12 +538,28 @@ async function handleCancel() {
     confirmButtonText: 'ยกเลิกการแก้ไข',
     cancelButtonText: 'กลับไปแก้ไข',
     confirmButtonColor: '#e53e3e',
-    cancelButtonColor: '#6b7280',
   })
   if (confirm.isConfirmed) {
     router.push('/main/my-list')
   }
 }
+
+/**
+ * [1.1.7] Lifecycle Hooks
+ */
+onMounted(async () => {
+  const token = localStorage.getItem('token') || sessionStorage.getItem('token')
+  if (token) {
+    const userPayload = decodeJwt(token)
+    repairFormData.value.reporterName =
+      `${userPayload.us_prefix_th || ''}${userPayload.us_first_name_th || ''} ${userPayload.us_last_name_th || ''}`.trim()
+    repairFormData.value.phoneNumber = toDisplay(userPayload.us_tel || '')
+    repairFormData.value.department = userPayload.us_department || ''
+  }
+
+  await Promise.all([fetchRepairTypeList(), fetchBuildingList()])
+  await fetchRepairDetail()
+})
 </script>
 
 <template>
@@ -619,17 +568,15 @@ async function handleCancel() {
       <h1 class="text-lg sm:text-xl font-bold text-black">แก้ไขแบบฟอร์มแจ้งซ่อม</h1>
     </div>
     <div class="mx-auto max-w-6xl">
-      <!-- ฟอร์มหลัก -->
       <form class="space-y-6">
-        <!-- แถว 1 -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10">
           <div>
             <label class="text-sm sm:text-base font-medium text-black">
               ลงชื่อผู้แจ้ง <span class="text-red-600">*</span>
             </label>
-            <p class="text-neutral-400 text-xs mb-2">กรอกชื่อ–นามสกุลของผู้ที่ทำการแจ้งปัญหา</p>
+            <p class="text-neutral-400 text-xs mb-2">ชื่อ–นามสกุลของผู้ที่ทำการแจ้งปัญหา</p>
             <input
-              v-model="formData.reporterName"
+              v-model="repairFormData.reporterName"
               type="text"
               class="w-full text-xm bg-gray-100 border border-neutral-400 rounded-md cursor-not-allowed placeholder-[#A1A1A1] text-sm px-3 py-2"
               readonly
@@ -640,9 +587,9 @@ async function handleCancel() {
             <label class="text-sm sm:text-base font-medium text-black">
               เบอร์โทรศัพท์ <span class="text-red-600">*</span>
             </label>
-            <p class="text-neutral-400 text-xs mb-2">กรอกเบอร์โทรศัพท์ที่สามารถติดต่อกลับได้</p>
+            <p class="text-neutral-400 text-xs mb-2">เบอร์โทรศัพท์ที่สามารถติดต่อกลับได้</p>
             <input
-              v-model="formData.phoneNumber"
+              v-model="repairFormData.phoneNumber"
               type="text"
               class="w-full text-xm bg-gray-100 border border-neutral-400 rounded-md cursor-not-allowed placeholder-[#A1A1A1] text-sm px-3 py-2"
               readonly
@@ -650,15 +597,14 @@ async function handleCancel() {
           </div>
         </div>
 
-        <!-- แถว 2 -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-10">
           <div>
             <label class="text-sm sm:text-base font-medium text-black">
               หน่วยงาน <span class="text-red-600">*</span>
             </label>
-            <p class="text-neutral-400 text-xs mb-2">กรอกชื่อหน่วยงานหรือแผนกที่สังกัด</p>
+            <p class="text-neutral-400 text-xs mb-2">ชื่อหน่วยงานหรือแผนกที่สังกัด</p>
             <input
-              v-model="formData.department"
+              v-model="repairFormData.department"
               type="text"
               class="w-full text-xm bg-gray-100 border border-neutral-400 rounded-md cursor-not-allowed placeholder-[#A1A1A1] text-sm px-3 py-2"
               readonly
@@ -671,57 +617,55 @@ async function handleCancel() {
             </label>
             <p class="text-neutral-400 text-xs mb-2">โปรดเลือกประเภทงานหรือสิ่งของที่ต้องการซ่อม</p>
             <select
-              v-model="formData.repairType"
+              v-model="repairFormData.repairType"
               @change="validateField('repairType')"
               :class="[
                 'w-full text-xm bg-white border rounded-md text-neutral-700 text-sm px-3 py-2',
-                errors.repairType ? 'border-red-500' : 'border-neutral-400',
+                errorData.repairType ? 'border-red-500' : 'border-neutral-400',
               ]"
             >
               <option value="">กรุณาเลือกประเภท</option>
-              <option v-for="type in formData.repairTypeOptions" :key="type.id" :value="type.id">
+              <option v-for="type in repairFormData.repairTypeList" :key="type.id" :value="type.id">
                 {{ type.name }}
               </option>
             </select>
-            <p v-if="errors.repairType" class="text-red-500 text-xs sm:text-sm mt-1">
-              {{ errors.repairType }}
+            <p v-if="errorData.repairType" class="text-red-500 text-xs sm:text-sm mt-1">
+              {{ errorData.repairType }}
             </p>
           </div>
 
           <div>
             <label class="text-base font-medium text-black">หมายเลขครุภัณฑ์</label>
-            <p class="text-neutral-400 text-xs mb-2">กรอกหมายเลขครุภัณฑ์ (ถ้ามี)</p>
+            <p class="text-neutral-400 text-xs mb-2">หมายเลขครุภัณฑ์ของอุปกรณ์ (ถ้ามี)</p>
             <input
-              v-model="formData.assetCode"
+              v-model="repairFormData.assetCode"
               type="text"
               class="w-full text-xm bg-white border-neutral-400 rounded-md placeholder-[#A1A1A1] text-sm px-3 py-2"
-              placeholder="กรอกเลขครุภัณฑ์ (ถ้ามี)"
+              placeholder="กรุณากรอกหมายเลขครุภัณฑ์ของอุปกรณ์ (ถ้ามี)"
             />
           </div>
         </div>
 
-        <!-- แถว 3 -->
         <div>
           <label class="text-sm sm:text-base font-medium text-black">
             ขอความอนุเคราะห์ตรวจสอบ/ซ่อมแซม <span class="text-red-600">*</span>
           </label>
           <p class="text-neutral-400 text-xs mb-2">กรอกปัญหาที่ต้องการให้ตรวจสอบหรือซ่อมแซม</p>
           <input
-            v-model="formData.problemDetail"
+            v-model="repairFormData.problemDetail"
             @input="validateField('problemDetail')"
             type="text"
             :class="[
               'w-full text-sm bg-white border rounded-md placeholder-[#A1A1A1] px-3 py-2',
-              errors.problemDetail ? 'border-red-500' : 'border-neutral-400',
+              errorData.problemDetail ? 'border-red-500' : 'border-neutral-400',
             ]"
             placeholder="กรุณากรอกรายละเอียดปัญหา"
           />
-          <p v-if="errors.problemDetail" class="text-red-500 text-xs sm:text-sm mt-1">
-            {{ errors.problemDetail }}
+          <p v-if="errorData.problemDetail" class="text-red-500 text-xs sm:text-sm mt-1">
+            {{ errorData.problemDetail }}
           </p>
         </div>
 
-        <!-- แถว 4 -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-10">
           <div>
             <label class="text-sm sm:text-base font-medium text-black">
@@ -729,25 +673,30 @@ async function handleCancel() {
             </label>
             <p class="text-neutral-400 text-xs mb-2">โปรดระบุชื่ออาคารที่พบปัญหา</p>
             <select
-              v-model="formData.building"
+              v-model="repairFormData.building"
               @change="
                 () => {
-                  fetchFloors(formData.building)
+                  repairFormData.floor = ''
+                  repairFormData.room = ''
+                  repairFormData.floorList = []
+                  repairFormData.roomList = []
+
+                  fetchFloorList(repairFormData.building)
                   validateField('building')
                 }
               "
               :class="[
                 'w-full text-xm bg-white border rounded-md text-neutral-700 text-sm px-3 py-2',
-                errors.building ? 'border-red-500' : 'border-neutral-400',
+                errorData.building ? 'border-red-500' : 'border-neutral-400',
               ]"
             >
               <option value="">กรุณาเลือกอาคาร</option>
-              <option v-for="b in formData.buildingOptions" :key="b.id" :value="b.id">
+              <option v-for="b in repairFormData.buildingList" :key="b.id" :value="b.id">
                 {{ b.name }}
               </option>
             </select>
-            <p v-if="errors.building" class="text-red-500 text-xs sm:text-sm mt-1">
-              {{ errors.building }}
+            <p v-if="errorData.building" class="text-red-500 text-xs sm:text-sm mt-1">
+              {{ errorData.building }}
             </p>
           </div>
 
@@ -757,25 +706,28 @@ async function handleCancel() {
             </label>
             <p class="text-neutral-400 text-xs mb-2">โปรดเลือกชั้นที่พบปัญหา</p>
             <select
-              v-model="formData.floor"
+              v-model="repairFormData.floor"
               @change="
                 () => {
-                  fetchRooms(formData.floor)
+                  repairFormData.room = ''
+                  repairFormData.roomList = []
+
+                  fetchRoomList(repairFormData.floor)
                   validateField('floor')
                 }
               "
               :class="[
                 'w-full text-xm bg-white border rounded-md text-neutral-700 text-sm px-3 py-2',
-                errors.floor ? 'border-red-500' : 'border-neutral-400',
+                errorData.floor ? 'border-red-500' : 'border-neutral-400',
               ]"
             >
               <option value="">กรุณาเลือกชั้น</option>
-              <option v-for="f in formData.floorOptions" :key="f.id" :value="f.id">
+              <option v-for="f in repairFormData.floorList" :key="f.id" :value="f.id">
                 {{ f.name }}
               </option>
             </select>
-            <p v-if="errors.floor" class="text-red-500 text-xs sm:text-sm mt-1">
-              {{ errors.floor }}
+            <p v-if="errorData.floor" class="text-red-500 text-xs sm:text-sm mt-1">
+              {{ errorData.floor }}
             </p>
           </div>
 
@@ -785,51 +737,47 @@ async function handleCancel() {
             </label>
             <p class="text-neutral-400 text-xs mb-2">โปรดเลือกห้องหรือพื้นที่ที่พบปัญหา</p>
             <select
-              v-model="formData.room"
+              v-model="repairFormData.room"
               @change="validateField('room')"
               :class="[
                 'w-full text-xm bg-white border rounded-md text-neutral-700 text-sm px-3 py-2',
-                errors.room ? 'border-red-500' : 'border-neutral-400',
+                errorData.room ? 'border-red-500' : 'border-neutral-400',
               ]"
             >
               <option value="">กรุณาเลือกห้อง</option>
-              <option v-for="r in formData.roomOptions" :key="r.id" :value="r.id">
+              <option v-for="r in repairFormData.roomList" :key="r.id" :value="r.id">
                 {{ r.name }}
               </option>
             </select>
-            <p v-if="errors.room" class="text-red-500 text-xs sm:text-sm mt-1">
-              {{ errors.room }}
+            <p v-if="errorData.room" class="text-red-500 text-xs sm:text-sm mt-1">
+              {{ errorData.room }}
             </p>
           </div>
         </div>
 
-        <!-- แถว 5 -->
         <div class="mb-1">
           <label class="text-sm sm:text-base font-medium text-black">
-            สาเหตุ/อาการเสีย <span class="text-red-600">*</span>
+            สาเหตุ / อาการเสีย <span class="text-red-600">*</span>
           </label>
           <p class="text-neutral-400 text-xs mb-2">อธิบายอาการเสียหรือสาเหตุที่พบอย่างชัดเจน</p>
         </div>
 
-        <!--แถวหลัก (2 ช่องเท่ากัน) -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-10 items-stretch">
-          <!-- ซ้าย: กล่องข้อความ -->
           <div class="flex flex-col flex-1">
             <textarea
-              v-model="formData.issueDescription"
+              v-model="repairFormData.issueDescription"
               @input="validateField('issueDescription')"
               :class="[
                 'flex-1 w-full min-h-[220px] sm:min-h-[280px] text-sm bg-white border rounded-md resize-none placeholder-[#A1A1A1] px-3 py-2',
-                errors.issueDescription ? 'border-red-500' : 'border-neutral-400',
+                errorData.issueDescription ? 'border-red-500' : 'border-neutral-400',
               ]"
-              placeholder="กรุณากรอกสาเหตุ/อาการที่เสีย"
+              placeholder="กรุณากรอกสาเหตุ / อาการที่เสีย"
             ></textarea>
-            <p v-if="errors.issueDescription" class="text-red-500 text-sm mt-1">
-              {{ errors.issueDescription }}
+            <p v-if="errorData.issueDescription" class="text-red-500 text-sm mt-1">
+              {{ errorData.issueDescription }}
             </p>
           </div>
 
-          <!-- ขวา: กล่องอัปโหลด + ปุ่มเร่งด่วน -->
           <div class="flex flex-col flex-1">
             <label
               for="dropzone-file"
@@ -839,9 +787,9 @@ async function handleCancel() {
                   ? 'border-blue-400 bg-blue-50 scale-105'
                   : 'border-gray-300 bg-gray-50 hover:bg-gray-100',
               ]"
-              @dragover="handleDragOver"
-              @dragleave="handleDragLeave"
-              @drop="handleDrop"
+              @dragover="onDragOver"
+              @dragleave="onDragLeave"
+              @drop="onDrop"
             >
               <div class="flex flex-col items-center justify-center pt-5 pb-6">
                 <div :class="['transition-all duration-200', isDragOver ? 'scale-110' : '']">
@@ -863,16 +811,9 @@ async function handleCancel() {
                 </p>
 
                 <p class="text-xs text-gray-400 mt-1">
-                  รองรับ: รูปภาพ, วิดีโอ (สูงสุด {{ maxFiles }} ไฟล์, 50MB/ไฟล์)
+                  รองรับ: รูปภาพ, วิดีโอ (สูงสุด {{ MAX_FILE_COUNT }} ไฟล์, 50MB/ไฟล์)
                 </p>
                 <p class="text-xs text-gray-500 mt-1">สามารถแนบหลักฐานประกอบการแจ้งซ่อมได้</p>
-
-                <div class="flex items-center gap-2 mt-2">
-                  <span class="text-xs px-2 py-1 bg-green-100 text-green-700 rounded">JPG</span>
-                  <span class="text-xs px-2 py-1 bg-green-100 text-green-700 rounded">PNG</span>
-                  <span class="text-xs px-2 py-1 bg-green-100 text-green-700 rounded">MP4</span>
-                  <span class="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded">+อื่นๆ</span>
-                </div>
               </div>
               <input
                 id="dropzone-file"
@@ -880,14 +821,13 @@ async function handleCancel() {
                 multiple
                 accept="image/*,video/*"
                 class="hidden"
-                @change="handleFileUpload"
+                @change="onFileUpload"
               />
             </label>
 
-            <!-- แสดง preview ไฟล์เก่า+ใหม่ -->
-            <div v-if="filePreview.length > 0" class="space-y-2 mb-4">
+            <div v-if="filePreviewList.length > 0" class="space-y-2 mb-4">
               <div
-                v-for="(file, index) in filePreview"
+                v-for="(file, index) in filePreviewList"
                 :key="index"
                 class="flex items-center gap-3 p-2 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
                 @click="openPreview(index)"
@@ -916,13 +856,12 @@ async function handleCancel() {
                 <div class="flex-1 min-w-0">
                   <p class="text-sm font-medium text-gray-800 truncate">{{ file.name }}</p>
                   <p class="text-xs text-gray-500">
-                    <!-- ถ้าไม่มี size (ไฟล์เก่า) จะไม่โชว์ MB แค่ว่าง ๆ -->
                     <span v-if="file.size">{{ (file.size / 1024 / 1024).toFixed(1) }} MB</span>
                   </p>
                 </div>
 
                 <button
-                  @click.stop="removeFile(index)"
+                  @click.stop="deleteFile(index)"
                   class="flex-shrink-0 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center text-sm hover:bg-red-600 transition-colors"
                   title="ลบไฟล์"
                 >
@@ -931,25 +870,26 @@ async function handleCancel() {
               </div>
             </div>
 
-            <!-- เมื่อไม่มีไฟล์ -->
             <div
-              v-if="filePreview.length === 0"
+              v-if="filePreviewList.length === 0"
               class="text-center text-gray-400 text-sm mb-4 py-2 border border-dashed border-gray-200 rounded-lg"
             >
               ไม่มีไฟล์แนบ (สามารถบันทึกฟอร์มได้โดยไม่แนบไฟล์)
             </div>
 
-            <!-- ปุ่มเร่งด่วน -->
             <div class="flex flex-col sm:flex-row justify-center items-center gap-4 sm:gap-6 mt-4">
               <div
-                v-for="(level, index) in urgencyLevels"
+                v-for="(level, index) in URGENCY_LEVEL_LIST"
                 :key="index"
                 class="flex items-center gap-3 cursor-pointer select-none"
-                @click="formData.urgency = level.value"
+                @click="repairFormData.urgency = level.value"
               >
                 <div
                   class="w-6 h-6 sm:w-7 sm:h-7 rounded-full border-2 shadow-md transition-all duration-200"
-                  :class="[level.border, formData.urgency === level.value ? level.bg : 'bg-white']"
+                  :class="[
+                    level.border,
+                    repairFormData.urgency === level.value ? level.bg : 'bg-white',
+                  ]"
                 ></div>
                 <span class="text-base text-black font-normal">{{ level.label }}</span>
               </div>
@@ -957,13 +897,12 @@ async function handleCancel() {
           </div>
         </div>
 
-        <!-- ปุ่มบันทึก -->
         <div class="flex justify-center sm:justify-end mt-8">
           <button
             type="button"
             :disabled="isSubmitting"
             class="bg-gray-400 text-white px-6 py-2.5 sm:py-3 rounded-lg hover:bg-gray-500 transition disabled:opacity-50 mr-4"
-            @click="handleCancel"
+            @click="cancelRepairEdit"
           >
             ยกเลิกการแก้ไข
           </button>
@@ -972,23 +911,14 @@ async function handleCancel() {
             type="button"
             :disabled="isSubmitting"
             class="bg-[#1E48D1] text-white px-6 py-2.5 sm:py-3 rounded-lg hover:bg-sky-700 transition disabled:opacity-50"
-            @click="handleSubmit"
+            @click="submitRepairEdit"
           >
             บันทึกการแก้ไข
           </button>
         </div>
       </form>
-      <!-- Popup ยืนยันก่อนส่ง -->
-      <ConfirmDialog
-        :visible="showConfirm"
-        title="ยืนยันการส่งแบบฟอร์มแจ้งซ่อม"
-        message="คุณต้องการยืนยันการส่งแบบฟอร์มแจ้งซ่อมนี้หรือไม่"
-        @confirm="confirmSubmit"
-        @cancel="cancelSubmit"
-      />
     </div>
 
-    <!-- Preview Modal -->
     <div
       v-if="showPreviewModal"
       class="fixed inset-0 z-50 bg-black bg-opacity-90 flex items-center justify-center"
@@ -1003,15 +933,15 @@ async function handleCancel() {
         </button>
 
         <img
-          v-if="filePreview[currentPreviewIndex]?.isImage"
-          :src="filePreview[currentPreviewIndex]?.url"
-          :alt="filePreview[currentPreviewIndex]?.name"
+          v-if="filePreviewList[currentPreviewIndex]?.isImage"
+          :src="filePreviewList[currentPreviewIndex]?.url"
+          :alt="filePreviewList[currentPreviewIndex]?.name"
           class="max-w-full max-h-full object-contain"
         />
 
         <video
-          v-else-if="filePreview[currentPreviewIndex]?.isVideo"
-          :src="filePreview[currentPreviewIndex]?.url"
+          v-else-if="filePreviewList[currentPreviewIndex]?.isVideo"
+          :src="filePreviewList[currentPreviewIndex]?.url"
           controls
           autoplay
           class="max-w-full max-h-full"
@@ -1021,14 +951,14 @@ async function handleCancel() {
         </video>
 
         <button
-          v-if="filePreview.length > 1 && currentPreviewIndex > 0"
+          v-if="filePreviewList.length > 1 && currentPreviewIndex > 0"
           @click="prevPreview"
           class="absolute -left-6 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-black bg-opacity-50 rounded-full flex items-center justify-center text-white text-2xl hover:text-gray-300 hover:bg-opacity-70"
         >
           ‹
         </button>
         <button
-          v-if="filePreview.length > 1 && currentPreviewIndex < filePreview.length - 1"
+          v-if="filePreviewList.length > 1 && currentPreviewIndex < filePreviewList.length - 1"
           @click="nextPreview"
           class="absolute -right-6 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-black bg-opacity-50 rounded-full flex items-center justify-center text-white text-2xl hover:text-gray-300 hover:bg-opacity-70"
         >
@@ -1036,16 +966,16 @@ async function handleCancel() {
         </button>
 
         <div
-          v-if="filePreview.length > 1"
+          v-if="filePreviewList.length > 1"
           class="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-white text-sm bg-black bg-opacity-50 px-3 py-1 rounded"
         >
-          {{ currentPreviewIndex + 1 }} / {{ filePreview.length }}
+          {{ currentPreviewIndex + 1 }} / {{ filePreviewList.length }}
         </div>
 
         <div
           class="absolute top-4 left-4 text-white text-sm bg-black bg-opacity-50 px-3 py-1 rounded"
         >
-          {{ filePreview[currentPreviewIndex]?.name }}
+          {{ filePreviewList[currentPreviewIndex]?.name }}
         </div>
       </div>
     </div>
