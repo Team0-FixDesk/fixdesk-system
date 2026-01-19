@@ -12,7 +12,59 @@ const { toRaw, toDisplay, maskInput } = usePhoneFormat()
 defineOptions({ name: 'AdminUserInfoView' })
 const API_BASE = import.meta.env.VITE_API_BASE
 
-// Build authorization headers for API requests สร้าง Authorization Header สำหรับเรียก API
+// --- Shared State for Unified Modal ---
+const showUserModal = ref(false)
+const userModalMode = ref('add') // 'add' | 'edit' | 'view'
+const userModalForm = ref({
+  us_id: '',
+  us_ttn_id: '',
+  us_first_name_th: '',
+  us_last_name_th: '',
+  us_first_name_en: '',
+  us_last_name_en: '',
+  us_user_name: '',
+  us_user_pass: '',
+  us_phone: '',
+  us_department: '',
+  us_role_id: '',
+  us_tt_id: '',
+  us_job_title: '' || '-',
+  role_name: '',
+  technician_type: '',
+})
+const userModalErrors = ref({
+  username: '',
+  password: '',
+  ttn: '',
+  firstTh: '',
+  lastTh: '',
+  firstEn: '',
+  lastEn: '',
+  phone: '',
+  department: '',
+  role: '',
+  techType: '',
+  jobTitle: '',
+})
+
+// Helper Computed Properties
+const isViewMode = computed(() => userModalMode.value === 'view')
+const isEditMode = computed(() => userModalMode.value === 'edit')
+const isAddMode = computed(() => userModalMode.value === 'add')
+
+const modalTitle = computed(() => {
+  if (isAddMode.value) return 'เพิ่มผู้ใช้งาน'
+  if (isEditMode.value) return 'แก้ไขข้อมูลผู้ใช้'
+  return 'รายละเอียดผู้ใช้งาน'
+})
+
+const modalIconClass = computed(() => {
+  if (isAddMode.value) return 'bg-green-100'
+  if (isEditMode.value) return 'bg-orange-100'
+  return 'bg-blue-100'
+})
+
+// --- Authorization & Data Fetching ---
 const getAuthHeaders = () => {
   const token = localStorage.getItem('token') || sessionStorage.getItem('token')
   return { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
@@ -38,21 +90,20 @@ async function fetchUsers() {
       throw new Error(data.message || 'โหลดข้อมูลไม่สำเร็จ')
     }
 
-    // map rows หลักจากข้อมูลผู้ใช้
     rows.value = data.map((user) => ({
       fullNameTh: `${user.us_first_name_th || ''} ${user.us_last_name_th || ''}`.trim(),
       fullNameEn: `${user.us_first_name_en || ''} ${user.us_last_name_en || ''}`.trim(),
       username: user.us_user_name || '-',
       department: user.us_department || '-',
-      role: user.role_name || '-', // จาก DB
-      technicianType: user.technician_type || '-', // จาก DB
+      role: user.role_name || '-',
+      technicianType: user.technician_type || '-',
+      jobTitle: user.us_job_title || '-',
       raw: {
         ...user,
         us_phone: toDisplay(user.us_phone),
       },
     }))
 
-    // สร้าง map username → id
     const map = {}
     for (const user of data) {
       if (user.us_user_name && user.us_id != null) {
@@ -61,16 +112,13 @@ async function fetchUsers() {
     }
     userIdByUsername.value = map
 
-    // สร้างตัวเลือกฟิลเตอร์จากข้อมูลจริงใน DB
     const roleSet = new Set()
-
     for (const user of data) {
       if (user.role_name) roleSet.add(user.role_name)
     }
     roleFilterOptions.value = Array.from(roleSet)
   } catch (err) {
     console.error('โหลดข้อมูลไม่สำเร็จ:', err)
-    // Toast notification
     const Toast = Sweetalert.mixin({
       toast: true,
       position: 'top-end',
@@ -89,7 +137,6 @@ async function fetchUsers() {
   }
 }
 
-// Global toast ใช้ได้ทุกที่
 const toast = Sweetalert.mixin({
   toast: true,
   position: 'top-end',
@@ -98,14 +145,12 @@ const toast = Sweetalert.mixin({
   timerProgressBar: true,
 })
 
-//ฟิลเตอร์
-const roleFilterOptions = ref([]) // list บทบาททั้งหมดจาก DB
-const technicianFilterOptions = ref([]) // list ตำแหน่งช่างทั้งหมดจาก DB
+const roleFilterOptions = ref([])
+const technicianFilterOptions = ref([])
 
 const filteredRows = computed(() => {
   return rows.value.filter((r) => {
     const keyword = searchQuery.value.toLowerCase()
-
     const matchSearch =
       r.fullNameTh.toLowerCase().includes(keyword) ||
       r.fullNameEn.toLowerCase().includes(keyword) ||
@@ -124,16 +169,12 @@ const filteredRows = computed(() => {
 
 function toggleRoleFilter() {
   showRoleFilter.value = !showRoleFilter.value
-  if (showRoleFilter.value) {
-    showTechFilter.value = false // ปิด Tech ถ้าเปิด Role
-  }
+  if (showRoleFilter.value) showTechFilter.value = false
 }
 
 function toggleTechFilter() {
   showTechFilter.value = !showTechFilter.value
-  if (showTechFilter.value) {
-    showRoleFilter.value = false // ปิด Role ถ้าเปิด Tech
-  }
+  if (showTechFilter.value) showRoleFilter.value = false
 }
 
 function clearFilters() {
@@ -141,11 +182,21 @@ function clearFilters() {
   selectedTechTypes.value = []
 }
 
-// function ปิด dropdown เมื่อคลิกรอบนอก
 function closeDropdown(event) {
   if (!event.target.closest('.relative')) {
     showRoleFilter.value = false
     showTechFilter.value = false
+  }
+}
+
+function renderThaiRole(role) {
+  switch (role) {
+    case 'Admin': return 'ผู้ดูแลระบบ'
+    case 'Technician': return 'ช่างซ่อม'
+    case 'Manager': return 'ผู้บริหาร'
+    case 'User': return 'ผู้ใช้งานทั่วไป'
+    case 'Stock': return 'ผู้ดูแลคลัง'
+    default: return role
   }
 }
 
@@ -156,83 +207,79 @@ onMounted(() => {
 })
 onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
 
-// ตัวแปรและฟังก์ชันสำหรับดูข้อมูลผู้ใช้
-const showViewModal = ref(false)
-const viewForm = ref({
-  us_id: '',
-  us_ttn_id: '',
-  us_first_name_th: '',
-  us_last_name_th: '',
-  us_first_name_en: '',
-  us_last_name_en: '',
-  us_user_name: '',
-  us_phone: '',
-  us_department: '',
-  us_role_id: '',
-  us_tt_id: '',
-  role_name: '',
-  technician_type: '',
-})
+// --- Unified Modal Logic ---
 
+function resetModalForm() {
+  userModalForm.value = {
+    us_id: '', us_ttn_id: '', us_first_name_th: '', us_last_name_th: '',
+    us_first_name_en: '', us_last_name_en: '', us_user_name: '', us_user_pass: '',
+    us_phone: '', us_department: '', us_role_id: '', us_tt_id: '',
+    us_job_title: '', role_name: '', technician_type: '',
+  }
+  userModalErrors.value = {
+    username: '', password: '', ttn: '', firstTh: '', lastTh: '',
+    firstEn: '', lastEn: '', phone: '', department: '', role: '',
+    techType: '', jobTitle: ''
+  }
+}
+
+// Function: Open Add
+function openAddModal() {
+  resetModalForm()
+  userModalMode.value = 'add'
+  showUserModal.value = true
+}
+
+// Function: Open Edit
+function openEditModal(username) {
+  try {
+    const row = rows.value.find((r) => r.username === username)
+    if (!row) throw new Error('ไม่พบผู้ใช้ในข้อมูลที่โหลดไว้')
+
+    resetModalForm()
+    userModalMode.value = 'edit'
+    const data = { ...row.raw }
+    data.us_phone = toDisplay(data.us_phone)
+    Object.assign(userModalForm.value, data)
+    userModalForm.value.us_user_pass = ''
+    showUserModal.value = true
+  } catch (err) {
+    toast.fire({ title: 'ผิดพลาด', text: err.message, icon: 'error', background: '#fee2e2', color: '#dc2626' })
+  }
+}
+
+// Function: Open View
 function openViewModal(username) {
   try {
     const row = rows.value.find((r) => r.username === username)
     if (!row) throw new Error('ไม่พบผู้ใช้ในข้อมูลที่โหลดไว้')
 
+    resetModalForm()
+    userModalMode.value = 'view'
     const data = { ...row.raw }
     data.us_phone = toDisplay(data.us_phone)
-    Object.assign(viewForm.value, data)
-    showViewModal.value = true
+    Object.assign(userModalForm.value, data)
+    showUserModal.value = true
   } catch (err) {
-    // Toast notification
-    const Toast = Sweetalert.mixin({
-      toast: true,
-      position: 'top-end',
-      animation: false,
-      showConfirmButton: false,
-      timer: 3000,
-      timerProgressBar: true,
-    })
-    Toast.fire({
-      title: 'ผิดพลาด',
-      text: err.message,
-      icon: 'error',
-      background: '#fee2e2',
-      color: '#dc2626',
-    })
+    toast.fire({ title: 'ผิดพลาด', text: err.message, icon: 'error', background: '#fee2e2', color: '#dc2626' })
   }
 }
 
-function closeViewModal() {
-  showViewModal.value = false
+// Function: Close
+function closeUserModal() {
+  showUserModal.value = false
 }
 
-// ตัวแปรและฟังก์ชันสำหรับเพิ่มผู้ใช้
-const showAddModal = ref(false)
-const addForm = ref({
-  us_ttn_id: '',
-  us_first_name_th: '',
-  us_last_name_th: '',
-  us_first_name_en: '',
-  us_last_name_en: '',
-  us_user_name: '',
-  us_user_pass: '',
-  us_phone: '',
-  us_department: '',
-  us_role_id: '',
-  us_tt_id: '',
-})
-
-function openAddModal() {
-  Object.keys(addForm.value).forEach((key) => (addForm.value[key] = ''))
-  showAddModal.value = true
-}
-function closeAddModal() {
-  showAddModal.value = false
+// Function: Unified Handle Submit
+function handleUserModalSubmit() {
+  if (isAddMode.value) confirmAddUser()
+  else if (isEditMode.value) confirmEditUser()
+  else closeUserModal()
 }
 
+// Function: Confirm Add
 async function confirmAddUser() {
-  if (!validateAddForm()) return
+  if (!validateUserForm()) return
   const result = await Sweetalert.fire({
     title: 'ยืนยันการเพิ่มผู้ใช้งาน?',
     text: 'คุณต้องการเพิ่มผู้ใช้งานใหม่ในระบบหรือไม่?',
@@ -249,91 +296,27 @@ async function confirmAddUser() {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify({
-        ...addForm.value,
-        us_ttn_id: parseInt(addForm.value.us_ttn_id),
-        us_role_id: parseInt(addForm.value.us_role_id),
-        us_tt_id: addForm.value.us_tt_id ? parseInt(addForm.value.us_tt_id) : null,
-        us_phone: toRaw(addForm.value.us_phone),
+        ...userModalForm.value,
+        us_ttn_id: parseInt(userModalForm.value.us_ttn_id),
+        us_role_id: parseInt(userModalForm.value.us_role_id),
+        us_tt_id: userModalForm.value.us_tt_id ? parseInt(userModalForm.value.us_tt_id) : null,
+        us_phone: toRaw(userModalForm.value.us_phone),
       }),
     })
     const data = await res.json()
     if (!res.ok) throw new Error(data.message || 'เพิ่มผู้ใช้ไม่สำเร็จ')
 
-    const toast = Sweetalert.mixin({
-      toast: true,
-      position: 'top-end',
-      showConfirmButton: false,
-      timer: 3000,
-      timerProgressBar: true,
-    })
-    toast.fire({
-      icon: 'success',
-      title: 'เพิ่มผู้ใช้เรียบร้อยแล้ว',
-      background: '#f0f9ff',
-      color: '#1e3a8a',
-    })
-    showAddModal.value = false
+    toast.fire({ icon: 'success', title: 'เพิ่มผู้ใช้เรียบร้อยแล้ว', background: '#f0f9ff', color: '#1e3a8a' })
+    showUserModal.value = false
     await fetchUsers()
   } catch (err) {
-    toast.fire({
-      icon: 'error',
-      title: err.message || 'ไม่สามารถเพิ่มผู้ใช้ได้',
-      background: '#fee2e2',
-      color: '#dc2626',
-    })
+    toast.fire({ icon: 'error', title: err.message || 'ไม่สามารถเพิ่มผู้ใช้ได้', background: '#fee2e2', color: '#dc2626' })
   }
 }
 
-// ตัวแปรและฟังก์ชันสำหรับแก้ไขผู้ใช้
-const showEditModal = ref(false)
-const editForm = ref({
-  us_id: '',
-  us_ttn_id: '',
-  us_first_name_th: '',
-  us_last_name_th: '',
-  us_first_name_en: '',
-  us_last_name_en: '',
-  us_user_name: '',
-  us_phone: '',
-  us_department: '',
-  us_role_id: '',
-  us_tt_id: '',
-})
-
-function openEditModal(username) {
-  try {
-    const row = rows.value.find((r) => r.username === username)
-    if (!row) throw new Error('ไม่พบผู้ใช้ในข้อมูลที่โหลดไว้')
-    const data = { ...row.raw }
-    data.us_phone = toDisplay(data.us_phone)
-    Object.assign(editForm.value, data)
-    showEditModal.value = true
-  } catch (err) {
-    // Toast notification
-    const Toast = Sweetalert.mixin({
-      toast: true,
-      position: 'top-end',
-      animation: false,
-      showConfirmButton: false,
-      timer: 3000,
-      timerProgressBar: true,
-    })
-    Toast.fire({
-      title: 'ผิดพลาด',
-      text: err.message,
-      icon: 'error',
-      background: '#fee2e2',
-      color: '#dc2626',
-    })
-  }
-}
-
-function closeEditModal() {
-  showEditModal.value = false
-}
-
+// Function: Confirm Edit
 async function confirmEditUser() {
-  if (!validateEditForm()) return
+  if (!validateUserForm()) return
   const result = await Sweetalert.fire({
     title: 'ยืนยันการแก้ไขข้อมูล?',
     text: 'คุณต้องการบันทึกการแก้ไขนี้หรือไม่?',
@@ -345,46 +328,35 @@ async function confirmEditUser() {
   })
   if (!result.isConfirmed) return
   try {
-    const res = await fetch(`${API_BASE}/users/${editForm.value.us_id}`, {
-      method: 'PUT',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({
-        ...editForm.value,
-        us_ttn_id: parseInt(editForm.value.us_ttn_id),
-        us_role_id: parseInt(editForm.value.us_role_id),
-        us_tt_id: editForm.value.us_tt_id ? parseInt(editForm.value.us_tt_id) : null,
-        us_phone: toRaw(editForm.value.us_phone),
-      }),
+    const payload = {
+      ...userModalForm.value,
+      us_ttn_id: parseInt(userModalForm.value.us_ttn_id),
+      us_role_id: parseInt(userModalForm.value.us_role_id),
+      us_tt_id: userModalForm.value.us_tt_id ? parseInt(userModalForm.value.us_tt_id) : null,
+      us_phone: toRaw(userModalForm.value.us_phone),
+    }
+
+    // *สำคัญ* ถ้าช่องรหัสผ่านว่าง ให้ลบ Key ทิ้ง (Backend จะได้ไม่เซ็ตเป็นค่าว่าง)
+    if (!payload.us_user_pass) {
+      delete payload.us_user_pass;
+    }
+
+    const res = await fetch(`${API_BASE}/users/${userModalForm.value.us_id}`, {
+      method: 'PUT', headers: getAuthHeaders(),
+      body: JSON.stringify(payload),
     })
     const data = await res.json()
     if (!res.ok) throw new Error(data.message || 'อัปเดตไม่สำเร็จ')
 
-    const toast = Sweetalert.mixin({
-      toast: true,
-      position: 'top-end',
-      showConfirmButton: false,
-      timer: 3000,
-      timerProgressBar: true,
-    })
-    toast.fire({
-      icon: 'success',
-      title: 'แก้ไขข้อมูลผู้ใช้เรียบร้อยแล้ว',
-      background: '#f0f9ff',
-      color: '#1e3a8a',
-    })
-    showEditModal.value = false
+    toast.fire({ icon: 'success', title: 'แก้ไขข้อมูลผู้ใช้เรียบร้อยแล้ว', background: '#f0f9ff', color: '#1e3a8a' })
+    showUserModal.value = false
     await fetchUsers()
   } catch (err) {
-    toast.fire({
-      icon: 'error',
-      title: err.message || 'ไม่สามารถแก้ไขข้อมูลผู้ใช้ได้',
-      background: '#fee2e2',
-      color: '#dc2626',
-    })
+    toast.fire({ icon: 'error', title: err.message || 'ไม่สามารถแก้ไขข้อมูลผู้ใช้ได้', background: '#fee2e2', color: '#dc2626' })
   }
 }
 
-// ตัวแปรและฟังก์ชันสำหรับลบผู้ใช้
+// Function: Confirm Delete
 async function confirmDelete(username) {
   const result = await Sweetalert.fire({
     title: 'ยืนยันการลบ?',
@@ -397,9 +369,7 @@ async function confirmDelete(username) {
   })
   if (!result.isConfirmed) return
   try {
-    // แปลง username -> id
     let id = userIdByUsername.value[username]
-    // กันกรณี map ยังไม่มีข้อมูล (เช่นเพิ่งรีเฟรชหน้า/ข้อมูลไม่ sync)
     if (!id) {
       const resUsers = await fetch(`${API_BASE}/users`, { headers: getAuthHeaders() })
       const dataUsers = await resUsers.json()
@@ -411,16 +381,14 @@ async function confirmDelete(username) {
         }
       }
     }
-    if (!id && id !== 0) {
-      throw new Error('ไม่พบผู้ใช้จากชื่อผู้ใช้ (username) นี้')
-    }
+    if (!id && id !== 0) throw new Error('ไม่พบผู้ใช้จากชื่อผู้ใช้ (username) นี้')
+
     const res = await fetch(`${API_BASE}/users/${id}`, {
       method: 'DELETE',
       headers: getAuthHeaders(),
     })
-    // พยายามอ่านเป็น JSON ก่อน ถ้าไม่ได้ค่อยอ่านเป็น text
-    let payload
-    let message = ''
+
+    let payload, message = ''
     try {
       payload = await res.json()
       message = payload?.message || ''
@@ -428,1385 +396,488 @@ async function confirmDelete(username) {
       const txt = await res.text()
       message = txt && txt.trim().startsWith('<') ? 'ปลายทางส่งกลับเป็น HTML' : txt
     }
-    if (!res.ok) {
-      throw new Error(message || `ลบไม่สำเร็จ (HTTP ${res.status})`)
-    }
-    const toast = Sweetalert.mixin({
-      toast: true,
-      position: 'top-end',
-      showConfirmButton: false,
-      timer: 3000,
-      timerProgressBar: true,
-    })
-    toast.fire({
-      icon: 'success',
-      title: 'ลบผู้ใช้เรียบร้อยแล้ว',
-      background: '#f0f9ff',
-      color: '#1e3a8a',
-    })
+    if (!res.ok) throw new Error(message || `ลบไม่สำเร็จ (HTTP ${res.status})`)
+
+    toast.fire({ icon: 'success', title: 'ลบผู้ใช้เรียบร้อยแล้ว', background: '#f0f9ff', color: '#1e3a8a' })
     await fetchUsers()
   } catch (err) {
-    toast.fire({
-      icon: 'error',
-      title: err.message || 'ไม่สามารถลบผู้ใช้ได้',
-      background: '#fee2e2',
-      color: '#dc2626',
-    })
+    toast.fire({ icon: 'error', title: err.message || 'ไม่สามารถลบผู้ใช้ได้', background: '#fee2e2', color: '#dc2626' })
   }
 }
 
-function handleAddRoleChange() {
-  if (addForm.value.us_role_id !== '2') {
-    addForm.value.us_tt_id = ''
+function handleRoleChange() {
+  if (userModalForm.value.us_role_id !== '2' && userModalForm.value.us_role_id !== 2) {
+    userModalForm.value.us_tt_id = ''
   }
 }
 
-//function สำหรับ edit form
-function handleEditRoleChange() {
-  // ถ้าไม่ใช่ช่าง (role_id !== '2') ให้ล้างค่าตำแหน่งช่าง
-  if (editForm.value.us_role_id !== '2' && editForm.value.us_role_id !== 2) {
-    editForm.value.us_tt_id = ''
-  }
-}
-
-// ตัวแปรและ validation สำหรับตรวจสอบความถูกต้องของ input ในฟอร์มเพิ่มผู้ใช้
-const addErrors = ref({
-  username: '',
-  password: '',
-  ttn: '',
-  firstTh: '',
-  lastTh: '',
-  firstEn: '',
-  lastEn: '',
-  phone: '',
-  department: '',
-  role: '',
-  techType: '',
-})
-
-function validateAddForm() {
+// Function: Unified Validation
+function validateUserForm() {
   let valid = true
-  addErrors.value = {
-    username: '',
-    password: '',
-    ttn: '',
-    firstTh: '',
-    lastTh: '',
-    firstEn: '',
-    lastEn: '',
-    phone: '',
-    department: '',
-    role: '',
-    techType: '',
+  // Reset Errors
+  Object.keys(userModalErrors.value).forEach(k => userModalErrors.value[k] = '')
+
+  const f = userModalForm.value
+
+  // Common Fields
+  if (!f.us_ttn_id) { userModalErrors.value.ttn = 'กรุณาเลือกคำนำหน้า'; valid = false }
+
+  // Job Title Check
+  if (!f.us_job_title || !f.us_job_title.trim()) {
+    if (!f.us_job_title.trim()) { userModalErrors.value.jobTitle = 'กรุณากรอกตำแหน่งบุคลากร'; valid = false }
   }
 
-  // ชื่อผู้ใช้งาน
-  if (!addForm.value.us_user_name.trim()) {
-    addErrors.value.username = 'กรุณากรอกชื่อผู้ใช้'
-    valid = false
+  // Names Th
+  if (!f.us_first_name_th.trim()) { userModalErrors.value.firstTh = 'กรุณากรอกชื่อภาษาไทย'; valid = false }
+  else if (!/^[ก-๙\s]+$/.test(f.us_first_name_th)) { userModalErrors.value.firstTh = 'กรุณากรอกเป็นภาษาไทยเท่านั้น'; valid = false }
+
+  if (!f.us_last_name_th.trim()) { userModalErrors.value.lastTh = 'กรุณากรอกนามสกุลภาษาไทย'; valid = false }
+  else if (!/^[ก-๙\s]+$/.test(f.us_last_name_th)) { userModalErrors.value.lastTh = 'กรุณากรอกเป็นภาษาไทยเท่านั้น'; valid = false }
+
+  // Names En
+  if (!f.us_first_name_en.trim()) { userModalErrors.value.firstEn = 'กรุณากรอกชื่อภาษาอังกฤษ'; valid = false }
+  else if (!/^[A-Za-z\s]+$/.test(f.us_first_name_en)) { userModalErrors.value.firstEn = 'กรุณากรอกเป็นภาษาอังกฤษเท่านั้น'; valid = false }
+
+  if (!f.us_last_name_en.trim()) { userModalErrors.value.lastEn = 'กรุณากรอกนามสกุลภาษาอังกฤษ'; valid = false }
+  else if (!/^[A-Za-z\s]+$/.test(f.us_last_name_en)) { userModalErrors.value.lastEn = 'กรุณากรอกเป็นภาษาอังกฤษเท่านั้น'; valid = false }
+
+  // Phone
+  if (!f.us_phone.trim()) { userModalErrors.value.phone = 'กรุณากรอกเบอร์โทร'; valid = false }
+  else if (!/^[0-9]{9,10}$/.test(toRaw(f.us_phone))) { userModalErrors.value.phone = 'เบอร์โทรต้องเป็นตัวเลข 9–10 หลัก'; valid = false }
+
+  // Dept & Role
+  if (!f.us_department.trim()) { userModalErrors.value.department = 'กรุณากรอกหน่วยงาน'; valid = false }
+  if (!f.us_role_id) { userModalErrors.value.role = 'กรุณาเลือกบทบาท'; valid = false }
+
+  // Tech Type
+  if ((f.us_role_id === '2' || f.us_role_id === 2) && !f.us_tt_id) { userModalErrors.value.techType = 'กรุณาเลือกประเภทช่าง'; valid = false }
+
+  // Add Mode Specifics
+  if (isAddMode.value) {
+    if (!f.us_user_name.trim()) { userModalErrors.value.username = 'กรุณากรอกชื่อผู้ใช้'; valid = false }
+    if (!f.us_user_pass.trim()) { userModalErrors.value.password = 'กรุณากรอกรหัสผ่าน'; valid = false }
   }
-  // รหัสผ่าน
-  if (!addForm.value.us_user_pass.trim()) {
-    addErrors.value.password = 'กรุณากรอกรหัสผ่าน'
-    valid = false
+  if (isEditMode.value && f.us_user_pass && !f.us_user_pass.trim()) {
+    userModalErrors.value.password = 'รหัสผ่านใหม่ต้องไม่เป็นช่องว่าง'; valid = false
   }
-  // คำนำหน้า
-  if (!addForm.value.us_ttn_id) {
-    addErrors.value.ttn = 'กรุณาเลือกคำนำหน้า'
-    valid = false
-  }
-  // ชื่อภาษาไทย
-  if (!addForm.value.us_first_name_th.trim()) {
-    addErrors.value.firstTh = 'กรุณากรอกชื่อภาษาไทย'
-    valid = false
-  } else if (!/^[ก-๙\s]+$/.test(addForm.value.us_first_name_th)) {
-    addErrors.value.firstTh = 'กรุณากรอกเป็นภาษาไทยเท่านั้น'
-    valid = false
-  }
-  // นามสกุลภาษาไทย
-  if (!addForm.value.us_last_name_th.trim()) {
-    addErrors.value.lastTh = 'กรุณากรอกนามสกุลภาษาไทย'
-    valid = false
-  } else if (!/^[ก-๙\s]+$/.test(addForm.value.us_last_name_th)) {
-    addErrors.value.lastTh = 'กรุณากรอกเป็นภาษาไทยเท่านั้น'
-    valid = false
-  }
-  // ชื่อภาษาอังกฤษ
-  if (!addForm.value.us_first_name_en.trim()) {
-    addErrors.value.firstEn = 'กรุณากรอกชื่อภาษาอังกฤษ'
-    valid = false
-  } else if (!/^[A-Za-z\s]+$/.test(addForm.value.us_first_name_en)) {
-    addErrors.value.firstEn = 'กรุณากรอกเป็นภาษาอังกฤษเท่านั้น'
-    valid = false
-  }
-  // นามสกุลภาษาอังกฤษ
-  if (!addForm.value.us_last_name_en.trim()) {
-    addErrors.value.lastEn = 'กรุณากรอกนามสกุลภาษาอังกฤษ'
-    valid = false
-  } else if (!/^[A-Za-z\s]+$/.test(addForm.value.us_last_name_en)) {
-    addErrors.value.lastEn = 'กรุณากรอกเป็นภาษาอังกฤษเท่านั้น'
-    valid = false
-  }
-  // เบอร์โทรศัพท์
-  if (!addForm.value.us_phone.trim()) {
-    addErrors.value.phone = 'กรุณากรอกเบอร์โทร'
-    valid = false
-  } else if (!/^[0-9]{9,10}$/.test(toRaw(addForm.value.us_phone))) {
-    addErrors.value.phone = 'เบอร์โทรต้องเป็นตัวเลข 9–10 หลัก'
-    valid = false
-  }
-  // หน่วยงาน
-  if (!addForm.value.us_department.trim()) {
-    addErrors.value.department = 'กรุณากรอกหน่วยงาน'
-    valid = false
-  }
-  // บทบาท
-  if (!addForm.value.us_role_id) {
-    addErrors.value.role = 'กรุณาเลือกบทบาท'
-    valid = false
-  }
-  // ประเภทช่าง (เฉพาะเลือกบทบาทช่าง)
-  if (addForm.value.us_role_id === '2' && !addForm.value.us_tt_id) {
-    addErrors.value.techType = 'กรุณาเลือกประเภทช่าง'
-    valid = false
-  }
+
   return valid
 }
 
-// ฟังก์ชัน clear error เมื่อผู้ใช้กำลังพิมพ์
-function clearAddError(field) {
-  if (addErrors.value[field]) {
-    addErrors.value[field] = ''
-  }
+function clearError(field) {
+  if (userModalErrors.value[field]) userModalErrors.value[field] = ''
 }
 
-function clearEditError(field) {
-  if (editErrors.value[field]) {
-    editErrors.value[field] = ''
-  }
-}
-
-// ตัวแปรและ validation สำหรับตรวจสอบความถูกต้องของ input ในฟอร์มแก้ไขข้อมูลผู้ใช้
-const editErrors = ref({
-  ttn: '',
-  firstTh: '',
-  lastTh: '',
-  firstEn: '',
-  lastEn: '',
-  phone: '',
-  department: '',
-  role: '',
-  techType: '',
-})
-
-function validateEditForm() {
-  let valid = true
-  editErrors.value = {
-    ttn: '',
-    firstTh: '',
-    lastTh: '',
-    firstEn: '',
-    lastEn: '',
-    phone: '',
-    department: '',
-    role: '',
-    techType: '',
-  }
-  // คำนำหน้า
-  if (!editForm.value.us_ttn_id) {
-    editErrors.value.ttn = 'กรุณาเลือกคำนำหน้า'
-    valid = false
-  }
-  // ชื่อภาษาไทย
-  if (!editForm.value.us_first_name_th.trim()) {
-    editErrors.value.firstTh = 'กรุณากรอกชื่อภาษาไทย'
-    valid = false
-  } else if (!/^[ก-๙\s]+$/.test(editForm.value.us_first_name_th)) {
-    editErrors.value.firstTh = 'กรุณากรอกเป็นภาษาไทยเท่านั้น'
-    valid = false
-  }
-  // นามกสุกลภาษาไทย
-  if (!editForm.value.us_last_name_th.trim()) {
-    editErrors.value.lastTh = 'กรุณากรอกนามสกุลภาษาไทย'
-    valid = false
-  } else if (!/^[ก-๙\s]+$/.test(editForm.value.us_last_name_th)) {
-    editErrors.value.lastTh = 'กรุณากรอกเป็นภาษาไทยเท่านั้น'
-    valid = false
-  }
-  // ชื่อภาษาอังกฤษ
-  if (!editForm.value.us_first_name_en.trim()) {
-    editErrors.value.firstEn = 'กรุณากรอกชื่อภาษาอังกฤษ'
-    valid = false
-  } else if (!/^[A-Za-z\s]+$/.test(editForm.value.us_first_name_en)) {
-    editErrors.value.firstEn = 'กรุณากรอกเป็นภาษาอังกฤษเท่านั้น'
-    valid = false
-  }
-
-  // นามสกุลภาษาอังกฤษ
-  if (!editForm.value.us_last_name_en.trim()) {
-    editErrors.value.lastEn = 'กรุณากรอกนามสกุลภาษาอังกฤษ'
-    valid = false
-  } else if (!/^[A-Za-z\s]+$/.test(editForm.value.us_last_name_en)) {
-    editErrors.value.lastEn = 'กรุณากรอกเป็นภาษาอังกฤษเท่านั้น'
-    valid = false
-  }
-  // เบอร์โทรศัพท์
-  if (!editForm.value.us_phone.trim()) {
-    editErrors.value.phone = 'กรุณากรอกเบอร์โทร'
-    valid = false
-  } else if (!/^[0-9]{9,10}$/.test(toRaw(editForm.value.us_phone))) {
-    editErrors.value.phone = 'เบอร์โทรต้องเป็นตัวเลข 9–10 หลัก'
-    valid = false
-  }
-  // หน่วยงาน
-  if (!editForm.value.us_department.trim()) {
-    editErrors.value.department = 'กรุณากรอกหน่วยงาน'
-    valid = false
-  }
-  // บทบาท
-  if (!editForm.value.us_role_id) {
-    editErrors.value.role = 'กรุณาเลือกบทบาท'
-    valid = false
-  }
-  // ประเภทช่าง (เมื่อเปลี่ยนมาเลือกบทบาทช่าง)
-  if (
-    (editForm.value.us_role_id === '2' || editForm.value.us_role_id === 2) &&
-    !editForm.value.us_tt_id
-  ) {
-    editErrors.value.techType = 'กรุณาเลือกประเภทช่าง'
-    valid = false
-  }
-  return valid
-}
-
-const titleOptions = ref([]) // คำนำหน้า
-const roleOptions = ref([]) // บทบาทผู้ใช้
-const technicianOptions = ref([]) // ประเภทช่าง
+const titleOptions = ref([])
+const roleOptions = ref([])
+const technicianOptions = ref([])
 
 async function fetchMasterData() {
   try {
-    // ดึงพร้อมกัน 3 endpoint เลย (ถ้ามีพร้อม)
     const [resTitles, resRoles, resTechs] = await Promise.all([
-      fetch(`${API_BASE}/titles`, { headers: getAuthHeaders() }), // เช่น ตาราง us_title_name
-      fetch(`${API_BASE}/roles`, { headers: getAuthHeaders() }), // เช่น ตาราง us_roles
-      fetch(`${API_BASE}/technician-types`, { headers: getAuthHeaders() }), // เช่น ตาราง technician_types
+      fetch(`${API_BASE}/titles`, { headers: getAuthHeaders() }),
+      fetch(`${API_BASE}/roles`, { headers: getAuthHeaders() }),
+      fetch(`${API_BASE}/technician-types`, { headers: getAuthHeaders() }),
     ])
 
     const [titlesData, rolesData, techData] = await Promise.all([
-      resTitles.json(),
-      resRoles.json(),
-      resTechs.json(),
+      resTitles.json(), resRoles.json(), resTechs.json(),
     ])
 
-    // map titles จาก DB → options
     titleOptions.value = [
       { value: '', label: 'เลือกคำนำหน้า', disabled: true },
-      ...titlesData.map((title) => ({
-        value: String(title.ttn_id),
-        label: title.ttn_name_th,
-        disabled: false,
-      })),
+      ...titlesData.map((title) => ({ value: String(title.ttn_id), label: title.ttn_name_th, disabled: false })),
     ]
 
-    // map roles จาก DB → options
     roleOptions.value = rolesData.map((role) => ({
-      value: String(role.role_id), // ใช้กับ us_role_id ใน form
-      code: role.role_name, // ใช้โชว์ใน filter เช่น 'ADMIN'
+      value: String(role.role_id),
+      code: role.role_name,
       label: role.role_label_th || role.role_name,
     }))
 
-    // map technician types จาก DB → options
     technicianOptions.value = [
       { value: '', label: 'ไม่ระบุ' },
-      ...techData.map((tech) => ({
-        value: String(tech.tt_id),
-        label: tech.tt_name,
-      })),
+      ...techData.map((tech) => ({ value: String(tech.tt_id), label: tech.tt_name })),
     ]
     technicianFilterOptions.value = techData.map((tech) => tech.tt_name)
-    manageTechList.value = techData.map((t) => ({
-      id: t.tt_id,
-      name: t.tt_name,
-    }))
+    manageTechList.value = techData.map((t) => ({ id: t.tt_id, name: t.tt_name }))
   } catch (err) {
     console.error('โหลดข้อมูล master data ไม่สำเร็จ:', err)
-    // Toast notification
-    const Toast = Sweetalert.mixin({
-      toast: true,
-      position: 'top-end',
-      animation: false,
-      showConfirmButton: false,
-      timer: 3000,
-      timerProgressBar: true,
-    })
-    Toast.fire({
-      title: 'ผิดพลาด',
-      text: 'ไม่สามารถโหลดข้อมูลคำนำหน้า/บทบาท/ประเภทช่างได้',
-      icon: 'error',
-      background: '#fee2e2',
-      color: '#dc2626',
-    })
+    toast.fire({ title: 'ผิดพลาด', text: 'ไม่สามารถโหลดข้อมูลคำนำหน้า/บทบาท/ประเภทช่างได้', icon: 'error', background: '#fee2e2', color: '#dc2626' })
   }
 }
 
 const showManageTechModal = ref(false)
 const manageTechList = ref([])
 
-function openManageTechModal() {
-  showManageTechModal.value = true
-}
-function closeManageTechModal() {
-  showManageTechModal.value = false
-}
+function openManageTechModal() { showManageTechModal.value = true }
+function closeManageTechModal() { showManageTechModal.value = false }
 
 async function handleAddTechType() {
   const { value: name } = await Sweetalert.fire({
-    title: 'เพิ่มตำแหน่งช่าง',
-    input: 'text',
-    inputLabel: 'ชื่อตำแหน่งช่าง',
-    inputPlaceholder: 'เช่น ช่างระบบไฟฟ้า',
-    showCancelButton: true,
-    confirmButtonText: 'บันทึก',
-    cancelButtonText: 'ยกเลิก',
-    inputValidator: (value) => {
-      if (!value || !value.trim()) return 'กรุณากรอกชื่อตำแหน่งช่าง'
-      return null
-    },
+    title: 'เพิ่มตำแหน่งช่าง', input: 'text', inputLabel: 'ชื่อตำแหน่งช่าง', inputPlaceholder: 'เช่น ช่างระบบไฟฟ้า',
+    showCancelButton: true, confirmButtonText: 'บันทึก', cancelButtonText: 'ยกเลิก',
+    inputValidator: (value) => { if (!value || !value.trim()) return 'กรุณากรอกชื่อตำแหน่งช่าง'; return null },
   })
   if (!name) return
 
   try {
     const res = await fetch(`${API_BASE}/technician-types`, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({ tt_name: name.trim() }),
+      method: 'POST', headers: getAuthHeaders(), body: JSON.stringify({ tt_name: name.trim() }),
     })
     const data = await res.json()
     if (!res.ok) throw new Error(data.message || 'เพิ่มตำแหน่งช่างไม่สำเร็จ')
 
-    // Toast notification
-    const Toast = Sweetalert.mixin({
-      toast: true,
-      position: 'top-end',
-      animation: false,
-      showConfirmButton: false,
-      timer: 2500,
-      timerProgressBar: true,
-      didOpen: (toast) => {
-        toast.addEventListener('mouseenter', Sweetalert.stopTimer)
-        toast.addEventListener('mouseleave', Sweetalert.resumeTimer)
-      },
-    })
-    await Toast.fire({
-      title: 'สำเร็จ',
-      text: 'เพิ่มตำแหน่งช่างเรียบร้อยแล้ว',
-      icon: 'success',
-      background: '#f0f9ff',
-      color: '#1e3a8a',
-    })
-    await fetchMasterData()
-    await fetchUsers()
+    toast.fire({ icon: 'success', title: 'เพิ่มตำแหน่งช่างเรียบร้อยแล้ว', background: '#f0f9ff', color: '#1e3a8a' })
+    await fetchMasterData(); await fetchUsers()
   } catch (err) {
-    // Toast notification
-    const Toast = Sweetalert.mixin({
-      toast: true,
-      position: 'top-end',
-      animation: false,
-      showConfirmButton: false,
-      timer: 3000,
-      timerProgressBar: true,
-    })
-    Toast.fire({
-      title: 'ผิดพลาด',
-      text: err.message || 'ไม่สามารถเพิ่มตำแหน่งช่างได้',
-      icon: 'error',
-      background: '#fee2e2',
-      color: '#dc2626',
-    })
+    toast.fire({ title: 'ผิดพลาด', text: err.message || 'ไม่สามารถเพิ่มตำแหน่งช่างได้', icon: 'error', background: '#fee2e2', color: '#dc2626' })
   }
 }
 
 async function handleEditTechType(item) {
   const { value: name } = await Sweetalert.fire({
-    title: 'แก้ไขตำแหน่งช่าง',
-    input: 'text',
-    inputLabel: 'ชื่อตำแหน่งช่าง',
-    inputValue: item.name,
-    showCancelButton: true,
-    confirmButtonText: 'บันทึก',
-    cancelButtonText: 'ยกเลิก',
-    inputValidator: (value) => {
-      if (!value || !value.trim()) return 'กรุณากรอกชื่อตำแหน่งช่าง'
-      return null
-    },
+    title: 'แก้ไขตำแหน่งช่าง', input: 'text', inputLabel: 'ชื่อตำแหน่งช่าง', inputValue: item.name,
+    showCancelButton: true, confirmButtonText: 'บันทึก', cancelButtonText: 'ยกเลิก',
+    inputValidator: (value) => { if (!value || !value.trim()) return 'กรุณากรอกชื่อตำแหน่งช่าง'; return null },
   })
   if (!name) return
 
   try {
     const res = await fetch(`${API_BASE}/technician-types/${item.id}`, {
-      method: 'PUT',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({ tt_name: name.trim() }),
-      us_phone: toRaw(addForm.value.us_phone),
+      method: 'PUT', headers: getAuthHeaders(), body: JSON.stringify({ tt_name: name.trim() }),
     })
     const data = await res.json()
     if (!res.ok) throw new Error(data.message || 'แก้ไขตำแหน่งช่างไม่สำเร็จ')
 
-    // Toast notification
-    const Toast = Sweetalert.mixin({
-      toast: true,
-      position: 'top-end',
-      animation: false,
-      showConfirmButton: false,
-      timer: 2500,
-      timerProgressBar: true,
-      didOpen: (toast) => {
-        toast.addEventListener('mouseenter', Sweetalert.stopTimer)
-        toast.addEventListener('mouseleave', Sweetalert.resumeTimer)
-      },
-    })
-    await Toast.fire({
-      title: 'สำเร็จ',
-      text: 'แก้ไขตำแหน่งช่างเรียบร้อยแล้ว',
-      icon: 'success',
-      background: '#f0f9ff',
-      color: '#1e3a8a',
-    })
-    await fetchMasterData()
-    await fetchUsers()
+    toast.fire({ icon: 'success', title: 'แก้ไขตำแหน่งช่างเรียบร้อยแล้ว', background: '#f0f9ff', color: '#1e3a8a' })
+    await fetchMasterData(); await fetchUsers()
   } catch (err) {
-    // Toast notification
-    const Toast = Sweetalert.mixin({
-      toast: true,
-      position: 'top-end',
-      animation: false,
-      showConfirmButton: false,
-      timer: 3000,
-      timerProgressBar: true,
-    })
-    Toast.fire({
-      title: 'ผิดพลาด',
-      text: err.message || 'ไม่สามารถแก้ไขตำแหน่งช่างได้',
-      icon: 'error',
-      background: '#fee2e2',
-      color: '#dc2626',
-    })
+    toast.fire({ title: 'ผิดพลาด', text: err.message || 'ไม่สามารถแก้ไขตำแหน่งช่างได้', icon: 'error', background: '#fee2e2', color: '#dc2626' })
   }
 }
 
 async function handleDeleteTechType(item) {
   const result = await Sweetalert.fire({
-    title: 'ยืนยันการลบ?',
-    text: `ต้องการลบ "${item.name}" หรือไม่`,
-    icon: 'warning',
-    showCancelButton: true,
-    confirmButtonText: 'ลบ',
-    cancelButtonText: 'ยกเลิก',
-    confirmButtonColor: '#dc2626',
+    title: 'ยืนยันการลบ?', text: `ต้องการลบ "${item.name}" หรือไม่`, icon: 'warning',
+    showCancelButton: true, confirmButtonText: 'ลบ', cancelButtonText: 'ยกเลิก', confirmButtonColor: '#dc2626',
   })
   if (!result.isConfirmed) return
 
   try {
-    const res = await fetch(`${API_BASE}/technician-types/${item.id}`, {
-      method: 'DELETE',
-      headers: getAuthHeaders(),
-    })
+    const res = await fetch(`${API_BASE}/technician-types/${item.id}`, { method: 'DELETE', headers: getAuthHeaders() })
     const data = await res.json().catch(() => ({}))
     if (!res.ok) throw new Error(data.message || 'ลบตำแหน่งช่างไม่สำเร็จ')
 
-    // Toast notification
-    const Toast = Sweetalert.mixin({
-      toast: true,
-      position: 'top-end',
-      animation: false,
-      showConfirmButton: false,
-      timer: 2500,
-      timerProgressBar: true,
-      didOpen: (toast) => {
-        toast.addEventListener('mouseenter', Sweetalert.stopTimer)
-        toast.addEventListener('mouseleave', Sweetalert.resumeTimer)
-      },
-    })
-    await Toast.fire({
-      title: 'สำเร็จ',
-      text: 'ลบตำแหน่งช่างเรียบร้อยแล้ว',
-      icon: 'success',
-      background: '#f0f9ff',
-      color: '#1e3a8a',
-    })
-    await fetchMasterData()
-    await fetchUsers()
+    toast.fire({ icon: 'success', title: 'ลบตำแหน่งช่างเรียบร้อยแล้ว', background: '#f0f9ff', color: '#1e3a8a' })
+    await fetchMasterData(); await fetchUsers()
   } catch (err) {
-    // Toast notification
-    const Toast = Sweetalert.mixin({
-      toast: true,
-      position: 'top-end',
-      animation: false,
-      showConfirmButton: false,
-      timer: 3000,
-      timerProgressBar: true,
-    })
-    Toast.fire({
-      title: 'ผิดพลาด',
-      text: err.message || 'ไม่สามารถลบตำแหน่งช่างได้',
-      icon: 'error',
-      background: '#fee2e2',
-      color: '#dc2626',
-    })
+    toast.fire({ title: 'ผิดพลาด', text: err.message || 'ไม่สามารถลบตำแหน่งช่างได้', icon: 'error', background: '#fee2e2', color: '#dc2626' })
   }
 }
 
 function handleImportSuccess() {
-  toast.fire({
-    icon: 'success',
-    title: 'นำเข้าผู้ใช้งานเรียบร้อยแล้ว',
-    background: '#f0f9ff',
-    color: '#1e3a8a',
-  })
+  toast.fire({ icon: 'success', title: 'นำเข้าผู้ใช้งานเรียบร้อยแล้ว', background: '#f0f9ff', color: '#1e3a8a' })
   showImportModal.value = false
 }
 
 function handleImportError(message) {
-  toast.fire({
-    icon: 'error',
-    title: message || 'นำเข้าผู้ใช้งานไม่สำเร็จ',
-    background: '#fee2e2',
-    color: '#dc2626',
-  })
+  toast.fire({ icon: 'error', title: message || 'นำเข้าผู้ใช้งานไม่สำเร็จ', background: '#fee2e2', color: '#dc2626' })
 }
 </script>
 
 <template>
-  <!-- ตาราง -->
   <div class="p-8 mx-auto bg-white shadow-md rounded-xl max-w-7xl">
     <h1 class="mb-6 text-lg font-bold text-black sm:text-xl">จัดการผู้ใช้งานระบบ</h1>
-    <!-- ฟิลเตอร์ -->
     <div class="mb-6">
       <div class="flex flex-col gap-4 mb-4 md:flex-row md:items-center md:justify-between">
         <div class="relative z-40 flex flex-wrap items-center gap-3">
-          <!-- ค้นหา -->
-          <input
-            v-model="searchQuery"
-            type="text"
-            placeholder="ค้นหาชื่อผู้ใช้ / หน่วยงาน / บทบาท"
-            class="w-full sm:w-[260px] h-10 px-4 rounded-lg border border-gray-300 bg-white focus:ring-2 focus:ring-blue-500 text-gray-700"
-          />
-          <!-- ฟิลเตอร์บทบาท -->
+          <input v-model="searchQuery" type="text" placeholder="ค้นหาชื่อผู้ใช้ / หน่วยงาน / บทบาท"
+            class="w-full sm:w-[260px] h-10 px-4 rounded-lg border border-gray-300 bg-white focus:ring-2 focus:ring-blue-500 text-gray-700" />
           <div class="relative">
-            <button
-              @click.stop="toggleRoleFilter"
-              class="flex items-center h-10 gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg"
-            >
+            <button @click.stop="toggleRoleFilter"
+              class="flex items-center h-10 gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg">
               บทบาท
-              <img
-                src="/icon/sidebar/chevron-down-icon.svg"
+              <img src="/icon/sidebar/chevron-down-icon.svg"
                 class="w-4 h-4 transition-transform duration-200 opacity-70"
-                :class="{ 'rotate-180': showRoleFilter }"
-              />
+                :class="{ 'rotate-180': showRoleFilter }" />
             </button>
 
-            <div
-              v-if="showRoleFilter"
-              class="absolute z-10 w-48 p-3 mt-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-md shadow-lg"
-            >
+            <div v-if="showRoleFilter"
+              class="absolute z-10 w-48 p-3 mt-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-md shadow-lg">
               <label v-for="role in roleFilterOptions" :key="role" class="flex items-center py-1">
-                <input
-                  type="checkbox"
-                  :value="role"
-                  v-model="selectedRoles"
-                  class="w-4 h-4 text-blue-600 border-gray-300"
-                />
-                <span class="ml-2">{{ role }}</span>
+                <input type="checkbox" :value="role" v-model="selectedRoles"
+                  class="w-4 h-4 text-blue-600 border-gray-300" />
+                <span class="ml-2">{{ renderThaiRole(role) }}</span>
               </label>
             </div>
           </div>
-          <!-- ฟิลเตอร์ตำแหน่ง -->
           <div class="relative">
-            <button
-              @click.stop="toggleTechFilter"
-              class="flex items-center h-10 gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg"
-            >
+            <button @click.stop="toggleTechFilter"
+              class="flex items-center h-10 gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg">
               ตำแหน่ง
-              <img
-                src="/icon/sidebar/chevron-down-icon.svg"
+              <img src="/icon/sidebar/chevron-down-icon.svg"
                 class="w-4 h-4 transition-transform duration-200 opacity-70"
-                :class="{ 'rotate-180': showTechFilter }"
-              />
+                :class="{ 'rotate-180': showTechFilter }" />
             </button>
 
-            <div
-              v-if="showTechFilter"
-              class="absolute z-10 w-56 p-3 mt-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-md shadow-lg"
-            >
+            <div v-if="showTechFilter"
+              class="absolute z-10 w-56 p-3 mt-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-md shadow-lg">
               <div class="overflow-y-auto max-h-56">
                 <label v-for="t in technicianFilterOptions" :key="t" class="flex items-center py-1">
-                  <input
-                    type="checkbox"
-                    v-model="allSelected"
-                    class="text-blue-600 cursor-pointer"
-                  />
+                  <input type="checkbox" v-model="allSelected" class="text-blue-600 cursor-pointer" />
 
                   <span class="ml-2">{{ t }}</span>
                 </label>
               </div>
 
               <div class="pt-2 mt-2 border-t border-gray-200">
-                <button
-                  type="button"
-                  @click.stop="openManageTechModal"
-                  class="flex items-center justify-center w-full gap-1 text-xs font-medium text-blue-600 hover:text-blue-700"
-                >
+                <button type="button" @click.stop="openManageTechModal"
+                  class="flex items-center justify-center w-full gap-1 text-xs font-medium text-blue-600 hover:text-blue-700">
                   <img src="/icon/plus-icon.svg" class="w-3 h-3" />
                   จัดการตำแหน่งช่าง
                 </button>
               </div>
             </div>
           </div>
-          <!-- ล้างตัวกรอง -->
-          <button
-            v-if="selectedRoles.length || selectedTechTypes.length"
-            @click="clearFilters"
-            class="text-sm font-medium text-blue-600 hover:text-blue-700"
-          >
+          <button v-if="selectedRoles.length || selectedTechTypes.length" @click="clearFilters"
+            class="text-sm font-medium text-blue-600 hover:text-blue-700">
             ล้างตัวกรอง
           </button>
         </div>
         <div class="flex flex-col gap-2 sm:flex-row">
-          <!-- ปุ่ม import -->
           <button
             class="inline-flex items-center justify-center sm:justify-start w-full sm:w-auto h-10 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-900 text-white font-medium shadow-sm transition"
-            @click="showImportModal = true"
-          >
+            @click="showImportModal = true">
             <img src="/icon/plus-icon.svg" class="w-4 h-4" />
             import
           </button>
-          <!-- ปุ่มเพิ่ม -->
-          <button
-            @click="openAddModal"
-            class="inline-flex items-center justify-center sm:justify-start w-full sm:w-auto h-10 px-4 rounded-lg bg-[#1E48D1] hover:bg-[#1539a9] text-white font-medium shadow-sm transition"
-          >
+          <button @click="openAddModal"
+            class="inline-flex items-center justify-center sm:justify-start w-full sm:w-auto h-10 px-4 rounded-lg bg-[#1E48D1] hover:bg-[#1539a9] text-white font-medium shadow-sm transition">
             <img src="/icon/plus-icon.svg" class="w-4 h-4" />
             เพิ่มผู้ใช้
           </button>
         </div>
       </div>
       <div class="-mx-2 overflow-x-auto sm:mx-0">
-        <TableComponent
-          :columns="columns"
-          :rows="
-            filteredRows.map((u) => [
-              u.fullNameTh,
-              u.username,
-              u.department,
-              u.role,
-              u.technicianType,
-              '',
-            ])
-          "
-          :perPage="10"
-          :columnAlign="['left', 'left', 'left', 'left', 'left', 'center']"
-          :id-column-as-link="false"
-          @detail="openViewModal"
-        >
-          <!-- ใส่ SLOT ให้ column ตัวดำเนินการ -->
+        <TableComponent :columns="columns" :rows="filteredRows.map((u) => [
+          u.fullNameTh,
+          u.username,
+          u.department,
+          renderThaiRole(u.role),
+          u.jobTitle,
+          '',
+        ])
+          " :perPage="10" :columnAlign="['left', 'left', 'left', 'left', 'left', 'center']" :id-column-as-link="false"
+          @detail="openViewModal">
           <template #cell-5="{ row }">
-            <TableActions
-              :row-id="row[1]"
-              :row="row"
-              role="admin"
-              :open-menu-id="openMenuId"
-              @toggle-menu="openMenuId = $event"
-              @detail="openViewModal(row[1])"
-              @edit="openEditModal(row[1])"
-              @delete="confirmDelete(row[1])"
-            />
+            <TableActions :row-id="row[1]" :row="row" role="admin" :open-menu-id="openMenuId"
+              @toggle-menu="openMenuId = $event" @detail="openViewModal(row[1])" @edit="openEditModal(row[1])"
+              @delete="confirmDelete(row[1])" />
           </template>
         </TableComponent>
       </div>
     </div>
 
-    <!-- View User Modal (เหมือน Edit เป๊ะ แต่ disabled ทั้งหมด) -->
-    <div
-      v-if="showViewModal"
+    <div v-if="showUserModal"
       class="fixed inset-0 z-50 flex items-center justify-center px-2 bg-black bg-opacity-50 sm:px-0"
-      @click.self="closeViewModal"
-    >
-      <div
-        class="bg-white rounded-lg p-4 sm:p-6 md:p-8 w-full max-w-2xl shadow-xl max-h-[90vh] overflow-y-auto"
-      >
-        <!-- Header with icon -->
+      @click.self="closeUserModal">
+      <div class="bg-white rounded-lg p-4 sm:p-6 md:p-8 w-full max-w-2xl shadow-xl max-h-[90vh] overflow-y-auto">
+
         <div class="flex items-center gap-3 mb-6">
-          <div class="p-3 bg-blue-100 rounded-full">
-            <img src="/icon/user-info.svg" alt="View User" class="w-8 h-8" />
+          <div class="p-3 rounded-full" :class="modalIconClass">
+            <img src="/icon/user-icon.svg" v-if="isAddMode || isEditMode" alt="User Icon" class="w-8 h-8" />
+            <img src="/icon/user-info.svg" v-else alt="View User" class="w-8 h-8" />
           </div>
-          <h2 class="text-xl font-bold text-gray-800">รายละเอียดผู้ใช้งาน</h2>
+          <h2 class="text-xl font-bold text-gray-800">{{ modalTitle }}</h2>
         </div>
-        <p class="mb-6 text-sm text-gray-600">แสดงข้อมูลผู้ใช้ในระบบ (ไม่สามารถแก้ไขได้)</p>
-        <form>
-          <!-- ชื่อผู้ใช้ -->
-          <div class="mb-3">
-            <label class="block text-sm font-medium text-gray-700 mb-1.5"> ชื่อผู้ใช้ </label>
-            <input
-              v-model="viewForm.us_user_name"
-              type="text"
-              disabled
-              class="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md cursor-not-allowed"
-            />
-          </div>
-          <!-- คำนำหน้า -->
-          <div class="mb-3">
-            <label class="block text-sm font-medium text-gray-700 mb-1.5"> คำนำหน้าชื่อ </label>
-            <select
-              v-model="viewForm.us_ttn_id"
-              disabled
-              class="w-full px-3 py-2 text-gray-500 bg-gray-100 border border-gray-300 rounded-md appearance-none cursor-not-allowed"
-            >
-              <option
-                v-for="opt in titleOptions"
-                :key="opt.value"
-                :value="opt.value"
-                :disabled="opt.disabled"
-              >
-                {{ opt.label }}
-              </option>
-            </select>
-          </div>
-          <!-- ชื่อ - นามสกุล (ภาษาไทย) -->
-          <div class="grid grid-cols-1 gap-3 mt-3 mb-3 sm:grid-cols-2">
+
+        <p v-if="isAddMode" class="mb-6 text-sm text-gray-600">กรอกข้อมูลเพื่อสร้างบัญชีผู้ใช้ใหม่ในระบบ</p>
+        <p v-else-if="isEditMode" class="mb-6 text-sm text-gray-600">คุณต้องการบันทึกการแก้ไขข้อมูลผู้ใช้หรือไม่</p>
+        <p v-else class="mb-6 text-sm text-gray-600">แสดงข้อมูลผู้ใช้ในระบบ (ไม่สามารถแก้ไขได้)</p>
+
+        <form @submit.prevent="handleUserModalSubmit">
+
+          <div v-if="isViewMode" class="mb-3">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1.5"> ชื่อ (ไทย) </label>
-              <input
-                v-model="viewForm.us_first_name_th"
-                type="text"
-                disabled
-                class="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md cursor-not-allowed"
-              />
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1.5"> นามสกุล (ไทย) </label>
-              <input
-                v-model="viewForm.us_last_name_th"
-                type="text"
-                disabled
-                class="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md cursor-not-allowed"
-              />
+              <label class="block text-sm font-medium mb-1.5">ชื่อผู้ใช้</label>
+              <input :value="userModalForm.us_user_name" type="text" disabled
+                class="w-full px-3 py-2 border rounded-md bg-gray-100 cursor-not-allowed" />
             </div>
           </div>
-          <!-- ชื่อ - นามสกุล (ภาษาอังกฤษ) -->
+          <div v-else class="grid grid-cols-1 gap-3 mb-3 sm:grid-cols-2">
+            <div>
+              <label class="block text-sm font-medium mb-1.5">ชื่อผู้ใช้ <span class="text-red-500">*</span></label>
+              <input v-model="userModalForm.us_user_name" @input="clearError('username')" type="text"
+                :class="['w-full px-3 py-2 border rounded-md', userModalErrors.username ? 'border-red-500' : 'border-gray-300']"
+                placeholder="กรอกชื่อผู้ใช้" />
+              <p v-if="userModalErrors.username" class="mt-1 text-sm text-red-500">{{ userModalErrors.username }}</p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1.5">
+                {{ isAddMode ? 'รหัสผ่าน' : 'เปลี่ยนรหัสผ่านใหม่' }}
+                <span v-if="isAddMode" class="text-red-500">*</span>
+              </label>
+              <input v-model="userModalForm.us_user_pass" @input="clearError('password')" type="password"
+                :class="['w-full px-3 py-2 border rounded-md', userModalErrors.password ? 'border-red-500' : 'border-gray-300', isAddMode ? 'text-gray-700 bg-white' : 'text-[#FF0000] bg-white tooltip']"
+                :placeholder="isAddMode ? 'กรอกรหัสผ่าน' : 'รหัสผ่านใหม่'" />
+              <p v-if="userModalErrors.password" class="mt-1 text-sm text-red-500">{{ userModalErrors.password }}</p>
+            </div>
+          </div>
+
           <div class="grid grid-cols-1 gap-3 mb-3 sm:grid-cols-2">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1.5"
-                >ชื่อ (ภาษาอังกฤษ)</label
-              >
-              <input
-                v-model="viewForm.us_first_name_en"
-                type="text"
-                disabled
-                class="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md cursor-not-allowed"
-              />
+              <label class="block text-sm font-medium mb-1.5">คำนำหน้าชื่อ <span v-if="!isViewMode"
+                  class="text-red-500">*</span></label>
+              <select v-model="userModalForm.us_ttn_id" @change="clearError('ttn')" :disabled="isViewMode"
+                :class="['w-full px-3 py-2 border rounded-md', isViewMode ? 'text-gray-500 bg-gray-100 cursor-not-allowed' : 'bg-white', userModalErrors.ttn ? 'border-red-500' : 'border-gray-300']">
+                <option v-for="opt in titleOptions" :key="opt.value" :value="opt.value" :disabled="opt.disabled">{{
+                  opt.label }}</option>
+              </select>
+              <p v-if="userModalErrors.ttn" class="mt-1 text-sm text-red-500">{{ userModalErrors.ttn }}</p>
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1.5"
-                >นามสกุล (ภาษาอังกฤษ)</label
-              >
-              <input
-                v-model="viewForm.us_last_name_en"
-                type="text"
-                disabled
-                class="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md cursor-not-allowed"
-              />
+              <label class="block text-sm font-medium mb-1.5">ตำแหน่งบุคลากร <span v-if="!isViewMode"
+                  class="text-red-500">*</span></label>
+
+              <input v-if="isAddMode" v-model="userModalForm.us_job_title" type="text"
+                :class="['w-full px-3 py-2 border rounded-md', userModalErrors.jobTitle ? 'border-red-500' : 'border-gray-300']"
+                placeholder="กรอกตำแหน่งบุคลากร" @input="clearError('jobTitle')" />
+
+              <input v-else-if="isEditMode" v-model="userModalForm.us_job_title" type="text"
+                :class="['w-full px-3 py-2 border rounded-md', userModalErrors.jobTitle ? 'border-red-500' : 'border-gray-300']"
+                placeholder="กรอกตำแหน่งบุคลากร" @input="clearError('jobTitle')" />
+
+              <input v-else
+                :value="isViewMode && (userModalForm.us_job_title === null || userModalForm.us_job_title === undefined || userModalForm.us_job_title === '') ? '-' : userModalForm.us_job_title"
+                type="text" :disabled="isViewMode"
+                :class="['w-full px-3 py-2 border rounded-md', isViewMode ? 'bg-gray-100 border-gray-300 cursor-not-allowed' : '', userModalErrors.jobTitle ? 'border-red-500' : 'border-gray-300']"
+                placeholder="กรอกตำแหน่งบุคลากร" @input="clearError('jobTitle')" />
+
+              <p v-if="isAddMode && userModalErrors.jobTitle" class="mt-1 text-sm text-red-500">{{
+                userModalErrors.jobTitle
+              }}</p>
+              <p v-if="!isAddMode && userModalErrors.jobTitle" class="mt-1 text-sm text-red-500">{{
+                userModalErrors.jobTitle
+              }}</p>
             </div>
           </div>
-          <!-- เบอร์โทรศัพท์ -->
-          <div class="mb-3">
-            <label class="block text-sm font-medium text-gray-700 mb-1.5">เบอร์โทร</label>
-            <input
-              v-model="viewForm.us_phone"
-              type="tel"
-              disabled
-              class="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md cursor-not-allowed"
-            />
+
+          <div class="grid grid-cols-1 gap-3 mt-3 mb-3 sm:grid-cols-2">
+            <div>
+              <label class="block text-sm font-medium mb-1.5">ชื่อ (ไทย) <span v-if="!isViewMode"
+                  class="text-red-500">*</span></label>
+              <input v-model="userModalForm.us_first_name_th" @input="clearError('firstTh')" type="text"
+                :disabled="isViewMode"
+                :class="['w-full px-3 py-2 border rounded-md', isViewMode ? 'bg-gray-100 cursor-not-allowed' : '', userModalErrors.firstTh ? 'border-red-500' : 'border-gray-300']"
+                placeholder="กรอกชื่อ" />
+              <p v-if="userModalErrors.firstTh" class="mt-1 text-sm text-red-500">{{ userModalErrors.firstTh }}</p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1.5">นามสกุล (ไทย) <span v-if="!isViewMode"
+                  class="text-red-500">*</span></label>
+              <input v-model="userModalForm.us_last_name_th" @input="clearError('lastTh')" type="text"
+                :disabled="isViewMode"
+                :class="['w-full px-3 py-2 border rounded-md', isViewMode ? 'bg-gray-100 cursor-not-allowed' : '', userModalErrors.lastTh ? 'border-red-500' : 'border-gray-300']"
+                placeholder="กรอกนามสกุล" />
+              <p v-if="userModalErrors.lastTh" class="mt-1 text-sm text-red-500">{{ userModalErrors.lastTh }}</p>
+            </div>
           </div>
-          <!-- หน่วยงาน -->
-          <div class="mb-3">
-            <label class="block text-sm font-medium text-gray-700 mb-1.5">หน่วยงาน</label>
-            <input
-              v-model="viewForm.us_department"
-              type="text"
-              disabled
-              class="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md cursor-not-allowed"
-            />
+
+          <div class="grid grid-cols-1 gap-3 mb-3 sm:grid-cols-2">
+            <div>
+              <label class="block text-sm font-medium mb-1.5">ชื่อ (ภาษาอังกฤษ) <span v-if="!isViewMode"
+                  class="text-red-500">*</span></label>
+              <input v-model="userModalForm.us_first_name_en" @input="clearError('firstEn')" type="text"
+                :disabled="isViewMode"
+                :class="['w-full px-3 py-2 border rounded-md', isViewMode ? 'bg-gray-100 cursor-not-allowed' : '', userModalErrors.firstEn ? 'border-red-500' : 'border-gray-300']"
+                placeholder="First Name" />
+              <p v-if="userModalErrors.firstEn" class="mt-1 text-sm text-red-500">{{ userModalErrors.firstEn }}</p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1.5">นามสกุล (ภาษาอังกฤษ) <span v-if="!isViewMode"
+                  class="text-red-500">*</span></label>
+              <input v-model="userModalForm.us_last_name_en" @input="clearError('lastEn')" type="text"
+                :disabled="isViewMode"
+                :class="['w-full px-3 py-2 border rounded-md', isViewMode ? 'bg-gray-100 cursor-not-allowed' : '', userModalErrors.lastEn ? 'border-red-500' : 'border-gray-300']"
+                placeholder="Last Name" />
+              <p v-if="userModalErrors.lastEn" class="mt-1 text-sm text-red-500">{{ userModalErrors.lastEn }}</p>
+            </div>
           </div>
-          <!-- บทบาท - ตำแหน่งช่าง (เหมือน Edit แต่ disabled) -->
+
+          <div class="grid grid-cols-1 gap-3 mb-3 sm:grid-cols-2">
+            <div :class="isViewMode ? 'col-span-2 sm:col-span-2' : ''"> <label
+                class="block text-sm font-medium mb-1.5">เบอร์โทร <span v-if="!isViewMode"
+                  class="text-red-500">*</span></label>
+              <input v-model="userModalForm.us_phone" @input="(maskInput($event.target), clearError('phone'))"
+                type="tel" :disabled="isViewMode"
+                :class="['w-full px-3 py-2 border rounded-md', isViewMode ? 'bg-gray-100 cursor-not-allowed' : '', userModalErrors.phone ? 'border-red-500' : 'border-gray-300']"
+                placeholder="กรอกเบอร์โทร" />
+              <p v-if="userModalErrors.phone" class="mt-1 text-sm text-red-500">{{ userModalErrors.phone }}</p>
+            </div>
+            <div :class="isViewMode ? 'col-span-2 sm:col-span-2' : ''">
+              <label class="block text-sm font-medium mb-1.5">หน่วยงาน <span v-if="!isViewMode"
+                  class="text-red-500">*</span></label>
+              <input v-model="userModalForm.us_department" type="text" @input="clearError('department')"
+                :disabled="isViewMode"
+                :class="['w-full px-3 py-2 border rounded-md', isViewMode ? 'bg-gray-100 cursor-not-allowed' : '', userModalErrors.department ? 'border-red-500' : 'border-gray-300']"
+                placeholder="กรอกหน่วยงาน" />
+              <p v-if="userModalErrors.department" class="mt-1 text-sm text-red-500">{{ userModalErrors.department }}
+              </p>
+            </div>
+          </div>
+
           <div class="grid grid-cols-2 gap-3 mb-4">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1.5">บทบาท</label>
-              <select
-                v-model="viewForm.us_role_id"
-                disabled
-                class="w-full px-3 py-2 text-gray-500 bg-gray-100 border border-gray-300 rounded-md appearance-none cursor-not-allowed"
-              >
+              <label class="block text-sm font-medium mb-1.5">บทบาท <span v-if="!isViewMode"
+                  class="text-red-500">*</span></label>
+              <select v-model="userModalForm.us_role_id" @change="(handleRoleChange(), clearError('role'))"
+                :disabled="isViewMode"
+                :class="['w-full px-3 py-2 border rounded-md', isViewMode ? 'text-gray-500 bg-gray-100 cursor-not-allowed' : 'bg-white', userModalErrors.role ? 'border-red-500' : 'border-gray-300']">
                 <option value="" disabled>เลือกบทบาท</option>
-                <option v-for="role in roleOptions" :key="role.value" :value="role.value">
-                  {{ role.code }}
-                </option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1.5">ตำแหน่งช่าง</label>
-              <select
-                v-model="viewForm.us_tt_id"
-                disabled
-                class="w-full px-3 py-2 text-gray-500 bg-gray-100 border border-gray-300 rounded-md appearance-none cursor-not-allowed"
-              >
-                <option value="">
-                  {{ addForm.us_role_id === '2' ? 'เลือกตำแหน่ง' : 'ไม่ระบุ' }}
-                </option>
-                <option v-for="opt in technicianOptions" :key="opt.value" :value="opt.value">
-                  {{ opt.label }}
-                </option>
-              </select>
-            </div>
-          </div>
-          <!-- ปุ่มปิด -->
-          <div class="flex justify-end mt-6">
-            <button
-              type="button"
-              @click="closeViewModal"
-              class="px-5 py-2 font-medium text-gray-700 transition bg-gray-200 rounded-md hover:bg-gray-300"
-            >
-              ปิด
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <!-- Modal เพิ่มผู้ใช้งาน -->
-    <div
-      v-if="showAddModal"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
-      @click.self="closeAddModal"
-    >
-      <div class="bg-white rounded-lg p-8 w-full max-w-2xl shadow-xl max-h-[90vh] overflow-y-auto">
-        <!-- Header with icon -->
-        <div class="flex items-center gap-3 mb-6">
-          <div class="p-3 bg-green-100 rounded-full">
-            <img src="/icon/user-icon.svg" alt="Add User" class="w-8 h-8" />
-          </div>
-          <h2 class="text-xl font-bold text-gray-800">เพิ่มผู้ใช้งาน</h2>
-        </div>
-        <p class="mb-6 text-sm text-gray-600">กรอกข้อมูลเพื่อสร้างบัญชีผู้ใช้ใหม่ในระบบ</p>
-        <form @submit.prevent="confirmAddUser">
-          <!-- ชื่อผู้ใช้ และ รหัสผ่าน -->
-          <div class="grid grid-cols-1 gap-3 mb-3 sm:grid-cols-2">
-            <div>
-              <label class="block text-sm font-medium mb-1.5">
-                ชื่อผู้ใช้ <span class="text-red-500">*</span>
-              </label>
-              <input
-                v-model="addForm.us_user_name"
-                @input="clearAddError('username')"
-                type="text"
-                :class="[
-                  'w-full px-3 py-2 border rounded-md',
-                  addErrors.username ? 'border-red-500' : 'border-gray-300',
-                ]"
-                placeholder="กรอกชื่อผู้ใช้"
-              />
-              <p v-if="addErrors.username" class="mt-1 text-sm text-red-500">
-                {{ addErrors.username }}
-              </p>
-            </div>
-            <div>
-              <label class="block text-sm font-medium mb-1.5">
-                รหัสผ่าน <span class="text-red-500">*</span>
-              </label>
-              <input
-                v-model="addForm.us_user_pass"
-                @input="clearAddError('password')"
-                type="password"
-                :class="[
-                  'w-full px-3 py-2 border rounded-md',
-                  addErrors.password ? 'border-red-500' : 'border-gray-300',
-                ]"
-                placeholder="กรอกรหัสผ่าน"
-              />
-              <p v-if="addErrors.password" class="mt-1 text-sm text-red-500">
-                {{ addErrors.password }}
-              </p>
-            </div>
-          </div>
-          <!-- คำนำหน้า -->
-          <div>
-            <label class="block text-sm font-medium mb-1.5">
-              คำนำหน้าชื่อ <span class="text-red-500">*</span>
-            </label>
-            <select
-              v-model="addForm.us_ttn_id"
-              @change="clearAddError('ttn')"
-              :class="[
-                'w-full px-3 py-2 border rounded-md bg-white',
-                addErrors.ttn ? 'border-red-500' : 'border-gray-300',
-              ]"
-            >
-              <option
-                v-for="opt in titleOptions"
-                :key="opt.value"
-                :value="opt.value"
-                :disabled="opt.disabled"
-              >
-                {{ opt.label }}
-              </option>
-            </select>
-            <p v-if="addErrors.ttn" class="mt-1 text-sm text-red-500">
-              {{ addErrors.ttn }}
-            </p>
-          </div>
-          <!-- ชื่อ - นามสกุล (ภาษาไทย) -->
-          <div class="grid grid-cols-1 gap-3 mt-3 mb-3 sm:grid-cols-2">
-            <div>
-              <label class="block text-sm font-medium mb-1.5">
-                ชื่อ (ไทย) <span class="text-red-500">*</span>
-              </label>
-              <input
-                v-model="addForm.us_first_name_th"
-                @input="clearAddError('firstTh')"
-                type="text"
-                :class="[
-                  'w-full px-3 py-2 border rounded-md',
-                  addErrors.firstTh ? 'border-red-500' : 'border-gray-300',
-                ]"
-                placeholder="กรอกชื่อ"
-              />
-              <p v-if="addErrors.firstTh" class="mt-1 text-sm text-red-500">
-                {{ addErrors.firstTh }}
-              </p>
-            </div>
-            <div>
-              <label class="block text-sm font-medium mb-1.5">
-                นามสกุล (ไทย) <span class="text-red-500">*</span>
-              </label>
-              <input
-                v-model="addForm.us_last_name_th"
-                @input="clearAddError('lastTh')"
-                type="text"
-                :class="[
-                  'w-full px-3 py-2 border rounded-md',
-                  addErrors.lastTh ? 'border-red-500' : 'border-gray-300',
-                ]"
-                placeholder="กรอกนามสกุล"
-              />
-              <p v-if="addErrors.lastTh" class="mt-1 text-sm text-red-500">
-                {{ addErrors.lastTh }}
-              </p>
-            </div>
-          </div>
-          <!-- ชื่อ - นามสกุล (ภาษาอังกฤษ) -->
-          <div class="grid grid-cols-1 gap-3 mb-3 sm:grid-cols-2">
-            <div>
-              <label class="block text-sm font-medium mb-1.5"
-                >ชื่อ (ภาษาอังกฤษ) <span class="text-red-500">*</span></label
-              >
-              <input
-                v-model="addForm.us_first_name_en"
-                @input="clearAddError('firstEn')"
-                type="text"
-                :class="[
-                  'w-full px-3 py-2 border rounded-md',
-                  addErrors.firstEn ? 'border-red-500 ' : 'border-gray-300',
-                ]"
-                placeholder="First Name"
-              />
-              <p v-if="addErrors.firstEn" class="mt-1 text-sm text-red-500">
-                {{ addErrors.firstEn }}
-              </p>
-            </div>
-            <div>
-              <label class="block text-sm font-medium mb-1.5"
-                >นามสกุล (ภาษาอังกฤษ) <span class="text-red-500">*</span></label
-              >
-              <input
-                v-model="addForm.us_last_name_en"
-                @input="clearAddError('lastEn')"
-                type="text"
-                :class="[
-                  'w-full px-3 py-2 border rounded-md',
-                  addErrors.lastEn ? 'border-red-500' : 'border-gray-300',
-                ]"
-                placeholder="Last Name"
-              />
-              <p v-if="addErrors.lastEn" class="mt-1 text-sm text-red-500">
-                {{ addErrors.lastEn }}
-              </p>
-            </div>
-          </div>
-          <!-- เบอร์โทร และ หน่วยงาน -->
-          <div class="grid grid-cols-1 gap-3 mb-3 sm:grid-cols-2">
-            <div>
-              <label class="block text-sm font-medium mb-1.5"
-                >เบอร์โทร <span class="text-red-500">*</span></label
-              >
-              <input
-                v-model="addForm.us_phone"
-                @input="(maskInput($event.target), clearAddError('phone'))"
-                type="tel"
-                :class="[
-                  'w-full px-3 py-2 border rounded-md',
-                  addErrors.phone ? 'border-red-500' : 'border-gray-300',
-                ]"
-                placeholder="กรอกเบอร์โทร"
-              />
-
-              <p v-if="addErrors.phone" class="mt-1 text-sm text-red-500">
-                {{ addErrors.phone }}
-              </p>
-            </div>
-            <div>
-              <label class="block text-sm font-medium mb-1.5">
-                หน่วยงาน <span class="text-red-500">*</span>
-              </label>
-              <input
-                v-model="addForm.us_department"
-                type="text"
-                :class="[
-                  'w-full px-3 py-2 border rounded-md',
-                  addErrors.department ? 'border-red-500' : 'border-gray-300',
-                ]"
-                placeholder="กรอกหน่วยงาน"
-                @input="clearAddError('department')"
-              />
-              <p v-if="addErrors.department" class="mt-1 text-sm text-red-500">
-                {{ addErrors.department }}
-              </p>
-            </div>
-          </div>
-          <!-- บทบาท - ตำแหน่งช่าง -->
-          <div class="grid grid-cols-2 gap-3 mb-4">
-            <div>
-              <label class="block text-sm font-medium mb-1.5">
-                บทบาท <span class="text-red-500">*</span>
-              </label>
-              <select
-                v-model="addForm.us_role_id"
-                @change="(handleAddRoleChange(), clearAddError('role'))"
-                :class="[
-                  'w-full px-3 py-2 border rounded-md bg-white',
-                  addErrors.role ? 'border-red-500' : 'border-gray-300',
-                ]"
-              >
-                <option value="">เลือกบทบาท</option>
-                <option v-for="role in roleOptions" :key="role.value" :value="role.value">
-                  {{ role.label }}
-                </option>
-              </select>
-              <p v-if="addErrors.role" class="mt-1 text-sm text-red-500">
-                {{ addErrors.role }}
-              </p>
-            </div>
-            <div>
-              <label class="block text-sm font-medium mb-1.5">
-                ตำแหน่งช่าง
-                <span v-if="addForm.us_role_id === '2'" class="text-red-500">*</span>
-              </label>
-              <select
-                v-model="addForm.us_tt_id"
-                :disabled="addForm.us_role_id !== '2'"
-                @change="clearAddError('techType')"
-                :class="[
-                  'w-full px-3 py-2 border rounded-md',
-                  addForm.us_role_id === '2'
-                    ? addErrors.techType
-                      ? 'border-red-500'
-                      : 'border-gray-300'
-                    : 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200',
-                ]"
-              >
-                <option value="">
-                  {{ addForm.us_role_id === '2' ? 'เลือกตำแหน่ง' : 'ไม่ระบุ' }}
-                </option>
-                <option v-for="opt in technicianOptions" :key="opt.value" :value="opt.value">
-                  {{ opt.label }}
-                </option>
-              </select>
-              <p v-if="addErrors.techType" class="mt-1 text-sm text-red-500">
-                {{ addErrors.techType }}
-              </p>
-            </div>
-          </div>
-
-          <!-- ปุ่มต่าง ๆ -->
-          <div class="flex flex-col gap-3 mt-6 sm:flex-row">
-            <button
-              type="button"
-              @click="closeAddModal"
-              class="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors font-medium"
-            >
-              ยกเลิก
-            </button>
-            <button
-              type="submit"
-              class="flex-1 px-4 py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-md transition-colors font-medium"
-            >
-              เพิ่มผู้ใช้
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <!-- Edit User Modal -->
-    <div
-      v-if="showEditModal"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
-      @click.self="closeEditModal"
-    >
-      <div class="bg-white rounded-lg p-8 w-full max-w-2xl shadow-xl max-h-[90vh] overflow-y-auto">
-        <!-- Header with icon -->
-        <div class="flex items-center gap-3 mb-6">
-          <div class="p-3 bg-orange-100 rounded-full">
-            <img src="/icon/user-icon.svg" alt="Edit User" class="w-8 h-8" />
-          </div>
-          <h2 class="text-xl font-bold text-gray-800">แก้ไขข้อมูลผู้ใช้</h2>
-        </div>
-        <p class="mb-6 text-sm text-gray-600">คุณต้องการบันทึกการแก้ไขข้อมูลผู้ใช้หรือไม่</p>
-        <form @submit.prevent="confirmEditUser">
-          <!-- ชื่อผู้ใช้ -->
-          <div class="mb-3">
-            <label class="block text-sm font-medium text-gray-700 mb-1.5">
-              ชื่อผู้ใช้ <span class="text-red-500">*</span>
-            </label>
-            <input
-              v-model="editForm.us_user_name"
-              type="text"
-              disabled
-              class="w-full px-3 py-2 text-gray-500 bg-gray-100 border border-gray-300 rounded-md cursor-not-allowed"
-            />
-          </div>
-          <!-- คำนำหน้า -->
-          <div>
-            <label class="block text-sm font-medium mb-1.5">
-              คำนำหน้าชื่อ <span class="text-red-500">*</span>
-            </label>
-            <select
-              v-model="editForm.us_ttn_id"
-              @change="clearEditError('ttn')"
-              :class="[
-                'w-full px-3 py-2 border rounded-md bg-white',
-                editErrors.ttn ? 'border-red-500' : 'border-gray-300',
-              ]"
-            >
-              <option
-                v-for="opt in titleOptions"
-                :key="opt.value"
-                :value="opt.value"
-                :disabled="opt.disabled"
-              >
-                {{ opt.label }}
-              </option>
-            </select>
-            <p v-if="editErrors.ttn" class="mt-1 text-sm text-red-500">
-              {{ editErrors.ttn }}
-            </p>
-          </div>
-          <!-- ชื่อ - นามสกุล (ภาษาไทย) -->
-          <div class="grid grid-cols-1 gap-3 mt-3 mb-3 sm:grid-cols-2">
-            <div>
-              <label class="block text-sm font-medium mb-1.5">
-                ชื่อ (ไทย) <span class="text-red-500">*</span>
-              </label>
-              <input
-                v-model="editForm.us_first_name_th"
-                type="text"
-                :class="[
-                  'w-full px-3 py-2 border rounded-md',
-                  editErrors.firstTh ? 'border-red-500' : 'border-gray-300',
-                ]"
-                placeholder="กรอกชื่อ"
-                @input="clearEditError('firstTh')"
-              />
-              <p v-if="editErrors.firstTh" class="mt-1 text-sm text-red-500">
-                {{ editErrors.firstTh }}
-              </p>
-            </div>
-            <div>
-              <label class="block text-sm font-medium mb-1.5">
-                นามสกุล (ไทย) <span class="text-red-500">*</span>
-              </label>
-              <input
-                v-model="editForm.us_last_name_th"
-                type="text"
-                :class="[
-                  'w-full px-3 py-2 border rounded-md',
-                  editErrors.lastTh ? 'border-red-500' : 'border-gray-300',
-                ]"
-                placeholder="กรอกนามสกุล"
-                @input="clearEditError('lastTh')"
-              />
-              <p v-if="editErrors.lastTh" class="mt-1 text-sm text-red-500">
-                {{ editErrors.lastTh }}
-              </p>
-            </div>
-          </div>
-          <!-- ชื่อ - นามสกุล (ภาษาอังกฤษ) -->
-          <div class="grid grid-cols-1 gap-3 mb-3 sm:grid-cols-2">
-            <div>
-              <label class="block text-sm font-medium mb-1.5">ชื่อ (ภาษาอังกฤษ)</label>
-              <input
-                v-model="editForm.us_first_name_en"
-                type="text"
-                :class="[
-                  'w-full px-3 py-2 border rounded-md',
-                  editErrors.firstEn ? 'border-red-500' : 'border-gray-300',
-                ]"
-                placeholder="First Name"
-                @input="clearEditError('firstEn')"
-              />
-              <p v-if="editErrors.firstEn" class="mt-1 text-sm text-red-500">
-                {{ editErrors.firstEn }}
-              </p>
-            </div>
-            <div>
-              <label class="block text-sm font-medium mb-1.5">นามสกุล (ภาษาอังกฤษ)</label>
-              <input
-                v-model="editForm.us_last_name_en"
-                type="text"
-                :class="[
-                  'w-full px-3 py-2 border rounded-md',
-                  editErrors.lastEn ? 'border-red-500' : 'border-gray-300',
-                ]"
-                placeholder="Last Name"
-                @input="clearEditError('lastEn')"
-              />
-              <p v-if="editErrors.lastEn" class="mt-1 text-sm text-red-500">
-                {{ editErrors.lastEn }}
-              </p>
-            </div>
-          </div>
-          <!-- เบอร์โทร และ หน่วยงาน -->
-          <div class="grid grid-cols-1 gap-3 mb-3 sm:grid-cols-2">
-            <div>
-              <label class="block text-sm font-medium mb-1.5">เบอร์โทร</label>
-              <input
-                v-model="editForm.us_phone"
-                @input="(maskInput($event.target), clearEditError('phone'))"
-                type="tel"
-                :class="[
-                  'w-full px-3 py-2 border rounded-md',
-                  editErrors.phone ? 'border-red-500' : 'border-gray-300',
-                ]"
-                placeholder="กรอกเบอร์โทร"
-              />
-              <p v-if="editErrors.phone" class="mt-1 text-sm text-red-500">
-                {{ editErrors.phone }}
-              </p>
-            </div>
-            <div>
-              <label class="block text-sm font-medium mb-1.5">
-                หน่วยงาน <span class="text-red-500">*</span>
-              </label>
-              <input
-                v-model="editForm.us_department"
-                type="text"
-                :class="[
-                  'w-full px-3 py-2 border rounded-md',
-                  editErrors.department ? 'border-red-500' : 'border-gray-300',
-                ]"
-                placeholder="กรอกหน่วยงาน"
-                @input="clearEditError('department')"
-              />
-              <p v-if="editErrors.department" class="mt-1 text-sm text-red-500">
-                {{ editErrors.department }}
-              </p>
-            </div>
-          </div>
-          <!-- บทบาท - ตำแหน่งช่าง (แถวเดียวกัน) -->
-          <div class="grid grid-cols-2 gap-3 mb-4">
-            <div>
-              <label class="block text-sm font-medium mb-1.5">
-                บทบาท <span class="text-red-500">*</span>
-              </label>
-              <select
-                v-model="editForm.us_role_id"
-                @change="(handleEditRoleChange(), clearEditError('role'))"
-                :class="[
-                  'w-full px-3 py-2 border rounded-md bg-white',
-                  editErrors.role ? 'border-red-500' : 'border-gray-300',
-                ]"
-              >
-                <option value="">เลือกบทบาท</option>
-                <option v-for="role in roleOptions" :key="role.value" :value="role.value">
-                  {{ role.label }}
-                </option>
-              </select>
-              <p v-if="editErrors.role" class="mt-1 text-sm text-red-500">
-                {{ editErrors.role }}
-              </p>
-            </div>
-            <div>
-              <label class="block text-sm font-medium mb-1.5">
-                ตำแหน่งช่าง
-                <span
-                  v-if="editForm.us_role_id === '2' || editForm.us_role_id === 2"
-                  class="text-red-500"
-                  >*</span
-                >
-              </label>
-              <select
-                v-model="editForm.us_tt_id"
-                :disabled="editForm.us_role_id !== '2' && editForm.us_role_id !== 2"
-                @change="clearEditError('techType')"
-                :class="[
-                  'w-full px-3 py-2 border rounded-md',
-                  editForm.us_role_id === '2' || editForm.us_role_id === 2
-                    ? editErrors.techType
-                      ? 'border-red-500'
-                      : 'border-gray-300'
-                    : 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200',
-                ]"
-              >
-                <option value="">
-                  {{
-                    editForm.us_role_id === '2' || editForm.us_role_id === 2
-                      ? 'เลือกตำแหน่ง'
-                      : 'ไม่ระบุ'
+                <option v-for="role in roleOptions" :key="role.value" :value="role.value">{{ renderThaiRole(role.label)
                   }}
                 </option>
-                <option v-for="opt in technicianOptions" :key="opt.value" :value="opt.value">
-                  {{ opt.label }}
-                </option>
               </select>
-              <p v-if="editErrors.techType" class="mt-1 text-sm text-red-500">
-                {{ editErrors.techType }}
-              </p>
+              <p v-if="userModalErrors.role" class="mt-1 text-sm text-red-500">{{ userModalErrors.role }}</p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1.5">ตำแหน่งช่าง <span
+                  v-if="(userModalForm.us_role_id === '2' || userModalForm.us_role_id === 2) && !isViewMode"
+                  class="text-red-500">*</span></label>
+              <select v-model="userModalForm.us_tt_id"
+                :disabled="isViewMode || (userModalForm.us_role_id !== '2' && userModalForm.us_role_id !== 2)"
+                @change="clearError('techType')"
+                :class="['w-full px-3 py-2 border rounded-md', (userModalForm.us_role_id === '2' || userModalForm.us_role_id === 2) && !isViewMode ? (userModalErrors.techType ? 'border-red-500' : 'border-gray-300') : 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200']">
+                <option value="">{{ (userModalForm.us_role_id === '2' || userModalForm.us_role_id === 2) ?
+                  'เลือกตำแหน่ง' :
+                  'ไม่ระบุ' }}</option>
+                <option v-for="opt in technicianOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+              </select>
+              <p v-if="userModalErrors.techType" class="mt-1 text-sm text-red-500">{{ userModalErrors.techType }}</p>
             </div>
           </div>
-          <!-- ปุ่มต่าง ๆ -->
-          <div class="flex flex-col gap-3 mt-6 sm:flex-row">
-            <button
-              type="button"
-              @click="closeEditModal"
-              class="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors font-medium"
-            >
-              ยกเลิก
-            </button>
-            <button
-              type="submit"
-              class="flex-1 px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-md transition-colors font-medium"
-            >
-              บันทึกการแก้ไข
-            </button>
+
+          <div class="flex justify-end gap-3 mt-6">
+            <button v-if="isViewMode" type="button" @click="closeUserModal"
+              class="px-5 py-2 font-medium text-gray-700 transition bg-gray-200 rounded-md hover:bg-gray-300">ปิด</button>
+            <template v-else>
+              <button type="button" @click="closeUserModal"
+                class="px-4 py-2 text-gray-700 border border-gray-300 rounded-md">ยกเลิก</button>
+              <button type="submit"
+                :class="['px-4 py-2 text-white rounded-md', isAddMode ? 'bg-green-500' : 'bg-orange-500']">
+                {{ isAddMode ? 'ยืนยันเพิ่ม' : 'บันทึกแก้ไข' }}
+              </button>
+            </template>
           </div>
+
         </form>
       </div>
     </div>
 
-    <!-- Manage Technician Types Modal -->
-    <div
-      v-if="showManageTechModal"
+    <div v-if="showManageTechModal"
       class="fixed inset-0 z-50 flex items-center justify-center px-2 bg-black bg-opacity-50 sm:px-0"
-      @click.self="closeManageTechModal"
-    >
+      @click.self="closeManageTechModal">
       <div class="bg-white rounded-lg p-8 w-full max-w-lg max-h-[100vh] overflow-y-auto">
         <div class="flex items-center justify-between mb-4">
           <div class="flex items-center gap-3">
@@ -1815,38 +886,26 @@ function handleImportError(message) {
             </div>
             <h2 class="text-lg font-bold text-black">จัดการตำแหน่งช่าง</h2>
           </div>
-          <button
-            type="button"
-            @click="handleAddTechType"
-            class="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-white bg-blue-700 rounded-md hover:bg-blue-900"
-          >
+          <button type="button" @click="handleAddTechType"
+            class="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-white bg-blue-700 rounded-md hover:bg-blue-900">
             <img src="/icon/plus-icon.svg" class="w-3 h-3" />
             เพิ่มตำแหน่ง
           </button>
         </div>
         <p class="mb-3 text-xs text-gray-600">เพิ่ม / แก้ไข / ลบชื่อตำแหน่งช่างในระบบ</p>
         <div class="space-y-1 overflow-y-auto max-h-72">
-          <div
-            v-for="item in manageTechList"
-            :key="item.id"
-            class="flex items-center justify-between px-4 py-2 text-sm border rounded-md"
-          >
+          <div v-for="item in manageTechList" :key="item.id"
+            class="flex items-center justify-between px-4 py-2 text-sm border rounded-md">
             <span class="text-gray-800">{{ item.name }}</span>
             <div class="flex items-center gap-2">
-              <button
-                type="button"
-                @click="handleEditTechType(item)"
+              <button type="button" @click="handleEditTechType(item)"
                 class="flex items-center justify-center w-8 h-8 text-white transition bg-yellow-400 rounded-md cursor-pointer sm:w-9 sm:h-8 hover:bg-yellow-500"
-                title="แก้ไข"
-              >
+                title="แก้ไข">
                 <img src="/icon/edit-icon.svg" class="w-4 h-4" />
               </button>
-              <button
-                type="button"
-                @click="handleDeleteTechType(item)"
+              <button type="button" @click="handleDeleteTechType(item)"
                 class="flex items-center justify-center w-8 h-8 text-white transition bg-red-500 rounded-md cursor-pointer sm:w-9 sm:h-8 hover:bg-red-600"
-                title="ลบ"
-              >
+                title="ลบ">
                 <img src="/icon/bin-icon.svg" class="w-4 h-4" />
               </button>
             </div>
@@ -1858,22 +917,14 @@ function handleImportError(message) {
         </div>
 
         <div class="flex justify-end mt-4">
-          <button
-            type="button"
-            @click="closeManageTechModal"
-            class="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50"
-          >
+          <button type="button" @click="closeManageTechModal"
+            class="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50">
             ปิด
           </button>
         </div>
       </div>
     </div>
   </div>
-  <ImportUserModal
-    v-if="showImportModal"
-    @close="showImportModal = false"
-    @refresh="fetchUsers()"
-    @success="handleImportSuccess"
-    @error="handleImportError"
-  />
+  <ImportUserModal v-if="showImportModal" @close="showImportModal = false" @refresh="fetchUsers()"
+    @success="handleImportSuccess" @error="handleImportError" />
 </template>
