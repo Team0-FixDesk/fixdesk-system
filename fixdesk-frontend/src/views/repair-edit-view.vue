@@ -4,7 +4,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
-import { usePhoneFormat } from "@/composables/usePhoneFormat"
+import { usePhoneFormat } from '@/composables/usePhoneFormat'
 
 /**
  * การกำหนด Options / Props
@@ -169,20 +169,27 @@ function processFileList(fileList) {
       position: 'top-end',
       showConfirmButton: false,
       timer: 2000,
-      timerProgressBar: true
+      timerProgressBar: true,
     })
     Toast.fire({
       title: 'ไฟล์เกินกำหนด',
       text: `สามารถอัพโหลดได้สูงสุด ${MAX_FILE_COUNT} ไฟล์`,
-      icon: 'warning'
+      icon: 'warning',
     })
     return
   }
 
   // ตรวจสอบประเภทไฟล์ที่อนุญาต
   const allowedTypeList = [
-    'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
-    'video/mp4', 'video/avi', 'video/mov', 'video/wmv',
+    'image/jpeg',
+    'image/jpg',
+    'image/png',
+    'image/gif',
+    'image/webp',
+    'video/mp4',
+    'video/avi',
+    'video/mov',
+    'video/wmv',
   ]
   const invalidFileList = fileList.filter((file) => !allowedTypeList.includes(file.type))
 
@@ -192,12 +199,12 @@ function processFileList(fileList) {
       position: 'top-end',
       showConfirmButton: false,
       timer: 2500,
-      timerProgressBar: true
+      timerProgressBar: true,
     })
     Toast.fire({
       title: 'ประเภทไฟล์ไม่ถูกต้อง',
       text: 'รองรับเฉพาะไฟล์รูปภาพและวิดีโอที่กำหนด',
-      icon: 'error'
+      icon: 'error',
     })
     return
   }
@@ -210,12 +217,12 @@ function processFileList(fileList) {
       position: 'top-end',
       showConfirmButton: false,
       timer: 2000,
-      timerProgressBar: true
+      timerProgressBar: true,
     })
     Toast.fire({
       title: 'ไฟล์ใหญ่เกินไป',
       text: 'ขนาดไฟล์ต้องไม่เกิน 50MB',
-      icon: 'error'
+      icon: 'error',
     })
     return
   }
@@ -258,7 +265,9 @@ function deleteFile(index) {
 
   // กรณีเป็นไฟล์ที่เพิ่มมาใหม่
   if (!item?.fromServer && item.fileRef) {
-    repairFormData.value.uploadedFileList = repairFormData.value.uploadedFileList.filter((f) => f !== item.fileRef)
+    repairFormData.value.uploadedFileList = repairFormData.value.uploadedFileList.filter(
+      (f) => f !== item.fileRef,
+    )
   }
 
   filePreviewList.value.splice(index, 1)
@@ -356,8 +365,13 @@ async function fetchRepairDetail() {
 function validateFormData() {
   let isValid = true
   errorData.value = {
-    repairType: '', building: '', floor: '', room: '',
-    problemDetail: '', issueDescription: '', urgency: '',
+    repairType: '',
+    building: '',
+    floor: '',
+    room: '',
+    problemDetail: '',
+    issueDescription: '',
+    urgency: '',
   }
 
   if (!repairFormData.value.repairType) {
@@ -404,10 +418,14 @@ function validateField(fieldName) {
       errorData.value.room = repairFormData.value.room ? '' : 'กรุณาเลือกห้อง'
       break
     case 'problemDetail':
-      errorData.value.problemDetail = repairFormData.value.problemDetail.trim() ? '' : 'กรุณากรอกหัวข้อปัญหา'
+      errorData.value.problemDetail = repairFormData.value.problemDetail.trim()
+        ? ''
+        : 'กรุณากรอกหัวข้อปัญหา'
       break
     case 'issueDescription':
-      errorData.value.issueDescription = repairFormData.value.issueDescription.trim() ? '' : 'กรุณากรอกสาเหตุ/อาการเสีย'
+      errorData.value.issueDescription = repairFormData.value.issueDescription.trim()
+        ? ''
+        : 'กรุณากรอกสาเหตุ/อาการเสีย'
       break
   }
 }
@@ -420,12 +438,12 @@ async function submitRepairEdit() {
       position: 'top-end',
       showConfirmButton: false,
       timer: 2500,
-      timerProgressBar: true
+      timerProgressBar: true,
     })
     Toast.fire({
       title: 'ข้อมูลไม่ครบถ้วน',
-      text: 'กรุณากรอกข้อมูลให้ครบถ้วนตามที่กำหนด',
-      icon: 'warning'
+      text: 'กรุณากรอกข้อมูลให้ครบถ้วน',
+      icon: 'warning',
     })
     return
   }
@@ -483,12 +501,12 @@ async function submitRepairEdit() {
       position: 'top-end',
       showConfirmButton: false,
       timer: 2500,
-      timerProgressBar: true
+      timerProgressBar: true,
     })
     toast.fire({
       title: 'บันทึกสำเร็จ!',
       text: 'แก้ไขใบแจ้งซ่อมเรียบร้อยแล้ว',
-      icon: 'success'
+      icon: 'success',
     })
     router.push('/main/my-list')
   } catch (err) {
@@ -498,12 +516,12 @@ async function submitRepairEdit() {
       position: 'top-end',
       showConfirmButton: false,
       timer: 3000,
-      timerProgressBar: true
+      timerProgressBar: true,
     })
     Toast.fire({
       title: 'บันทึกไม่สำเร็จ',
       text: err.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล',
-      icon: 'error'
+      icon: 'error',
     })
   } finally {
     isSubmitting.value = false
@@ -618,7 +636,7 @@ onMounted(async () => {
 
           <div>
             <label class="text-base font-medium text-black">หมายเลขครุภัณฑ์</label>
-            <p class="text-neutral-400 text-xs mb-2">กรอกหมายเลขครุภัณฑ์ของอุปกรณ์ (ถ้ามี)</p>
+            <p class="text-neutral-400 text-xs mb-2">หมายเลขครุภัณฑ์ของอุปกรณ์ (ถ้ามี)</p>
             <input
               v-model="repairFormData.assetCode"
               type="text"
@@ -658,6 +676,11 @@ onMounted(async () => {
               v-model="repairFormData.building"
               @change="
                 () => {
+                  repairFormData.floor = ''
+                  repairFormData.room = ''
+                  repairFormData.floorList = []
+                  repairFormData.roomList = []
+
                   fetchFloorList(repairFormData.building)
                   validateField('building')
                 }
@@ -686,6 +709,9 @@ onMounted(async () => {
               v-model="repairFormData.floor"
               @change="
                 () => {
+                  repairFormData.room = ''
+                  repairFormData.roomList = []
+
                   fetchRoomList(repairFormData.floor)
                   validateField('floor')
                 }
@@ -860,7 +886,10 @@ onMounted(async () => {
               >
                 <div
                   class="w-6 h-6 sm:w-7 sm:h-7 rounded-full border-2 shadow-md transition-all duration-200"
-                  :class="[level.border, repairFormData.urgency === level.value ? level.bg : 'bg-white']"
+                  :class="[
+                    level.border,
+                    repairFormData.urgency === level.value ? level.bg : 'bg-white',
+                  ]"
                 ></div>
                 <span class="text-base text-black font-normal">{{ level.label }}</span>
               </div>

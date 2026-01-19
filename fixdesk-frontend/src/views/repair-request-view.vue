@@ -175,8 +175,15 @@ function processFileList(fileList) {
 
   // ตรวจสอบประเภทไฟล์
   const allowedTypeList = [
-    'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
-    'video/mp4', 'video/avi', 'video/mov', 'video/wmv',
+    'image/jpeg',
+    'image/jpg',
+    'image/png',
+    'image/gif',
+    'image/webp',
+    'video/mp4',
+    'video/avi',
+    'video/mov',
+    'video/wmv',
   ]
   const invalidFileList = fileList.filter((file) => !allowedTypeList.includes(file.type))
 
@@ -302,15 +309,14 @@ async function submitRepairRequest() {
     const Toast = Swal.mixin({
       toast: true,
       position: 'top-end',
+      showConfirmButton: false,
       timer: 2500,
       timerProgressBar: true,
     })
     Toast.fire({
       title: 'ข้อมูลไม่ครบถ้วน',
-      text: 'กรุณากรอกข้อมูลให้ครบถ้วนตามที่กำหนด',
+      text: 'กรุณากรอกข้อมูลให้ครบถ้วน',
       icon: 'warning',
-      background: '#fef3c7',
-      color: '#92400e',
     })
     return
   }
@@ -454,8 +460,13 @@ async function cancelRepairRequest() {
 function isValidFormData() {
   let valid = true
   errorData.value = {
-    repairType: '', building: '', floor: '', room: '',
-    problemDetail: '', issueDescription: '', urgency: '',
+    repairType: '',
+    building: '',
+    floor: '',
+    room: '',
+    problemDetail: '',
+    issueDescription: '',
+    urgency: '',
   }
 
   if (!repairFormData.value.repairType) {
@@ -501,10 +512,14 @@ function validateField(field) {
       errorData.value.room = repairFormData.value.room ? '' : 'กรุณาเลือกห้อง'
       break
     case 'problemDetail':
-      errorData.value.problemDetail = repairFormData.value.problemDetail.trim() ? '' : 'กรุณากรอกหัวข้อปัญหา'
+      errorData.value.problemDetail = repairFormData.value.problemDetail.trim()
+        ? ''
+        : 'กรุณากรอกหัวข้อปัญหา'
       break
     case 'issueDescription':
-      errorData.value.issueDescription = repairFormData.value.issueDescription.trim() ? '' : 'กรุณากรอกสาเหตุ/อาการเสีย'
+      errorData.value.issueDescription = repairFormData.value.issueDescription.trim()
+        ? ''
+        : 'กรุณากรอกสาเหตุ/อาการเสีย'
       break
   }
 }
@@ -626,6 +641,11 @@ function validateField(field) {
               v-model="repairFormData.building"
               @change="
                 () => {
+                  repairFormData.floor = ''
+                  repairFormData.room = ''
+                  repairFormData.floorList = []
+                  repairFormData.roomList = []
+
                   fetchFloorList(repairFormData.building)
                   validateField('building')
                 }
@@ -654,6 +674,9 @@ function validateField(field) {
               v-model="repairFormData.floor"
               @change="
                 () => {
+                  repairFormData.room = ''
+                  repairFormData.roomList = []
+
                   fetchRoomList(repairFormData.floor)
                   validateField('floor')
                 }
@@ -691,7 +714,9 @@ function validateField(field) {
                 {{ r.name }}
               </option>
             </select>
-            <p v-if="errorData.room" class="text-red-500 text-xs sm:text-sm mt-1">{{ errorData.room }}</p>
+            <p v-if="errorData.room" class="text-red-500 text-xs sm:text-sm mt-1">
+              {{ errorData.room }}
+            </p>
           </div>
         </div>
 
@@ -724,7 +749,9 @@ function validateField(field) {
               for="dropzone-file"
               :class="[
                 'flex flex-col items-center justify-center w-full border-2 border-dashed rounded-lg cursor-pointer transition flex-1 min-h-[220px] sm:min-h-[280px] mb-4',
-                isDragOver ? 'border-blue-400 bg-blue-50 scale-105' : 'border-gray-300 bg-gray-50 hover:bg-gray-100',
+                isDragOver
+                  ? 'border-blue-400 bg-blue-50 scale-105'
+                  : 'border-gray-300 bg-gray-50 hover:bg-gray-100',
               ]"
               @dragover="onDragOver"
               @dragleave="onDragLeave"
@@ -732,19 +759,38 @@ function validateField(field) {
             >
               <div class="flex flex-col items-center justify-center pt-5 pb-6 text-center">
                 <div :class="['transition-all duration-200', isDragOver ? 'scale-110' : '']">
-                  <img src="/icon/image-up-icon.svg" :class="['w-10 h-10 mb-2', isDragOver ? 'opacity-80' : 'opacity-70']" />
+                  <img
+                    src="/icon/image-up-icon.svg"
+                    :class="['w-10 h-10 mb-2', isDragOver ? 'opacity-80' : 'opacity-70']"
+                  />
                 </div>
-                <p :class="['text-sm mb-1', isDragOver ? 'text-blue-600 font-semibold' : 'text-gray-500']">
-                  <span class="font-semibold">{{ isDragOver ? 'วางไฟล์ที่นี่' : 'ลากไฟล์ หรือ คลิกเพื่อเลือกไฟล์' }}</span>
+                <p
+                  :class="[
+                    'text-sm mb-1',
+                    isDragOver ? 'text-blue-600 font-semibold' : 'text-gray-500',
+                  ]"
+                >
+                  <span class="font-semibold">{{
+                    isDragOver ? 'วางไฟล์ที่นี่' : 'ลากไฟล์ หรือ คลิกเพื่อเลือกไฟล์'
+                  }}</span>
                 </p>
-                <p class="text-xs text-gray-400 mt-1">รองรับ: รูปภาพ, วิดีโอ (สูงสุด {{ MAX_FILE_COUNT }} ไฟล์, 50MB/ไฟล์)</p>
+                <p class="text-xs text-gray-400 mt-1">
+                  รองรับ: รูปภาพ, วิดีโอ (สูงสุด {{ MAX_FILE_COUNT }} ไฟล์, 50MB/ไฟล์)
+                </p>
                 <div class="flex items-center gap-2 mt-2 justify-center">
                   <span class="text-xs px-2 py-1 bg-green-100 text-green-700 rounded">JPG</span>
                   <span class="text-xs px-2 py-1 bg-green-100 text-green-700 rounded">PNG</span>
                   <span class="text-xs px-2 py-1 bg-green-100 text-green-700 rounded">MP4</span>
                 </div>
               </div>
-              <input id="dropzone-file" type="file" multiple accept="image/*,video/*" class="hidden" @change="onFileUpload" />
+              <input
+                id="dropzone-file"
+                type="file"
+                multiple
+                accept="image/*,video/*"
+                class="hidden"
+                @change="onFileUpload"
+              />
             </label>
 
             <div v-if="filePreviewList.length > 0" class="space-y-2 mb-4">
@@ -754,21 +800,43 @@ function validateField(field) {
                 class="flex items-center gap-3 p-2 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
                 @click="openPreview(index)"
               >
-                <div class="flex-shrink-0 w-12 h-12 rounded-md overflow-hidden bg-gray-200 flex items-center justify-center">
-                  <img v-if="file.isImage" :src="file.url" :alt="file.name" class="w-full h-full object-cover" />
-                  <svg v-else-if="file.isVideo" class="w-6 h-6 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M6.3 2.84A1 1 0 004 3.75v12.5a1 1 0 001.65.76L17.3 10.76a1 1 0 000-1.52L5.65 3.08z" />
+                <div
+                  class="flex-shrink-0 w-12 h-12 rounded-md overflow-hidden bg-gray-200 flex items-center justify-center"
+                >
+                  <img
+                    v-if="file.isImage"
+                    :src="file.url"
+                    :alt="file.name"
+                    class="w-full h-full object-cover"
+                  />
+                  <svg
+                    v-else-if="file.isVideo"
+                    class="w-6 h-6 text-gray-500"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      d="M6.3 2.84A1 1 0 004 3.75v12.5a1 1 0 001.65.76L17.3 10.76a1 1 0 000-1.52L5.65 3.08z"
+                    />
                   </svg>
                 </div>
                 <div class="flex-1 min-w-0">
                   <p class="text-sm font-medium text-gray-800 truncate">{{ file.name }}</p>
                   <p class="text-xs text-gray-500">{{ (file.size / 1024 / 1024).toFixed(1) }} MB</p>
                 </div>
-                <button @click.stop="deleteFile(index)" class="flex-shrink-0 w-8 h-8 bg-red-500 text-white rounded-full text-sm hover:bg-red-600 transition-colors">×</button>
+                <button
+                  @click.stop="deleteFile(index)"
+                  class="flex-shrink-0 w-8 h-8 bg-red-500 text-white rounded-full text-sm hover:bg-red-600 transition-colors"
+                >
+                  ×
+                </button>
               </div>
             </div>
 
-            <div v-if="filePreviewList.length === 0" class="text-center text-gray-400 text-sm mb-4 py-2 border border-dashed border-gray-200 rounded-lg">
+            <div
+              v-if="filePreviewList.length === 0"
+              class="text-center text-gray-400 text-sm mb-4 py-2 border border-dashed border-gray-200 rounded-lg"
+            >
               ไม่มีไฟล์แนบ (สามารถส่งฟอร์มได้โดยไม่แนบไฟล์)
             </div>
 
@@ -781,7 +849,10 @@ function validateField(field) {
               >
                 <div
                   class="w-6 h-6 sm:w-7 sm:h-7 rounded-full border-2 shadow-md transition-all duration-200"
-                  :class="[level.border, repairFormData.urgency === level.value ? level.bg : 'bg-white']"
+                  :class="[
+                    level.border,
+                    repairFormData.urgency === level.value ? level.bg : 'bg-white',
+                  ]"
                 ></div>
                 <span class="text-base text-black font-normal">{{ level.label }}</span>
               </div>
@@ -810,19 +881,56 @@ function validateField(field) {
       </form>
     </div>
 
-    <div v-if="showPreviewModal" class="fixed inset-0 z-50 bg-black bg-opacity-90 flex items-center justify-center" @click="closePreview">
+    <div
+      v-if="showPreviewModal"
+      class="fixed inset-0 z-50 bg-black bg-opacity-90 flex items-center justify-center"
+      @click="closePreview"
+    >
       <div class="relative max-w-4xl max-h-full p-4" @click.stop>
-        <button @click="closePreview" class="absolute -top-4 -right-4 w-10 h-10 bg-black bg-opacity-50 rounded-full text-white text-2xl hover:text-gray-300 z-10">×</button>
-        <img v-if="filePreviewList[currentPreviewIndex]?.isImage" :src="filePreviewList[currentPreviewIndex]?.url" class="max-w-full max-h-full object-contain" />
-        <video v-else-if="filePreviewList[currentPreviewIndex]?.isVideo" :src="filePreviewList[currentPreviewIndex]?.url" controls autoplay class="max-w-full max-h-full" :key="currentPreviewIndex"></video>
+        <button
+          @click="closePreview"
+          class="absolute -top-4 -right-4 w-10 h-10 bg-black bg-opacity-50 rounded-full text-white text-2xl hover:text-gray-300 z-10"
+        >
+          ×
+        </button>
+        <img
+          v-if="filePreviewList[currentPreviewIndex]?.isImage"
+          :src="filePreviewList[currentPreviewIndex]?.url"
+          class="max-w-full max-h-full object-contain"
+        />
+        <video
+          v-else-if="filePreviewList[currentPreviewIndex]?.isVideo"
+          :src="filePreviewList[currentPreviewIndex]?.url"
+          controls
+          autoplay
+          class="max-w-full max-h-full"
+          :key="currentPreviewIndex"
+        ></video>
 
-        <button v-if="filePreviewList.length > 1 && currentPreviewIndex > 0" @click="prevPreview" class="absolute -left-6 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-black bg-opacity-50 rounded-full text-white text-2xl">‹</button>
-        <button v-if="filePreviewList.length > 1 && currentPreviewIndex < filePreviewList.length - 1" @click="nextPreview" class="absolute -right-6 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-black bg-opacity-50 rounded-full text-white text-2xl">›</button>
+        <button
+          v-if="filePreviewList.length > 1 && currentPreviewIndex > 0"
+          @click="prevPreview"
+          class="absolute -left-6 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-black bg-opacity-50 rounded-full text-white text-2xl"
+        >
+          ‹
+        </button>
+        <button
+          v-if="filePreviewList.length > 1 && currentPreviewIndex < filePreviewList.length - 1"
+          @click="nextPreview"
+          class="absolute -right-6 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-black bg-opacity-50 rounded-full text-white text-2xl"
+        >
+          ›
+        </button>
 
-        <div v-if="filePreviewList.length > 1" class="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-white text-sm bg-black bg-opacity-50 px-3 py-1 rounded">
+        <div
+          v-if="filePreviewList.length > 1"
+          class="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-white text-sm bg-black bg-opacity-50 px-3 py-1 rounded"
+        >
           {{ currentPreviewIndex + 1 }} / {{ filePreviewList.length }}
         </div>
-        <div class="absolute top-4 left-4 text-white text-sm bg-black bg-opacity-50 px-3 py-1 rounded">
+        <div
+          class="absolute top-4 left-4 text-white text-sm bg-black bg-opacity-50 px-3 py-1 rounded"
+        >
           {{ filePreviewList[currentPreviewIndex]?.name }}
         </div>
       </div>

@@ -1,8 +1,11 @@
 <script setup>
-import { ref, onMounted, reactive } from 'vue'
+import { ref, watch, onMounted} from 'vue'
 import { jwtDecode } from 'jwt-decode'
 import Swal from 'sweetalert2'
 import { usePhoneFormat } from '@/composables/usePhoneFormat'
+
+defineExpose({ forceClose })
+
 const { toRaw, toDisplay, maskInput } = usePhoneFormat()
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
@@ -50,6 +53,7 @@ const errors = ref({
 })
 
 onMounted(() => {
+
   const token = localStorage.getItem('token') || sessionStorage.getItem('token')
   if (token) {
     try {
@@ -67,6 +71,12 @@ onMounted(() => {
     }
   }
 })
+
+function forceClose() {
+  showDropdown.value = false
+  closeAllPopup()
+}
+
 
 function toggleDropdown() {
   if (!props.expanded) return
@@ -340,10 +350,21 @@ function closeAllPopup() {
   showPopupPassword.value = false
   showPopupConfirm.value = false
 }
+
+watch(
+  () => props.expanded,
+  (newVal) => {
+    if (!newVal) {
+      showDropdown.value = false
+      closeAllPopup()
+    }
+  },
+)
 </script>
 
 <template>
   <footer
+    ref="rootRef"
     class="relative border-t border-blue-700 px-4 py-3 flex items-center gap-3 hover:bg-blue-800 transition-all duration-300 cursor-pointer select-none"
     @click="toggleDropdown"
   >
@@ -373,7 +394,7 @@ function closeAllPopup() {
       class="absolute bottom-16 left-0 w-full bg-blue-900 rounded-lg shadow-lg py-2 z-50"
     >
       <button
-        @click="openProfilePopup"
+        @click.stop="openProfilePopup"
         class="flex items-center w-full gap-2 px-4 py-2 text-left hover:bg-blue-800 transition-all"
       >
         <img src="/icon/sidebar/settings-icon.svg" class="w-4 h-4" />
