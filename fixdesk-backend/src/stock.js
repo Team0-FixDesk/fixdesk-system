@@ -20,7 +20,7 @@ const storage = multer.diskStorage({
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
     cb(
       null,
-      file.fieldname + "-" + uniqueSuffix + path.extname(file.originalname)
+      file.fieldname + "-" + uniqueSuffix + path.extname(file.originalname),
     );
   },
 });
@@ -140,7 +140,7 @@ module.exports = function StockRoutes(db) {
           });
         });
       });
-    }
+    },
   );
 
   // เรียกหมวดหมู่
@@ -165,7 +165,8 @@ module.exports = function StockRoutes(db) {
     }
 
     // ตรวจสอบชื่อซ้ำ
-    const checkQuery = "SELECT COUNT(*) as count FROM categories WHERE LOWER(ct_name) = LOWER(?)";
+    const checkQuery =
+      "SELECT COUNT(*) as count FROM categories WHERE LOWER(ct_name) = LOWER(?)";
     db.query(checkQuery, [ct_name.trim()], (err, results) => {
       if (err) {
         console.error("Error checking category:", err);
@@ -186,7 +187,7 @@ module.exports = function StockRoutes(db) {
         res.status(201).json({
           message: "เพิ่มหมวดหมู่สำเร็จ",
           ct_id: result.insertId,
-          ct_name: ct_name.trim()
+          ct_name: ct_name.trim(),
         });
       });
     });
@@ -202,7 +203,8 @@ module.exports = function StockRoutes(db) {
     }
 
     // ตรวจสอบชื่อซ้ำ (ยกเว้นตัวเอง)
-    const checkQuery = "SELECT COUNT(*) as count FROM categories WHERE LOWER(ct_name) = LOWER(?) AND ct_id != ?";
+    const checkQuery =
+      "SELECT COUNT(*) as count FROM categories WHERE LOWER(ct_name) = LOWER(?) AND ct_id != ?";
     db.query(checkQuery, [ct_name.trim(), id], (err, results) => {
       if (err) {
         console.error("Error checking category:", err);
@@ -232,7 +234,8 @@ module.exports = function StockRoutes(db) {
     const { id } = req.params;
 
     // ตรวจสอบว่ามีสินค้าใช้หมวดหมู่นี้อยู่หรือไม่
-    const checkQuery = "SELECT COUNT(*) as count FROM products WHERE pd_category_id = ?";
+    const checkQuery =
+      "SELECT COUNT(*) as count FROM products WHERE pd_category_id = ?";
     db.query(checkQuery, [id], (err, results) => {
       if (err) {
         console.error("Error checking products:", err);
@@ -241,7 +244,7 @@ module.exports = function StockRoutes(db) {
 
       if (results[0].count > 0) {
         return res.status(400).json({
-          message: `ไม่สามารถลบได้ เนื่องจากมีสินค้า ${results[0].count} รายการใช้หมวดหมู่นี้อยู่`
+          message: `ไม่สามารถลบได้ เนื่องจากมีสินค้า ${results[0].count} รายการใช้หมวดหมู่นี้อยู่`,
         });
       }
 
@@ -389,9 +392,9 @@ module.exports = function StockRoutes(db) {
 
             res.json({ message: "แก้ไขสำเร็จ" });
           });
-        }
+        },
       );
-    }
+    },
   );
 
   router.get("/stock-forms/:id", authMiddleware, (req, res) => {
@@ -508,7 +511,8 @@ module.exports = function StockRoutes(db) {
       pd.pd_detail,
       pd.pd_upload_image,
       ct.ct_name AS category,
-      sfd.sfd_qty
+      sfd.sfd_qty,
+      sfd.sfd_status
 
     FROM stock_form sf
 
@@ -533,6 +537,96 @@ module.exports = function StockRoutes(db) {
       res.json(results);
     });
   });
+
+  // เพิ่ม API ใหม่: อนุมัติ “รายชิ้น”
+  router.put(
+    "/stock-forms/detail/update-item-status",
+    authMiddleware,
+    (req, res) => {
+      const { sf_code, pd_id, status } = req.body;
+
+      if (!sf_code || !pd_id || !["approved", "rejected"].includes(status)) {
+        return res.status(400).json({ message: "invalid payload" });
+      }
+
+      // หา sf_id
+      db.query(
+        "SELECT sf_id FROM stock_form WHERE sf_code = ?",
+        [sf_code],
+        (err, rows) => {
+          if (err) return res.status(500).json({ message: err.message });
+          if (!rows.length) {
+            return res.status(404).json({ message: "ไม่พบใบเบิก" });
+          }
+
+          const sf_id = rows[0].sf_id;
+
+          // update item (กันกดย้ำ)
+          const updateItem = `
+          UPDATE stock_form_detail
+          SET sfd_status = ?
+          WHERE sfd_sf_id = ?
+            AND sfd_pd_id = ?
+            AND sfd_status = 'waiting'
+        `;
+
+          db.query(updateItem, [status, sf_id, pd_id], (err2, result) => {
+            if (err2) return res.status(500).json({ message: err2.message });
+            if (result.affectedRows === 0) {
+              return res
+                .status(400)
+                .json({ message: "รายการนี้ถูกพิจารณาแล้ว" });
+            }
+
+            // ถ้า reject → คืน stock เฉพาะชิ้นนี้
+            if (status === "rejected") {
+              const returnStock = `
+              UPDATE products p
+              JOIN stock_form_detail sfd ON sfd.sfd_pd_id = p.pd_id
+              SET p.pd_quantity = p.pd_quantity + sfd.sfd_qty
+              WHERE sfd.sfd_sf_id = ? AND sfd.sfd_pd_id = ?
+            `;
+              db.query(returnStock, [sf_id, pd_id], () =>
+                recalcStockFormStatus(sf_id, res),
+              );
+            } else {
+              recalcStockFormStatus(sf_id, res);
+            }
+          });
+        },
+      );
+    },
+  );
+
+  function recalcStockFormStatus(sf_id, res) {
+    const q = `
+    SELECT
+      SUM(sfd_status = 'waiting') AS waiting,
+      SUM(sfd_status = 'approved') AS approved,
+      SUM(sfd_status = 'rejected') AS rejected
+    FROM stock_form_detail
+    WHERE sfd_sf_id = ?
+  `;
+
+    db.query(q, [sf_id], (err, rows) => {
+      if (err) return res.status(500).json({ message: err.message });
+
+      const { waiting, approved, rejected } = rows[0];
+      let newStatus = "waiting";
+
+      if (waiting === 0 && approved > 0 && rejected === 0)
+        newStatus = "approved";
+      else if (waiting === 0 && rejected > 0 && approved === 0)
+        newStatus = "rejected";
+      else if (approved > 0 && rejected > 0) newStatus = "partial";
+
+      db.query(
+        "UPDATE stock_form SET sf_status = ? WHERE sf_id = ?",
+        [newStatus, sf_id],
+        () => res.json({ message: "updated", sf_status: newStatus }),
+      );
+    });
+  }
 
   // อัปเดตสถานะใบเบิกของ
   router.put("/stock-forms/update-status", authMiddleware, (req, res) => {
@@ -648,7 +742,6 @@ module.exports = function StockRoutes(db) {
       return updateStatusOnly();
     });
   });
-
 
   // เบิกสินค้า
   router.post("/withdraw", authMiddleware, (req, res) => {
