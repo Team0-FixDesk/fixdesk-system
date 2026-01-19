@@ -586,12 +586,12 @@ function validateField(field) {
 
           <div>
             <label class="text-base font-medium text-black">หมายเลขครุภัณฑ์</label>
-            <p class="text-neutral-400 text-xs mb-2">หมายเลขครุภัณฑ์ (ถ้ามี)</p>
+            <p class="text-neutral-400 text-xs mb-2">หมายเลขครุภัณฑ์ของอุปกรณ์ (ถ้ามี)</p>
             <input
               v-model="repairFormData.assetCode"
               type="text"
               class="w-full text-xm bg-white border-neutral-400 rounded-md placeholder-[#A1A1A1] text-sm px-3 py-2"
-              placeholder="กรอกเลขครุภัณฑ์ (ถ้ามี)"
+              placeholder="กรุณากรอกเลขครุภัณฑ์ (ถ้ามี)"
             />
           </div>
         </div>
@@ -697,7 +697,7 @@ function validateField(field) {
 
         <div class="mb-1">
           <label class="text-sm sm:text-base font-medium text-black">
-            สาเหตุ/อาการเสีย <span class="text-red-600">*</span>
+            สาเหตุ / อาการเสีย <span class="text-red-600">*</span>
           </label>
           <p class="text-neutral-400 text-xs mb-2">อธิบายอาการเสียหรือสาเหตุที่พบอย่างชัดเจน</p>
         </div>
@@ -711,7 +711,7 @@ function validateField(field) {
                 'flex-1 w-full min-h-[220px] sm:min-h-[280px] text-sm bg-white border rounded-md resize-none placeholder-[#A1A1A1] px-3 py-2',
                 errorData.issueDescription ? 'border-red-500' : 'border-neutral-400',
               ]"
-              placeholder="กรุณากรอกสาเหตุ/อาการที่เสีย"
+              placeholder="กรุณากรอกสาเหตุ / อาการที่เสีย"
             ></textarea>
 
             <p v-if="errorData.issueDescription" class="text-red-500 text-sm mt-1">

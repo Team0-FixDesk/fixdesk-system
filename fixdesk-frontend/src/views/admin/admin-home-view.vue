@@ -180,6 +180,12 @@ function isWithin7Days(item) {
   return isWithinLastDays(item.rawDate, 7)
 }
 
+function isCurrentMonth(item) {
+  const now = new Date()
+  const d = item.rawDate
+  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()
+}
+
 /* =========================
   Computed: Filtered Rows
 ========================= */
@@ -211,7 +217,9 @@ const rowsForDisplay = computed(() => filteredRequests.value.map((item) => item.
 /* =========================
   Computed: Stats
 ========================= */
-const allTasks = computed(() => repairRequests.value.filter((r) => r.meta?.rf_user_status).length)
+const allTasks = computed(() =>
+  repairRequests.value.filter((r) => isCurrentMonth(r) && r.meta?.rf_user_status).length
+)
 
 const todayTasks = computed(() => repairRequests.value.filter((r) => isToday(r)).length)
 
@@ -229,24 +237,24 @@ const completedTasks = computed(
 const statItems = computed(() => [
   {
     value: allTasks.value,
-    label: 'รายการแจ้งซ่อมทั้งหมด',
+    label: 'รายการแจ้งซ่อมทั้งหมดในเดือนนี้',
     colorClass: 'text-red-500',
   },
   {
     value: todayTasks.value,
-    label: 'งานทั้งหมดวันนี้',
+    label: 'รายการแจ้งซ่อมทั้งหมดภายในวันนี้',
     colorClass: 'text-amber-500',
     filterKey: 'today',
   },
   {
     value: progressTasks.value,
-    label: 'กำลังดำเนินการ',
+    label: 'รายการแจ้งซ่อมที่กำลังดำเนินการ',
     colorClass: 'text-blue-500',
     filterKey: 'in_progress',
   },
   {
     value: completedTasks.value,
-    label: 'เสร็จสิ้น (7 วัน)',
+    label: 'รายการแจ้งซ่อมที่เสร็จสิ้นในระยะเวลา 7 วัน',
     colorClass: 'text-green-500',
     filterKey: 'completed_7days',
   },
@@ -312,6 +320,8 @@ onMounted(() => {
         :urgencyColumn="3"
         :statusColumn="4"
         :columnAlign="['left', 'left', 'left', 'center', 'center', 'center']"
+        :id-column-index="0"
+        @detail="goToRepairDetail"
       >
         <template #cell-5="{ row }">
           <div class="flex justify-center">

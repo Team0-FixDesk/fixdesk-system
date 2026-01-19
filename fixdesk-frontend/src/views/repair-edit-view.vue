@@ -19,8 +19,8 @@ const router = useRouter()
 const { toDisplay } = usePhoneFormat()
 
 const repairCode = route.params.code
-const API_BASE_URL = import.meta.env.VITE_API_BASE 
-const MAX_FILE_COUNT = 5 
+const API_BASE_URL = import.meta.env.VITE_API_BASE
+const MAX_FILE_COUNT = 5
 const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB
 
 const isSubmitting = ref(false)
@@ -28,27 +28,27 @@ const isDragOver = ref(false)
 const showPreviewModal = ref(false)
 const currentPreviewIndex = ref(0)
 
-// ข้อมูลหลักในฟอร์มแจ้งซ่อม 
+// ข้อมูลหลักในฟอร์มแจ้งซ่อม
 const repairFormData = ref({
   reporterName: '',
   phoneNumber: '',
   department: '',
   repairType: '',
-  repairTypeList: [], 
+  repairTypeList: [],
   building: '',
-  buildingList: [],   
+  buildingList: [],
   floor: '',
-  floorList: [],     
+  floorList: [],
   room: '',
-  roomList: [],       
+  roomList: [],
   assetCode: '',
   problemDetail: '',
   issueDescription: '',
   urgency: '',
-  uploadedFileList: [], 
+  uploadedFileList: [],
 })
 
-// ข้อมูลข้อผิดพลาดของแต่ละฟิลด์ 
+// ข้อมูลข้อผิดพลาดของแต่ละฟิลด์
 const errorData = ref({
   repairType: '',
   building: '',
@@ -60,9 +60,9 @@ const errorData = ref({
 })
 
 const filePreviewList = ref([]) // รายการไฟล์สำหรับแสดงผล Preview
-const existingFileList = ref([]) // รายการ Path ไฟล์เดิมที่มีอยู่ในระบบ 
+const existingFileList = ref([]) // รายการ Path ไฟล์เดิมที่มีอยู่ในระบบ
 
-// ระดับความเร่งด่วน 
+// ระดับความเร่งด่วน
 const URGENCY_LEVEL_LIST = [
   { label: 'เร่งด่วนมาก', value: 'high', border: 'border-red-600', bg: 'bg-red-600' },
   { label: 'เร่งด่วน', value: 'medium', border: 'border-amber-400', bg: 'bg-amber-400' },
@@ -70,7 +70,7 @@ const URGENCY_LEVEL_LIST = [
 ]
 
 /**
- *  ส่วนของฟังก์ชัน 
+ *  ส่วนของฟังก์ชัน
  */
 
 // ดึงข้อมูลประเภทงานซ่อม
@@ -329,7 +329,7 @@ async function fetchRepairDetail() {
     repairFormData.value.urgency = data.rf_urgency || 'medium'
 
     const images = Array.isArray(data.rf_image) ? data.rf_image : []
-    existingFileList.value = images 
+    existingFileList.value = images
 
     filePreviewList.value = []
     images.forEach((path) => {
@@ -556,7 +556,7 @@ onMounted(async () => {
             <label class="text-sm sm:text-base font-medium text-black">
               ลงชื่อผู้แจ้ง <span class="text-red-600">*</span>
             </label>
-            <p class="text-neutral-400 text-xs mb-2">กรอกชื่อ–นามสกุลของผู้ที่ทำการแจ้งปัญหา</p>
+            <p class="text-neutral-400 text-xs mb-2">ชื่อ–นามสกุลของผู้ที่ทำการแจ้งปัญหา</p>
             <input
               v-model="repairFormData.reporterName"
               type="text"
@@ -569,7 +569,7 @@ onMounted(async () => {
             <label class="text-sm sm:text-base font-medium text-black">
               เบอร์โทรศัพท์ <span class="text-red-600">*</span>
             </label>
-            <p class="text-neutral-400 text-xs mb-2">กรอกเบอร์โทรศัพท์ที่สามารถติดต่อกลับได้</p>
+            <p class="text-neutral-400 text-xs mb-2">เบอร์โทรศัพท์ที่สามารถติดต่อกลับได้</p>
             <input
               v-model="repairFormData.phoneNumber"
               type="text"
@@ -584,7 +584,7 @@ onMounted(async () => {
             <label class="text-sm sm:text-base font-medium text-black">
               หน่วยงาน <span class="text-red-600">*</span>
             </label>
-            <p class="text-neutral-400 text-xs mb-2">กรอกชื่อหน่วยงานหรือแผนกที่สังกัด</p>
+            <p class="text-neutral-400 text-xs mb-2">ชื่อหน่วยงานหรือแผนกที่สังกัด</p>
             <input
               v-model="repairFormData.department"
               type="text"
@@ -618,12 +618,12 @@ onMounted(async () => {
 
           <div>
             <label class="text-base font-medium text-black">หมายเลขครุภัณฑ์</label>
-            <p class="text-neutral-400 text-xs mb-2">กรอกหมายเลขครุภัณฑ์ (ถ้ามี)</p>
+            <p class="text-neutral-400 text-xs mb-2">กรอกหมายเลขครุภัณฑ์ของอุปกรณ์ (ถ้ามี)</p>
             <input
               v-model="repairFormData.assetCode"
               type="text"
               class="w-full text-xm bg-white border-neutral-400 rounded-md placeholder-[#A1A1A1] text-sm px-3 py-2"
-              placeholder="กรอกเลขครุภัณฑ์ (ถ้ามี)"
+              placeholder="กรุณากรอกหมายเลขครุภัณฑ์ของอุปกรณ์ (ถ้ามี)"
             />
           </div>
         </div>
@@ -731,7 +731,7 @@ onMounted(async () => {
 
         <div class="mb-1">
           <label class="text-sm sm:text-base font-medium text-black">
-            สาเหตุ/อาการเสีย <span class="text-red-600">*</span>
+            สาเหตุ / อาการเสีย <span class="text-red-600">*</span>
           </label>
           <p class="text-neutral-400 text-xs mb-2">อธิบายอาการเสียหรือสาเหตุที่พบอย่างชัดเจน</p>
         </div>
@@ -745,7 +745,7 @@ onMounted(async () => {
                 'flex-1 w-full min-h-[220px] sm:min-h-[280px] text-sm bg-white border rounded-md resize-none placeholder-[#A1A1A1] px-3 py-2',
                 errorData.issueDescription ? 'border-red-500' : 'border-neutral-400',
               ]"
-              placeholder="กรุณากรอกสาเหตุ/อาการที่เสีย"
+              placeholder="กรุณากรอกสาเหตุ / อาการที่เสีย"
             ></textarea>
             <p v-if="errorData.issueDescription" class="text-red-500 text-sm mt-1">
               {{ errorData.issueDescription }}
