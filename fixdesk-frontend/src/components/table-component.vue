@@ -126,7 +126,6 @@ function renderStatusStockInventoryBadge(type) {
 
             <template v-if="!item.isDummy">
               <span v-if="cellIndex === props.idColumnIndex && props.idColumnAsLink"
-                class="text-blue-600 underline cursor-pointer hover:text-blue-800"
                 @click.stop="$emit('detail', getRowId(item.row))" v-html="cell"></span>
 
               <span v-else-if="cellIndex === props.urgencyColumn" v-html="renderUrgencyBadge(cell)"></span>

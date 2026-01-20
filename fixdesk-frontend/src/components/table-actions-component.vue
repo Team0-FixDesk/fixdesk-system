@@ -52,8 +52,6 @@ const buttonRef = ref(null)
 const dropdownRef = ref(null)
 const dropdownStyle = ref({})
 
-const showAbove = ref(false)
-
 async function toggleMenu(event) {
   event.stopPropagation()
 
@@ -68,6 +66,12 @@ async function toggleMenu(event) {
   await nextTick()
   calculatePosition()
 }
+
+function emitAndClose(eventName, payload) {
+  emit(eventName, payload)
+  emit('toggle-menu', null)
+}
+
 
 function calculatePosition() {
   if (!buttonRef.value) return
@@ -158,7 +162,7 @@ onBeforeUnmount(() => {
         <!-- ทุก role ใช้ได้ -->
         <button
           v-if="role !== 'stock'"
-          @click="emit('detail', row)"
+          @click="emitAndClose('detail', row)"
           class="w-full text-left px-3 py-2 rounded-md hover:bg-gray-100 flex items-center gap-2"
         >
           <img
@@ -173,7 +177,7 @@ onBeforeUnmount(() => {
           <!-- รับงาน (pending) -->
           <button
             v-if="normalizedStatus === 'pending'"
-            @click="emit('accept', row)"
+            @click="emitAndClose('accept', row)"
             class="w-full text-left px-3 py-2 rounded-md hover:bg-teal-50 flex items-center gap-2 group"
           >
             <div
@@ -194,7 +198,7 @@ onBeforeUnmount(() => {
           <!-- ปิดงาน (in_progress, outsource) -->
           <button
             v-if="normalizedStatus === 'in_progress' || normalizedStatus === 'outsource'"
-            @click="emit('close-job', row)"
+            @click="emitAndClose('close-job', row)"
             class="w-full text-left px-3 py-2 rounded-md hover:bg-green-50 flex items-center gap-2 group"
           >
             <div
@@ -215,7 +219,7 @@ onBeforeUnmount(() => {
           <!-- จ้างช่างภายนอก (in_progress) -->
           <button
             v-if="normalizedStatus === 'in_progress'"
-            @click="emit('outsource', row)"
+            @click="emitAndClose('outsource', row)"
             class="w-full text-left px-3 py-2 rounded-md hover:bg-amber-50 flex items-center gap-2 group"
           >
             <div
@@ -236,7 +240,7 @@ onBeforeUnmount(() => {
           <!-- เบิกวัสดุอุปกรณ์ (in_progress, outsource) -->
           <button
             v-if="normalizedStatus === 'in_progress' || normalizedStatus === 'outsource'"
-            @click="emit('open-stock', row)"
+            @click="emitAndClose('open-stock', row)"
             class="w-full text-left px-3 py-2 rounded-md hover:bg-blue-50 flex items-center gap-2 group"
           >
             <div
@@ -258,7 +262,7 @@ onBeforeUnmount(() => {
         <!-- Admin / Location -->
         <template v-if="role === 'admin' || role === 'location'">
           <button
-            @click="emit('edit', row)"
+            @click="emitAndClose('edit', row)"
             class="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2"
           >
             <img
@@ -270,7 +274,7 @@ onBeforeUnmount(() => {
           <div class="border-t border-gray-300 mx-1"></div>
 
           <button
-            @click="emit('delete', row)"
+            @click="emitAndClose('delete', row)"
             class="w-full text-left px-3 py-2 hover:bg-gray-100 text-red-600 flex items-center gap-2"
           >
             <img
@@ -287,7 +291,7 @@ onBeforeUnmount(() => {
           <!-- ยังไม่มอบหมาย -->
           <button
             v-if="props.assignedTech == null"
-            @click="emit('assign', row)"
+            @click="emitAndClose('assign', row)"
             class="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2"
           >
             <img
@@ -317,7 +321,7 @@ onBeforeUnmount(() => {
               งานนี้ถูกมอบหมายแล้ว<br />
               <span
                 class="text-blue-600 cursor-pointer hover:underline"
-                @click="emit('detail', row)"
+                @click="emitAndClose('detail', row)"
               >
                 ดูรายละเอียดใบแจ้งซ่อม
               </span>
@@ -329,7 +333,7 @@ onBeforeUnmount(() => {
         <template v-if="role === 'user'">
           <button
             v-if="normalizedStatus === 'pending'"
-            @click="emit('edit', row)"
+            @click="emitAndClose('edit', row)"
             class="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2"
           >
             <img
@@ -341,7 +345,7 @@ onBeforeUnmount(() => {
           <div class="border-t border-gray-300 mx-1"></div>
           <button
             v-if="normalizedStatus === 'pending'"
-            @click="emit('delete', row)"
+            @click="emitAndClose('delete', row)"
             class="w-full text-left px-3 py-2 hover:bg-gray-100 text-red-600 flex items-center gap-2"
           >
             <img
@@ -357,7 +361,7 @@ onBeforeUnmount(() => {
           <div class="border-t border-gray-200 my-1"></div>
 
           <button
-            @click="emit('edit', row)"
+            @click="emitAndClose('edit', row)"
             class="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2"
           >
             <img src="/icon/edit-icon.svg" class="bg-amber-400 rounded-md p-1 h-6 w-6" />
@@ -367,7 +371,7 @@ onBeforeUnmount(() => {
           <div class="border-t border-gray-200 my-1"></div>
 
           <button
-            @click="emit('delete', row)"
+            @click="emitAndClose('delete', row)"
             class="w-full text-left px-3 py-2 hover:bg-gray-100 text-red-600 flex items-center gap-2"
           >
             <img src="/icon/bin-icon.svg" class="bg-red-400 rounded-md p-1 h-6 w-6" />
