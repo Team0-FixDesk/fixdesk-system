@@ -153,7 +153,7 @@ const props = defineProps({
   close   = ปิด popup
   refresh = โหลดตารางผู้ใช้ใหม่หลัง import สำเร็จ
  */
-const emit = defineEmits(['back', 'close', 'refresh'])
+const emit = defineEmits(['back', 'close', 'refresh', 'success', 'error'])
 
 const API_BASE = import.meta.env.VITE_API_BASE
 
@@ -192,7 +192,6 @@ const allSelected = computed({
 
 
 async function importSelected() {
-  // เลือกเฉพาะ user ที่ติ๊กเลือก และข้อมูลถูกต้อง
   const selected = props.users.filter((u) => u.selected && u.isValid)
 
   try {
@@ -215,20 +214,21 @@ async function importSelected() {
       }),
     })
 
+    const result = await res.json()
+
     if (!res.ok) {
-      const err = await res.json()
-      alert(err.message || 'Import failed')
+      // ❌ ไม่ alert แล้ว
+      emit('error', result.message || 'Import ไม่สำเร็จ')
       return
     }
 
-    const result = await res.json()
-    console.log('IMPORT RESULT:', result)
-
-    emit('close')
+    // ✅ สำเร็จ
+    emit('success', result)
     emit('refresh')
+    emit('close')
   } catch (err) {
-    console.error(err)
-    alert('ไม่สามารถเชื่อมต่อ backend ได้')
+    emit('error', 'ไม่สามารถเชื่อมต่อ backend ได้')
   }
 }
+
 </script>

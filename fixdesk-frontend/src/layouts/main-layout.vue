@@ -15,7 +15,7 @@ const router = useRouter()
 const role = ref(null)
 const isInitialized = ref(false)
 
-/* 🕒 Idle timeout: 2 ชั่วโมง */
+/* Idle timeout: 2 ชั่วโมง */
 const IDLE_TIMEOUT = 2 * 60 * 60 * 1000
 let idleTimer = null
 
@@ -58,7 +58,7 @@ onMounted(() => {
     return
   }
 
-  const isRemembered = !!localToken // ✔ ถ้ามีใน local แปลว่าติ๊ก "จำฉันไว้"
+  const isRemembered = !!localToken // ถ้ามีใน local แปลว่าติ๊ก "จำฉันไว้"
 
   try {
     const decoded = jwtDecode(token)
@@ -87,7 +87,7 @@ onMounted(() => {
       }
     }
 
-    // 🕒 เริ่มจับเวลา idle เฉพาะกรณี "ไม่จำฉันไว้"
+    // เริ่มจับเวลา idle เฉพาะกรณี "ไม่จำฉันไว้"
     if (!isRemembered) {
       resetIdleTimer()
       window.addEventListener('mousemove', resetIdleTimer)

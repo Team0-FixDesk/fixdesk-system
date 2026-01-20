@@ -20,7 +20,7 @@ const storage = multer.diskStorage({
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
     cb(
       null,
-      file.fieldname + "-" + uniqueSuffix + path.extname(file.originalname)
+      file.fieldname + "-" + uniqueSuffix + path.extname(file.originalname),
     );
   },
 });
@@ -140,7 +140,7 @@ module.exports = function StockRoutes(db) {
           });
         });
       });
-    }
+    },
   );
 
   // เรียกหมวดหมู่
@@ -165,7 +165,8 @@ module.exports = function StockRoutes(db) {
     }
 
     // ตรวจสอบชื่อซ้ำ
-    const checkQuery = "SELECT COUNT(*) as count FROM categories WHERE LOWER(ct_name) = LOWER(?)";
+    const checkQuery =
+      "SELECT COUNT(*) as count FROM categories WHERE LOWER(ct_name) = LOWER(?)";
     db.query(checkQuery, [ct_name.trim()], (err, results) => {
       if (err) {
         console.error("Error checking category:", err);
@@ -186,7 +187,7 @@ module.exports = function StockRoutes(db) {
         res.status(201).json({
           message: "เพิ่มหมวดหมู่สำเร็จ",
           ct_id: result.insertId,
-          ct_name: ct_name.trim()
+          ct_name: ct_name.trim(),
         });
       });
     });
@@ -202,7 +203,8 @@ module.exports = function StockRoutes(db) {
     }
 
     // ตรวจสอบชื่อซ้ำ (ยกเว้นตัวเอง)
-    const checkQuery = "SELECT COUNT(*) as count FROM categories WHERE LOWER(ct_name) = LOWER(?) AND ct_id != ?";
+    const checkQuery =
+      "SELECT COUNT(*) as count FROM categories WHERE LOWER(ct_name) = LOWER(?) AND ct_id != ?";
     db.query(checkQuery, [ct_name.trim(), id], (err, results) => {
       if (err) {
         console.error("Error checking category:", err);
@@ -232,7 +234,8 @@ module.exports = function StockRoutes(db) {
     const { id } = req.params;
 
     // ตรวจสอบว่ามีสินค้าใช้หมวดหมู่นี้อยู่หรือไม่
-    const checkQuery = "SELECT COUNT(*) as count FROM products WHERE pd_category_id = ?";
+    const checkQuery =
+      "SELECT COUNT(*) as count FROM products WHERE pd_category_id = ?";
     db.query(checkQuery, [id], (err, results) => {
       if (err) {
         console.error("Error checking products:", err);
@@ -241,7 +244,7 @@ module.exports = function StockRoutes(db) {
 
       if (results[0].count > 0) {
         return res.status(400).json({
-          message: `ไม่สามารถลบได้ เนื่องจากมีสินค้า ${results[0].count} รายการใช้หมวดหมู่นี้อยู่`
+          message: `ไม่สามารถลบได้ เนื่องจากมีสินค้า ${results[0].count} รายการใช้หมวดหมู่นี้อยู่`,
         });
       }
 
@@ -389,9 +392,9 @@ module.exports = function StockRoutes(db) {
 
             res.json({ message: "แก้ไขสำเร็จ" });
           });
-        }
+        },
       );
-    }
+    },
   );
 
   router.get("/stock-forms/:id", authMiddleware, (req, res) => {
@@ -508,7 +511,8 @@ module.exports = function StockRoutes(db) {
       pd.pd_detail,
       pd.pd_upload_image,
       ct.ct_name AS category,
-      sfd.sfd_qty
+      sfd.sfd_qty,
+      sfd.sfd_status
 
     FROM stock_form sf
 
@@ -534,120 +538,129 @@ module.exports = function StockRoutes(db) {
     });
   });
 
-  // อัปเดตสถานะใบเบิกของ
-  router.put("/stock-forms/update-status", authMiddleware, (req, res) => {
-    const { sf_code, status } = req.body;
-
-    console.log("update-status body:", req.body);
-
-    if (!sf_code || !status) {
-      return res.status(400).json({ message: "ต้องมี sf_code และ status" });
+  // เพิ่ม API ใหม่: อนุมัติ “รายชิ้น”
+  router.put("/stock-forms/detail/update-item-status", authMiddleware, (req, res) => {
+    const { sf_code, pd_id, status } = req.body;
+    
+    if (!sf_code || !pd_id || !["approved", "rejected"].includes(status)) {
+      return res.status(400).json({ message: "invalid payload" });
     }
-
-    // 1) หา sf_id + สถานะปัจจุบัน
-    const checkQuery = `
-      SELECT sf_id, sf_status
-      FROM stock_form
-      WHERE sf_code = ?
-    `;
-
-    db.query(checkQuery, [sf_code], (err, rows) => {
-      if (err) {
-        console.error("checkQuery error:", err);
-        return res.status(500).json({ message: "เกิดข้อผิดพลาด (checkQuery)" });
-      }
-
-      if (!rows || rows.length === 0) {
-        return res.status(404).json({ message: "ไม่พบใบเบิกนี้" });
-      }
-
+  
+    // หา sf_id จาก sf_code
+    db.query("SELECT sf_id FROM stock_form WHERE sf_code = ?", [sf_code], (err, rows) => {
+      if (err) return res.status(500).json({ message: err.message });
+      if (!rows.length) return res.status(404).json({ message: "ไม่พบใบเบิก" });
+    
       const sf_id = rows[0].sf_id;
-      const current = rows[0].sf_status;
-
-      // กันแก้ซ้ำ
-      if (current !== "waiting") {
-        return res.status(400).json({
-          message: "ใบเบิกได้รับการอนุมัติหรือปฏิเสธแล้ว ไม่สามารถแก้ไขได้",
-        });
-      }
-
-      // ฟังก์ชันอัปเดตสถานะอย่างเดียว
-      const updateStatusOnly = () => {
-        const updateQuery = `
-          UPDATE stock_form
-          SET sf_status = ?
-          WHERE sf_code = ?
-        `;
-
-        db.query(updateQuery, [status, sf_code], (err2) => {
-          if (err2) {
-            console.error("updateQuery error:", err2);
-            return res.status(500).json({ message: "อัปเดตสถานะไม่สำเร็จ" });
-          }
-
-          return res.json({ message: "อัปเดตสถานะสำเร็จ" });
-        });
-      };
-
-      // 2) ถ้า rejected -> คืนสต๊อกก่อน แล้วค่อยอัปเดตสถานะ
-      if (status === "rejected") {
-        const detailQuery = `
-          SELECT sfd_pd_id, sfd_qty
-          FROM stock_form_detail
+    
+      // 1) อ่าน qty ของรายการนี้ก่อน (เพื่อคืนสต๊อกแบบตรง ๆ)
+      const findQtySql = `
+        SELECT sfd_qty, sfd_status
+        FROM stock_form_detail
+        WHERE sfd_sf_id = ? AND sfd_pd_id = ?
+      `;
+      db.query(findQtySql, [sf_id, pd_id], (errQ, dRows) => {
+        if (errQ) return res.status(500).json({ message: errQ.message });
+        if (!dRows.length) return res.status(404).json({ message: "ไม่พบรายการในใบเบิก" });
+      
+        const currentStatus = dRows[0].sfd_status;
+        const qty = Number(dRows[0].sfd_qty) || 0;
+      
+        // 2) กันกดซ้ำ: ถ้าไม่ได้อยู่ waiting แล้ว ให้หยุด
+        if (currentStatus !== "waiting") {
+          return res.status(400).json({ message: "รายการนี้ถูกพิจารณาแล้ว" });
+        }
+      
+        // 3) อัปเดตสถานะจาก waiting -> approved/rejected (ทำครั้งเดียว)
+        const updateItemSql = `
+          UPDATE stock_form_detail
+          SET sfd_status = ?
           WHERE sfd_sf_id = ?
+            AND sfd_pd_id = ?
+            AND sfd_status = 'waiting'
         `;
-
-        db.query(detailQuery, [sf_id], (errD, items) => {
-          if (errD) {
-            console.error("detailQuery error:", errD);
-            return res
-              .status(500)
-              .json({ message: "โหลดรายการคืนสต๊อกไม่สำเร็จ" });
+      
+        db.query(updateItemSql, [status, sf_id, pd_id], (errU, result) => {
+          if (errU) return res.status(500).json({ message: errU.message });
+          if (result.affectedRows === 0) {
+            return res.status(400).json({ message: "รายการนี้ถูกพิจารณาแล้ว" });
           }
-
-          // ถ้าไม่มีรายการก็อัปเดตสถานะไปเลย
-          if (!items || items.length === 0) {
-            return updateStatusOnly();
-          }
-
-          let idx = 0;
-
-          const returnNext = () => {
-            if (idx >= items.length) {
-              // คืนครบแล้ว -> อัปเดตสถานะ
-              return updateStatusOnly();
-            }
-
-            const { sfd_pd_id, sfd_qty } = items[idx++];
-
+        
+          // 4) ถ้า rejected => คืนสต๊อก 1 ครั้ง (เพราะ update ผ่านได้แค่ครั้งเดียว)
+          if (status === "rejected") {
             const returnStockSql = `
               UPDATE products
               SET pd_quantity = pd_quantity + ?
               WHERE pd_id = ?
             `;
-
-            db.query(returnStockSql, [sfd_qty, sfd_pd_id], (errR) => {
-              if (errR) {
-                console.error("returnStockSql error:", errR);
-                return res.status(500).json({
-                  message: "คืนสต๊อกไม่สำเร็จ",
-                  error: errR.message,
-                });
-              }
-              returnNext();
+            return db.query(returnStockSql, [qty, pd_id], (errR) => {
+              if (errR) return res.status(500).json({ message: errR.message });
+              return recalcStockFormStatus(sf_id, res);
             });
-          };
-
-          returnNext();
+          }
+        
+          // approved: ไม่ต้องยุ่งสต๊อก (เพราะคุณตัดตั้งแต่สร้างใบแล้ว)
+          return recalcStockFormStatus(sf_id, res);
         });
-
-        return; // กัน flow ไหลลงไป approved
-      }
-
-      // 3) approved (หรืออื่น ๆ) -> อัปเดตสถานะอย่างเดียว
-      return updateStatusOnly();
+      });
     });
   });
+
+
+
+
+  function recalcStockFormStatus(sf_id, res) {
+    const q = `
+    SELECT
+      SUM(sfd_status = 'waiting') AS waiting,
+      SUM(sfd_status = 'approved') AS approved,
+      SUM(sfd_status = 'rejected') AS rejected
+    FROM stock_form_detail
+    WHERE sfd_sf_id = ?
+  `;
+
+    db.query(q, [sf_id], (err, rows) => {
+      if (err) return res.status(500).json({ message: err.message });
+
+      const { waiting, approved, rejected } = rows[0];
+      let newStatus = "waiting";
+
+      if (waiting === 0 && approved > 0 && rejected === 0)
+        newStatus = "approved";
+      else if (waiting === 0 && rejected > 0 && approved === 0)
+        newStatus = "rejected";
+      else if (approved > 0 && rejected > 0) newStatus = "partial";
+
+      db.query(
+        "UPDATE stock_form SET sf_status = ? WHERE sf_id = ?",
+        [newStatus, sf_id],
+        () => res.json({ message: "updated", sf_status: newStatus }),
+      );
+    });
+  }
+
+  // อัปเดตสถานะใบเบิกของ
+  router.put("/stock-forms/update-status", authMiddleware, (req, res) => {
+    const { sf_code, status } = req.body;
+
+    if (!sf_code || !status) {
+      return res.status(400).json({ message: "ต้องมี sf_code และ status" });
+    }
+
+    const updateQuery = `
+      UPDATE stock_form
+      SET sf_status = ?
+      WHERE sf_code = ?
+    `;
+
+    db.query(updateQuery, [status, sf_code], (err2, result) => {
+      if (err2) return res.status(500).json({ message: "อัปเดตสถานะไม่สำเร็จ" });
+      if (result.affectedRows === 0) return res.status(404).json({ message: "ไม่พบใบเบิกนี้" });
+      return res.json({ message: "อัปเดตสถานะสำเร็จ", sf_status: status });
+    });
+  });
+
+
 
 
   // เบิกสินค้า

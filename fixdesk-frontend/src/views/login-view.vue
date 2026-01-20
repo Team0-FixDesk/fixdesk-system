@@ -20,6 +20,22 @@ const rememberMe = ref(false)
 // LOGIN FUNCTION
 const handleLogin = async () => {
   errorMessage.value = ''
+
+  if (!username.value.trim() && !password.value.trim()) {
+    errorMessage.value = 'กรุณากรอกชื่อผู้ใช้และรหัสผ่าน'
+    return
+  }
+
+  if (!username.value.trim()) {
+    errorMessage.value = 'กรุณากรอกชื่อผู้ใช้'
+    return
+  }
+
+  if (!password.value.trim()) {
+    errorMessage.value = 'กรุณากรอกรหัสผ่าน'
+    return
+  }
+
   isLoading.value = true
 
   try {
@@ -118,7 +134,6 @@ const handleLogin = async () => {
             aria-label="ชื่อผู้ใช้"
             placeholder="ชื่อผู้ใช้"
             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 text-base placeholder-gray-400"
-            required
           />
 
           <input
@@ -127,16 +142,38 @@ const handleLogin = async () => {
             aria-label="รหัสผ่าน"
             placeholder="รหัสผ่าน"
             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 text-base placeholder-gray-400"
-            required
           />
 
-          <label class="flex items-center gap-2 text-sm text-gray-700">
+          <label class="flex items-center gap-2 text-sm text-gray-700 relative">
             <input
               v-model="rememberMe"
               type="checkbox"
               class="h-4 w-4 rounded border-gray-300 text-[#1E48D1] focus:ring-[#1E48D1]"
             />
             <span>จำฉันไว้</span>
+
+            <!-- Info icon -->
+            <span
+              class="group relative inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full text-gray-400 cursor-pointer select-none hover:text-gray-600 transition"
+              aria-label="คำอธิบายการจำฉันไว้"
+              tabindex="0"
+            >
+              <img
+                src="/icon/circle-info-icon.svg"
+                class="opacity-30 hover:opacity-100 transition"
+              />
+              <!-- Tooltip -->
+              <div
+                class="absolute bottom-full left-0 mt-2 w-72 p-3 text-xs text-white bg-gray-800 rounded-lg opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity pointer-events-none text-left"
+              >
+                <p class="mb-1">หากเลือก ระบบจะจำการเข้าสู่ระบบไว้ในอุปกรณ์นี้</p>
+                <ul class="list-disc list-inside space-y-0.5 text-gray-200">
+                  <li>ปิด – เปิดเบราว์เซอร์ได้โดยไม่ต้องเข้าสู่ระบบใหม่</li>
+                  <li>ระบบจะออกจากระบบอัตโนมัติเมื่อถึงเวลาที่กำหนด</li>
+                  <li>แนะนำให้ใช้เฉพาะอุปกรณ์ส่วนตัว</li>
+                </ul>
+              </div>
+            </span>
           </label>
 
           <button

@@ -107,8 +107,9 @@ function toggleValue(list, value, emitName) {
           :value="search"
           @input="emit('update:search', $event.target.value)"
           type="text"
-          :placeholder="searchPlaceholder"
-          class="w-[260px] h-10 px-4 rounded-lg border border-gray-300
+          placeholder="ค้นหาใบแจ้งซ่อมหรืออื่นๆ"
+          :title="searchPlaceholder"
+          class="w-[260px] h-10 px-4 rounded-lg border border-gray-300 text-gray-700
                  focus:ring-2 focus:ring-blue-500 focus:outline-none"
         />
 

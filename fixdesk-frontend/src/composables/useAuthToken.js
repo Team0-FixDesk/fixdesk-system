@@ -1,4 +1,3 @@
-// src/composables/useAuthToken.js
 import { computed } from 'vue'
 import { jwtDecode } from 'jwt-decode'
 
@@ -11,8 +10,7 @@ export function useAuthToken() {
     if (!token.value) return null
     try {
       return jwtDecode(token.value)
-    } catch (e) {
-      console.error('Invalid token', e)
+    } catch {
       return null
     }
   })

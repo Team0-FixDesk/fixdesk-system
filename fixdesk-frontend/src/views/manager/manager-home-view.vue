@@ -10,18 +10,18 @@ const API_BASE = import.meta.env.VITE_API_BASE
 const { displayName, displayDepartment, fetchUserProfile } = useUserProfile(API_BASE)
 
 const monthLabels = [
-  'ม.ค.',
-  'ก.พ.',
-  'มี.ค.',
-  'เม.ย.',
-  'พ.ค.',
-  'มิ.ย.',
-  'ก.ค.',
-  'ส.ค.',
-  'ก.ย.',
-  'ต.ค.',
-  'พ.ย.',
-  'ธ.ค.',
+  'มกราคม',
+  'กุมภาพันธ์',
+  'มีนาคม',
+  'เมษายน',
+  'พฤษภาคม',
+  'มิถุนายน',
+  'กรกฎาคม',
+  'สิงหาคม',
+  'กันยายน',
+  'ตุลาคม',
+  'พฤศจิกายน',
+  'ธันวาคม',
 ]
 
 const GRID_STYLE = {
@@ -168,6 +168,16 @@ const filterCurrentWeek = (repairs) => {
   const sunday = new Date(monday)
   sunday.setDate(monday.getDate() + 6)
   sunday.setHours(23, 59, 59, 999)
+  
+  const getYear = (dateStr) => new Date(dateStr).getFullYear()
+  const getMonth = (dateStr) => new Date(dateStr).getMonth()
+
+  const filterByYear = (items, year) =>
+    items.filter((i) => getYear(i.rf_create_at) === year)
+
+  const countByStatus = (items, status) =>
+    items.filter((i) => i.rf_user_status === status).length
+
 
   return repairs.filter((r) => {
     const d = new Date(r.rf_create_at)
@@ -489,7 +499,7 @@ function updateWeeklyTrendChart(repairsInYear) {
 const efficiencyChartOptions = shallowRef({
   chart: { toolbar: { show: false } },
   grid: GRID_STYLE,
-  colors: [EFFICIENCY_COLORS.rate],
+  colors: ['#f97316'],
   plotOptions: {
     bar: {
       horizontal: true,
@@ -527,7 +537,7 @@ const efficiencyChartOptions = shallowRef({
           {
             label: 'อัตราสำเร็จ',
             value: `${Number(rate).toFixed(1)}%`,
-            color: EFFICIENCY_COLORS.rate,
+            color: "#f97316",
           },
         ],
         unitLabel: 'หน่วย: รายการ / %',
@@ -582,7 +592,7 @@ function updateEfficiencyChart(repairsInYear) {
 const typeOptions = shallowRef({
   chart: { toolbar: { show: false }, zoom: { enabled: false } },
   grid: GRID_STYLE,
-  colors: [TYPE_COLORS.total],
+  colors: ['#7c3aed'],
   plotOptions: { bar: { horizontal: true, borderRadius: 6 } },
   dataLabels: { enabled: false },
   xaxis: { categories: ['ไม่มีข้อมูล'] },
@@ -636,7 +646,7 @@ function updateTypeChart(repairsInYear) {
 const deptOptions = shallowRef({
   chart: { toolbar: { show: false }, zoom: { enabled: false } },
   grid: GRID_STYLE,
-  colors: [DEPT_COLORS.total],
+  colors: ['#166534'],
   plotOptions: { bar: { horizontal: true, borderRadius: 6 } },
   dataLabels: { enabled: false },
   xaxis: { categories: ['ไม่มีข้อมูล'] },
@@ -1100,7 +1110,7 @@ onMounted(() => {
               <span class="inline-flex items-center gap-2">
                 <span
                   class="inline-block w-3.5 h-3.5 rounded-sm"
-                  :style="{ backgroundColor: EFFICIENCY_COLORS.rate }"
+                  :style="{ backgroundColor: '#fb923c' }"
                 ></span>
                 อัตราสำเร็จ
               </span>
@@ -1124,7 +1134,7 @@ onMounted(() => {
               <span class="inline-flex items-center gap-2">
                 <span
                   class="inline-block w-3.5 h-3.5 rounded-sm"
-                  :style="{ backgroundColor: TYPE_COLORS.total }"
+                  :style="{ backgroundColor: '#7c3aed' }"
                 ></span>
                 จำนวนงาน
               </span>
@@ -1145,7 +1155,7 @@ onMounted(() => {
               <span class="inline-flex items-center gap-2">
                 <span
                   class="inline-block w-3.5 h-3.5 rounded-sm"
-                  :style="{ backgroundColor: DEPT_COLORS.total }"
+                  :style="{ backgroundColor: '#166534' }"
                 ></span>
                 จำนวนแจ้งซ่อม
               </span>
