@@ -442,11 +442,11 @@ function validateUserForm() {
   else if (!/^[A-Za-z\s]+$/.test(f.us_last_name_en)) { userModalErrors.value.lastEn = 'กรุณากรอกเป็นภาษาอังกฤษเท่านั้น'; valid = false }
 
   // Phone
-  if (!f.us_phone.trim()) { userModalErrors.value.phone = 'กรุณากรอกเบอร์โทร'; valid = false }
-  else if (!/^[0-9]{9,10}$/.test(toRaw(f.us_phone))) { userModalErrors.value.phone = 'เบอร์โทรต้องเป็นตัวเลข 9–10 หลัก'; valid = false }
+  if (!f.us_phone.trim()) { userModalErrors.value.phone = 'กรุณากรอกเบอร์โทรศัพท์'; valid = false }
+  else if (!/^[0-9]{9,10}$/.test(toRaw(f.us_phone))) { userModalErrors.value.phone = 'เบอร์โทรศัพท์ต้องเป็นตัวเลข 9–10 หลัก'; valid = false }
 
   // Dept & Role
-  if (!f.us_department.trim()) { userModalErrors.value.department = 'กรุณากรอกหน่วยงาน'; valid = false }
+  if (!f.us_department.trim()) { userModalErrors.value.department = 'กรุณากรอกชื่อหน่วยงาน'; valid = false }
   if (!f.us_role_id) { userModalErrors.value.role = 'กรุณาเลือกบทบาท'; valid = false }
 
   // Tech Type
@@ -807,21 +807,21 @@ function handleImportError(message) {
 
           <div class="grid grid-cols-1 gap-3 mb-3 sm:grid-cols-2">
             <div :class="isViewMode ? 'col-span-2 sm:col-span-2' : ''"> <label
-                class="block text-sm font-medium mb-1.5">เบอร์โทร <span v-if="!isViewMode"
+                class="block text-sm font-medium mb-1.5">เบอร์โทรศัพท์ <span v-if="!isViewMode"
                   class="text-red-500">*</span></label>
               <input v-model="userModalForm.us_phone" @input="(maskInput($event.target), clearError('phone'))"
                 type="tel" :disabled="isViewMode"
                 :class="['w-full px-3 py-2 border rounded-md', isViewMode ? 'bg-gray-100 cursor-not-allowed' : '', userModalErrors.phone ? 'border-red-500' : 'border-gray-300']"
-                placeholder="กรอกเบอร์โทร" />
+                placeholder="กรอกเบอร์โทรศัพท์" />
               <p v-if="userModalErrors.phone" class="mt-1 text-sm text-red-500">{{ userModalErrors.phone }}</p>
             </div>
             <div :class="isViewMode ? 'col-span-2 sm:col-span-2' : ''">
-              <label class="block text-sm font-medium mb-1.5">หน่วยงาน <span v-if="!isViewMode"
+              <label class="block text-sm font-medium mb-1.5">ชื่อหน่วยงาน <span v-if="!isViewMode"
                   class="text-red-500">*</span></label>
               <input v-model="userModalForm.us_department" type="text" @input="clearError('department')"
                 :disabled="isViewMode"
                 :class="['w-full px-3 py-2 border rounded-md', isViewMode ? 'bg-gray-100 cursor-not-allowed' : '', userModalErrors.department ? 'border-red-500' : 'border-gray-300']"
-                placeholder="กรอกหน่วยงาน" />
+                placeholder="กรอกชื่อหน่วยงาน" />
               <p v-if="userModalErrors.department" class="mt-1 text-sm text-red-500">{{ userModalErrors.department }}
               </p>
             </div>
