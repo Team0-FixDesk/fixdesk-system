@@ -1,4 +1,9 @@
 <script setup>
+/**
+ * File: stock-withdraw-approve-view.vue
+ * Description: หน้าผู้อนุมัติใบเบิกของ (Stock Withdraw Approval) แสดงรายการ + อนุมัติ/ไม่อนุมัติรายชิ้น
+ */
+
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
@@ -32,8 +37,8 @@ const approverName = ref('')
 
 const sessionUser = JSON.parse(
   localStorage.getItem('session_user') ||
-    sessionStorage.getItem('session_user') ||
-    '{}',
+  sessionStorage.getItem('session_user') ||
+  '{}',
 )
 
 if (sessionUser.firstName && sessionUser.lastName) {
@@ -54,6 +59,36 @@ const allReviewed = computed(() => {
     )
   )
 })
+
+const reviewedCount = computed(
+  () =>
+    items.value.filter(
+      (i) => i.status === 'approved' || i.status === 'rejected',
+    ).length,
+)
+
+const reviewedPercent = computed(() => {
+  if (!items.value.length) return 0
+  return Math.round((reviewedCount.value / items.value.length) * 100)
+})
+
+/* ================= Image Preview Modal ================= */
+const isImageOpen = ref(false)
+const previewSrc = ref('')
+const previewAlt = ref('')
+
+const openImage = (src, alt = 'รูปครุภัณฑ์') => {
+  if (!src) return
+  previewSrc.value = src
+  previewAlt.value = alt
+  isImageOpen.value = true
+}
+
+const closeImage = () => {
+  isImageOpen.value = false
+  previewSrc.value = ''
+  previewAlt.value = ''
+}
 
 /* ================= LOAD DATA ================= */
 const loadDetail = async () => {
@@ -81,7 +116,7 @@ const loadDetail = async () => {
       category: d.category,
       qty: d.sfd_qty,
       status: d.sfd_status, // waiting / approved / rejected
-      img: d.pd_upload_image,
+      img: d.pd_upload_image ? `${API}/uploads/${d.pd_upload_image}` : null,
     }))
   } catch (err) {
     console.error(err)
@@ -100,14 +135,13 @@ onMounted(loadDetail)
 const computeFormStatus = () => {
   const list = items.value
 
-  const allRejected = list.length > 0 && list.every((it) => it.status === 'rejected')
+  const allRejected =
+    list.length > 0 && list.every((it) => it.status === 'rejected')
   if (allRejected) return 'rejected'
 
-  // มี approved อย่างน้อย 1 = approved
   const hasApproved = list.some((it) => it.status === 'approved')
   if (hasApproved) return 'approved'
 
-  // กันพลาด (จริง ๆ ปุ่มยืนยันกดไม่ได้ถ้าไม่ครบ)
   return request.value.status || 'waiting'
 }
 
@@ -169,7 +203,6 @@ const confirmApprove = async () => {
     try {
       await updateFormStatus(formStatus)
     } catch (err) {
-      // ถ้า backend ยังไม่มี endpoint นี้ จะโดน 404/500
       console.error('updateFormStatus error:', err)
       await Sweetalert.fire(
         'อัปเดตหัวใบไม่สำเร็จ',
@@ -179,8 +212,6 @@ const confirmApprove = async () => {
     }
 
     await Sweetalert.fire('สำเร็จ', 'บันทึกผลการอนุมัติเรียบร้อยแล้ว', 'success')
-
-    // โหลดใหม่ให้ตรงกับ DB
     await loadDetail()
   } catch (err) {
     console.error(err)
@@ -193,11 +224,11 @@ const confirmApprove = async () => {
 function renderStatusStockBadge(type) {
   switch (type) {
     case 'waiting':
-      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-lg bg-amber-50 text-amber-500 font-semibold">รออนุมัติ</span>`
+      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-lg bg-amber-50 text-amber-600 font-semibold border border-amber-100">รออนุมัติ</span>`
     case 'approved':
-      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-lg bg-green-100 text-green-600 font-semibold">อนุมัติแล้ว</span>`
+      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-lg bg-emerald-50 text-emerald-700 font-semibold border border-emerald-100">อนุมัติแล้ว</span>`
     case 'rejected':
-      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-lg bg-red-100 text-red-500 font-semibold">ไม่อนุมัติ</span>`
+      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-lg bg-rose-50 text-rose-700 font-semibold border border-rose-100">ไม่อนุมัติ</span>`
     default:
       return type
   }
@@ -212,18 +243,12 @@ function goBack() {
   <div class="min-h-screen bg-gradient-to-b from-slate-50 to-white px-3 sm:px-6 lg:px-8 py-6">
     <div class="mx-auto max-w-7xl">
       <!-- Top Header -->
-      <div
-        class="bg-white/80 backdrop-blur rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6 mb-6"
-      >
+      <div class="bg-white/80 backdrop-blur rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6 mb-6">
         <div class="flex items-start sm:items-center justify-between gap-4">
           <div class="flex items-center gap-3">
-            <button
-              type="button"
+            <button type="button"
               class="w-11 h-11 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center hover:bg-slate-100 active:scale-[0.98] transition"
-              @click="goBack"
-              aria-label="ย้อนกลับ"
-              title="ย้อนกลับ"
-            >
+              @click="goBack" aria-label="ย้อนกลับ" title="ย้อนกลับ">
               <img src="/icon/back-icon.svg" class="w-6 h-6" />
             </button>
 
@@ -240,31 +265,9 @@ function goBack() {
             <div class="text-right">
               <p class="text-xs text-slate-500">ความคืบหน้า</p>
               <p class="text-sm font-semibold text-slate-900 mt-1">
-                {{ items.filter(i => i.status === 'approved' || i.status === 'rejected').length }}
-                / {{ items.length }} รายการ
+                {{ reviewedCount }} / {{ items.length }} รายการ
               </p>
             </div>
-          </div>
-        </div>
-
-        <!-- Progress bar -->
-        <div class="mt-4">
-          <div class="flex items-center justify-between text-xs text-slate-500 mb-2">
-            <span>ตรวจสอบรายการ</span>
-            <span v-if="items.length > 0">
-              {{ Math.round((items.filter(i => i.status === 'approved' || i.status === 'rejected').length / items.length) * 100) }}%
-            </span>
-            <span v-else>0%</span>
-          </div>
-          <div class="w-full h-2 rounded-full bg-slate-100 overflow-hidden border border-slate-200">
-            <div
-              class="h-full rounded-full bg-blue-600 transition-all"
-              :style="{
-                width: items.length
-                  ? `${(items.filter(i => i.status === 'approved' || i.status === 'rejected').length / items.length) * 100}%`
-                  : '0%'
-              }"
-            ></div>
           </div>
         </div>
       </div>
@@ -273,125 +276,124 @@ function goBack() {
         <!-- LEFT: Items -->
         <div class="col-span-12 lg:col-span-8 space-y-4">
           <!-- Empty state -->
-          <div
-            v-if="items.length === 0"
-            class="bg-white rounded-2xl border border-slate-200 p-8 text-center"
-          >
+          <div v-if="items.length === 0" class="bg-white rounded-2xl border border-slate-200 p-8 text-center">
             <p class="text-slate-700 font-semibold">ไม่พบรายการเบิก</p>
             <p class="text-sm text-slate-500 mt-1">โปรดลองรีเฟรช หรือตรวจสอบรหัสใบเบิก</p>
           </div>
 
-          <div
-            v-for="item in items"
-            :key="item.id"
-            class="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition overflow-hidden"
-          >
-            <!-- Card header -->
-            <div class="p-4 sm:p-5 flex items-start justify-between gap-4">
-              <div class="min-w-0">
-                <p class="text-sm font-semibold text-slate-900 truncate">
-                  {{ item.name }}
-                </p>
+          <div v-for="item in items" :key="item.id"
+            class="relative bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition overflow-hidden">
+            <!-- Card body -->
+            <div class="p-4 sm:p-5 pb-28 sm:pb-5">
+              <!-- Row: Image LEFT | Content RIGHT -->
+              <div class="flex flex-col sm:flex-row items-start gap-4 sm:gap-5">
+                <!-- LEFT: Image -->
+                <div class="shrink-0">
+                  <button v-if="item.img" type="button"
+                    class="group relative w-40 h-40 sm:w-48 sm:h-48 rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 shadow-sm hover:shadow-md transition"
+                    @click="openImage(item.img, item.name)" :aria-label="`ดูรูป ${item.name}`"
+                    title="คลิกเพื่อดูรูปใหญ่">
+                    <img :src="item.img" :alt="item.name"
+                      class="w-full h-full object-cover group-hover:scale-[1.03] transition" loading="lazy"
+                      @error="(e) => (e.target.src = '/icon/no-image.svg')" />
+                  </button>
 
-                <div class="mt-2 flex flex-wrap gap-2 text-xs">
-                  <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-50 border border-slate-200 text-slate-600">
-                    <span class="font-medium text-slate-700">ครุภัณฑ์</span>
-                    <span class="text-slate-500">•</span>
-                    <span class="truncate">{{ item.assetCode }}</span>
-                  </span>
+                  <div v-else
+                    class="w-40 h-40 sm:w-48 sm:h-48 rounded-2xl border border-slate-200 bg-slate-50 flex items-center justify-center text-xs text-slate-400">
+                    ไม่มีรูป
+                  </div>
+                </div>
 
-                  <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-50 border border-slate-200 text-slate-600">
-                    <span class="font-medium text-slate-700">หมวดหมู่</span>
-                    <span class="text-slate-500">•</span>
-                    <span class="truncate">{{ item.category }}</span>
-                  </span>
+                <!-- RIGHT: Content -->
+                <div class="min-w-0 flex-1 w-full">
+                  <p class="text-sm sm:text-base font-semibold text-slate-900 truncate">
+                    {{ item.name }}
+                  </p>
 
-                  <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-50 border border-slate-200 text-slate-600">
-                    <span class="font-medium text-slate-700">จำนวน</span>
-                    <span class="text-slate-500">•</span>
-                    <span class="font-semibold text-slate-900">{{ item.qty }}</span>
-                  </span>
+                  <div class="mt-2 flex flex-wrap gap-2 text-xs">
+                    <span
+                      class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-50 border border-slate-200 text-slate-600">
+                      <span class="font-medium text-slate-700">รหัสวัสดุ</span>
+                      <span class="text-slate-400">•</span>
+                      <span class="truncate">{{ item.assetCode }}</span>
+                    </span>
+
+                    <span
+                      class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-50 border border-slate-200 text-slate-600">
+                      <span class="font-medium text-slate-700">หมวดหมู่</span>
+                      <span class="text-slate-400">•</span>
+                      <span class="truncate">{{ item.category }}</span>
+                    </span>
+
+                    <span
+                      class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-50 border border-slate-200 text-slate-600">
+                      <span class="font-medium text-slate-700">จำนวน</span>
+                      <span class="text-slate-400">•</span>
+                      <span class="font-semibold text-slate-900">{{ item.qty }}</span>
+                    </span>
+                  </div>
+
+                  <p v-if="request.status === 'waiting' && item.status === 'waiting'"
+                    class="text-xs text-slate-400 mt-2">
+                    *ยังไม่ได้เลือกผลการอนุมัติ
+                  </p>
+
+                  <!-- สถานะรายการ (ซ้ายล่าง) -->
+                  <div class="mt-4 text-xs text-slate-500">
+                    สถานะรายการ:
+                    <span class="font-semibold" :class="item.status === 'approved'
+                      ? 'text-emerald-700'
+                      : item.status === 'rejected'
+                        ? 'text-rose-700'
+                        : 'text-amber-700'">
+                      {{
+                        item.status === 'approved'
+                          ? 'อนุมัติ'
+                          : item.status === 'rejected'
+                            ? 'ไม่อนุมัติ'
+                            : 'รอพิจารณา'
+                      }}
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              <!-- Decision UI -->
-              <div class="shrink-0 flex flex-col items-end gap-2">
-                <template v-if="request.status === 'waiting'">
-                  <div class="flex gap-2">
-                    <label
-                      class="group inline-flex items-center gap-2 rounded-xl border px-3 py-2 cursor-pointer transition
-                             hover:bg-emerald-50 hover:border-emerald-200"
-                      :class="item.status === 'approved'
-                        ? 'bg-emerald-50 border-emerald-300 ring-2 ring-emerald-200'
-                        : 'bg-white border-slate-200'"
-                      title="อนุมัติรายการนี้"
-                    >
-                      <input
-                        type="radio"
-                        :name="`approve-${item.id}`"
-                        value="approved"
-                        @change="approveItem(item.id, 'approved')"
-                        class="w-4 h-4 text-emerald-600"
-                        :checked="item.status === 'approved'"
-                      />
+              <!-- ปุ่มอนุมัติ และไม่อนุมัติ -->
+              <!-- ปุ่มอยู่มุมขวาล่าง แต่ไม่มีกรอบครอบ -->
+              <div class="sm:absolute sm:bottom-5 sm:right-5 sm:mt-0 mt-4 flex justify-end z-10">
+                <div class="inline-flex items-center gap-2">
+                  <template v-if="request.status === 'waiting'">
+                    <label class="group inline-flex items-center gap-2 rounded-xl border px-3 py-2 cursor-pointer transition
+               hover:bg-emerald-50 hover:border-emerald-200" :class="item.status === 'approved'
+                ? 'bg-emerald-50 border-emerald-300 ring-2 ring-emerald-200'
+                : 'bg-white border-slate-200'" title="อนุมัติรายการนี้">
+                      <input type="radio" :name="`approve-${item.id}`" value="approved"
+                        @change="approveItem(item.id, 'approved')" class="w-4 h-4 text-emerald-600"
+                        :checked="item.status === 'approved'" />
                       <span class="text-sm font-semibold text-emerald-700">อนุมัติ</span>
                     </label>
 
-                    <label
-                      class="group inline-flex items-center gap-2 rounded-xl border px-3 py-2 cursor-pointer transition
-                             hover:bg-rose-50 hover:border-rose-200"
-                      :class="item.status === 'rejected'
-                        ? 'bg-rose-50 border-rose-300 ring-2 ring-rose-200'
-                        : 'bg-white border-slate-200'"
-                      title="ไม่อนุมัติรายการนี้"
-                    >
-                      <input
-                        type="radio"
-                        :name="`approve-${item.id}`"
-                        value="rejected"
-                        @change="approveItem(item.id, 'rejected')"
-                        class="w-4 h-4 text-rose-600"
-                        :checked="item.status === 'rejected'"
-                      />
+                    <label class="group inline-flex items-center gap-2 rounded-xl border px-3 py-2 cursor-pointer transition
+               hover:bg-rose-50 hover:border-rose-200" :class="item.status === 'rejected'
+                ? 'bg-rose-50 border-rose-300 ring-2 ring-rose-200'
+                : 'bg-white border-slate-200'" title="ไม่อนุมัติรายการนี้">
+                      <input type="radio" :name="`approve-${item.id}`" value="rejected"
+                        @change="approveItem(item.id, 'rejected')" class="w-4 h-4 text-rose-600"
+                        :checked="item.status === 'rejected'" />
                       <span class="text-sm font-semibold text-rose-700">ไม่อนุมัติ</span>
                     </label>
-                  </div>
+                  </template>
 
-                  <!-- Micro hint -->
-                  <p
-                    v-if="item.status === 'waiting'"
-                    class="text-xs text-slate-400"
-                  >
-                    *ยังไม่ได้เลือกผลการอนุมัติ
-                  </p>
-                </template>
-
-                <template v-else>
-                  <div v-html="renderStatusStockBadge(item.status)"></div>
-                </template>
-              </div>
-            </div>
-
-            <!-- Subtle footer line -->
-            <div class="h-px bg-slate-100"></div>
-
-            <!-- Optional: image preview (ถ้ามีรูป) -->
-            <div v-if="item.img" class="p-4 sm:p-5 pt-4">
-              <div class="flex items-center gap-3">
-                <div class="w-14 h-14 rounded-xl overflow-hidden border border-slate-200 bg-slate-50 shrink-0">
-                  <img
-                    :src="item.img"
-                    alt="รูปครุภัณฑ์"
-                    class="w-full h-full object-cover"
-                    loading="lazy"
-                  />
+                  <template v-else>
+                    <div v-html="renderStatusStockBadge(item.status)"></div>
+                  </template>
                 </div>
-                <p class="text-xs text-slate-500">
-                  รูปภาพประกอบ (ถ้าไม่แสดง อาจเป็น path ใน backend/ไฟล์ไม่พบ)
-                </p>
               </div>
             </div>
+
+            <div class="h-px bg-slate-100"></div>
           </div>
+
         </div>
 
         <!-- RIGHT: Sticky Panel -->
@@ -448,14 +450,10 @@ function goBack() {
                 <label class="text-sm font-medium text-slate-700 block mb-1">
                   ชื่อผู้อนุมัติการเบิกของ
                 </label>
-                <input
-                  v-model="approverName"
-                  disabled
-                  class="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-500"
-                />
+                <input v-model="approverName" disabled
+                  class="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-500" />
               </div>
 
-              <!-- Inline guidance + error -->
               <div v-if="canApprove" class="space-y-2">
                 <div class="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
                   <div class="mt-0.5 w-2.5 h-2.5 rounded-full bg-blue-600 shrink-0"></div>
@@ -472,15 +470,10 @@ function goBack() {
                 </div>
               </div>
 
-              <!-- Primary CTA -->
-              <button
-                v-if="canApprove"
-                class="w-full inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 font-semibold text-white
+              <button v-if="canApprove" class="w-full inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 font-semibold text-white
                        bg-blue-600 hover:bg-blue-700 active:scale-[0.99] transition
-                       disabled:opacity-50 disabled:cursor-not-allowed"
-                :disabled="!allReviewed || isSubmitting"
-                @click="confirmApprove"
-              >
+                       disabled:opacity-50 disabled:cursor-not-allowed" :disabled="!allReviewed || isSubmitting"
+                @click="confirmApprove">
                 <span v-if="isSubmitting" class="inline-flex items-center gap-2">
                   <span class="w-4 h-4 rounded-full border-2 border-white/60 border-t-transparent animate-spin"></span>
                   กำลังบันทึก...
@@ -488,7 +481,6 @@ function goBack() {
                 <span v-else>ยืนยันผลการอนุมัติ</span>
               </button>
 
-              <!-- When already decided -->
               <div v-else class="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
                 <p class="text-sm font-semibold text-emerald-700">ใบเบิกนี้ได้รับการพิจารณาแล้ว</p>
                 <p class="text-xs text-emerald-700/80 mt-1">
@@ -510,10 +502,37 @@ function goBack() {
           <div class="text-right">
             <p class="text-xs text-slate-500">ความคืบหน้า</p>
             <p class="text-sm font-semibold text-slate-900 mt-1">
-              {{ items.filter(i => i.status === 'approved' || i.status === 'rejected').length }}
-              / {{ items.length }}
+              {{ reviewedCount }} / {{ items.length }}
             </p>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Image Preview Modal -->
+    <div v-if="isImageOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog"
+      aria-modal="true" aria-label="ดูรูป" @click.self="closeImage">
+      <div class="absolute inset-0 bg-black/60"></div>
+
+      <div class="relative w-full max-w-4xl bg-white rounded-2xl overflow-hidden shadow-xl border border-white/10">
+        <div class="flex items-center justify-between px-4 py-3 border-b border-slate-200">
+          <p class="text-sm font-semibold text-slate-900 truncate">{{ previewAlt }}</p>
+          <button type="button"
+            class="w-10 h-10 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 transition flex items-center justify-center"
+            @click="closeImage" aria-label="ปิด" title="ปิด">
+            ✕
+          </button>
+        </div>
+
+        <div class="bg-slate-50 p-3 sm:p-4">
+          <div class="w-full aspect-[16/9] sm:aspect-[3/2] rounded-xl overflow-hidden bg-white border border-slate-200">
+            <img :src="previewSrc" :alt="previewAlt" class="w-full h-full object-contain"
+              @error="(e) => (e.target.src = '/icon/no-image.svg')" />
+          </div>
+
+          <p class="text-xs text-slate-500 mt-3">
+            *คลิกด้านนอกหรือกด ✕ เพื่อปิด (ช่วยลดความผิดพลาดก่อนอนุมัติ)
+          </p>
         </div>
       </div>
     </div>

@@ -946,7 +946,8 @@ onBeforeUnmount(() => {
         :columns="COLUMN_LIST"
         :rows="filteredRowList"
         :perPage="10"
-        :idColumnIndex="0"
+        :idColumnIndex="1"
+        :hiddenColumns="[0]"
         :statusStockinventoryColumn="6"
         :columnAlign="['left', 'left', 'left', 'center', 'center']"
       >
