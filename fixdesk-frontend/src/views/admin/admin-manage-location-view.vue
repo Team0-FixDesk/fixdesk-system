@@ -993,6 +993,19 @@ async function saveEditLocation() {
   if (!validateAlphanumeric(editForm.value.name, 'name')) {
     return
   }
+  const result = await Swal.fire({
+    title: 'ยืนยันการแก้ไขข้อมูล?',
+    text: 'คุณต้องการบันทึกการแก้ไขนี้หรือไม่?',
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'บันทึก',
+    cancelButtonText: 'ยกเลิก',
+    confirmButtonColor: '#f97316',
+  })
+
+  if (!result.isConfirmed) {
+    return
+  }
 
   try {
     const endpoint = '/rooms'
