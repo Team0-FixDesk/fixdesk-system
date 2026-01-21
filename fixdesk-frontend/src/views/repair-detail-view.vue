@@ -7,6 +7,7 @@ import AcceptJobModalComponent from '@/components/modal/accept-job-modal-compone
 import Swal from 'sweetalert2'
 import { usePhoneFormat } from '@/composables/usePhoneFormat'
 import { useAuthToken } from '@/composables/useAuthToken'
+import { jwtDecode } from 'jwt-decode'
 
 // --- Constants ---
 const API_BASE_URL = import.meta.env.VITE_API_BASE
@@ -28,7 +29,6 @@ const canAccept = ref(false)
 const showAssignPopup = ref(false)
 const showAcceptPopup = ref(false)
 const showStatusPopup = ref(false)
-const showWithdrawModal = ref(false)
 
 // Array naming convention
 const mediaFileList = ref([])
@@ -48,6 +48,14 @@ function requireAuth() {
 
   return true
 }
+
+const currentUserId = computed(() => {
+  try {
+    return token?.value ? jwtDecode(token.value)?.us_id : null
+  } catch {
+    return null
+  }
+})
 
 // --- Logic Functions ---
 
@@ -210,9 +218,9 @@ async function fetchRepairDetail() {
   try {
     const res = await fetch(`${API_BASE_URL}/repair-requests/${repairCode}?_=${Date.now()}`)
     const data = await res.json()
-    
+
     if (!res.ok) throw new Error(data.message || 'โหลดข้อมูลไม่สำเร็จ')
-    
+
     const timeline = buildTimelineFromRepair(data)
     repair.value = {
       ...data,
@@ -247,7 +255,7 @@ function getUserStatusBadge(status) {
     default:
       badgeHtml = `<span class="inline-flex justify-center items-center w-28 sm:w-36 h-7 sm:h-8 px-3 rounded-full bg-gray-100 text-gray-500 font-semibold text-xs sm:text-sm">ยกเลิก</span>`
   }
-  
+
   return badgeHtml
 }
 
@@ -333,7 +341,11 @@ function buildTimelineFromRepair(repairData) {
   const timelineStepList = []
   const statusConfigs = [
     { key: 'rf_create_at', title: 'รอดำเนินการ', description: 'ระบบได้รับใบแจ้งซ่อมของคุณแล้ว' },
-    { key: 'rf_in_process_at', title: 'กำลังดำเนินการ', description: 'เจ้าหน้าที่กำลังดำเนินการซ่อมแซม' },
+    {
+      key: 'rf_in_process_at',
+      title: 'กำลังดำเนินการ',
+      description: 'เจ้าหน้าที่กำลังดำเนินการซ่อมแซม',
+    },
     { key: 'rf_done_at', title: 'ดำเนินการเสร็จสิ้น', description: 'งานซ่อมเสร็จเรียบร้อยแล้ว' },
   ]
 
@@ -632,7 +644,9 @@ onMounted(() => {
                         class="h-20 sm:h-24 rounded-lg bg-gray-100 flex items-center justify-center cursor-pointer"
                         @click="openMedia(3)"
                       >
-                        <span class="text-gray-500 font-medium">+{{ mediaFileList.length - 3 }}</span>
+                        <span class="text-gray-500 font-medium"
+                          >+{{ mediaFileList.length - 3 }}</span
+                        >
                       </div>
                     </div>
                   </template>
@@ -742,14 +756,10 @@ onMounted(() => {
                 class="w-full px-6 py-3.5 text-sm sm:text-base font-semibold rounded-xl shadow-md transition-all duration-200 flex items-center justify-center gap-3 hover:shadow-lg hover:-translate-y-0.5 bg-blue-600 hover:bg-blue-700 text-white"
                 @click="handleRepairFrom(repair?.rf_code)"
               >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                  />
-                </svg>
+                <img
+                  src="/icon/item-icon.svg"
+                  class="w-5 h-5"
+                />
                 เบิกวัสดุ/อุปกรณ์
               </button>
 
@@ -771,48 +781,10 @@ onMounted(() => {
                         : 'bg-amber-500 hover:bg-amber-600',
                   ]"
                 >
-                  <svg
-                    v-if="repair?.rf_user_status === 'pending'"
-                    class="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                  <svg
-                    v-else-if="repair?.rf_user_status === 'outsource'"
-                    class="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                  <svg
-                    v-else
-                    class="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                    />
-                  </svg>
+                  <img
+                  src="/icon/rotate-icon.svg"
+                  class="w-5 h-5"
+                />
                   <span>
                     {{
                       repair?.rf_user_status === 'pending'
@@ -842,6 +814,7 @@ onMounted(() => {
       v-if="showAcceptPopup"
       :repairCode="repair?.rf_code"
       :isOpen="showAcceptPopup"
+      :currentUserId="currentUserId"
       @close="showAcceptPopup = false"
       @success="handleAcceptSuccess"
     />
@@ -851,7 +824,9 @@ onMounted(() => {
       class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-60 backdrop-blur-sm"
       @click.self="closeStatusPopup"
     >
-      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in duration-200">
+      <div
+        class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in duration-200"
+      >
         <div class="p-6 text-center border-b border-gray-100">
           <h3 class="text-xl font-bold text-gray-800">เลือกสถานะงาน</h3>
           <p class="text-gray-500 text-sm mt-1">กรุณาเลือกสถานะที่ต้องการเปลี่ยน</p>
@@ -862,8 +837,18 @@ onMounted(() => {
             class="w-full py-4 px-6 bg-green-50 hover:bg-green-100 text-green-700 rounded-xl font-bold transition-all flex items-center justify-between group"
           >
             <span>ดำเนินการเสร็จสิ้น</span>
-            <svg class="w-5 h-5 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            <svg
+              class="w-5 h-5 transform group-hover:translate-x-1 transition-transform"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 5l7 7-7 7"
+              />
             </svg>
           </button>
           <button
@@ -871,8 +856,18 @@ onMounted(() => {
             class="w-full py-4 px-6 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-xl font-bold transition-all flex items-center justify-between group"
           >
             <span>จ้างช่างภายนอก</span>
-            <svg class="w-5 h-5 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            <svg
+              class="w-5 h-5 transform group-hover:translate-x-1 transition-transform"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 5l7 7-7 7"
+              />
             </svg>
           </button>
           <button
@@ -895,7 +890,12 @@ onMounted(() => {
         class="absolute top-6 right-6 text-white hover:text-gray-300 transition p-2 bg-white/10 rounded-full"
       >
         <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M6 18L18 6M6 6l12 12"
+          />
         </svg>
       </button>
 
@@ -906,7 +906,12 @@ onMounted(() => {
           class="absolute left-0 z-10 p-4 text-white hover:bg-white/10 rounded-full transition"
         >
           <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M15 19l-7-7 7-7"
+            />
           </svg>
         </button>
 
@@ -931,7 +936,12 @@ onMounted(() => {
           class="absolute right-0 z-10 p-4 text-white hover:bg-white/10 rounded-full transition"
         >
           <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 5l7 7-7 7"
+            />
           </svg>
         </button>
       </div>
