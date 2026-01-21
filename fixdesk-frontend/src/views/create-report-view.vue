@@ -10,6 +10,7 @@ const documentRef = ref(null)
 const exportWrapper = ref(null)
 const isGenerating = ref(false)
 const userFullName = ref('')
+const userPosition = ref('')
 
 // Thai Months
 const thaiMonths = [
@@ -49,9 +50,6 @@ function validateField(field) {
     case 'department':
       errors.value.department = formData.value.department.trim() ? '' : 'กรุณากรอกส่วนราชการ';
       break;
-    case 'documentNumber':
-      errors.value.documentNumber = formData.value.documentNumber.trim() ? '' : 'กรุณากรอกเลขที่เอกสาร';
-      break;
     case 'subject':
       errors.value.subject = formData.value.subject.trim() ? '' : 'กรุณากรอกเรื่อง';
       break;
@@ -60,9 +58,6 @@ function validateField(field) {
       break;
     case 'content':
       errors.value.content = formData.value.content.trim() ? '' : 'กรุณากรอกเนื้อเรื่อง';
-      break;
-    case 'position':
-      errors.value.position = formData.value.position.trim() ? '' : 'กรุณากรอกตำแหน่ง';
       break;
   }
 }
@@ -181,7 +176,7 @@ async function generatePDF() {
     const imgData = canvas.toDataURL('image/png', 1.0)
     pdf.addImage(imgData, 'PNG', 0, 0, 210, 297)
 
-    const filename = `บันทึกข้อความ_${formData.value.month}_${currentYear.value}.pdf`
+    const filename = `หนังสือบันทึกข้อความประจำเดือน${formData.value.month} ${currentYear.value}.pdf`
     pdf.save(filename)
 
     if (window.Swal) {
@@ -227,6 +222,7 @@ onMounted(() => {
       const firstName = decoded.us_first_name_th || ''
       const lastName = decoded.us_last_name_th || ''
       userFullName.value = `${firstName} ${lastName}`.trim() || decoded.us_user_name || 'ผู้ใช้ระบบ'
+      userPosition.value = decoded.us_job_title || 'พนักงานทั่วไป'
     } catch (err) {
       console.error('Decode token error:', err)
       userFullName.value = 'ผู้ใช้ระบบ'
@@ -285,7 +281,7 @@ onMounted(() => {
                     <div class="signature-box text-center ml-auto w-[250px]">
                       <div class="signature-line mb-2">(ลงชื่อ)..............................................</div>
                       <div class="signature-name">({{ userFullName }})</div>
-                      <div class="signature-position">{{ formData.position }}</div>
+                      <div class="signature-position">{{ userPosition }}</div>
                     </div>
                   </div>
                 </div>
@@ -304,7 +300,7 @@ onMounted(() => {
               </label>
               <input v-model="formData.department" type="text"
                 :class="['w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-gray-400', errors.department ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-blue-500']"
-                placeholder="เช่น สำนักปลัดเทศบาล ฝ่ายอำนวยการ งานอาคารและสถานที่"
+                placeholder="กรอกส่วนราชการ"
                 @blur="validateField('department')" />
               <p v-if="errors.department" class="text-xs text-red-500 mt-1">{{ errors.department }}</p>
             </div>
@@ -312,11 +308,11 @@ onMounted(() => {
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">
-                  ที่ (เลขที่เอกสาร) <span class="text-red-500">*</span>
+                  ที่ (เลขที่เอกสาร)
                 </label>
                 <input v-model="formData.documentNumber" type="text"
                   :class="['w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-gray-400', errors.documentNumber ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-blue-500']"
-                  placeholder="เช่น สป.2200/2568"
+                  placeholder="กรอกเลขที่เอกสาร"
                   @blur="validateField('documentNumber')" />
                 <p v-if="errors.documentNumber" class="text-xs text-red-500 mt-1">{{ errors.documentNumber }}</p>
               </div>
@@ -334,7 +330,7 @@ onMounted(() => {
                 </label>
                 <input v-model="formData.subject" type="text"
                   :class="['w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-gray-400', errors.subject ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-blue-500']"
-                  placeholder="รายงานการปฏิบัติงาน..."
+                  placeholder="กรอกหัวเรื่อง"
                   @blur="validateField('subject')" />
                 <p v-if="errors.subject" class="text-xs text-red-500 mt-1">{{ errors.subject }}</p>
               </div>
@@ -353,7 +349,7 @@ onMounted(() => {
               </label>
               <input v-model="formData.to" type="text"
                 :class="['w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-gray-400', errors.to ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-blue-500']"
-                placeholder="นายกเทศมนตรีนครบ้านสวน"
+                placeholder="กรอกชื่อผู้รับหนังสือ"
                 @blur="validateField('to')" />
               <p v-if="errors.to" class="text-xs text-red-500 mt-1">{{ errors.to }}</p>
             </div>
@@ -362,10 +358,10 @@ onMounted(() => {
               <label class="block text-sm font-medium text-gray-700 mb-1">
                 เนื้อเรื่อง <span class="text-red-500">*</span>
               </label>
-              <p class="text-xs text-gray-500 mb-1">กด Tab เพื่อย่อหน้า, กด Enter เพื่อขึ้นบรรทัดใหม่</p>
+              <p class="text-xs text-gray-500 mb-1">ใช้ปุ่ม `Tab` สำหรับการย่อหน้า และใช้ปุ่ม `Enter` เพื่อเริ่มบรรทัด</p>
               <textarea v-model="formData.content" rows="4" @keydown="handleKeydown"
                 :class="['w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 transition-all resize-y placeholder:text-gray-400', errors.content ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-blue-500']"
-                placeholder="ด้วย งานอาคารและสถานที่..."
+                placeholder="กรอกเนื้อเรื่อง"
                 @blur="validateField('content')"></textarea>
               <p v-if="errors.content" class="text-xs text-red-500 mt-1">{{ errors.content }}</p>
             </div>
@@ -380,11 +376,8 @@ onMounted(() => {
                 <label class="block text-sm font-medium text-gray-700 mb-1">
                   ตำแหน่ง <span class="text-red-500">*</span>
                 </label>
-                <input v-model="formData.position" type="text"
-                  :class="['w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-gray-400', errors.position ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-blue-500']"
-                  placeholder="ผู้ช่วยเจ้าพนักงานธุรการ"
-                  @blur="validateField('position')" />
-                <p v-if="errors.position" class="text-xs text-red-500 mt-1">{{ errors.position }}</p>
+                <input :value="userPosition" type="text" disabled
+                  class="w-full px-4 py-2.5 border border-gray-200 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed" />
               </div>
             </div>
 

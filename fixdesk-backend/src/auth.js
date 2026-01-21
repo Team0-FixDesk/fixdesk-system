@@ -17,7 +17,7 @@ module.exports = function authRoutes(db) {
         SELECT u.us_id, u.us_user_name, u.us_user_pass,
             t.ttn_title_th, u.us_first_name_th, u.us_last_name_th,
             u.us_first_name_en, u.us_last_name_en,
-            u.us_phone, u.us_department,
+            u.us_phone, u.us_department, u.us_job_title,
             r.role_name
         FROM user u
         LEFT JOIN title_name t ON u.us_ttn_id = t.ttn_id
@@ -52,6 +52,7 @@ module.exports = function authRoutes(db) {
         us_last_name_en: user.us_last_name_en || "",
         us_tel: user.us_phone || "",
         us_department: user.us_department || "",
+        us_job_title: user.us_job_title || "",
         role_name: user.role_name || "",
     };
 
