@@ -709,7 +709,7 @@ function handleImportError(message) {
             <div>
               <label class="block text-sm font-medium mb-1.5">ชื่อผู้ใช้ <span class="text-red-500">*</span></label>
               <input v-model="userModalForm.us_user_name" @input="clearError('username')" type="text"
-                :class="['w-full px-3 py-2 border rounded-md', userModalErrors.username ? 'border-red-500' : 'border-gray-300']"
+                :class="['w-full px-3 py-2 border rounded-md', userModalErrors.username ? 'border-red-500' : 'border-gray-300',' placeholder-gray-400']"
                 placeholder="กรอกชื่อผู้ใช้" />
               <p v-if="userModalErrors.username" class="mt-1 text-sm text-red-500">{{ userModalErrors.username }}</p>
             </div>
@@ -719,8 +719,8 @@ function handleImportError(message) {
                 <span v-if="isAddMode" class="text-red-500">*</span>
               </label>
               <input v-model="userModalForm.us_user_pass" @input="clearError('password')" type="password"
-                :class="['w-full px-3 py-2 border rounded-md', userModalErrors.password ? 'border-red-500' : 'border-gray-300', isAddMode ? 'text-gray-700 bg-white' : 'text-[#FF0000] bg-white tooltip']"
-                :placeholder="isAddMode ? 'กรอกรหัสผ่าน' : 'รหัสผ่านใหม่'" />
+                :class="['w-full px-3 py-2 border rounded-md', userModalErrors.password ? 'border-red-500' : 'border-gray-300', isAddMode ? 'placeholder-gray-400 bg-white' : 'placeholder-[#FF0000] bg-white']"
+                :placeholder="isAddMode ? 'กรอกรหัสผ่าน' : 'รหัสผ่านใหม่'" :title="isEditMode ? 'หากไม่ต้องการเปลี่ยนรหัสผ่านไม่จำเป็นต้องกรอก' : ''" />
               <p v-if="userModalErrors.password" class="mt-1 text-sm text-red-500">{{ userModalErrors.password }}</p>
             </div>
           </div>
@@ -741,11 +741,11 @@ function handleImportError(message) {
                   class="text-red-500">*</span></label>
 
               <input v-if="isAddMode" v-model="userModalForm.us_job_title" type="text"
-                :class="['w-full px-3 py-2 border rounded-md', userModalErrors.jobTitle ? 'border-red-500' : 'border-gray-300']"
+                :class="['w-full px-3 py-2 border rounded-md', userModalErrors.jobTitle ? 'border-red-500' : 'border-gray-300',' placeholder-gray-400']"
                 placeholder="กรอกตำแหน่งบุคลากร" @input="clearError('jobTitle')" />
 
               <input v-else-if="isEditMode" v-model="userModalForm.us_job_title" type="text"
-                :class="['w-full px-3 py-2 border rounded-md', userModalErrors.jobTitle ? 'border-red-500' : 'border-gray-300']"
+                :class="['w-full px-3 py-2 border rounded-md', userModalErrors.jobTitle ? 'border-red-500' : 'border-gray-300',' placeholder-gray-400']"
                 placeholder="กรอกตำแหน่งบุคลากร" @input="clearError('jobTitle')" />
 
               <input v-else
@@ -769,7 +769,7 @@ function handleImportError(message) {
                   class="text-red-500">*</span></label>
               <input v-model="userModalForm.us_first_name_th" @input="clearError('firstTh')" type="text"
                 :disabled="isViewMode"
-                :class="['w-full px-3 py-2 border rounded-md', isViewMode ? 'bg-gray-100 cursor-not-allowed' : '', userModalErrors.firstTh ? 'border-red-500' : 'border-gray-300']"
+                :class="['w-full px-3 py-2 border rounded-md', isViewMode ? 'bg-gray-100 cursor-not-allowed' : '', userModalErrors.firstTh ? 'border-red-500' : 'border-gray-300',' placeholder-gray-400']"
                 placeholder="กรอกชื่อ" />
               <p v-if="userModalErrors.firstTh" class="mt-1 text-sm text-red-500">{{ userModalErrors.firstTh }}</p>
             </div>
@@ -778,7 +778,7 @@ function handleImportError(message) {
                   class="text-red-500">*</span></label>
               <input v-model="userModalForm.us_last_name_th" @input="clearError('lastTh')" type="text"
                 :disabled="isViewMode"
-                :class="['w-full px-3 py-2 border rounded-md', isViewMode ? 'bg-gray-100 cursor-not-allowed' : '', userModalErrors.lastTh ? 'border-red-500' : 'border-gray-300']"
+                :class="['w-full px-3 py-2 border rounded-md', isViewMode ? 'bg-gray-100 cursor-not-allowed' : '', userModalErrors.lastTh ? 'border-red-500' : 'border-gray-300',' placeholder-gray-400']"
                 placeholder="กรอกนามสกุล" />
               <p v-if="userModalErrors.lastTh" class="mt-1 text-sm text-red-500">{{ userModalErrors.lastTh }}</p>
             </div>
@@ -790,7 +790,7 @@ function handleImportError(message) {
                   class="text-red-500">*</span></label>
               <input v-model="userModalForm.us_first_name_en" @input="clearError('firstEn')" type="text"
                 :disabled="isViewMode"
-                :class="['w-full px-3 py-2 border rounded-md', isViewMode ? 'bg-gray-100 cursor-not-allowed' : '', userModalErrors.firstEn ? 'border-red-500' : 'border-gray-300']"
+                :class="['w-full px-3 py-2 border rounded-md', isViewMode ? 'bg-gray-100 cursor-not-allowed' : '', userModalErrors.firstEn ? 'border-red-500' : 'border-gray-300',' placeholder-gray-400']"
                 placeholder="First Name" />
               <p v-if="userModalErrors.firstEn" class="mt-1 text-sm text-red-500">{{ userModalErrors.firstEn }}</p>
             </div>
@@ -799,7 +799,7 @@ function handleImportError(message) {
                   class="text-red-500">*</span></label>
               <input v-model="userModalForm.us_last_name_en" @input="clearError('lastEn')" type="text"
                 :disabled="isViewMode"
-                :class="['w-full px-3 py-2 border rounded-md', isViewMode ? 'bg-gray-100 cursor-not-allowed' : '', userModalErrors.lastEn ? 'border-red-500' : 'border-gray-300']"
+                :class="['w-full px-3 py-2 border rounded-md', isViewMode ? 'bg-gray-100 cursor-not-allowed' : '', userModalErrors.lastEn ? 'border-red-500' : 'border-gray-300',' placeholder-gray-400']"
                 placeholder="Last Name" />
               <p v-if="userModalErrors.lastEn" class="mt-1 text-sm text-red-500">{{ userModalErrors.lastEn }}</p>
             </div>
@@ -811,7 +811,7 @@ function handleImportError(message) {
                   class="text-red-500">*</span></label>
               <input v-model="userModalForm.us_phone" @input="(maskInput($event.target), clearError('phone'))"
                 type="tel" :disabled="isViewMode"
-                :class="['w-full px-3 py-2 border rounded-md', isViewMode ? 'bg-gray-100 cursor-not-allowed' : '', userModalErrors.phone ? 'border-red-500' : 'border-gray-300']"
+                :class="['w-full px-3 py-2 border rounded-md', isViewMode ? 'bg-gray-100 cursor-not-allowed' : '', userModalErrors.phone ? 'border-red-500' : 'border-gray-300',' placeholder-gray-400']"
                 placeholder="กรอกเบอร์โทรศัพท์" />
               <p v-if="userModalErrors.phone" class="mt-1 text-sm text-red-500">{{ userModalErrors.phone }}</p>
             </div>
@@ -820,7 +820,7 @@ function handleImportError(message) {
                   class="text-red-500">*</span></label>
               <input v-model="userModalForm.us_department" type="text" @input="clearError('department')"
                 :disabled="isViewMode"
-                :class="['w-full px-3 py-2 border rounded-md', isViewMode ? 'bg-gray-100 cursor-not-allowed' : '', userModalErrors.department ? 'border-red-500' : 'border-gray-300']"
+                :class="['w-full px-3 py-2 border rounded-md', isViewMode ? 'bg-gray-100 cursor-not-allowed' : '', userModalErrors.department ? 'border-red-500' : 'border-gray-300',' placeholder-gray-400']"
                 placeholder="กรอกชื่อหน่วยงาน" />
               <p v-if="userModalErrors.department" class="mt-1 text-sm text-red-500">{{ userModalErrors.department }}
               </p>
