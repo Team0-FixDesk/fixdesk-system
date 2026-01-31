@@ -55,7 +55,7 @@ function handleFile(e) {
         row['นามสกุล (TH)'] &&
         row['ชื่อ (EN)'] &&
         row['นามสกุล (EN)'] &&
-        isValidPhone(phone) && 
+        isValidPhone(phone) &&
         row['หน่วยงาน'] &&
         role &&
         (!isTechnician || technicianType)
