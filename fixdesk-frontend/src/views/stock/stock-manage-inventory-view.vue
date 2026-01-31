@@ -32,7 +32,6 @@ const COLUMN_LIST = [
   'ตัวดำเนินการ',
 ]
 
-
 const openMenuId = ref(null)
 const categoriesLoaded = ref(false)
 const itemsCount = ref(0)
@@ -60,12 +59,6 @@ const selectedStatusList = ref([]) //
 const selectedTypeList = ref([]) //
 const editFilePreviewList = ref([]) //
 
-    const data = await res.json()
-    // เก็บทั้ง value (ct_id) และ label (ct_name) สำหรับ dropdown
-    typeOptions.value = (data || []).map((cat) => ({
-      value: String(cat.ct_id),
-      label: cat.ct_name,
-    }))
 const productIdToCategoryIdMap = ref({})
 const productIdToImageMap = ref({})
 const stockStatusMap = ref({})
@@ -95,7 +88,6 @@ const editForm = ref({
   uploadImage: null,
 })
 
-
 const filteredRowList = computed(() => {
   return allRowList.value.filter((row) => {
     const productId = row[0]
@@ -120,14 +112,6 @@ const filteredRowList = computed(() => {
   })
 })
 
-
-function getAuthHeaders() {
-  const token = localStorage.getItem('token') || sessionStorage.getItem('token')
-  return {
-    Authorization: `Bearer ${token}`,
-  }
-}
-
 const fetchCategories = async () => {
   try {
     if (categoriesLoaded.value) return
@@ -139,7 +123,7 @@ const fetchCategories = async () => {
     // เก็บทั้ง value (ct_id) และ label (ct_name)
     typeOptionList.value = (categoryData || []).map((category) => ({
       value: String(category.ct_id),
-      label: category.ct_name
+      label: category.ct_name,
     }))
 
     categoriesLoaded.value = true
@@ -226,9 +210,9 @@ async function fetchAllStock() {
 
 // --- Category Management Functions ---
 function openManageCategoryModal() {
-  manageCategoryList.value = typeOptionList.value.map(option => ({
+  manageCategoryList.value = typeOptionList.value.map((option) => ({
     id: option.value,
-    name: option.label
+    name: option.label,
   }))
   showManageCategoryModal.value = true
   showTypeFilter.value = false
@@ -270,9 +254,9 @@ async function handleAddCategory() {
     // รีโหลดข้อมูล
     categoriesLoaded.value = false
     await fetchCategories()
-    manageCategoryList.value = typeOptionList.value.map(option => ({
+    manageCategoryList.value = typeOptionList.value.map((option) => ({
       id: option.value,
-      name: option.label
+      name: option.label,
     }))
 
     Swal.fire({
@@ -321,9 +305,9 @@ async function handleEditCategory(category) {
     categoriesLoaded.value = false
     await fetchCategories()
     await fetchAllStock()
-    manageCategoryList.value = typeOptionList.value.map(option => ({
+    manageCategoryList.value = typeOptionList.value.map((option) => ({
       id: option.value,
-      name: option.label
+      name: option.label,
     }))
 
     Swal.fire({
@@ -362,9 +346,9 @@ async function handleDeleteCategory(category) {
     // รีโหลดข้อมูล
     categoriesLoaded.value = false
     await fetchCategories()
-    manageCategoryList.value = typeOptionList.value.map(option => ({
+    manageCategoryList.value = typeOptionList.value.map((option) => ({
       id: option.value,
-      name: option.label
+      name: option.label,
     }))
 
     Swal.fire({
@@ -958,7 +942,7 @@ onBeforeUnmount(() => {
                 </svg>
                 จัดการหมวดหมู่
               </button>
-              <hr class="my-2">
+              <hr class="my-2" />
               <div v-if="typeOptionList.length === 0" class="text-gray-400 text-sm p-2">
                 ไม่มีข้อมูล
               </div>
@@ -1105,7 +1089,11 @@ onBeforeUnmount(() => {
                   ]"
                 >
                   <option value="" disabled>กรุณาเลือกหมวดหมู่รายการ</option>
-                  <option v-for="option in typeOptionList" :key="option.value" :value="option.value">
+                  <option
+                    v-for="option in typeOptionList"
+                    :key="option.value"
+                    :value="option.value"
+                  >
                     {{ option.label }}
                   </option>
                 </select>
@@ -1387,7 +1375,11 @@ onBeforeUnmount(() => {
                   class="text-black w-full px-3 py-2 border border-gray-300 focus:ring-1 rounded-md bg-white"
                 >
                   <option value="" disabled>กรุณาเลือกหมวดหมู่</option>
-                  <option v-for="option in typeOptionList" :key="option.value" :value="String(option.value)">
+                  <option
+                    v-for="option in typeOptionList"
+                    :key="option.value"
+                    :value="String(option.value)"
+                  >
                     {{ option.label }}
                   </option>
                 </select>
@@ -1470,7 +1462,10 @@ onBeforeUnmount(() => {
                 />
               </label>
 
-              <div v-else-if="editFilePreviewList.length === 0 && editForm.uploadImage" class="mb-4">
+              <div
+                v-else-if="editFilePreviewList.length === 0 && editForm.uploadImage"
+                class="mb-4"
+              >
                 <div
                   class="relative flex items-center justify-center w-full h-64 overflow-hidden bg-gray-100 border border-gray-300 rounded-lg group"
                 >
@@ -1684,10 +1679,10 @@ onBeforeUnmount(() => {
     </div>
   </div>
   <ImportStockModal
-  v-if="showImportModal"
-  @close="showImportModal = false"
-  @refresh="fetchStockList"
-/>
+    v-if="showImportModal"
+    @close="showImportModal = false"
+    @refresh="fetchAllStock"
+  />
 </template>
 
 <style scoped>
