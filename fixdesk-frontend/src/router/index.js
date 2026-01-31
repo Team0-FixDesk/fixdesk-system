@@ -1,7 +1,7 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 import { jwtDecode } from 'jwt-decode'
 
-// AUTH
+// PUBLIC
 import HomeView from '@/views/home-view.vue'
 import LoginView from '../views/login-view.vue'
 import MainLayout from '../layouts/main-layout.vue'
@@ -45,127 +45,140 @@ const router = createRouter({
   history: createWebHashHistory(import.meta.env.BASE_URL),
   routes: [
     { path: '/', redirect: '/home' },
-    { path: '/home', name: 'home', component: HomeView },
+    { path: '/home', name: 'home', component: HomeView, meta: { public: true } },
     { path: '/login', name: 'login', component: LoginView },
     {
       path: '/main',
       component: MainLayout,
       children: [
-        { path: 'user-home', component: UserHomeView, meta: { role: ['User'] } },
+        { path: 'user-home', component: UserHomeView, meta: { roles: ['User'] } },
 
-        { path: 'admin-home', component: AdminHomeView, meta: { role: ['Admin'] } },
+        { path: 'admin-home', component: AdminHomeView, meta: { roles: ['Admin'] } },
         {
           path: 'admin-check-request',
           component: AdminCheckRequestView,
-          meta: { role: ['Admin'] },
+          meta: { roles: ['Admin'] },
         },
-        { path: 'admin-user-info', component: AdminUserInfoView, meta: { role: ['Admin'] } },
-        { path: 'admin-summary', component: AdminSummaryView, meta: { role: ['Admin'] } },
+        { path: 'admin-user-info', component: AdminUserInfoView, meta: { roles: ['Admin'] } },
+        { path: 'admin-summary', component: AdminSummaryView, meta: { roles: ['Admin'] } },
         {
           path: 'admin-manage-location',
           component: AdminManageLocationView,
-          meta: { role: ['Admin'] },
+          meta: { roles: ['Admin'] },
         },
-        { path: 'manager-home', component: ManagerHomeView, meta: { role: ['Manager'] } },
-        { path: 'manager-summary', component: ManagerSummaryView, meta: { role: ['Manager'] } },
+        { path: 'manager-home', component: ManagerHomeView, meta: { roles: ['Manager'] } },
+        { path: 'manager-summary', component: ManagerSummaryView, meta: { roles: ['Manager'] } },
 
-        { path: 'technician-home', component: TechnicianHomeView, meta: { role: ['Technician'] } },
+        { path: 'technician-home', component: TechnicianHomeView, meta: { roles: ['Technician'] } },
         {
           path: 'technician-repair-list',
           component: TechnicianRepairListView,
-          meta: { role: ['Technician'] },
+          meta: { roles: ['Technician'] },
         },
         {
           path: 'technician-history',
           component: TechnicianHistoryView,
-          meta: { role: ['Technician'] },
+          meta: { roles: ['Technician'] },
         },
         {
           path: 'technician-stock-list',
           component: TechnicianStockListView,
-          meta: { role: ['Technician'] },
+          meta: { roles: ['Technician'] },
         },
         {
           path: 'technician-requisition-list',
           component: TechnicianRequisitionListView,
           name: 'technician-requisition-list',
-          meta: { role: ['Technician'] },
+          meta: { roles: ['Technician'] },
         },
-        { path: 'stock-home', component: StockHomeView, meta: { role: ['Stock'] } },
+        { path: 'stock-home', component: StockHomeView, meta: { roles: ['Stock'] } },
         {
           path: 'stock-withdraw-list',
           component: StockWithdrawListView,
-          meta: { role: ['Stock'] },
+          meta: { roles: ['Stock'] },
         },
         {
           path: 'stock-withdraw-history',
           component: StockWithdrawHistoryView,
-          meta: { role: ['Stock'] },
+          meta: { roles: ['Stock'] },
         },
         {
           path: 'stock-manage-inventory',
           component: StockManageInventoryView,
-          meta: { role: ['Stock'] },
+          meta: { roles: ['Stock'] },
         },
         {
           path: 'stock-requisition/:code',
           component: StockRequisitionApproval,
-          meta: { role: ['Stock'] },
+          meta: { roles: ['Stock'] },
         },
         {
           path: 'repair-request',
           component: RepairRequestView,
-          meta: { role: ['User', 'Admin', 'Technician', 'Manager', 'Stock'] },
+          meta: { roles: ['User', 'Admin', 'Technician', 'Manager', 'Stock'] },
         },
         {
           path: 'my-list',
           component: MyListView,
-          meta: { role: ['User', 'Admin', 'Technician', 'Manager', 'Stock'] },
+          meta: { roles: ['User', 'Admin', 'Technician', 'Manager', 'Stock'] },
         },
         {
           path: 'manage-report',
           component: manageReportView,
-          meta: { role: ['Admin', 'Manager'] },
+          meta: { roles: ['Admin', 'Manager'] },
         },
         {
           path: 'create-report',
           component: CreateReportView,
-          meta: { role: ['Admin', 'Manager'] }, public: true
+          meta: { roles: ['Admin', 'Manager'] },
         },
         {
           path: 'repair-detail/:code',
           name: 'RepairDetail',
           component: () => import('@/views/repair-detail-view.vue'),
-          meta: { role: ['User', 'Admin', 'Technician', 'Manager', 'Stock'] },
+          meta: { roles: ['User', 'Admin', 'Technician', 'Manager', 'Stock'] },
         },
         {
           path: 'repair-edit/:code',
           name: 'RepairEdit',
           component: () => import('@/views/repair-edit-view.vue'),
-          meta: { role: ['User', 'Admin', 'Technician', 'Manager', 'Stock'] },
+          meta: { roles: ['User', 'Admin', 'Technician', 'Manager', 'Stock'] },
         },
       ],
     },
   ],
 })
 
-// NAVIGATION GUARD
+// NAVIGATION GUARD (การตั้งค่าเส้นทางของระบบ)
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('token') || sessionStorage.getItem('token')
-  if (to.path === '/home') return next()
 
-  // CASE: หน้า Login
-  if (to.path === '/login') {
-    if (token) {
-      const role = jwtDecode(token).role_name
-      return next(getHomeByRole(role))
-    }
+  // บังคับให้ทุกการเข้าครั้งแรก ไป /home
+  if (to.matched.some((record) => record.meta.public)) {
     return next()
   }
+
+  // CASE: หน้า Login
+  if (to.name === 'login') {
+    if (token) {
+      try {
+        const role = jwtDecode(token).role_name
+        return next(getHomeByRole(role))
+      } catch {
+        // token ผิดปกติ / หมดอายุ → ล้างทิ้งแล้วให้เข้า login
+        localStorage.removeItem('token')
+        sessionStorage.removeItem('token')
+        return next()
+      }
+    }
+
+    return next()
+  }
+
   // CASE: ต้อง login เสมอ
   if (!token) return next('/login')
 
-  let decoded = null
+  let decoded
   try {
     decoded = jwtDecode(token)
   } catch {
@@ -175,8 +188,9 @@ router.beforeEach((to, from, next) => {
   }
 
   const role = decoded.role_name
+
   // CASE: เช็ค role
-  if (to.meta.role && !to.meta.role.includes(role)) {
+  if (to.meta.roles && !to.meta.roles.includes(role)) {
     return next(getHomeByRole(role))
   }
 

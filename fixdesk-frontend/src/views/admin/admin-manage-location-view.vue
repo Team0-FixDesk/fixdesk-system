@@ -37,10 +37,9 @@ async function importExcel() {
   })
 
   if (!confirm.isConfirmed) {
-  resetFileInput()
-  return
-}
-
+    resetFileInput()
+    return
+  }
 
   const formData = new FormData()
   formData.append('file', excelFile.value)
@@ -64,8 +63,8 @@ async function importExcel() {
     if (contentType && contentType.includes('application/json')) {
       data = await res.json()
     } else {
-  throw new Error('Backend response ไม่ใช่ JSON')
-}
+      throw new Error('Backend response ไม่ใช่ JSON')
+    }
 
     if (!res.ok) {
       throw new Error(data.message || 'Import ล้มเหลว')
@@ -78,17 +77,15 @@ async function importExcel() {
     })
 
     resetFileInput()
-await refreshData()
-
+    await refreshData()
   } catch (err) {
-  await Swal.fire({
-    icon: 'error',
-    title: 'Import ล้มเหลว',
-    text: err.message,
-  })
-  resetFileInput()
-}
- finally {
+    await Swal.fire({
+      icon: 'error',
+      title: 'Import ล้มเหลว',
+      text: err.message,
+    })
+    resetFileInput()
+  } finally {
     isImporting.value = false
   }
 }
@@ -148,6 +145,9 @@ const showViewModal = ref(false)
 const showAddModal = ref(false)
 const showEditModal = ref(false)
 
+const modalFloors = ref([])
+const bulkFloors = ref([])
+
 // Data for modals
 const viewData = ref({})
 const addForm = ref({
@@ -187,6 +187,22 @@ const errorMessages = ref({
 
 // VALIDATION FUNCTIONS
 function validateAlphanumeric(value, fieldName) {
+  if (fieldName === 'newFloorName' || (fieldName === 'name' && addForm.value.type === 'floor')) {
+    const numberRegex = /^[0-9]+$/
+    if (!value.trim()) {
+      validationErrors.value[fieldName] = true
+      errorMessages.value[fieldName] = `กรุณากรอกข้อมูล`
+      return false
+    }
+    if (!numberRegex.test(value)) {
+      validationErrors.value[fieldName] = true
+      errorMessages.value[fieldName] = `กรุณากรอกชั้นเป็นตัวเลขเท่านั้น`
+      return false
+    }
+    validationErrors.value[fieldName] = false
+    errorMessages.value[fieldName] = ''
+    return true
+  }
   const regex = /^[ก-๙a-zA-Z0-9\s/]*$/
 
   if (!value.trim()) {
@@ -977,6 +993,19 @@ async function saveEditLocation() {
   if (!validateAlphanumeric(editForm.value.name, 'name')) {
     return
   }
+  const result = await Swal.fire({
+    title: 'ยืนยันการแก้ไขข้อมูล?',
+    text: 'คุณต้องการบันทึกการแก้ไขนี้หรือไม่?',
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'บันทึก',
+    cancelButtonText: 'ยกเลิก',
+    confirmButtonColor: '#f97316',
+  })
+
+  if (!result.isConfirmed) {
+    return
+  }
 
   try {
     const endpoint = '/rooms'
@@ -1045,7 +1074,7 @@ async function handleModalBuildingChange() {
       })
       if (res.ok) {
         const data = await res.json()
-        floors.value = data.map((floor) => ({
+        modalFloors.value = data.map((floor) => ({
           floor_id: floor.floor_id,
           floor_name: floor.floor_name,
           building_id: addForm.value.building_id,
@@ -1066,7 +1095,7 @@ async function handleBulkBuildingChange() {
       })
       if (res.ok) {
         const data = await res.json()
-        floors.value = data.map((floor) => ({
+        bulkFloors.value = data.map((floor) => ({
           floor_id: floor.floor_id,
           floor_name: floor.floor_name,
           building_id: addForm.value.building_id,
@@ -1175,37 +1204,23 @@ onBeforeUnmount(() => {
           </button>
         </div>
 
-
         <div class="flex items-center gap-3">
           <!-- Import Excel (ปุ่มรอง เข้าธีม) -->
-          <label class="inline-flex items-center gap-2 h-10 px-4 rounded-lg
-           border border-[#1E48D1]
-           text-[#1E48D1]
-           bg-white
-           hover:bg-blue-50
-           cursor-pointer
-           transition">
-            <input
-  ref="fileInput"
-  type="file"
-  accept=".xlsx"
-  class="hidden"
-  @change="handleFileChange"
-/>
+          <label
+            class="inline-flex items-center justify-center sm:justify-start w-full sm:w-auto h-10 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-900 text-white font-medium shadow-sm transition">
+            <input ref="fileInput" type="file" accept=".xlsx" class="hidden" @change="handleFileChange" />
+            <img src="/icon/plus-icon.svg" class="w-4 h-4" />
 
-            Import Excel
+            Import
           </label>
 
           <!-- เพิ่มสถานที่ (ปุ่มหลัก) -->
-          <button @click="openAddModal" class="inline-flex items-center justify-center h-10 px-4 rounded-lg
-           bg-[#1E48D1] hover:bg-[#1539a9]
-           text-white font-medium shadow-sm transition">
+          <button @click="openAddModal"
+            class="inline-flex items-center justify-center h-10 px-4 rounded-lg bg-[#1E48D1] hover:bg-[#1539a9] text-white font-medium shadow-sm transition">
             <img src="/icon/plus-icon.svg" class="w-4 h-4 mr-2" />
             เพิ่มสถานที่
           </button>
         </div>
-
-
       </div>
 
       <!-- ตาราง -->
@@ -1368,10 +1383,10 @@ onBeforeUnmount(() => {
             <label class="block text-sm font-medium text-gray-700 mb-2">
               ชั้น <span class="text-red-500">*</span>
             </label>
-            <select v-model="addForm.floor_id" :disabled="!addForm.building_id"
+            <select v-if="addForm.type === 'room'" v-model="addForm.floor_id" :disabled="!addForm.building_id"
               class="w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-blue-400 focus:outline-none disabled:bg-gray-100">
               <option value="">เลือกชั้น</option>
-              <option v-for="floor in floors" :key="floor.floor_id" :value="floor.floor_id">
+              <option v-for="floor in modalFloors" :key="floor.floor_id" :value="floor.floor_id">
                 {{ floor.floor_name }}
               </option>
             </select>
@@ -1458,7 +1473,7 @@ onBeforeUnmount(() => {
               :disabled="addForm.building_mode === 'new' || !addForm.building_id"
               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 focus:outline-none disabled:bg-gray-100">
               <option value="">-- เลือกชั้น --</option>
-              <option v-for="floor in floors" :key="floor.floor_id" :value="floor.floor_id">
+              <option v-for="floor in bulkFloors" :key="floor.floor_id" :value="floor.floor_id">
                 {{ floor.floor_name }}
               </option>
             </select>

@@ -6,6 +6,7 @@ import html2canvas from 'html2canvas'
 import JSZip from 'jszip'
 import RepairFilterBarComponent from '@/components/filters/repair-filter-bar-component.vue'
 import TableComponent from '@/components/table-component.vue'
+import Swal from 'sweetalert2'
 
 defineOptions({ name: 'ManageReportView' })
 
@@ -81,7 +82,7 @@ const getRepairFormHTML = (item, isPdf = false) => {
     ? `border-bottom: 2px dotted #888; padding-bottom: 8px; line-height: 1.2; margin-bottom: 2px;`
     : `border-bottom: 1px dotted #000; padding-bottom: 0px; line-height: 1.4; margin-bottom: 2px;`;
 
-    // Preview: top: 3px (สวยบนจอ)
+  // Preview: top: 3px (สวยบนจอ)
   // PDF: top: 5px (ดันลงมาอีกหน่อย เพราะ html2canvas ชอบดึงขึ้น)
   const checkboxTop = isPdf ? '10px' : '1px';
   const checkboxLineHeight = isPdf ? '5px' : '12px'; // ปรับตำแหน่งเครื่องหมายถูกในกล่องนิดหน่อย
@@ -173,8 +174,8 @@ const getRepairFormHTML = (item, isPdf = false) => {
         <div class="box">
           <div style="font-weight: bold; margin-bottom: 12px; text-decoration: underline;">สำหรับเจ้าหน้าที่ ตรวจสอบ/ซ่อม</div>
 
-          <div><span style="${checkboxStyle}">${ !isOutsourced ? '✓' : '' }</span> สามารถแก้ไข/ซ่อมบำรุงได้</div>
-          <div style="margin-top: 8px;"><span style="${checkboxStyle}">${ isOutsourced ? '✓' : '' }</span> ต้องจ้างบริษัทฯมาดำเนินการ................................................................................................</div>
+          <div><span style="${checkboxStyle}">${!isOutsourced ? '✓' : ''}</span> สามารถแก้ไข/ซ่อมบำรุงได้</div>
+          <div style="margin-top: 8px;"><span style="${checkboxStyle}">${isOutsourced ? '✓' : ''}</span> ต้องจ้างบริษัทฯมาดำเนินการ................................................................................................</div>
 
           <div class="divider"></div>
 
@@ -321,7 +322,6 @@ const paginatedRowsForTable = computed(() => {
     row.meta.rf_code,
     `${row.meta.us_first_name} ${row.meta.us_last_name}`,
     row.meta.tt_name || '-',
-    row.meta.rf_prop_number || '-',
     row.meta.department_name || '-',
     row.meta.rf_user_status
   ])
@@ -438,7 +438,7 @@ const generateSinglePDF = async (item) => {
   const a4HeightPx = 1123
 
   // เรียกใช้ฟังก์ชันเดียวกันกับ Preview
- tempDiv.innerHTML = getRepairFormHTML(item, true);
+  tempDiv.innerHTML = getRepairFormHTML(item, true);
 
   tempDiv.style.width = `${a4WidthPx}px`;
   tempDiv.style.height = `${a4HeightPx}px`;
@@ -498,7 +498,7 @@ const downloadCSV = async () => {
   if (selectedMonth.value && selectedYear.value) {
     const monthName = thaiMonths[parseInt(selectedMonth.value) - 1]
     const yearBE = parseInt(selectedYear.value) + 543
-    fileName = `รายงานสรุป_${monthName}_${yearBE}.csv`
+    fileName = `รายงานปฏิบัติงานประจำเดือน${monthName} ${yearBE}.csv`
   }
   link.setAttribute('href', url)
   link.setAttribute('download', fileName)
@@ -510,17 +510,24 @@ const downloadCSV = async () => {
 
 const downloadPDF = async () => {
   if (printSelection.value.length === 0) {
-    alert('กรุณาเลือกรายการที่ต้องการพิมพ์')
+    Swal.fire({
+      icon: 'warning',
+      title: 'ไม่มีรายการที่เลือก',
+      text: 'กรุณาเลือกใบแจ้งซ่อมอย่างน้อย 1 รายการเพื่อดาวน์โหลดไฟล์ PDF',
+    })
     return
   }
   isGeneratingPDF.value = true
   try {
-    const itemsToPrint = printDetails.value
+    const itemsToPrint = printDetails.value.filter(item => printSelection.value.includes(item.rf_code))
     let pdfFileName = 'ใบแจ้งซ่อม_ทั้งหมด'
     if (selectedMonth.value && selectedYear.value) {
       const monthName = thaiMonths[parseInt(selectedMonth.value) - 1]
       const yearBE = parseInt(selectedYear.value) + 543
-      pdfFileName = `ใบแจ้งซ่อม_${monthName}_${yearBE}`
+      pdfFileName = `ใบแจ้งซ่อมประจำเดือน${monthName} ${yearBE}`
+    }
+    if (itemsToPrint.length === 1 && printOption.value === 'merged') {
+      pdfFileName = `ใบแจ้งซ่อม_${itemsToPrint[0].rf_code}`
     }
     if (printOption.value === 'merged') {
       const pdf = new jsPDF({
@@ -531,7 +538,7 @@ const downloadPDF = async () => {
       for (let i = 0; i < itemsToPrint.length; i++) {
         const { img, width, height } = await generateSinglePDF(itemsToPrint[i])
         if (i > 0) pdf.addPage()
-        pdf.addImage(img, 'PNG', 0, 0, 210, 297,undefined, 'FAST')
+        pdf.addImage(img, 'PNG', 0, 0, 210, 297, undefined, 'FAST')
       }
       pdf.save(`${pdfFileName}.pdf`)
     } else {
@@ -640,7 +647,7 @@ onMounted(() => {
               <div class="p-4 border-b border-gray-200">
                 <div v-if="selectedItems.length === 0" class="flex justify-between items-center">
                   <h3 class="text-lg font-semibold text-gray-800">
-                    รายการแจ้งซ่อมที่เสร็จสิ้น (พร้อมพิมพ์)
+                    รายการแจ้งซ่อมที่เสร็จสิ้น
                   </h3>
                   <span class="text-sm text-gray-500">{{ filteredRows.length }} รายการ</span>
                 </div>
@@ -660,20 +667,19 @@ onMounted(() => {
                     class="flex items-center gap-2 bg-white text-blue-600 font-medium py-2 px-4 rounded-lg hover:bg-blue-50 transition-all">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                        d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
-                    พิมพ์ ({{ selectedItems.length }})
+                    ดาวน์โหลด ({{ selectedItems.length }})
                   </button>
                 </div>
               </div>
 
               <div class="flex-1 flex flex-col overflow-x-auto">
-                <table-component
-                  :columns="['', 'วันที่', 'หมายเลขแจ้งซ่อม', 'ผู้แจ้ง', 'ประเภท', 'รหัสครุภัณฑ์', 'หน่วยงาน', 'สถานะ']"
+                <table-component :columns="['', 'วันที่', 'หมายเลขแจ้งซ่อม', 'ผู้แจ้ง', 'ประเภท', 'หน่วยงาน', 'สถานะ']"
                   :rows="paginatedRowsForTable" :perPage="perPage" :idColumnIndex="2"
-                  :activeId="selectedItems[0] || null" :statusColumn="7"
-                  :columnAlign="['center', 'left', 'left', 'left', 'center', 'left', 'left', 'center']"
-                  :hiddenColumns="[]" @detail="handleRowClick" class="w-full">
+                  :activeId="selectedItems[0] || null" :statusColumn="6"
+                  :columnAlign="['center', 'left', 'left', 'left', 'center', 'left', 'center']" :hiddenColumns="[]"
+                  @detail="handleRowClick" class="w-full" :id-column-as-link="false">
                   <template #cell-0="{ row }">
                     <input type="checkbox" :value="row[2]" v-model="selectedItems" @click.stop
                       class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer" />
@@ -716,7 +722,7 @@ onMounted(() => {
           class="relative bg-white rounded-xl shadow-2xl w-[95%] max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
           <div class="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50">
             <h2 class="text-lg font-semibold text-gray-800">
-              เตรียมพิมพ์แบบฟอร์ม ({{ printSelection.length }} รายการ)
+              เตรียมดาวน์โหลดแบบฟอร์ม ({{ printSelection.length }} รายการ)
             </h2>
             <button @click="closePrintModal" class="p-2 hover:bg-gray-200 rounded-full transition-colors">
               <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -740,7 +746,7 @@ onMounted(() => {
                       @click.stop="togglePrintSelection(item.rf_code)"
                       class="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded" />
                     <div class="flex-1 min-w-0">
-                      <p class="font-medium text-gray-800">{{ index + 1 }}. Job ID: {{ item.rf_code }}</p>
+                      <p class="font-medium text-gray-800">{{ index + 1 }}. {{ item.rf_code }}</p>
                       <p class="text-xs text-gray-500 truncate">({{ item.tt_name }} - {{ item.reporter?.name || '-' }})
                       </p>
                     </div>
@@ -769,16 +775,16 @@ onMounted(() => {
             <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <!-- Print Options -->
               <div class="flex items-center gap-4">
-                <span class="text-sm font-medium text-gray-700">ตัวเลือกการพิมพ์:</span>
+                <span class="text-sm font-medium text-gray-700">ตัวเลือกการดาวน์โหลด:</span>
                 <label class="flex items-center gap-2 cursor-pointer">
                   <input type="radio" v-model="printOption" value="merged"
                     class="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500" />
-                  <span class="text-sm text-gray-700">รวมเป็นไฟล์เดียว (Merged PDF)</span>
+                  <span class="text-sm text-gray-700">รวมเป็นไฟล์เดียว</span>
                 </label>
                 <label class="flex items-center gap-2 cursor-pointer">
                   <input type="radio" v-model="printOption" value="zip"
                     class="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500" />
-                  <span class="text-sm text-gray-700">แยกไฟล์ (ZIP File)</span>
+                  <span class="text-sm text-gray-700">ดาวน์โหลดเป็นไฟล์แยก (ZIP File)</span>
                 </label>
               </div>
               <!-- Action Buttons -->
