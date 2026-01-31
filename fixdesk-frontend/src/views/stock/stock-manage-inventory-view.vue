@@ -4,9 +4,12 @@ import TableComponent from '@/components/table-component.vue'
 import TableActions from '@/components/table-actions-component.vue'
 import { useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
+import ImportStockModal from '@/components/import-excel-stock-component.vue'
+
 const router = useRouter()
 
 const openMenuId = ref(null)
+const showImportModal = ref(false)
 
 function getAuthHeaders() {
   const token = localStorage.getItem('token') || sessionStorage.getItem('token')
@@ -45,7 +48,7 @@ const fetchCategories = async () => {
     // เก็บทั้ง value (ct_id) และ label (ct_name) สำหรับ dropdown
     typeOptions.value = (data || []).map((cat) => ({
       value: String(cat.ct_id),
-      label: cat.ct_name
+      label: cat.ct_name,
     }))
 
     categoriesLoaded.value = true
@@ -182,9 +185,9 @@ const manageCategoryList = ref([])
 // --- Category Management Functions ---
 function openManageCategoryModal() {
   // โหลดรายการหมวดหมู่ใหม่
-  manageCategoryList.value = typeOptions.value.map(opt => ({
+  manageCategoryList.value = typeOptions.value.map((opt) => ({
     id: opt.value,
-    name: opt.label
+    name: opt.label,
   }))
   showManageCategoryModal.value = true
   showTypeFilter.value = false
@@ -216,7 +219,7 @@ async function handleAddCategory() {
       method: 'POST',
       headers: {
         ...getAuthHeaders(),
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({ ct_name: name.trim() }),
     })
@@ -226,9 +229,9 @@ async function handleAddCategory() {
     // รีโหลดข้อมูล
     categoriesLoaded.value = false
     await fetchCategories()
-    manageCategoryList.value = typeOptions.value.map(opt => ({
+    manageCategoryList.value = typeOptions.value.map((opt) => ({
       id: opt.value,
-      name: opt.label
+      name: opt.label,
     }))
 
     Swal.fire({
@@ -236,7 +239,7 @@ async function handleAddCategory() {
       title: 'สำเร็จ',
       text: 'เพิ่มหมวดหมู่เรียบร้อยแล้ว',
       timer: 2000,
-      showConfirmButton: false
+      showConfirmButton: false,
     })
   } catch (err) {
     console.error('Add category error:', err)
@@ -266,7 +269,7 @@ async function handleEditCategory(cat) {
       method: 'PUT',
       headers: {
         ...getAuthHeaders(),
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({ ct_name: name.trim() }),
     })
@@ -277,9 +280,9 @@ async function handleEditCategory(cat) {
     categoriesLoaded.value = false
     await fetchCategories()
     await fetchAllStock()
-    manageCategoryList.value = typeOptions.value.map(opt => ({
+    manageCategoryList.value = typeOptions.value.map((opt) => ({
       id: opt.value,
-      name: opt.label
+      name: opt.label,
     }))
 
     Swal.fire({
@@ -287,7 +290,7 @@ async function handleEditCategory(cat) {
       title: 'สำเร็จ',
       text: 'แก้ไขหมวดหมู่เรียบร้อยแล้ว',
       timer: 2000,
-      showConfirmButton: false
+      showConfirmButton: false,
     })
   } catch (err) {
     console.error('Edit category error:', err)
@@ -318,9 +321,9 @@ async function handleDeleteCategory(cat) {
     // รีโหลดข้อมูล
     categoriesLoaded.value = false
     await fetchCategories()
-    manageCategoryList.value = typeOptions.value.map(opt => ({
+    manageCategoryList.value = typeOptions.value.map((opt) => ({
       id: opt.value,
-      name: opt.label
+      name: opt.label,
     }))
 
     Swal.fire({
@@ -328,7 +331,7 @@ async function handleDeleteCategory(cat) {
       title: 'สำเร็จ',
       text: 'ลบหมวดหมู่เรียบร้อยแล้ว',
       timer: 2000,
-      showConfirmButton: false
+      showConfirmButton: false,
     })
   } catch (err) {
     console.error('Delete category error:', err)
@@ -837,59 +840,82 @@ const openEditModal = async (pdIdFromTable) => {
 </script>
 
 <template>
-  <div class="bg-white rounded-xl shadow-md p-12 mx-auto max-w-8xl container px-5 py-6">
-    <div class="flex justify-between items-center mb-6">
+  <div class="container p-12 px-5 py-6 mx-auto bg-white shadow-md rounded-xl max-w-8xl">
+    <div class="flex items-center justify-between mb-6">
       <h1 class="text-2xl font-bold text-gray-800">รายการคลัง</h1>
-      <button
-        @click="showAddModal = true"
-        class="bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded-md flex items-center shadow-sm transition-colors"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          class="h-5 w-5 mr-1"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
+      <div class="flex gap-2">
+        <button
+          @click="showImportModal = true"
+          class="flex items-center px-4 py-2 text-white transition-colors bg-blue-700 rounded-md shadow-sm hover:bg-blue-800"
         >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M12 4v16m8-8H4"
-          />
-        </svg>
-        เพิ่มรายการ
-      </button>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="w-5 h-5 mr-1"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 4v16m8-8H4"
+            />
+          </svg>
+          Import
+        </button>
+
+        <button
+          @click="showAddModal = true"
+          class="flex items-center px-4 py-2 text-white transition-colors bg-blue-700 rounded-md shadow-sm hover:bg-blue-800"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="w-5 h-5 mr-1"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 4v16m8-8H4"
+            />
+          </svg>
+          เพิ่มรายการ
+        </button>
+      </div>
     </div>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 mb-8">
-      <div class="bg-white rounded-lg border p-6 text-center shadow-sm">
+    <div class="grid grid-cols-1 gap-6 mb-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+      <div class="p-6 text-center bg-white border rounded-lg shadow-sm">
         <h2 class="text-2xl font-bold text-blue-600">{{ itemsCount }} รายการ</h2>
-        <p class="text-gray-600 text-sm">รายการของทั้งหมด</p>
+        <p class="text-sm text-gray-600">รายการของทั้งหมด</p>
       </div>
 
-      <div class="bg-white rounded-lg border p-6 text-center shadow-sm">
+      <div class="p-6 text-center bg-white border rounded-lg shadow-sm">
         <h2 class="text-2xl font-bold text-orange-500">{{ itemsNew }} รายการ</h2>
-        <p class="text-gray-600 text-sm">คำขอเบิกของ</p>
+        <p class="text-sm text-gray-600">คำขอเบิกของ</p>
       </div>
 
-      <div class="bg-white rounded-lg border p-6 text-center shadow-sm">
+      <div class="p-6 text-center bg-white border rounded-lg shadow-sm">
         <h2 class="text-2xl font-bold text-green-600">{{ itemRequestWaiting }} รายการ</h2>
-        <p class="text-gray-600 text-sm">คำขอเบิกรออนุมัติ</p>
+        <p class="text-sm text-gray-600">คำขอเบิกรออนุมัติ</p>
       </div>
 
-      <div class="bg-white rounded-lg border p-6 text-center shadow-sm">
+      <div class="p-6 text-center bg-white border rounded-lg shadow-sm">
         <h2 class="text-2xl font-bold text-red-600">{{ itemRequestDeclined }} รายการ</h2>
-        <p class="text-gray-600 text-sm">ใกล้หมด Stock</p>
+        <p class="text-sm text-gray-600">ใกล้หมด Stock</p>
       </div>
 
-      <div class="bg-white rounded-lg border p-6 text-center shadow-sm">
+      <div class="p-6 text-center bg-white border rounded-lg shadow-sm">
         <h2 class="text-2xl font-bold text-purple-600">{{ itemNewToday }} รายการ</h2>
-        <p class="text-gray-600 text-sm">ของเข้าใหม่วันนี้</p>
+        <p class="text-sm text-gray-600">ของเข้าใหม่วันนี้</p>
       </div>
     </div>
 
-    <div class="mb-6 relative z-40">
+    <div class="relative z-40 mb-6">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div class="flex flex-wrap items-center gap-3">
           <input
@@ -902,19 +928,19 @@ const openEditModal = async (pdIdFromTable) => {
           <div class="relative">
             <button
               @click.stop="showStatusFilter = !showStatusFilter"
-              class="flex items-center gap-1 border border-gray-300 rounded-lg px-4 py-2 bg-white text-gray-700 hover:bg-gray-50"
+              class="flex items-center gap-1 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
             >
               สถานะ
               <img
                 src="/icon/sidebar/chevron-down-icon.svg"
-                class="w-4 h-4 opacity-70 transition-transform duration-200"
+                class="w-4 h-4 transition-transform duration-200 opacity-70"
                 :class="{ 'rotate-180': showStatusFilter }"
               />
             </button>
 
             <div
               v-if="showStatusFilter"
-              class="absolute mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg p-3 text-sm text-gray-700 z-10"
+              class="absolute z-10 w-48 p-3 mt-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-md shadow-lg"
             >
               <label class="flex items-center py-1 cursor-pointer hover:bg-gray-50">
                 <input
@@ -951,38 +977,49 @@ const openEditModal = async (pdIdFromTable) => {
           <div class="relative">
             <button
               @click.stop="showTypeFilter = !showTypeFilter"
-              class="flex items-center gap-1 border border-gray-300 rounded-lg px-4 py-2 bg-white text-gray-700"
+              class="flex items-center gap-1 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg"
             >
               หมวดหมู่
               <img
                 src="/icon/sidebar/chevron-down-icon.svg"
-                class="w-4 h-4 opacity-70 transition-transform duration-200"
+                class="w-4 h-4 transition-transform duration-200 opacity-70"
                 :class="{ 'rotate-180': showTypeFilter }"
                 alt="toggle"
               />
             </button>
             <div
               v-if="showTypeFilter"
-              class="absolute mt-2 w-56 bg-white border border-gray-200 rounded-md shadow-lg p-3 text-sm text-gray-700 z-10 max-h-72 overflow-y-auto"
+              class="absolute z-10 w-56 p-3 mt-2 overflow-y-auto text-sm text-gray-700 bg-white border border-gray-200 rounded-md shadow-lg max-h-72"
             >
               <!-- ปุ่มจัดการหมวดหมู่ -->
               <button
                 @click="openManageCategoryModal"
-                class="w-full flex items-center gap-2 px-2 py-2 mb-2 text-blue-600 hover:bg-blue-50 rounded-md border border-blue-200"
+                class="flex items-center w-full gap-2 px-2 py-2 mb-2 text-blue-600 border border-blue-200 rounded-md hover:bg-blue-50"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="w-4 h-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                  />
                 </svg>
                 จัดการหมวดหมู่
               </button>
-              <hr class="my-2">
-              <div v-if="typeOptions.length === 0" class="text-gray-400 text-sm p-2">
+              <hr class="my-2" />
+              <div v-if="typeOptions.length === 0" class="p-2 text-sm text-gray-400">
                 ไม่มีข้อมูล
               </div>
               <label
                 v-for="category in typeOptions"
                 :key="category.value"
-                class="flex items-center py-1 hover:bg-gray-50 cursor-pointer"
+                class="flex items-center py-1 cursor-pointer hover:bg-gray-50"
               >
                 <input
                   type="checkbox"
@@ -1036,18 +1073,18 @@ const openEditModal = async (pdIdFromTable) => {
 
     <div
       v-if="showAddModal"
-      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 font-sans"
+      class="fixed inset-0 z-50 flex items-center justify-center font-sans bg-black bg-opacity-50"
       @click.self="closeAddModal"
     >
       <div
         class="bg-white rounded-lg w-full max-w-2xl shadow-xl max-h-[90vh] overflow-y-auto relative animate-fade-in-up"
       >
-        <div class="flex justify-between items-center px-6 py-4 border-b border-gray-100">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <div class="flex items-center gap-3">
-            <div class="bg-blue-700 text-white rounded p-1 flex items-center justify-center">
+            <div class="flex items-center justify-center p-1 text-white bg-blue-700 rounded">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                class="h-4 w-4"
+                class="w-4 h-4"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -1060,11 +1097,11 @@ const openEditModal = async (pdIdFromTable) => {
           </div>
           <button
             @click="closeAddModal"
-            class="text-gray-400 hover:text-gray-600 transition-colors"
+            class="text-gray-400 transition-colors hover:text-gray-600"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              class="h-6 w-6"
+              class="w-6 h-6"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -1082,10 +1119,10 @@ const openEditModal = async (pdIdFromTable) => {
         <div class="p-6">
           <form @submit.prevent="confirmAddItem">
             <div class="mb-4">
-              <label class="block text-sm font-medium text-black mb-1">
+              <label class="block mb-1 text-sm font-medium text-black">
                 ชื่อรายการ <span class="text-red-500">*</span>
               </label>
-              <span class="text-xs text-gray-400 block mb-1">กรอกชื่อรายการของที่ต้องการเพิ่ม</span>
+              <span class="block mb-1 text-xs text-gray-400">กรอกชื่อรายการของที่ต้องการเพิ่ม</span>
               <input
                 v-model="formdata.name"
                 type="text"
@@ -1095,17 +1132,17 @@ const openEditModal = async (pdIdFromTable) => {
                 ]"
                 placeholder="กรุณากรอกชื่อรายการ"
               />
-              <p v-if="addErrors.name" class="text-red-500 text-sm mt-1">{{ addErrors.name }}</p>
+              <p v-if="addErrors.name" class="mt-1 text-sm text-red-500">{{ addErrors.name }}</p>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+            <div class="grid grid-cols-1 gap-4 mb-4 sm:grid-cols-2">
               <div>
                 <label class="block text-sm font-medium text-black"> หมายเลขเลขครุภัณฑ์ </label>
-                <span class="text-xs text-gray-400 block mb-1">กรอกหมายเลขครุภัณฑ์ (ถ้ามี)</span>
+                <span class="block mb-1 text-xs text-gray-400">กรอกหมายเลขครุภัณฑ์ (ถ้ามี)</span>
                 <input
                   v-model="formdata.asset_no"
                   type="text"
-                  class="text-black w-full px-3 py-2 border-gray-400 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder-gray-400 transition-all"
+                  class="w-full px-3 py-2 text-black placeholder-gray-400 transition-all border-gray-400 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
                   placeholder="กรุณากรอกเลขครุภัณฑ์"
                 />
               </div>
@@ -1114,7 +1151,7 @@ const openEditModal = async (pdIdFromTable) => {
                 <label class="block text-sm font-medium text-black">
                   หมวดหมู่ <span class="text-red-500">*</span>
                 </label>
-                <span class="text-xs text-gray-400 block mb-1">โปรดเลือกหมวดหมู่รายการ</span>
+                <span class="block mb-1 text-xs text-gray-400">โปรดเลือกหมวดหมู่รายการ</span>
                 <select
                   v-model="formdata.ct_id"
                   :class="[
@@ -1127,15 +1164,15 @@ const openEditModal = async (pdIdFromTable) => {
                     {{ opt.label }}
                   </option>
                 </select>
-                <p v-if="addErrors.type_id" class="text-red-500 text-sm mt-1">
+                <p v-if="addErrors.type_id" class="mt-1 text-sm text-red-500">
                   {{ addErrors.type_id }}
                 </p>
               </div>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+            <div class="grid grid-cols-1 gap-4 mb-4 sm:grid-cols-2">
               <div>
-                <label class="block text-sm font-medium text-black mb-1">
+                <label class="block mb-1 text-sm font-medium text-black">
                   จำนวน <span class="text-red-500">*</span>
                 </label>
                 <input
@@ -1148,13 +1185,13 @@ const openEditModal = async (pdIdFromTable) => {
                   ]"
                   placeholder="กรุณากรอกจำนวน"
                 />
-                <p v-if="addErrors.quantity" class="text-red-500 text-sm mt-1">
+                <p v-if="addErrors.quantity" class="mt-1 text-sm text-red-500">
                   {{ addErrors.quantity }}
                 </p>
               </div>
 
               <div>
-                <label class="block text-sm font-medium text-black mb-1">
+                <label class="block mb-1 text-sm font-medium text-black">
                   หน่วยนับ <span class="text-red-500">*</span>
                 </label>
                 <input
@@ -1166,18 +1203,18 @@ const openEditModal = async (pdIdFromTable) => {
                   ]"
                   placeholder="กรุณากรอกหน่วยนับ"
                 />
-                <p v-if="addErrors.unit" class="text-red-500 text-sm mt-1">{{ addErrors.unit }}</p>
+                <p v-if="addErrors.unit" class="mt-1 text-sm text-red-500">{{ addErrors.unit }}</p>
               </div>
             </div>
 
             <div class="grid grid-cols-1 mb-8">
               <div>
-                <label class="block text-sm font-medium text-black mb-1">
+                <label class="block mb-1 text-sm font-medium text-black">
                   สถานะ <span class="text-red-500">*</span>
                 </label>
                 <select
                   v-model="formdata.status"
-                  class="text-black placeholder-gray-400 w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all"
+                  class="w-full px-3 py-2 text-black placeholder-gray-400 transition-all bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
                 >
                   <option value="" disabled>กรุณาเลือกสถานะ</option>
                   <option value="active">พร้อมใช้งาน</option>
@@ -1219,13 +1256,13 @@ const openEditModal = async (pdIdFromTable) => {
                     </span>
                   </p>
 
-                  <p class="text-xs text-gray-400 mt-1">รองรับรูปภาพเท่านั้น (สูงสุด 1 รูป)</p>
-                  <p class="text-xs text-gray-500 mt-1">สามารถแนบรูปภาพประกอบได้</p>
+                  <p class="mt-1 text-xs text-gray-400">รองรับรูปภาพเท่านั้น (สูงสุด 1 รูป)</p>
+                  <p class="mt-1 text-xs text-gray-500">สามารถแนบรูปภาพประกอบได้</p>
 
                   <div class="flex items-center gap-2 mt-2">
-                    <span class="text-xs px-2 py-1 bg-green-100 text-green-700 rounded">JPG</span>
-                    <span class="text-xs px-2 py-1 bg-green-100 text-green-700 rounded">PNG</span>
-                    <span class="text-xs px-2 py-1 bg-green-100 text-green-700 rounded">WEBP</span>
+                    <span class="px-2 py-1 text-xs text-green-700 bg-green-100 rounded">JPG</span>
+                    <span class="px-2 py-1 text-xs text-green-700 bg-green-100 rounded">PNG</span>
+                    <span class="px-2 py-1 text-xs text-green-700 bg-green-100 rounded">WEBP</span>
                   </div>
                 </div>
 
@@ -1238,15 +1275,15 @@ const openEditModal = async (pdIdFromTable) => {
                 />
               </label>
 
-              <div v-else class="w-full border rounded-lg p-4 bg-gray-50 relative mb-4">
+              <div v-else class="relative w-full p-4 mb-4 border rounded-lg bg-gray-50">
                 <div class="flex items-start gap-4">
                   <div
-                    class="w-24 h-24 rounded-lg overflow-hidden border border-gray-200 bg-white flex-shrink-0"
+                    class="flex-shrink-0 w-24 h-24 overflow-hidden bg-white border border-gray-200 rounded-lg"
                   >
                     <img
                       :src="filePreview[0].url"
                       :alt="filePreview[0].name"
-                      class="w-full h-full object-cover"
+                      class="object-cover w-full h-full"
                     />
                   </div>
 
@@ -1254,13 +1291,13 @@ const openEditModal = async (pdIdFromTable) => {
                     <p class="text-sm font-semibold text-gray-900 truncate">
                       {{ filePreview[0].name }}
                     </p>
-                    <p class="text-xs text-gray-500 mt-1">
+                    <p class="mt-1 text-xs text-gray-500">
                       ขนาด: {{ (filePreview[0].size / 1024 / 1024).toFixed(2) }} MB
                     </p>
-                    <p class="text-xs text-green-600 mt-2 flex items-center">
+                    <p class="flex items-center mt-2 text-xs text-green-600">
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
-                        class="h-4 w-4 mr-1"
+                        class="w-4 h-4 mr-1"
                         viewBox="0 0 20 20"
                         fill="currentColor"
                       >
@@ -1277,12 +1314,12 @@ const openEditModal = async (pdIdFromTable) => {
 
                 <button
                   @click.prevent="removeFile(0)"
-                  class="absolute top-2 right-2 p-1 bg-white rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50 border border-gray-200 shadow-sm transition-colors"
+                  class="absolute p-1 text-gray-400 transition-colors bg-white border border-gray-200 rounded-full shadow-sm top-2 right-2 hover:text-red-500 hover:bg-red-50"
                   title="ลบรูปภาพ"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    class="h-5 w-5"
+                    class="w-5 h-5"
                     viewBox="0 0 20 20"
                     fill="currentColor"
                   >
@@ -1300,7 +1337,7 @@ const openEditModal = async (pdIdFromTable) => {
               <button
                 type="button"
                 @click="closeAddModal"
-                class="px-8 py-2 border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 rounded-md transition-colors font-medium shadow-sm text-sm"
+                class="px-8 py-2 text-sm font-medium text-gray-700 transition-colors bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50"
               >
                 ยกเลิก
               </button>
@@ -1308,7 +1345,7 @@ const openEditModal = async (pdIdFromTable) => {
               <button
                 type="button"
                 @click="confirmAddItem"
-                class="px-8 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded-md transition-colors font-medium shadow-sm text-sm"
+                class="px-8 py-2 text-sm font-medium text-white transition-colors bg-blue-700 rounded-md shadow-sm hover:bg-blue-800"
               >
                 บันทึก
               </button>
@@ -1321,18 +1358,18 @@ const openEditModal = async (pdIdFromTable) => {
     <!-- Edit Modal -->
     <div
       v-if="showEditModal"
-      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 font-sans"
+      class="fixed inset-0 z-50 flex items-center justify-center font-sans bg-black bg-opacity-50"
       @click.self="closeEditModal"
     >
       <div
         class="bg-white rounded-lg w-full max-w-2xl shadow-xl max-h-[90vh] overflow-y-auto relative animate-fade-in-up"
       >
-        <div class="flex justify-between items-center px-6 py-4 border-b border-gray-100">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <div class="flex items-center gap-3">
-            <div class="bg-orange-500 text-white rounded p-1 flex items-center justify-center">
+            <div class="flex items-center justify-center p-1 text-white bg-orange-500 rounded">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                class="h-4 w-4"
+                class="w-4 h-4"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -1349,11 +1386,11 @@ const openEditModal = async (pdIdFromTable) => {
           </div>
           <button
             @click="closeEditModal"
-            class="text-gray-400 hover:text-gray-600 transition-colors"
+            class="text-gray-400 transition-colors hover:text-gray-600"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              class="h-6 w-6"
+              class="w-6 h-6"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -1371,27 +1408,27 @@ const openEditModal = async (pdIdFromTable) => {
         <div class="p-6">
           <form @submit.prevent="confirmEditItem">
             <div class="mb-4">
-              <label class="block text-sm font-medium text-black mb-1">
+              <label class="block mb-1 text-sm font-medium text-black">
                 ชื่อรายการ <span class="text-red-500">*</span>
               </label>
-              <span class="text-xs text-gray-400 block mb-1">กรอกชื่อรายการของที่ต้องการแก้ไข</span>
+              <span class="block mb-1 text-xs text-gray-400">กรอกชื่อรายการของที่ต้องการแก้ไข</span>
               <input
                 v-model="editForm.name"
                 type="text"
-                class="text-black placeholder-gray-400 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 transition-all"
+                class="w-full px-3 py-2 text-black placeholder-gray-400 transition-all border border-gray-300 rounded-md focus:outline-none focus:ring-1"
                 placeholder="กรุณากรอกชื่อรายการ"
               />
-              <p v-if="editErrors?.name" class="text-red-500 text-sm mt-1">{{ editErrors.name }}</p>
+              <p v-if="editErrors?.name" class="mt-1 text-sm text-red-500">{{ editErrors.name }}</p>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+            <div class="grid grid-cols-1 gap-4 mb-4 sm:grid-cols-2">
               <div>
                 <label class="block text-sm font-medium text-black"> หมายเลขเลขครุภัณฑ์ </label>
-                <span class="text-xs text-gray-400 block mb-1">กรอกหมายเลขครุภัณฑ์ (ถ้ามี)</span>
+                <span class="block mb-1 text-xs text-gray-400">กรอกหมายเลขครุภัณฑ์ (ถ้ามี)</span>
                 <input
                   v-model="editForm.asset_no"
                   type="text"
-                  class="text-black w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 placeholder-gray-400 transition-all"
+                  class="w-full px-3 py-2 text-black placeholder-gray-400 transition-all border border-gray-300 rounded-md focus:outline-none focus:ring-1"
                   placeholder="กรุณากรอกเลขครุภัณฑ์"
                 />
               </div>
@@ -1400,10 +1437,10 @@ const openEditModal = async (pdIdFromTable) => {
                 <label class="block text-sm font-medium text-black">
                   หมวดหมู่ <span class="text-red-500">*</span>
                 </label>
-                <span class="text-xs text-gray-400 block mb-1">โปรดเลือกหมวดหมู่รายการ</span>
+                <span class="block mb-1 text-xs text-gray-400">โปรดเลือกหมวดหมู่รายการ</span>
                 <select
                   v-model="editForm.ct_id"
-                  class="text-black w-full px-3 py-2 border border-gray-300 focus:ring-1 rounded-md bg-white"
+                  class="w-full px-3 py-2 text-black bg-white border border-gray-300 rounded-md focus:ring-1"
                 >
                   <option value="" disabled>กรุณาเลือกหมวดหมู่</option>
                   <option v-for="opt in typeOptions" :key="opt.value" :value="String(opt.value)">
@@ -1413,39 +1450,39 @@ const openEditModal = async (pdIdFromTable) => {
               </div>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+            <div class="grid grid-cols-1 gap-4 mb-4 sm:grid-cols-2">
               <div>
-                <label class="block text-sm font-medium text-black mb-1">
+                <label class="block mb-1 text-sm font-medium text-black">
                   จำนวน <span class="text-red-500">*</span>
                 </label>
                 <input
                   v-model="editForm.quantity"
                   type="number"
                   min="1"
-                  class="text-black placeholder-gray-400 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 transition-all"
+                  class="w-full px-3 py-2 text-black placeholder-gray-400 transition-all border border-gray-300 rounded-md focus:outline-none focus:ring-1"
                 />
               </div>
 
               <div>
-                <label class="block text-sm font-medium text-black mb-1">
+                <label class="block mb-1 text-sm font-medium text-black">
                   หน่วยนับ <span class="text-red-500">*</span>
                 </label>
                 <input
                   v-model="editForm.unit"
                   type="text"
-                  class="text-black placeholder-gray-400 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 transition-all"
+                  class="w-full px-3 py-2 text-black placeholder-gray-400 transition-all border border-gray-300 rounded-md focus:outline-none focus:ring-1"
                 />
               </div>
             </div>
 
             <div class="grid grid-cols-1 mb-8">
               <div>
-                <label class="block text-sm font-medium text-black mb-1">
+                <label class="block mb-1 text-sm font-medium text-black">
                   สถานะ <span class="text-red-500">*</span>
                 </label>
                 <select
                   v-model="editForm.status"
-                  class="text-black placeholder-gray-400 w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-1 transition-all"
+                  class="w-full px-3 py-2 text-black placeholder-gray-400 transition-all bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-1"
                 >
                   <option value="active">พร้อมใช้งาน</option>
                   <option value="inactive">ไม่พร้อมใช้งาน</option>
@@ -1454,7 +1491,7 @@ const openEditModal = async (pdIdFromTable) => {
             </div>
 
             <div class="flex flex-col flex-1 mb-6">
-              <label class="block text-sm font-medium text-black mb-2">รูปภาพสินค้า</label>
+              <label class="block mb-2 text-sm font-medium text-black">รูปภาพสินค้า</label>
 
               <label
                 v-if="editFilePreview.length === 0 && !editForm.upload_image"
@@ -1471,13 +1508,13 @@ const openEditModal = async (pdIdFromTable) => {
               >
                 <div class="flex flex-col items-center justify-center pt-5 pb-6">
                   <img src="/icon/image-up-icon.svg" class="w-10 h-10 mb-2 opacity-70" />
-                  <p class="text-xs text-gray-400 mt-1">รองรับรูปภาพเท่านั้น (สูงสุด 1 รูป)</p>
-                  <p class="text-xs text-gray-500 mt-1">สามารถแนบรูปภาพประกอบได้</p>
+                  <p class="mt-1 text-xs text-gray-400">รองรับรูปภาพเท่านั้น (สูงสุด 1 รูป)</p>
+                  <p class="mt-1 text-xs text-gray-500">สามารถแนบรูปภาพประกอบได้</p>
 
                   <div class="flex items-center gap-2 mt-2">
-                    <span class="text-xs px-2 py-1 bg-green-100 text-green-700 rounded">JPG</span>
-                    <span class="text-xs px-2 py-1 bg-green-100 text-green-700 rounded">PNG</span>
-                    <span class="text-xs px-2 py-1 bg-green-100 text-green-700 rounded">WEBP</span>
+                    <span class="px-2 py-1 text-xs text-green-700 bg-green-100 rounded">JPG</span>
+                    <span class="px-2 py-1 text-xs text-green-700 bg-green-100 rounded">PNG</span>
+                    <span class="px-2 py-1 text-xs text-green-700 bg-green-100 rounded">WEBP</span>
                   </div>
                 </div>
                 <input
@@ -1491,21 +1528,21 @@ const openEditModal = async (pdIdFromTable) => {
 
               <div v-else-if="editFilePreview.length === 0 && editForm.upload_image" class="mb-4">
                 <div
-                  class="relative w-full h-64 bg-gray-100 rounded-lg border border-gray-300 flex items-center justify-center overflow-hidden group"
+                  class="relative flex items-center justify-center w-full h-64 overflow-hidden bg-gray-100 border border-gray-300 rounded-lg group"
                 >
                   <img
                     :src="`${API_BASE}/uploads/${editForm.upload_image}`"
-                    class="h-full object-contain"
+                    class="object-contain h-full"
                     alt="Current Image"
                   />
 
                   <label
                     for="dropzone-file-edit-replace"
-                    class="absolute inset-0 bg-black bg-opacity-50 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-white"
+                    class="absolute inset-0 flex flex-col items-center justify-center text-white transition-opacity bg-black bg-opacity-50 opacity-0 cursor-pointer group-hover:opacity-100"
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
-                      class="h-10 w-10 mb-2"
+                      class="w-10 h-10 mb-2"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -1527,31 +1564,31 @@ const openEditModal = async (pdIdFromTable) => {
                     @change="handleEditFileUpload"
                   />
                 </div>
-                <p class="text-xs text-gray-500 mt-2 text-center">
+                <p class="mt-2 text-xs text-center text-gray-500">
                   รูปภาพปัจจุบัน (อัปโหลดใหม่เพื่อแทนที่)
                 </p>
               </div>
 
-              <div v-else class="w-full border rounded-lg p-4 bg-gray-50 relative mb-4">
+              <div v-else class="relative w-full p-4 mb-4 border rounded-lg bg-gray-50">
                 <div class="flex items-start gap-4">
                   <div
-                    class="w-24 h-24 rounded-lg overflow-hidden border border-gray-200 bg-white flex-shrink-0"
+                    class="flex-shrink-0 w-24 h-24 overflow-hidden bg-white border border-gray-200 rounded-lg"
                   >
-                    <img :src="editFilePreview[0].url" class="w-full h-full object-cover" />
+                    <img :src="editFilePreview[0].url" class="object-cover w-full h-full" />
                   </div>
                   <div class="flex-1 min-w-0 pt-1">
                     <p class="text-sm font-semibold text-gray-900 truncate">
                       {{ editFilePreview[0].name }}
                     </p>
-                    <p class="text-xs text-green-600 mt-2">กำลังจะบันทึกรูปภาพใหม่...</p>
+                    <p class="mt-2 text-xs text-green-600">กำลังจะบันทึกรูปภาพใหม่...</p>
                   </div>
                   <button
                     @click.prevent="removeEditFile"
-                    class="absolute top-2 right-2 p-1 bg-white rounded-full text-gray-400 hover:text-red-500 border shadow-sm"
+                    class="absolute p-1 text-gray-400 bg-white border rounded-full shadow-sm top-2 right-2 hover:text-red-500"
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
-                      class="h-5 w-5"
+                      class="w-5 h-5"
                       viewBox="0 0 20 20"
                       fill="currentColor"
                     >
@@ -1570,14 +1607,14 @@ const openEditModal = async (pdIdFromTable) => {
               <button
                 type="button"
                 @click="closeEditModal"
-                class="px-8 py-2 border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 rounded-md transition-colors font-medium shadow-sm text-sm"
+                class="px-8 py-2 text-sm font-medium text-gray-700 transition-colors bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50"
               >
                 ยกเลิก
               </button>
 
               <button
                 type="submit"
-                class="px-8 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-md transition-colors font-medium shadow-sm text-sm"
+                class="px-8 py-2 text-sm font-medium text-white transition-colors bg-orange-500 rounded-md shadow-sm hover:bg-orange-600"
               >
                 บันทึกการแก้ไข
               </button>
@@ -1598,34 +1635,56 @@ const openEditModal = async (pdIdFromTable) => {
         <div class="flex items-center justify-between p-4 border-b">
           <h2 class="text-lg font-bold text-gray-800">จัดการหมวดหมู่</h2>
           <button @click="closeManageCategoryModal" class="text-gray-400 hover:text-gray-600">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="w-6 h-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
 
         <!-- Body -->
-        <div class="p-4 overflow-y-auto flex-1">
+        <div class="flex-1 p-4 overflow-y-auto">
           <!-- ปุ่มเพิ่มหมวดหมู่ -->
           <button
             @click="handleAddCategory"
-            class="w-full flex items-center justify-center gap-2 px-4 py-2 mb-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+            class="flex items-center justify-center w-full gap-2 px-4 py-2 mb-4 text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="w-5 h-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+              />
             </svg>
             เพิ่มหมวดหมู่ใหม่
           </button>
 
           <!-- รายการหมวดหมู่ -->
-          <div v-if="manageCategoryList.length === 0" class="text-center text-gray-400 py-8">
+          <div v-if="manageCategoryList.length === 0" class="py-8 text-center text-gray-400">
             ไม่มีข้อมูลหมวดหมู่
           </div>
           <ul v-else class="space-y-2">
             <li
               v-for="cat in manageCategoryList"
               :key="cat.id"
-              class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100"
+              class="flex items-center justify-between p-3 rounded-lg bg-gray-50 hover:bg-gray-100"
             >
               <span class="text-gray-700">{{ cat.name }}</span>
               <div class="flex gap-2">
@@ -1634,8 +1693,19 @@ const openEditModal = async (pdIdFromTable) => {
                   class="p-1.5 text-blue-600 hover:bg-blue-100 rounded"
                   title="แก้ไข"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="w-4 h-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                    />
                   </svg>
                 </button>
                 <button
@@ -1643,8 +1713,19 @@ const openEditModal = async (pdIdFromTable) => {
                   class="p-1.5 text-red-600 hover:bg-red-100 rounded"
                   title="ลบ"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="w-4 h-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    />
                   </svg>
                 </button>
               </div>
@@ -1656,7 +1737,7 @@ const openEditModal = async (pdIdFromTable) => {
         <div class="p-4 border-t">
           <button
             @click="closeManageCategoryModal"
-            class="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            class="w-full px-4 py-2 text-gray-700 transition-colors border border-gray-300 rounded-lg hover:bg-gray-50"
           >
             ปิด
           </button>
@@ -1664,6 +1745,11 @@ const openEditModal = async (pdIdFromTable) => {
       </div>
     </div>
   </div>
+  <ImportStockModal
+  v-if="showImportModal"
+  @close="showImportModal = false"
+  @refresh="fetchStockList"
+/>
 </template>
 
 <style scoped>

@@ -20,7 +20,7 @@ const storage = multer.diskStorage({
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
     cb(
       null,
-      file.fieldname + "-" + uniqueSuffix + path.extname(file.originalname)
+      file.fieldname + "-" + uniqueSuffix + path.extname(file.originalname),
     );
   },
 });
@@ -140,7 +140,7 @@ module.exports = function StockRoutes(db) {
           });
         });
       });
-    }
+    },
   );
 
   // เรียกหมวดหมู่
@@ -165,7 +165,8 @@ module.exports = function StockRoutes(db) {
     }
 
     // ตรวจสอบชื่อซ้ำ
-    const checkQuery = "SELECT COUNT(*) as count FROM categories WHERE LOWER(ct_name) = LOWER(?)";
+    const checkQuery =
+      "SELECT COUNT(*) as count FROM categories WHERE LOWER(ct_name) = LOWER(?)";
     db.query(checkQuery, [ct_name.trim()], (err, results) => {
       if (err) {
         console.error("Error checking category:", err);
@@ -186,7 +187,7 @@ module.exports = function StockRoutes(db) {
         res.status(201).json({
           message: "เพิ่มหมวดหมู่สำเร็จ",
           ct_id: result.insertId,
-          ct_name: ct_name.trim()
+          ct_name: ct_name.trim(),
         });
       });
     });
@@ -202,7 +203,8 @@ module.exports = function StockRoutes(db) {
     }
 
     // ตรวจสอบชื่อซ้ำ (ยกเว้นตัวเอง)
-    const checkQuery = "SELECT COUNT(*) as count FROM categories WHERE LOWER(ct_name) = LOWER(?) AND ct_id != ?";
+    const checkQuery =
+      "SELECT COUNT(*) as count FROM categories WHERE LOWER(ct_name) = LOWER(?) AND ct_id != ?";
     db.query(checkQuery, [ct_name.trim(), id], (err, results) => {
       if (err) {
         console.error("Error checking category:", err);
@@ -232,7 +234,8 @@ module.exports = function StockRoutes(db) {
     const { id } = req.params;
 
     // ตรวจสอบว่ามีสินค้าใช้หมวดหมู่นี้อยู่หรือไม่
-    const checkQuery = "SELECT COUNT(*) as count FROM products WHERE pd_category_id = ?";
+    const checkQuery =
+      "SELECT COUNT(*) as count FROM products WHERE pd_category_id = ?";
     db.query(checkQuery, [id], (err, results) => {
       if (err) {
         console.error("Error checking products:", err);
@@ -241,7 +244,7 @@ module.exports = function StockRoutes(db) {
 
       if (results[0].count > 0) {
         return res.status(400).json({
-          message: `ไม่สามารถลบได้ เนื่องจากมีสินค้า ${results[0].count} รายการใช้หมวดหมู่นี้อยู่`
+          message: `ไม่สามารถลบได้ เนื่องจากมีสินค้า ${results[0].count} รายการใช้หมวดหมู่นี้อยู่`,
         });
       }
 
@@ -389,9 +392,9 @@ module.exports = function StockRoutes(db) {
 
             res.json({ message: "แก้ไขสำเร็จ" });
           });
-        }
+        },
       );
-    }
+    },
   );
 
   router.get("/stock-forms/:id", authMiddleware, (req, res) => {
@@ -649,7 +652,6 @@ module.exports = function StockRoutes(db) {
     });
   });
 
-
   // เบิกสินค้า
   router.post("/withdraw", authMiddleware, (req, res) => {
     const { repair_code, requester_name, department, withdraw_date, items } =
@@ -715,6 +717,117 @@ module.exports = function StockRoutes(db) {
           sf_code,
         });
       });
+    });
+  });
+
+  router.post("/stock/import", authMiddleware, async (req, res) => {
+    // ไว้มาลบทีหลัง
+    console.log("🔥 /stock/import HIT");
+    console.log("BODY:", req.body);
+
+    const { items } = req.body;
+    const results = [];
+    const errors = [];
+
+    if (!Array.isArray(items) || !items.length) {
+      return res.status(400).json({ message: "No stock items to import" });
+    }
+
+    for (const [i, u] of items.entries()) {
+      try {
+       //ตรวจสอบความถูกต้องข้อมูล
+        const qty = Number(u.pd_quantity);
+
+        if (!u.pd_name || isNaN(qty) || qty <= 0 || !u.pd_unit_name) {
+          throw new Error("Missing required fields");
+        }
+
+       // ชื่อและหมายเลขครุภัณฑ์ห้ามซ้ำในระบบ
+        const [dupRows] = await db.promise().query(
+          `
+        SELECT pd_id FROM products
+        WHERE pd_name = ?
+           OR (pd_asset_code IS NOT NULL AND pd_asset_code = ?)
+        LIMIT 1
+        `,
+          [u.pd_name, u.pd_asset_code || null],
+        );
+
+        if (dupRows.length) {
+          throw new Error("Duplicate name or asset code");
+        }
+      
+        let pd_unit_id;
+        const [unitRows] = await db
+          .promise()
+          .query("SELECT units_id FROM units WHERE units_name = ?", [
+            u.pd_unit_name,
+          ]);
+
+        if (unitRows.length > 0) {
+          pd_unit_id = unitRows[0].units_id;
+        } else {
+          const [insertUnit] = await db
+            .promise()
+            .query("INSERT INTO units (units_name) VALUES (?)", [
+              u.pd_unit_name,
+            ]);
+
+          pd_unit_id = insertUnit.insertId;
+        }
+
+        //ถ้าไม่มีหมวดหมู่ใน DB ไม่สามารถ import เข้าได้
+        let pd_category_id = null;
+
+        if (u.pd_category_name) {
+          const [ctRows] = await db
+            .promise()
+            .query("SELECT ct_id FROM categories WHERE ct_name = ?", [
+              u.pd_category_name,
+            ]);
+
+          if (!ctRows.length) throw new Error("Invalid category");
+
+          pd_category_id = ctRows[0].ct_id;
+        }
+
+       // insert products
+        await db.promise().query(
+          `INSERT INTO products (
+          pd_asset_code,
+          pd_name,
+          pd_category_id,
+          pd_quantity,
+          pd_unit_id,
+          pd_upload_image,
+          pd_updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, NOW())`,
+          [
+            u.pd_asset_code || null, // ครุภัณฑ์กรอกไม่กรอกก็ได้
+            u.pd_name,
+            pd_category_id,
+            qty,
+            pd_unit_id,
+            null, // ไม่มีรูปตอน import excel
+          ],
+        );
+
+        results.push({ index: i, name: u.pd_name });
+      } catch (err) {
+        console.error("IMPORT STOCK ERROR:", err.message);
+
+        errors.push({
+          index: i,
+          name: u.pd_name,
+          message: err.message,
+        });
+      }
+    }
+
+    res.json({
+      success: results.length,
+      failed: errors.length,
+      errors,
     });
   });
 

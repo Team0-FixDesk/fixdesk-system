@@ -3,16 +3,21 @@
     <div class="w-full max-w-4xl p-6 bg-white shadow-lg rounded-xl">
       <!-- Header -->
       <div class="flex items-center justify-between mb-4">
-        <h2 class="text-lg font-semibold">นำเข้าข้อมูลผู้ใช้งาน (ขั้นตอนที่ {{ step }}/2)</h2>
+        <h2 class="text-lg font-semibold">
+          นำเข้าข้อมูลคลัง (ขั้นตอนที่ {{ step }}/2)
+        </h2>
         <button @click="$emit('close')" class="text-gray-500 hover:text-black">✕</button>
       </div>
 
       <!-- Body -->
-      <UploadExcelStep v-if="step === 1" @next="goPreview" />
+      <UploadStockExcelStep
+        v-if="step === 1"
+        @next="goPreview"
+      />
 
-      <PreviewUserStep
+      <PreviewStockExcelStep
         v-if="step === 2"
-        :users="users"
+        :items="items"
         @back="step = 1"
         @close="$emit('close')"
         @refresh="$emit('refresh')"
@@ -23,15 +28,15 @@
 
 <script setup>
 import { ref } from 'vue'
-import UploadExcelStep from './upload-excel-user-component.vue'
-import PreviewUserStep from './preview-user-excel-component.vue'
+import UploadStockExcelStep from './upload-excel-stock-component.vue'
+import PreviewStockExcelStep from './preview-excel-stock-component.vue'
 
 const step = ref(1)
-const users = ref([])
+const items = ref([])
 
 //ฟังก์ชันเมื่ออัปโหลด Excel เสร็จ
 function goPreview(data) {
-  users.value = data
+  items.value = data
   step.value = 2
 }
 </script>
