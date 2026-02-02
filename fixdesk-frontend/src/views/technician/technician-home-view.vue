@@ -277,7 +277,7 @@ const openDetail = (rfCode) => {
       <CardHomeComponent :items="statItems" @click="onCardClick" />
     </div>
 
-    <div class="grid grid-cols-1 gap-6 mb-8 lg:grid-cols-3">
+    <div class="grid grid-cols-1 gap-3 mb-8 lg:grid-cols-3">
       <div class="p-5 bg-white border border-gray-200 shadow-sm rounded-2xl lg:col-span-2">
         <div class="flex items-center justify-between mb-4">
           <div>
@@ -299,6 +299,7 @@ const openDetail = (rfCode) => {
           :perPage="5"
           mode="view-only"
           :idColumnIndex="0"
+          :id-column-as-link="true"
           @detail="(id) => onRepairRowClick(id)"
           :columnAlign="['left', 'left', 'left', 'left', 'center', 'center']"
         />
@@ -345,7 +346,18 @@ const openDetail = (rfCode) => {
         :perPage="5"
         :statusStockColumn="3"
         :columnAlign="['left', 'left', 'left', 'center']"
+        @detail="(row)=>openDetail(row.rf_code)"
       >
+        <template #cell-0="{ row }">
+          <a
+            href="#"
+            @click.prevent="openDetail(row[1].rf_code)"
+            class="text-blue-600 hover:text-blue-800 underline"
+          >
+            {{ row[0] }}
+          </a>
+
+        </template>
         <!-- รายการของ -->
         <template #cell-2="{ row }">
           <div class="space-y-1 text-sm">

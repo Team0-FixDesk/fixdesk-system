@@ -98,6 +98,9 @@ onMounted(() => {
       :perPage="10"
       :statusColumn="2"
       :columnAlign="['left', 'left', 'center', 'center']"
+      :id-column-index="0"
+      :id-column-as-link="true"
+      @detail="goToDetail"
     >
       <!-- Actions -->
       <template #cell-3="{ row }">
