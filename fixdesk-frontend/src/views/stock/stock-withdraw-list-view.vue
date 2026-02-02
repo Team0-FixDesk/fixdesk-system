@@ -147,6 +147,9 @@ onMounted(() => {
       :perPage="10"
       :statusStockColumn="3"
       :columnAlign="['left', 'left', 'left', 'center', 'center']"
+      :id-column-index="0"
+      :id-column-as-link="true"
+      @detail="openDetail"
     >
       <template #cell-4="{ row }">
         <div class="flex justify-center">
