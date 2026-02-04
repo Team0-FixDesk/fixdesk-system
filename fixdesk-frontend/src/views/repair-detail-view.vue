@@ -110,7 +110,7 @@ async function confirmCloseJob() {
       },
       body: JSON.stringify({
         status: 'done',
-        tech_summary: techSummary.value || 'ดำเนินการเสร็จสิ้น'
+        tech_summary: techSummary.value || 'ดำเนินการเสร็จสิ้น',
       }),
     })
 
@@ -275,6 +275,8 @@ async function fetchRepairDetail() {
       timeline,
     }
     processMediaFileList(data.rf_image)
+
+    console.log(data.stock_items)
   } catch (err) {
     console.error('โหลดข้อมูลไม่สำเร็จ:', err)
     isError.value = true
@@ -459,6 +461,25 @@ function handleRepairFrom(code) {
     console.warn('Cannot store selected_rf_code', e)
   }
   router.push('/main/technician-stock-list')
+}
+
+function getStockStatusBadge(status) {
+  const baseClass =
+    'inline-flex items-center justify-center min-w-[110px] h-[20px] px-3 rounded-lg text-xs font-medium'
+
+  switch (status) {
+    case 'waiting':
+      return `<span class="${baseClass} bg-amber-50 text-amber-600">รออนุมัติ</span>`
+
+    case 'approved':
+      return `<span class="${baseClass} bg-green-50 text-green-600">อนุมัติแล้ว</span>`
+
+    case 'rejected':
+      return `<span class="${baseClass} bg-red-50 text-red-600">ไม่อนุมัติ</span>`
+
+    default:
+      return `<span class="${baseClass} bg-gray-50 text-gray-600">-</span>`
+  }
 }
 
 onMounted(() => {
@@ -716,19 +737,21 @@ onMounted(() => {
               <h2 class="text-lg font-semibold text-gray-800">รายการเบิก</h2>
             </div>
 
-            <div v-if="repair?.stock_items?.length" class="space-y-3 h-[280px] overflow-y-auto">
+            <div v-if="repair?.stock_items?.length" class="space-y-4 h-[250px] overflow-y-auto">
               <div
                 v-for="(item, i) in repair.stock_items"
                 :key="i"
-                class="flex p-1 items-center"
+                class="flex items-center justify-between py-1 p-3"
                 :class="{
                   'border-b border-gray-200': i < repair.stock_items.length - 1,
                 }"
               >
-                <div class="flex-1 leading-tight">
-                  <p class="text-gray-800 font-semibold text-sm">
+                <!-- LEFT -->
+                <div class="flex-1 pr-4">
+                  <p class="text-gray-800 font-semibold text-sm mb-1">
                     {{ item.name }}
                   </p>
+
                   <p class="text-xs text-gray-500">
                     หมายเลขวัสดุ/ครุภัณฑ์:
                     <span class="text-gray-700 font-medium">
@@ -737,12 +760,17 @@ onMounted(() => {
                   </p>
                 </div>
 
-                <div class="text-right">
-                  <p class="text-xs text-gray-500">จำนวนที่เบิก</p>
-                  <p class="text-sm text-gray-400">
-                    {{ item.qty }}
-                    <span class="text-sm text-gray-500">ชิ้น</span>
-                  </p>
+                <!-- RIGHT -->
+                <div class="flex flex-col items-end gap-1">
+                  <div
+                    class="flex justify-end w-full mb-1"
+                    v-html="getStockStatusBadge(item.status)"
+                  ></div>
+
+                  <div class="text-xs text-gray-500 flex justify-between w-full">
+                    <span>จำนวน</span>
+                    <span class="text-gray-700 font-semibold"> {{ item.qty }} ชิ้น </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -773,7 +801,7 @@ onMounted(() => {
             </div>
           </div>
 
-          <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+          <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm h-[427px]">
             <div class="border-b border-gray-300 pb-2 mb-4 flex items-center gap-2">
               <img src="/icon/time-icon.svg" class="w-8 h-8" />
               <h2 class="text-base sm:text-lg font-semibold text-gray-800">สถานะการดำเนินงาน</h2>
@@ -804,10 +832,7 @@ onMounted(() => {
                 class="w-full px-6 py-3.5 text-sm sm:text-base font-semibold rounded-xl shadow-md transition-all duration-200 flex items-center justify-center gap-3 hover:shadow-lg hover:-translate-y-0.5 bg-blue-600 hover:bg-blue-700 text-white"
                 @click="handleRepairFrom(repair?.rf_code)"
               >
-                <img
-                  src="/icon/item-icon.svg"
-                  class="w-5 h-5"
-                />
+                <img src="/icon/item-icon.svg" class="w-5 h-5" />
                 เบิกวัสดุ/อุปกรณ์
               </button>
 
@@ -829,10 +854,7 @@ onMounted(() => {
                         : 'bg-amber-500 hover:bg-amber-600',
                   ]"
                 >
-                  <img
-                  src="/icon/rotate-icon.svg"
-                  class="w-5 h-5"
-                />
+                  <img src="/icon/rotate-icon.svg" class="w-5 h-5" />
                   <span>
                     {{
                       repair?.rf_user_status === 'pending'
@@ -853,21 +875,9 @@ onMounted(() => {
                   <div class="p-3">
                     <div class="flex items-center gap-2 mb-3 pb-2 border-b border-gray-100">
                       <div
-                        class="w-7 h-7 rounded-full bg-amber-100 flex items-center justify-center"
+                        class="w-7 h-7 rounded-full bg-amber-500 flex items-center justify-center"
                       >
-                        <svg
-                          class="w-3.5 h-3.5 text-amber-500"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                          />
-                        </svg>
+                        <img src="/icon/rotate-icon.svg" class="w-5 h-5" />
                       </div>
                       <div>
                         <h3 class="text-xs font-bold text-gray-800">เปลี่ยนสถานะงาน</h3>
@@ -876,19 +886,7 @@ onMounted(() => {
                         @click="closeStatusPopup"
                         class="ml-auto p-1 hover:bg-gray-100 rounded transition"
                       >
-                        <svg
-                          class="w-4 h-4 text-gray-400"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M6 18L18 6M6 6l12 12"
-                          />
-                        </svg>
+                        <img src="/icon/close-icon.svg" class="w-5 h-5" />
                       </button>
                     </div>
 
@@ -899,21 +897,9 @@ onMounted(() => {
                         class="w-full flex items-center gap-2.5 p-2.5 rounded-lg hover:bg-green-50 transition-all duration-200 group"
                       >
                         <div
-                          class="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center group-hover:bg-green-200 transition"
+                          class="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center group-hover:bg-green-200 transition"
                         >
-                          <svg
-                            class="w-4 h-4 text-green-600"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              stroke-width="2"
-                              d="M5 13l4 4L19 7"
-                            />
-                          </svg>
+                          <img src="/icon/approved-white-icon.svg" class="w-5 h-5" />
                         </div>
                         <div class="text-left">
                           <p class="text-sm font-medium text-gray-800 group-hover:text-green-700">
@@ -930,21 +916,9 @@ onMounted(() => {
                         class="w-full flex items-center gap-2.5 p-2.5 rounded-lg hover:bg-amber-50 transition-all duration-200 group"
                       >
                         <div
-                          class="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center group-hover:bg-amber-200 transition"
+                          class="w-8 h-8 rounded-full bg-amber-400 flex items-center justify-center group-hover:bg-amber-200 transition"
                         >
-                          <svg
-                            class="w-4 h-4 text-amber-600"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              stroke-width="2"
-                              d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                            />
-                          </svg>
+                          <img src="/icon/outsource-icon.svg" class="w-5 h-5" />
                         </div>
                         <div class="text-left">
                           <p class="text-sm font-medium text-gray-800 group-hover:text-amber-700">
@@ -1000,9 +974,7 @@ onMounted(() => {
             class="w-full h-32 p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             maxlength="500"
           ></textarea>
-          <div class="text-right text-xs text-gray-400">
-            {{ techSummary.length }}/500
-          </div>
+          <div class="text-right text-xs text-gray-400">{{ techSummary.length }}/500</div>
         </div>
         <div class="p-6 pt-0 flex gap-3">
           <button
@@ -1018,7 +990,7 @@ onMounted(() => {
               'flex-1 py-3 px-6 rounded-xl font-medium transition-colors',
               techSummary.trim()
                 ? 'bg-green-600 hover:bg-green-700 text-white'
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed',
             ]"
           >
             ยืนยันปิดงาน
