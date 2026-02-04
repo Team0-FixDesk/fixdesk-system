@@ -95,22 +95,22 @@ const router = createRouter({
         {
           path: 'stock-withdraw-list',
           component: StockWithdrawListView,
-          meta: { roles: ['Stock'] },
+          meta: { roles: ['Stock', 'Admin'] },
         },
         {
           path: 'stock-withdraw-history',
           component: StockWithdrawHistoryView,
-          meta: { roles: ['Stock'] },
+          meta: { roles: ['Stock', 'Admin'] },
         },
         {
           path: 'stock-manage-inventory',
           component: StockManageInventoryView,
-          meta: { roles: ['Stock'] },
+          meta: { roles: ['Stock', 'Admin'] },
         },
         {
           path: 'stock-requisition/:code',
           component: StockRequisitionApproval,
-          meta: { roles: ['Stock'] },
+          meta: { roles: ['Stock', 'Admin'] },
         },
         {
           path: 'repair-request',

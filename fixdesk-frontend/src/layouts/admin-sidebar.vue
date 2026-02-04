@@ -15,6 +15,17 @@ const menus = [
     label: 'ตรวจสอบคำร้อง',
     path: '/main/admin-check-request',
   },
+  {
+    icon: '/icon/sidebar/logs-list-icon.svg',
+    label: 'รายการเบิกของ',
+    path: '/main/stock-withdraw-list',
+  },
+  {
+    icon: '/icon/sidebar/history-list-icon.svg',
+    label: 'ประวัติการเบิกของ',
+    path: '/main/stock-withdraw-history',
+  },
+
   { icon: '/icon/sidebar/user-icon.svg', label: 'ข้อมูลผู้ใช้', path: '/main/admin-user-info' },
   { icon: '/icon/sidebar/dashboard-icon.svg', label: 'หน้าสรุปผล', path: '/main/admin-summary' },
   {
