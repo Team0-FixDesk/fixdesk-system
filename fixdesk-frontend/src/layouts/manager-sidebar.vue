@@ -10,7 +10,7 @@ const menus = [
   { icon: '/icon/sidebar/home-icon.svg', label: 'หน้าหลัก', path: '/main/manager-home' },
   { icon: '/icon/sidebar/repair-icon.svg', label: 'แจ้งซ่อม', path: '/main/repair-request' },
   { icon: '/icon/sidebar/list-icon.svg', label: 'รายการของฉัน', path: '/main/my-list' },
-  { icon: '/icon/sidebar/dashboard-icon.svg', label: 'หน้าสรุปผล', path: '/main/manager-summary' },
+  { icon: '/icon/sidebar/dashboard-icon.svg', label: 'หน้าสรุปผล', path: '/main/information-summary' },
   { icon: '/icon/sidebar/report-icon.svg', label: 'สร้างรายงาน', path: '/main/manage-report' },
 ]
 </script>

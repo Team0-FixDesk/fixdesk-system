@@ -271,7 +271,17 @@ onMounted(() => {
           :statusColumn="4"
           :activeId="selectedTrackingCode"
           @detail="onRowClick"
-        />
+        >
+          <template #cell-1="{ row }">
+            <a
+              href="#"
+              @click.prevent="router.push(`/main/repair-detail/${row[1]}`)"
+              class="text-blue-600 hover:text-blue-800 underline"
+            >
+              {{ row[1] }}
+            </a>
+          </template>
+        </TableComponent>
       </div>
 
       <div class="col-span-4 bg-white rounded-xl border border-slate-200 shadow-sm p-5">

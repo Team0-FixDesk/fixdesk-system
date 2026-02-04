@@ -2,15 +2,15 @@ import { createRouter, createWebHashHistory } from 'vue-router'
 import { jwtDecode } from 'jwt-decode'
 
 // PUBLIC
-import HomeView from '@/views/home-view.vue'
-import LoginView from '../views/login-view.vue'
+import HomeView from '@/views/public/home-view.vue'
+import LoginView from '../views/public/login-view.vue'
 import MainLayout from '../layouts/main-layout.vue'
 
 // SHARED
-import RepairRequestView from '../views/repair-request-view.vue'
-import MyListView from '../views/my-list-view.vue'
-import CreateReportView from '../views/create-report-view.vue'
-import manageReportView from '../views/manage-report-view.vue'
+import RepairRequestView from '../views/shared/repair-request-view.vue'
+import MyListView from '../views/shared/my-list-view.vue'
+import CreateReportView from '../views/shared/create-report-view.vue'
+import manageReportView from '../views/shared/manage-report-view.vue'
 
 // USER
 import UserHomeView from '../views/user/user-home-view.vue'
@@ -19,7 +19,6 @@ import UserHomeView from '../views/user/user-home-view.vue'
 import AdminHomeView from '../views/admin/admin-home-view.vue'
 import AdminCheckRequestView from '../views/admin/admin-check-request-view.vue'
 import AdminUserInfoView from '../views/admin/admin-user-info-view.vue'
-import AdminSummaryView from '../views/admin/admin-summary-view.vue'
 import AdminManageLocationView from '../views/admin/admin-manage-location-view.vue'
 
 // MANAGER
@@ -60,14 +59,13 @@ const router = createRouter({
           meta: { roles: ['Admin'] },
         },
         { path: 'admin-user-info', component: AdminUserInfoView, meta: { roles: ['Admin'] } },
-        { path: 'admin-summary', component: AdminSummaryView, meta: { roles: ['Admin'] } },
         {
           path: 'admin-manage-location',
           component: AdminManageLocationView,
           meta: { roles: ['Admin'] },
         },
         { path: 'manager-home', component: ManagerHomeView, meta: { roles: ['Manager'] } },
-        { path: 'manager-summary', component: ManagerSummaryView, meta: { roles: ['Manager'] } },
+        { path: 'information-summary', component: ManagerSummaryView, meta: { roles: ['Manager', 'Admin'] } },
 
         { path: 'technician-home', component: TechnicianHomeView, meta: { roles: ['Technician'] } },
         {
@@ -95,22 +93,22 @@ const router = createRouter({
         {
           path: 'stock-withdraw-list',
           component: StockWithdrawListView,
-          meta: { roles: ['Stock'] },
+          meta: { roles: ['Stock', 'Admin'] },
         },
         {
           path: 'stock-withdraw-history',
           component: StockWithdrawHistoryView,
-          meta: { roles: ['Stock'] },
+          meta: { roles: ['Stock', 'Admin'] },
         },
         {
           path: 'stock-manage-inventory',
           component: StockManageInventoryView,
-          meta: { roles: ['Stock'] },
+          meta: { roles: ['Stock', 'Admin'] },
         },
         {
           path: 'stock-requisition/:code',
           component: StockRequisitionApproval,
-          meta: { roles: ['Stock'] },
+          meta: { roles: ['Stock', 'Admin'] },
         },
         {
           path: 'repair-request',
@@ -135,13 +133,13 @@ const router = createRouter({
         {
           path: 'repair-detail/:code',
           name: 'RepairDetail',
-          component: () => import('@/views/repair-detail-view.vue'),
+          component: () => import('@/views/shared/repair-detail-view.vue'),
           meta: { roles: ['User', 'Admin', 'Technician', 'Manager', 'Stock'] },
         },
         {
           path: 'repair-edit/:code',
           name: 'RepairEdit',
-          component: () => import('@/views/repair-edit-view.vue'),
+          component: () => import('@/views/shared/repair-edit-view.vue'),
           meta: { roles: ['User', 'Admin', 'Technician', 'Manager', 'Stock'] },
         },
       ],

@@ -34,7 +34,7 @@ module.exports = function RepairFormRoutes(db) {
   const fileFilter = (req, file, callback) => {
     const allowedTypes = /jpeg|jpg|png|gif|webp|mp4|avi|mov|wmv/;
     const extname = allowedTypes.test(
-      path.extname(file.originalname).toLowerCase()
+      path.extname(file.originalname).toLowerCase(),
     );
     const mimetype = allowedTypes.test(file.mimetype);
     if (mimetype && extname) {
@@ -42,8 +42,8 @@ module.exports = function RepairFormRoutes(db) {
     } else {
       callback(
         new Error(
-          "กรุณาอัพโหลดไฟล์รูปภาพหรือวิดีโอเท่านั้น (jpg, png, gif, webp, mp4, avi, mov, wmv)"
-        )
+          "กรุณาอัพโหลดไฟล์รูปภาพหรือวิดีโอเท่านั้น (jpg, png, gif, webp, mp4, avi, mov, wmv)",
+        ),
       );
     }
   };
@@ -60,7 +60,7 @@ module.exports = function RepairFormRoutes(db) {
         return res.status(400).json({ message: "กรุณาเลือกไฟล์สำหรับอัพโหลด" });
       }
       const filePaths = req.files.map(
-        (file) => `/uploads/repair/${file.filename}`
+        (file) => `/uploads/repair/${file.filename}`,
       );
       res.json({
         message: "อัพโหลดไฟล์สำเร็จ",
@@ -177,10 +177,10 @@ module.exports = function RepairFormRoutes(db) {
                   }))
                 : [],
             });
-          }
+          },
         );
       });
-    }
+    },
   );
 
   // อัพเดตใบแจ้งซ่อมพร้อมไฟล์
@@ -266,7 +266,7 @@ module.exports = function RepairFormRoutes(db) {
             : [],
         });
       });
-    }
+    },
   );
 
   // สร้างแบบฟอร์มแจ้งซ่อม (JSON only)
@@ -337,7 +337,7 @@ module.exports = function RepairFormRoutes(db) {
             id: results2.insertId,
             rf_code: rfCode,
           });
-        }
+        },
       );
     });
   });
@@ -515,7 +515,7 @@ module.exports = function RepairFormRoutes(db) {
           .status(500)
           .json({ message: "เกิดข้อผิดพลาด", error: err.message });
       }
-      
+
       if (results.length === 0)
         return res.status(404).json({ message: "ไม่พบใบแจ้งซ่อมนี้" });
 
@@ -567,17 +567,18 @@ module.exports = function RepairFormRoutes(db) {
         pd.pd_name,
         pd.pd_asset_code,
         pd.pd_upload_image,
-        sfd.sfd_qty
+        sfd.sfd_qty,
+        sfd.sfd_status
       FROM stock_form sf
       LEFT JOIN stock_form_detail sfd ON sfd.sfd_sf_id = sf.sf_id
       LEFT JOIN products pd ON pd.pd_id = sfd.sfd_pd_id
       WHERE sf.sf_rf_id = ?
-    `;
+      `;
 
       db.query(stockQuery, [r.rf_id], (err2, stockRows) => {
         if (err2) {
-            console.error("Stock Query Error:", err2);
-            return res.status(500).json({ message: "โหลดรายการเบิกล้มเหลว" });
+          console.error("Stock Query Error:", err2);
+          return res.status(500).json({ message: "โหลดรายการเบิกล้มเหลว" });
         }
 
         const stockItems = stockRows.map((i) => ({
@@ -585,6 +586,7 @@ module.exports = function RepairFormRoutes(db) {
           name: i.pd_name,
           assetCode: i.pd_asset_code,
           qty: i.sfd_qty,
+          status: i.sfd_status,
           img: i.pd_upload_image,
         }));
 
@@ -594,7 +596,6 @@ module.exports = function RepairFormRoutes(db) {
       });
     });
   });
-
 
   router.put("/repair-requests/:code", (req, res) => {
     const { code } = req.params;
@@ -666,7 +667,13 @@ module.exports = function RepairFormRoutes(db) {
   // --- ปรับ /assign-repair (มอบหมายช่างเดี่ยว) ---
   router.post("/assign-repair", authMiddleware, (req, res) => {
     // เพราะถ้า Admin มอบหมายเอง แสดงว่าตั้งใจให้คนนี้เป็นคนรับผิดชอบหลัก
-    const { rf_code, technician_id, is_lead = true, assigned_by, ra_assigned_by } = req.body;
+    const {
+      rf_code,
+      technician_id,
+      is_lead = true,
+      assigned_by,
+      ra_assigned_by,
+    } = req.body;
 
     if (!rf_code || !technician_id) {
       return res.status(400).json({
@@ -727,7 +734,7 @@ module.exports = function RepairFormRoutes(db) {
                 if (existErr) {
                   console.error(
                     "Error checking existing assignment:",
-                    existErr
+                    existErr,
                   );
                   return res.status(500).json({
                     message: "ตรวจสอบการมอบหมายล้มเหลว",
@@ -766,9 +773,9 @@ module.exports = function RepairFormRoutes(db) {
                               message:
                                 "ช่างถูกมอบหมายแล้ว (อัปเดตเป็นหัวหน้าเรียบร้อย)",
                             });
-                          }
+                          },
                         );
-                      }
+                      },
                     );
                   } else {
                     return res
@@ -783,9 +790,13 @@ module.exports = function RepairFormRoutes(db) {
 
                 // รองรับทั้ง assigned_by และ ra_assigned_by (กรณี frontend ส่ง key ไม่ตรง)
                 // ถ้าไม่ได้ส่ง assigned_by/ra_assigned_by มา ให้ fallback เป็น req.user.us_id (user ที่ login)
-                let assignById = typeof ra_assigned_by !== 'undefined' ? ra_assigned_by : assigned_by;
+                let assignById =
+                  typeof ra_assigned_by !== "undefined"
+                    ? ra_assigned_by
+                    : assigned_by;
                 if (!assignById) {
-                  assignById = req.user && (req.user.us_id || req.user.id) || null;
+                  assignById =
+                    (req.user && (req.user.us_id || req.user.id)) || null;
                 }
                 db.query(
                   "INSERT INTO repair_assignment (ra_rf_id, ra_us_id, ra_is_lead, ra_assigned_at, ra_assigned_by) VALUES (?, ?, ?, ?, ?)",
@@ -808,7 +819,7 @@ module.exports = function RepairFormRoutes(db) {
                           if (clearErr2) {
                             console.warn(
                               "Error clearing other leads",
-                              clearErr2
+                              clearErr2,
                             );
                           }
                           // อัปเดตสถานะงานหลักเป็น in_progress ด้วย เพื่อความสมบูรณ์ (Optional)
@@ -820,7 +831,7 @@ module.exports = function RepairFormRoutes(db) {
                             assigned_to: techId,
                             is_lead: true,
                           });
-                        }
+                        },
                       );
                     } else {
                       return res.json({
@@ -829,13 +840,13 @@ module.exports = function RepairFormRoutes(db) {
                         is_lead: false,
                       });
                     }
-                  }
+                  },
                 );
-              }
+              },
             );
-          }
+          },
         );
-      }
+      },
     );
   });
 

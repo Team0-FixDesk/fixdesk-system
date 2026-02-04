@@ -606,9 +606,6 @@ module.exports = function StockRoutes(db) {
     });
   });
 
-
-
-
   function recalcStockFormStatus(sf_id, res) {
     const q = `
     SELECT
@@ -659,9 +656,6 @@ module.exports = function StockRoutes(db) {
       return res.json({ message: "อัปเดตสถานะสำเร็จ", sf_status: status });
     });
   });
-
-
-
 
   // เบิกสินค้า
   router.post("/withdraw", authMiddleware, (req, res) => {
@@ -728,6 +722,117 @@ module.exports = function StockRoutes(db) {
           sf_code,
         });
       });
+    });
+  });
+
+  router.post("/stock/import", authMiddleware, async (req, res) => {
+    // ไว้มาลบทีหลัง
+    console.log("🔥 /stock/import HIT");
+    console.log("BODY:", req.body);
+
+    const { items } = req.body;
+    const results = [];
+    const errors = [];
+
+    if (!Array.isArray(items) || !items.length) {
+      return res.status(400).json({ message: "No stock items to import" });
+    }
+
+    for (const [i, u] of items.entries()) {
+      try {
+       //ตรวจสอบความถูกต้องข้อมูล
+        const qty = Number(u.pd_quantity);
+
+        if (!u.pd_name || isNaN(qty) || qty <= 0 || !u.pd_unit_name) {
+          throw new Error("Missing required fields");
+        }
+
+       // ชื่อและหมายเลขครุภัณฑ์ห้ามซ้ำในระบบ
+        const [dupRows] = await db.promise().query(
+          `
+        SELECT pd_id FROM products
+        WHERE pd_name = ?
+           OR (pd_asset_code IS NOT NULL AND pd_asset_code = ?)
+        LIMIT 1
+        `,
+          [u.pd_name, u.pd_asset_code || null],
+        );
+
+        if (dupRows.length) {
+          throw new Error("Duplicate name or asset code");
+        }
+      
+        let pd_unit_id;
+        const [unitRows] = await db
+          .promise()
+          .query("SELECT units_id FROM units WHERE units_name = ?", [
+            u.pd_unit_name,
+          ]);
+
+        if (unitRows.length > 0) {
+          pd_unit_id = unitRows[0].units_id;
+        } else {
+          const [insertUnit] = await db
+            .promise()
+            .query("INSERT INTO units (units_name) VALUES (?)", [
+              u.pd_unit_name,
+            ]);
+
+          pd_unit_id = insertUnit.insertId;
+        }
+
+        //ถ้าไม่มีหมวดหมู่ใน DB ไม่สามารถ import เข้าได้
+        let pd_category_id = null;
+
+        if (u.pd_category_name) {
+          const [ctRows] = await db
+            .promise()
+            .query("SELECT ct_id FROM categories WHERE ct_name = ?", [
+              u.pd_category_name,
+            ]);
+
+          if (!ctRows.length) throw new Error("Invalid category");
+
+          pd_category_id = ctRows[0].ct_id;
+        }
+
+       // insert products
+        await db.promise().query(
+          `INSERT INTO products (
+          pd_asset_code,
+          pd_name,
+          pd_category_id,
+          pd_quantity,
+          pd_unit_id,
+          pd_upload_image,
+          pd_updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, NOW())`,
+          [
+            u.pd_asset_code || null, // ครุภัณฑ์กรอกไม่กรอกก็ได้
+            u.pd_name,
+            pd_category_id,
+            qty,
+            pd_unit_id,
+            null, // ไม่มีรูปตอน import excel
+          ],
+        );
+
+        results.push({ index: i, name: u.pd_name });
+      } catch (err) {
+        console.error("IMPORT STOCK ERROR:", err.message);
+
+        errors.push({
+          index: i,
+          name: u.pd_name,
+          message: err.message,
+        });
+      }
+    }
+
+    res.json({
+      success: results.length,
+      failed: errors.length,
+      errors,
     });
   });
 

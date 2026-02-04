@@ -31,6 +31,10 @@ const allowedStatuses = ['pending', 'in_progress', 'outsource']
 
 const showAcceptPopup = ref(false)
 const currentAcceptCode = ref(null)
+const showTechSummaryModal = ref(false)
+const currentCloseJobCode = ref(null)
+const techSummary = ref('')
+
 
 /* =========================
    Utility Functions
@@ -84,7 +88,15 @@ async function loadRepairs() {
       .filter(r => allowedStatuses.includes(r.rf_user_status))
       .map(formatRow)
   } catch (err) {
-    Swal.fire('เกิดข้อผิดพลาด', err.message, 'error')
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: 'error',
+      title: 'เกิดข้อผิดพลาด',
+      text: err.message,
+      showConfirmButton: false,
+      timer: 3000,
+    })
   }
 }
 
@@ -160,15 +172,28 @@ function handleOpenStock(code) {
 }
 
 /**
- * ปิดงานซ่อม (Close Job)
+ * เปิด modal สำหรับปิดงานซ่อม
  * @param {string} code
  */
-async function handleCloseJob(code) {
+function handleCloseJob(code) {
+  currentCloseJobCode.value = code
+  techSummary.value = ''
+  showTechSummaryModal.value = true
+}
+
+/**
+ * เปิด modal สำหรับจ้างช่างภายนอก
+ * @param {string} code
+ */
+async function handleOutsource(code) {
   const result = await Swal.fire({
-    title: 'ปิดงานซ่อม',
-    text: `คุณต้องการปิดงาน ${code} ใช่หรือไม่`,
+    title: 'จ้างช่างภายนอก',
+    text: 'คุณต้องการส่งงานให้ช่างภายนอกหรือไม่?',
+    icon: 'question',
     showCancelButton: true,
-    confirmButtonText: 'ปิดงาน',
+    confirmButtonText: 'ใช่, ส่งงาน',
+    cancelButtonText: 'ยกเลิก',
+    confirmButtonColor: '#f59e0b',
   })
 
   if (!result.isConfirmed) return
@@ -180,8 +205,47 @@ async function handleCloseJob(code) {
         ...getAuthHeaders(),
         'Content-Type': 'application/json',
       },
+      body: JSON.stringify({ status: 'outsource' }),
+    })
+
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.message)
+
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: 'success',
+      title: 'ส่งงานให้ช่างภายนอกเรียบร้อย',
+      showConfirmButton: false,
+      timer: 2000,
+    })
+    loadRepairs()
+  } catch (err) {
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: 'error',
+      title: 'ไม่สามารถส่งงานได้',
+      showConfirmButton: false,
+      timer: 3000,
+    })
+  }
+}
+
+/**
+ * ปิดงานซ่อม (Close Job) หลังจากกรอก summary
+ */
+async function confirmCloseJob() {
+  try {
+    const res = await fetch(`${API_BASE}/technician/close-job/${currentCloseJobCode.value}`, {
+      method: 'PUT',
+      headers: {
+        ...getAuthHeaders(),
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify({
-        tech_summary: 'งานเสร็จแล้ว',
+        status: 'done',
+        tech_summary: techSummary.value || 'ดำเนินการเสร็จสิ้น',
         tech_remark: '',
       }),
     })
@@ -189,12 +253,30 @@ async function handleCloseJob(code) {
     const data = await res.json()
     if (!res.ok) throw new Error(data.message)
 
-    Swal.fire('สำเร็จ', 'ปิดงานแล้ว', 'success')
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: 'success',
+      title: 'ปิดงานเรียบร้อยแล้ว',
+      showConfirmButton: false,
+      timer: 2000,
+    })
+    showTechSummaryModal.value = false
     loadRepairs()
   } catch (err) {
-    Swal.fire('ผิดพลาด', err.message, 'error')
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: 'error',
+      title: 'เกิดข้อผิดพลาด',
+      text: err.message,
+      showConfirmButton: false,
+      timer: 3000,
+    })
   }
 }
+
+
 
 /* =========================
    Lifecycle Hooks
@@ -241,6 +323,9 @@ onMounted(() => {
       :perPage="10"
       :statusColumn="2"
       :columnAlign="['left', 'left', 'center', 'center']"
+      :id-column-index="0"
+      :id-column-as-link="true"
+      @detail="goToDetail"
     >
       <template #cell-3="{ row }">
         <TableActionsComponent
@@ -253,6 +338,7 @@ onMounted(() => {
           @detail="goToDetail(row[0])"
           @accept="handleAccept(row[0])"
           @close-job="handleCloseJob(row[0])"
+          @outsource="handleOutsource(row[0])"
           @open-stock="handleOpenStock(row[0])"
         />
       </template>
@@ -266,5 +352,52 @@ onMounted(() => {
       @close="showAcceptPopup = false"
       @success="loadRepairs"
     />
+
+    <!-- Modal สำหรับกรอกรายละเอียดการตรวจสอบ/ซ่อม -->
+    <div
+      v-if="showTechSummaryModal"
+      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-60 backdrop-blur-sm"
+      @click.self="showTechSummaryModal = false"
+    >
+      <div
+        class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200"
+      >
+        <div class="p-6 text-center border-b border-gray-100">
+          <h3 class="text-xl font-bold text-gray-800">รายละเอียดการดำเนินการ</h3>
+          <p class="text-gray-500 text-sm mt-1">กรุณากรอกรายละเอียดการตรวจสอบ/ซ่อม</p>
+        </div>
+        <div class="p-6 space-y-4">
+          <textarea
+            v-model="techSummary"
+            placeholder="กรอกรายละเอียดการตรวจสอบ/ซ่อม..."
+            class="w-full h-32 p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            maxlength="500"
+          ></textarea>
+          <div class="text-right text-xs text-gray-400">
+            {{ techSummary.length }}/500
+          </div>
+        </div>
+        <div class="p-6 pt-0 flex gap-3">
+          <button
+            @click="showTechSummaryModal = false"
+            class="flex-1 py-3 px-6 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl font-medium transition-colors"
+          >
+            ยกเลิก
+          </button>
+          <button
+            @click="confirmCloseJob"
+            :disabled="!techSummary.trim()"
+            :class="[
+              'flex-1 py-3 px-6 rounded-xl font-medium transition-colors',
+              techSummary.trim()
+                ? 'bg-green-600 hover:bg-green-700 text-white'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            ]"
+          >
+            ยืนยันปิดงาน
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>

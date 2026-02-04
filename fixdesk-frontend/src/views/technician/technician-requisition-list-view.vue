@@ -228,7 +228,18 @@ onBeforeUnmount(() => {
       :perPage="10"
       :statusStockColumn="3"
       :columnAlign="['left', 'left', 'left', 'center']"
-    >
+      @detail="(row)=>goToRepairDetail(row.repairFormCode)"
+      >
+        <template #cell-0="{ row }">
+          <a
+            href="#"
+            @click.prevent="goToRepairDetail(row[1].repairFormCode)"
+            class="text-blue-600 hover:text-blue-800 underline"
+          >
+            {{ row[0] }}
+          </a>
+
+        </template>
       <template #cell-2="{ row }">
         <div class="space-y-1 text-sm">
           <div v-for="(item, index) in row[2]" :key="index" class="flex items-center">

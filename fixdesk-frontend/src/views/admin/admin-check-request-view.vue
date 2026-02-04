@@ -233,6 +233,7 @@ onMounted(() => {
       :statusColumn="3"
       :columnAlign="['left', 'left', 'center', 'center', 'center']"
       :id-column-index="0"
+      :id-column-as-link="true"
       @detail="openDetail"
     >
       <!-- คอลัมน์ Action (index 7) -->
