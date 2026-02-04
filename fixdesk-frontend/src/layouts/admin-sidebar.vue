@@ -27,7 +27,7 @@ const menus = [
   },
 
   { icon: '/icon/sidebar/user-icon.svg', label: 'ข้อมูลผู้ใช้', path: '/main/admin-user-info' },
-  { icon: '/icon/sidebar/dashboard-icon.svg', label: 'หน้าสรุปผล', path: '/main/admin-summary' },
+  { icon: '/icon/sidebar/dashboard-icon.svg', label: 'หน้าสรุปผล', path: '/main/information-summary' },
   {
     icon: '/icon/sidebar/building-icon.svg',
     label: 'จัดการสถานที่',

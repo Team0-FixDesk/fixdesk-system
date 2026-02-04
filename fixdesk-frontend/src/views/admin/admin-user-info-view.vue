@@ -765,7 +765,7 @@ function handleImportError(message) {
 
           <div class="grid grid-cols-1 gap-3 mt-3 mb-3 sm:grid-cols-2">
             <div>
-              <label class="block text-sm font-medium mb-1.5">ชื่อ (ไทย) <span v-if="!isViewMode"
+              <label class="block text-sm font-medium mb-1.5">ชื่อ (ภาษาไทย) <span v-if="!isViewMode"
                   class="text-red-500">*</span></label>
               <input v-model="userModalForm.us_first_name_th" @input="clearError('firstTh')" type="text"
                 :disabled="isViewMode"
@@ -774,7 +774,7 @@ function handleImportError(message) {
               <p v-if="userModalErrors.firstTh" class="mt-1 text-sm text-red-500">{{ userModalErrors.firstTh }}</p>
             </div>
             <div>
-              <label class="block text-sm font-medium mb-1.5">นามสกุล (ไทย) <span v-if="!isViewMode"
+              <label class="block text-sm font-medium mb-1.5">นามสกุล (ภาษาไทย) <span v-if="!isViewMode"
                   class="text-red-500">*</span></label>
               <input v-model="userModalForm.us_last_name_th" @input="clearError('lastTh')" type="text"
                 :disabled="isViewMode"
