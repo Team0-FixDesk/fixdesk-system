@@ -2,7 +2,14 @@
 import { computed } from 'vue'
 
 /**
- * รับข้อมูล stock จาก component import-stock-component
+ * รับข้อมูล items จาก component import-stock-component
+ * คาดหวังว่าข้อมูลที่ส่งมา (props.items) จะถูก map มาจาก Excel แล้วตาม Key ด้านล่างนี้:
+ * - pd_name (ชื่อรายการ)
+ * - pd_asset_code (หมายเลขครุภัณฑ์)
+ * - pd_category_name (หมวดหมู่)
+ * - pd_quantity (จำนวน)
+ * - pd_unit_name (หน่วยนับ)
+ * - status (สถานะ)
  */
 const props = defineProps({
   items: {
@@ -11,82 +18,82 @@ const props = defineProps({
   },
 })
 
-/*
-  back    = ย้อนกลับไปหน้า upload
-  close   = ปิด popup
-  refresh = โหลดตารางรายการอุปกรณ์ใหม่หลัง import สำเร็จ
- */
-const emit = defineEmits(['back', 'close', 'refresh'])
+/* Events */
+const emit = defineEmits(['back', 'close', 'refresh', 'success', 'error'])
 
 const API_BASE = import.meta.env.VITE_API_BASE
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem('token') || sessionStorage.getItem('token')
-
   return {
     'Content-Type': 'application/json',
     Authorization: `Bearer ${token}`,
   }
 }
 
-/**
- * เช็คว่ามีรายการที่ valid อย่างน้อย 1 ตัวไหม
- * ใช้เปิด/ปิด checkbox “เลือกทั้งหมด”
- */
-const hasValidItem = computed(() => props.items.some((u) => u.isValid))
-const selectedCount = computed(() => props.items.filter((u) => u.selected && u.isValid).length)
-
-/**
- * checkbox “เลือกทั้งหมด”
- * get เช็คว่าอุปกรณ์ที่ valid ทุกตัวถูกเลือก
- * set ติ๊ก / เอาติ๊กออกเฉพาะตัวที่ valid
- */
+/* Checkbox Logic */
+const hasValidItem = computed(() => (props.items || []).some((item) => item.isValid))
+const selectedCount = computed(
+  () => (props.items || []).filter((item) => item.selected && item.isValid).length,
+)
 const allSelected = computed({
   get() {
-    const validItems = props.items.filter((u) => u.isValid)
+    const validItems = (props.items || []).filter((item) => item.isValid)
     if (!validItems.length) return false
-    return validItems.every((u) => u.selected)
+    return validItems.every((item) => item.selected)
   },
   set(val) {
-    props.items.forEach((u) => {
-      if (u.isValid) u.selected = val
-    })
+    // ตรงนี้ถ้า items ไม่มี ก็จะไม่ทำงาน ไม่ error
+    if (props.items) {
+      props.items.forEach((item) => {
+        if (item.isValid) item.selected = val
+      })
+    }
   },
 })
 
+/* Import Function */
 async function importSelected() {
-  // เลือกเฉพาะอุปกรณ์ที่ติ๊กเลือก และข้อมูลถูกต้อง
-  const selected = props.items.filter((u) => u.selected && u.isValid)
+  const selected = props.items.filter((item) => item.selected && item.isValid)
 
   try {
     const res = await fetch(`${API_BASE}/stock/import`, {
       method: 'POST',
       headers: getAuthHeaders(),
-      body: JSON.stringify({ items: selected }),
+      body: JSON.stringify({
+        // Map ข้อมูลตามคอลัมน์ใน Excel Stock
+        items: selected.map((item) => ({
+          pd_name: item.pd_name, // ชื่อรายการ
+          pd_asset_code: item.pd_asset_code, // หมายเลขครุภัณฑ์
+          pd_category_name: item.pd_category_name, // หมวดหมู่
+          pd_quantity: Number(item.pd_quantity), // จำนวน (แปลงเป็นตัวเลข)
+          pd_unit_name: item.pd_unit_name, // หน่วยนับ
+          status: item.status, // สถานะ
+        })),
+      }),
     })
 
+    const result = await res.json()
+
     if (!res.ok) {
-      const err = await res.json()
-      alert(err.message || 'Import failed')
+      emit('error', result.message || 'Import failed')
       return
     }
 
-    emit('close')
+    emit('success', result)
     emit('refresh')
+    emit('close')
   } catch (err) {
     console.error(err)
-    alert('ไม่สามารถเชื่อมต่อ backend ได้')
+    emit('error', 'ไม่สามารถเชื่อมต่อ backend ได้')
   }
 }
 </script>
 
-<!-- หน้า Preview หลังจากอัปโหลดไฟล์ Excel สามารถเลือกอุปกรณ์ที่ต้องการ import ได้ -->
 <template>
   <div>
     <div class="flex items-center justify-between mb-3">
       <label class="flex items-center gap-2 cursor-pointer">
-
-        <!-- checkbox สำหรับเลือก import ทั้งหมด (เฉพาะแถวที่มีข้อมูลที่ถูกต้อง) -->
         <input
           type="checkbox"
           v-model="allSelected"
@@ -110,48 +117,42 @@ async function importSelected() {
         </div>
         <span>เลือกทั้งหมด</span>
       </label>
-
-      <!-- จำนวนรายการที่เลือก import -->
       <span class="text-sm text-gray-500"> {{ selectedCount }} รายการที่เลือก </span>
     </div>
 
-    <!-- ตารางแสดงข้อมูลอุปกรณ์ก่อน import -->
     <div class="overflow-auto border rounded-lg max-h-96">
       <table class="w-full text-sm">
-        <thead class="sticky top-0 bg-gray-100">
+        <thead class="sticky top-0 z-10 bg-gray-100 shadow-sm">
           <tr>
-            <th class="p-2"></th>
+            <th class="p-2 w-10"></th>
             <th class="p-2 text-left">ชื่อรายการ</th>
             <th class="p-2 text-left">ครุภัณฑ์</th>
             <th class="p-2 text-left">หมวดหมู่</th>
-            <th class="p-2 text-left">จำนวน</th>
-            <th class="p-2 text-left">หน่วย</th>
-            <th class="p-2 text-left">สถานะ</th>
+            <th class="p-2 text-center w-20">จำนวน</th>
+            <th class="p-2 text-left w-20">หน่วย</th>
+            <th class="p-2 text-left w-24">สถานะ</th>
           </tr>
         </thead>
 
-        <!-- ข้อมูลในตาราง -->
         <tbody>
-          <!-- ถ้าข้อมูลไม่ถูกต้อง แถวจะเป็นสีแดง -->
           <tr
-            v-for="(u, index) in items"
-            :key="u.id || index"
-            :class="!u.isValid ? 'bg-red-50' : ''"
+            v-for="(item, index) in items"
+            :key="index"
+            :class="!item.isValid ? 'bg-red-50' : 'hover:bg-gray-50'"
           >
-            <!-- checkbox ในตาราง-->
-            <td class="p-2">
+            <td class="p-3">
               <label class="inline-flex items-center cursor-pointer">
                 <input
                   type="checkbox"
-                  v-model="u.selected"
-                  :disabled="!u.isValid"
+                  v-model="item.selected"
+                  :disabled="!item.isValid"
                   class="hidden peer"
                 />
                 <div
-                  class="flex items-center justify-center w-4 h-4 border border-gray-400 rounded-none peer-checked:bg-blue-600 peer-checked:border-blue-600 peer-disabled:opacity-40"
+                  class="flex items-center justify-center w-4 h-4 border border-gray-400 peer-checked:bg-blue-600 peer-checked:border-blue-600 peer-disabled:opacity-40"
                 >
                   <svg
-                    v-if="u.selected"
+                    v-if="item.selected"
                     xmlns="http://www.w3.org/2000/svg"
                     class="w-3 h-3 text-white"
                     fill="none"
@@ -165,41 +166,57 @@ async function importSelected() {
               </label>
             </td>
 
-            <!-- ชื่อรายการ -->
-            <td class="p-2">{{ u.pd_name }}</td>
+            <td class="p-2 font-medium">
+              {{ item.pd_name }}
+            </td>
 
-            <!-- หมายเลขครุภัณฑ์ -->
-            <td class="p-2">{{ u.pd_asset_code || '-' }}</td>
+            <td class="p-2 font-mono text-xs text-gray-600">
+              {{ item.pd_asset_code || '-' }}
+            </td>
 
-            <!-- หมวดหมู่ -->
-            <td class="p-2">{{ u.pd_category_name }}</td>
+            <td class="p-2">
+              {{ item.pd_category_name }}
+            </td>
 
-            <!-- จำนวน -->
-            <td class="p-2">{{ u.pd_quantity }}</td>
+            <td class="p-2 text-center">
+              {{ item.pd_quantity }}
+            </td>
 
-            <!-- หน่วย -->
-            <td class="p-2">{{ u.pd_unit_name }}</td>
+            <td class="p-2 text-gray-500">
+              {{ item.pd_unit_name }}
+            </td>
 
-            <!-- สถานะ -->
-            <td class="p-2">{{ u.status }}</td>
+            <td class="p-2">
+              <span
+                class="px-2 py-1 text-xs rounded"
+                :class="
+                  item.status === 'พร้อมใช้งาน' || item.status === 'Active'
+                    ? 'bg-green-100 text-green-700'
+                    : 'bg-gray-100 text-gray-600'
+                "
+              >
+                {{ item.status }}
+              </span>
+            </td>
           </tr>
         </tbody>
       </table>
     </div>
+
     <div class="flex justify-end gap-2 mt-4">
       <button
-        class="inline-flex items-center justify-center w-full h-10 px-4 font-medium text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50"
+        class="inline-flex items-center justify-center w-full h-10 px-4 font-medium text-gray-700 transition-colors border border-gray-300 rounded-md sm:justify-start sm:w-auto hover:bg-gray-50"
         @click="$emit('back')"
       >
         ย้อนกลับ
       </button>
 
       <button
-        class="inline-flex items-center justify-center w-full h-10 px-4 font-medium text-white bg-green-500 rounded-md hover:bg-green-600 disabled:bg-gray-400"
+        class="inline-flex items-center justify-center w-full h-10 px-4 font-medium text-white transition-colors bg-green-500 rounded-md sm:w-auto sm:justify-start hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
         :disabled="selectedCount === 0"
         @click="importSelected"
       >
-        Import รายการที่เลือก
+        Import {{ selectedCount }} รายการ
       </button>
     </div>
   </div>

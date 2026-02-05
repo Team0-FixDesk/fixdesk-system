@@ -1,15 +1,36 @@
 <template>
   <div>
-    <!-- กล่องอัปโหลดไฟล์ -->
     <div
-      class="p-10 text-center border-2 border-dashed rounded-lg cursor-pointer hover:border-blue-500"
+      class="p-10 text-center border-2 border-dashed rounded-lg cursor-pointer hover:border-blue-500 bg-gray-50 hover:bg-blue-50 transition-colors"
+      :class="isDragging ? 'border-blue-500 bg-blue-100' : 'border-gray-300'"
       @click="fileInput.click()"
+      @dragover.prevent="isDragging = true"
+      @dragleave.prevent="isDragging = false"
+      @drop.prevent="handleDrop"
     >
-      <p class="mb-1 font-medium">อัปโหลดไฟล์ Excel (.xlsx)</p>
-      <p class="text-sm text-gray-500">ลากไฟล์มาวาง หรือคลิกเพื่อเลือกไฟล์</p>
+      <div class="flex flex-col items-center justify-center gap-2">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="w-12 h-12 text-gray-400"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+          />
+        </svg>
+        <p class="font-medium text-gray-700">อัปโหลดไฟล์ Excel (.xlsx)</p>
+        <p class="text-sm text-gray-500">ลากไฟล์มาวาง หรือคลิกเพื่อเลือกไฟล์</p>
+      </div>
 
       <input ref="fileInput" type="file" accept=".xlsx" class="hidden" @change="handleFile" />
     </div>
+
+    <p v-if="errorMessage" class="mt-2 text-sm text-red-500 text-center">{{ errorMessage }}</p>
   </div>
 </template>
 
@@ -17,95 +38,119 @@
 import { ref } from 'vue'
 import * as XLSX from 'xlsx'
 
-// emit next = ส่งข้อมูล stock ที่อ่านจาก Excel ไปหน้า preview
-const emit = defineEmits(['next'])
+const emit = defineEmits(['next', 'error'])
 const fileInput = ref(null)
+const isDragging = ref(false)
+const errorMessage = ref('')
 
-//อ่านไฟล์ excel
-function handleFile(e) {
-  const file = e.target.files[0]
+// ฟังก์ชัน Helper สำหรับดึงค่าจาก cell ให้เป็น string และ trim ช่องว่าง
+const getVal = (val) => (val !== undefined && val !== null ? String(val).trim() : '')
+
+function processFile(file) {
+  errorMessage.value = ''
+
   if (!file) return
 
   const reader = new FileReader()
 
   reader.onload = (event) => {
-    const data = new Uint8Array(event.target.result)
-    const workbook = XLSX.read(data, { type: 'array' })
+    try {
+      const data = new Uint8Array(event.target.result)
+      const workbook = XLSX.read(data, { type: 'array' })
 
-    const sheetName = workbook.SheetNames[0]
-    const worksheet = workbook.Sheets[sheetName]
+      const sheetName = workbook.SheetNames[0]
+      const worksheet = workbook.Sheets[sheetName]
 
-    const rows = XLSX.utils.sheet_to_json(worksheet, {
-      defval: '',
-    })
+      // อ่านแบบ Array of Arrays (header: 1) เพื่ออิงตามลำดับคอลัมน์
+      // Row 0 = Header, Row 1+ = Data
+      const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 })
 
-    const items = rows.map((row, index) => {
-      const name = (row['ชื่อรายการ'] || '').toString().trim()
-      const assetNo = (row['หมายเลขครุภัณฑ์'] || '').toString().trim()
+      // ตัด Header ออก
+      const dataRows = rows.slice(1)
 
-      const rawQty = row['จำนวน']
-      const quantity = Number(rawQty)
-      const isValidQuantity = !isNaN(quantity) && quantity > 0
-
-      const unit = (row['หน่วยนับ'] || '').toString().trim()
-      const category = (row['หมวดหมู่'] || '').toString().trim()
-
-      // ต้องกรอกชื่อ, จำนวน, หน่วย, หมวดหมู่
-      const baseValid = !!(name && isValidQuantity && unit && category)
-
-      return {
-        id: index + 1,
-        pd_name: name,
-        pd_asset_code: assetNo || null,
-        pd_quantity: quantity,
-        pd_unit_name: unit,
-        pd_category_name: category,
-        status: 'พร้อมใช้งาน',
-
-        selected: baseValid,
-        isValid: baseValid,
+      if (dataRows.length === 0) {
+        errorMessage.value = 'ไม่พบข้อมูลในไฟล์'
+        return
       }
-    })
 
-    //ตรวจซ้ำชื่อรายการ หรือหมายเลขครุภัณฑ์
-    const nameMap = new Map()
-    const assetMap = new Map()
+      // Map ข้อมูลให้เข้ากับ Structure ของ Stock
+      const items = dataRows.map((row, index) => {
+        // Map ตามลำดับ Column ในไฟล์ TemplateExcelStock.xlsx
+        // Col 0: ชื่อรายการ *
+        // Col 1: หมายเลขครุภัณฑ์
+        // Col 2: หมวดหมู่ *
+        // Col 3: จำนวน *
+        // Col 4: หน่วยนับ *
+        // Col 5: สถานะ *
 
-    items.forEach((item, index) => {
-      const nameKey = item.pd_name
-      const assetKey = item.pd_asset_code
+        const name = getVal(row[0])
+        const assetCode = getVal(row[1])
+        const category = getVal(row[2])
 
-      // ซ้ำชื่อ
-      if (nameKey) {
-        if (nameMap.has(nameKey)) {
-          const firstIndex = nameMap.get(nameKey)
-          items[firstIndex].isValid = false
-          items[firstIndex].selected = false
-          item.isValid = false
-          item.selected = false
-        } else {
-          nameMap.set(nameKey, index)
+        // จัดการเรื่องตัวเลข (จำนวน)
+        const rawQty = row[3]
+        const quantity = Number(rawQty)
+        const isValidQty = !isNaN(quantity) && quantity > 0
+
+        const unit = getVal(row[4])
+        const status = getVal(row[5])
+
+        // ตรวจสอบว่า Valid หรือไม่ (Mandatory fields)
+        // ชื่อ, หมวดหมู่, จำนวน, หน่วยนับ, สถานะ จำเป็นต้องมี
+        const isValid = !!(
+          name &&
+          category &&
+          isValidQty &&
+          unit &&
+          status
+        )
+
+        return {
+          id: index + 1,
+          // Map Keys ให้ตรงกับที่ Step 2 (Preview) และ Backend ต้องการ
+          pd_name: name,
+          pd_asset_code: assetCode || null, // ถ้าไม่มีให้เป็น null
+          pd_category_name: category,
+          pd_quantity: quantity,
+          pd_unit_name: unit,
+          status: status,
+
+          selected: isValid, // ถ้าข้อมูลถูกต้อง ให้ติ๊กเลือกไว้ก่อน
+          isValid: isValid,
         }
+      }).filter(item => item.pd_name) // กรองแถวว่างทิ้ง (ต้องมีชื่อรายการ)
+
+      if (items.length === 0) {
+        errorMessage.value = 'ไม่พบรายการที่สมบูรณ์ในไฟล์'
+        return
       }
 
-      // ซ้ำหมายเลขครุภัณฑ์
-      if (assetKey) {
-        if (assetMap.has(assetKey)) {
-          const firstIndex = assetMap.get(assetKey)
-          items[firstIndex].isValid = false
-          items[firstIndex].selected = false
-          item.isValid = false
-          item.selected = false
-        } else {
-          assetMap.set(assetKey, index)
-        }
-      }
-    })
+      emit('next', items)
 
-    // ส่งไปหน้า preview (Step 2)
-    emit('next', items)
+    } catch (err) {
+      console.error(err)
+      errorMessage.value = 'เกิดข้อผิดพลาดในการอ่านไฟล์'
+      emit('error', 'ไฟล์ไม่ถูกต้อง')
+    }
   }
 
   reader.readAsArrayBuffer(file)
+}
+
+function handleFile(e) {
+  const file = e.target.files[0]
+  processFile(file)
+  // Reset input เพื่อให้เลือกไฟล์เดิมซ้ำได้ถ้าต้องการ
+  e.target.value = ''
+}
+
+function handleDrop(e) {
+  isDragging.value = false
+  const file = e.dataTransfer.files[0]
+  if (file && file.name.endsWith('.xlsx')) {
+    processFile(file)
+  } else {
+    errorMessage.value = 'กรุณาอัปโหลดไฟล์ .xlsx เท่านั้น'
+  }
 }
 </script>
