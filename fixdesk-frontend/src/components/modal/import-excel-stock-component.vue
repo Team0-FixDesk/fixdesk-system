@@ -1,3 +1,18 @@
+<script setup>
+import { ref } from 'vue'
+import UploadStockExcelStep from './upload-excel-stock-component.vue/'
+import PreviewStockExcelStep from './preview-excel-stock-component.vue'
+
+const step = ref(1)
+const items = ref([])
+
+//ฟังก์ชันเมื่ออัปโหลด Excel เสร็จ
+function goPreview(data) {
+  items.value = data
+  step.value = 2
+}
+</script>
+
 <template>
   <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
     <div class="w-full max-w-4xl p-6 bg-white shadow-lg rounded-xl">
@@ -25,18 +40,3 @@
     </div>
   </div>
 </template>
-
-<script setup>
-import { ref } from 'vue'
-import UploadStockExcelStep from './upload-excel-stock-component.vue'
-import PreviewStockExcelStep from './preview-excel-stock-component.vue'
-
-const step = ref(1)
-const items = ref([])
-
-//ฟังก์ชันเมื่ออัปโหลด Excel เสร็จ
-function goPreview(data) {
-  items.value = data
-  step.value = 2
-}
-</script>

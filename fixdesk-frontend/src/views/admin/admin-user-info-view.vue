@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import TableComponent from '@/components/table-component.vue'
 import TableActions from '@/components/table-actions-component.vue'
-import ImportUserModal from '@/components/import-user-excel-component.vue'
+import ImportUserModal from '@/components/modal/import-user-excel-component.vue'
 import ImportButtonComponent from '@/components/button/import-button-component.vue'
 import BaseButtonComponent from '@/components/button/base/base-button-component.vue'
 

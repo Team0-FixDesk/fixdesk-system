@@ -1,3 +1,85 @@
+<script setup>
+import { computed } from 'vue'
+
+/**
+ * รับข้อมูล stock จาก component import-stock-component
+ */
+const props = defineProps({
+  items: {
+    type: Array,
+    required: true,
+  },
+})
+
+/*
+  back    = ย้อนกลับไปหน้า upload
+  close   = ปิด popup
+  refresh = โหลดตารางรายการอุปกรณ์ใหม่หลัง import สำเร็จ
+ */
+const emit = defineEmits(['back', 'close', 'refresh'])
+
+const API_BASE = import.meta.env.VITE_API_BASE
+
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('token') || sessionStorage.getItem('token')
+
+  return {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${token}`,
+  }
+}
+
+/**
+ * เช็คว่ามีรายการที่ valid อย่างน้อย 1 ตัวไหม
+ * ใช้เปิด/ปิด checkbox “เลือกทั้งหมด”
+ */
+const hasValidItem = computed(() => props.items.some((u) => u.isValid))
+const selectedCount = computed(() => props.items.filter((u) => u.selected && u.isValid).length)
+
+/**
+ * checkbox “เลือกทั้งหมด”
+ * get เช็คว่าอุปกรณ์ที่ valid ทุกตัวถูกเลือก
+ * set ติ๊ก / เอาติ๊กออกเฉพาะตัวที่ valid
+ */
+const allSelected = computed({
+  get() {
+    const validItems = props.items.filter((u) => u.isValid)
+    if (!validItems.length) return false
+    return validItems.every((u) => u.selected)
+  },
+  set(val) {
+    props.items.forEach((u) => {
+      if (u.isValid) u.selected = val
+    })
+  },
+})
+
+async function importSelected() {
+  // เลือกเฉพาะอุปกรณ์ที่ติ๊กเลือก และข้อมูลถูกต้อง
+  const selected = props.items.filter((u) => u.selected && u.isValid)
+
+  try {
+    const res = await fetch(`${API_BASE}/stock/import`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ items: selected }),
+    })
+
+    if (!res.ok) {
+      const err = await res.json()
+      alert(err.message || 'Import failed')
+      return
+    }
+
+    emit('close')
+    emit('refresh')
+  } catch (err) {
+    console.error(err)
+    alert('ไม่สามารถเชื่อมต่อ backend ได้')
+  }
+}
+</script>
+
 <!-- หน้า Preview หลังจากอัปโหลดไฟล์ Excel สามารถเลือกอุปกรณ์ที่ต้องการ import ได้ -->
 <template>
   <div>
@@ -122,85 +204,3 @@
     </div>
   </div>
 </template>
-
-<script setup>
-import { computed } from 'vue'
-
-/**
- * รับข้อมูล stock จาก component import-stock-component
- */
-const props = defineProps({
-  items: {
-    type: Array,
-    required: true,
-  },
-})
-
-/*
-  back    = ย้อนกลับไปหน้า upload
-  close   = ปิด popup
-  refresh = โหลดตารางรายการอุปกรณ์ใหม่หลัง import สำเร็จ
- */
-const emit = defineEmits(['back', 'close', 'refresh'])
-
-const API_BASE = import.meta.env.VITE_API_BASE
-
-const getAuthHeaders = () => {
-  const token = localStorage.getItem('token') || sessionStorage.getItem('token')
-
-  return {
-    'Content-Type': 'application/json',
-    Authorization: `Bearer ${token}`,
-  }
-}
-
-/**
- * เช็คว่ามีรายการที่ valid อย่างน้อย 1 ตัวไหม
- * ใช้เปิด/ปิด checkbox “เลือกทั้งหมด”
- */
-const hasValidItem = computed(() => props.items.some((u) => u.isValid))
-const selectedCount = computed(() => props.items.filter((u) => u.selected && u.isValid).length)
-
-/**
- * checkbox “เลือกทั้งหมด”
- * get เช็คว่าอุปกรณ์ที่ valid ทุกตัวถูกเลือก
- * set ติ๊ก / เอาติ๊กออกเฉพาะตัวที่ valid
- */
-const allSelected = computed({
-  get() {
-    const validItems = props.items.filter((u) => u.isValid)
-    if (!validItems.length) return false
-    return validItems.every((u) => u.selected)
-  },
-  set(val) {
-    props.items.forEach((u) => {
-      if (u.isValid) u.selected = val
-    })
-  },
-})
-
-async function importSelected() {
-  // เลือกเฉพาะอุปกรณ์ที่ติ๊กเลือก และข้อมูลถูกต้อง
-  const selected = props.items.filter((u) => u.selected && u.isValid)
-
-  try {
-    const res = await fetch(`${API_BASE}/stock/import`, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({ items: selected }),
-    })
-
-    if (!res.ok) {
-      const err = await res.json()
-      alert(err.message || 'Import failed')
-      return
-    }
-
-    emit('close')
-    emit('refresh')
-  } catch (err) {
-    console.error(err)
-    alert('ไม่สามารถเชื่อมต่อ backend ได้')
-  }
-}
-</script>

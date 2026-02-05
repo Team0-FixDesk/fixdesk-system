@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
-import ImportStockModal from '@/components/import-excel-stock-component.vue'
+import ImportStockModal from '@/components/modal/import-excel-stock-component.vue'
 import TableComponent from '@/components/table-component.vue'
 import TableActions from '@/components/table-actions-component.vue'
 import CardSummaryComponent from '@/components/card-home-component.vue'
