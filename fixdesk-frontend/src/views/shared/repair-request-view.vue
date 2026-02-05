@@ -5,6 +5,8 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
 import { usePhoneFormat } from '@/composables/usePhoneFormat'
+import { Icon } from '@iconify/vue'
+
 
 /** * การกำหนด Options / Props
  */
@@ -759,10 +761,7 @@ function validateField(field) {
             >
               <div class="flex flex-col items-center justify-center pt-5 pb-6 text-center">
                 <div :class="['transition-all duration-200', isDragOver ? 'scale-110' : '']">
-                  <img
-                    src="/icon/image-up-icon.svg"
-                    :class="['w-10 h-10 mb-2', isDragOver ? 'opacity-80' : 'opacity-70']"
-                  />
+                  <Icon icon="ri:image-upload-line" width="60" height="60" style="color: gray" />
                 </div>
                 <p
                   :class="[

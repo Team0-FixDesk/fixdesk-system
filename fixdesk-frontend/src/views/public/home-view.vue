@@ -4,6 +4,8 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 
+import LogoFIXDESK from '@/assets/icons/LogoFIXDESK-logo.png'
+
 // ====== CONFIG API URL ======
 const API_BASE = import.meta.env.VITE_API_BASE
 
@@ -110,7 +112,7 @@ const goToLogin = () => {
     <!-- Navbar -->
     <header class="w-full max-w-6xl flex justify-between items-center py-6 px-6">
       <div class="flex items-center gap-3 text-3xl font-semibold text-slate-800">
-        <img src="/icon/LogoFIXDESK-logo.png" class="h-12 w-auto" alt="FixDesk Logo" />
+        <img :src="LogoFIXDESK" alt="FixDesk Logo" class="w-10 h-10 object-contain" />
         <span>FixDesk</span>
       </div>
 

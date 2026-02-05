@@ -11,6 +11,8 @@ import { useRouter } from 'vue-router'
 import CardHomeComponent from '@/components/card-home-component.vue'
 import repairButtonComponent from '@/components/button/repair-button-component.vue'
 import TableComponent from '@/components/table-component.vue'
+import InfoButtonComponent from '@/components/button/info-button-component.vue'
+
 
 /* =========================
   Imports (composables)
@@ -318,14 +320,7 @@ onMounted(() => {
         @detail="goToRepairDetail"
       >
         <template #cell-5="{ row }">
-          <div class="flex justify-center">
-            <button
-              @click="goToRepairDetail(row[0])"
-              class="flex items-center gap-2 px-2 py-2 rounded-md bg-[#1E48D1] hover:bg-[#163A9B] text-white"
-            >
-              <img src="/icon/info-icon.svg" class="h-4 w-4" />
-            </button>
-          </div>
+            <InfoButtonComponent @click="goToRepairDetail(row[0])"/>
         </template>
       </TableComponent>
     </div>

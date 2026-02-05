@@ -4,6 +4,9 @@ import { useRouter } from 'vue-router'
 import { jwtDecode } from 'jwt-decode'
 import { Icon } from '@iconify/vue'
 
+import LogoFIXDESK from '@/assets/icons/Logo.png'
+import Logo92Tech from '@/assets/icons/92Tech-logo.png'
+
 /* ===================== Config ===================== */
 const API_BASE = import.meta.env.VITE_API_BASE
 const LOGIN_URL = `${API_BASE}/login`
@@ -117,11 +120,11 @@ const handleLogin = async () => {
       <!-- โลโก้ -->
       <div class="flex flex-col items-center justify-center flex-1">
         <img
+          :src="Logo92Tech"
           alt="92 Tech logo"
           class="hidden md:block absolute top-4 left-4 w-10"
-          src="/icon/92Tech-logo.png"
         />
-        <img alt="FixDesk logo" class="w-48 h-auto" src="/icon/Logo.png" />
+        <img :src="LogoFIXDESK" alt="FixDesk logo" class="w-48 h-auto" />
       </div>
 
       <!-- ฟอร์มล็อกอิน -->

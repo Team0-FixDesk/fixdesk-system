@@ -1319,8 +1319,8 @@ onBeforeUnmount(() => {
       >
         <!-- Header with icon -->
         <div class="flex items-center gap-3 mb-6">
-          <div class="bg-blue-100 p-3 rounded-full">
-            <img src="/icon/info-icon.svg" alt="View Location" class="w-8 h-8" />
+          <div class="bg-blue-400 p-3 rounded-full">
+            <Icon icon="material-symbols:info-outline-rounded" width="24" height="24"  style="color: #FFFFFF" />
           </div>
           <h2 class="text-xl font-bold text-gray-800">รายละเอียดสถานที่</h2>
         </div>
@@ -1730,8 +1730,8 @@ onBeforeUnmount(() => {
       <div class="bg-white rounded-lg p-8 w-full max-w-2xl shadow-xl max-h-[90vh] overflow-y-auto">
         <!-- Header with icon -->
         <div class="flex items-center gap-3 mb-6">
-          <div class="bg-orange-100 p-3 rounded-full">
-            <img src="/icon/edit-icon.svg" alt="Edit Location" class="w-8 h-8" />
+          <div class="bg-orange-400 p-3 rounded-full">
+            <Icon icon="fluent:edit-24-regular" width="24" height="24" style="color: #FFFFFF" />
           </div>
           <h2 class="text-xl font-bold text-gray-800">
             แก้ไข{{

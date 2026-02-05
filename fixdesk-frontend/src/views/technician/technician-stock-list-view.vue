@@ -4,6 +4,7 @@ defineOptions({ name: 'TechnicianStockListView' }) //
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
+import { Icon } from '@iconify/vue'
 
 // Components
 import ProductCardComponent from '@/components/product-card-component.vue'
@@ -34,7 +35,7 @@ const currentDepartment = ref('')
  */
 const loadTechnicianProfile = () => {
   const user = JSON.parse(
-    sessionStorage.getItem('session_user') || localStorage.getItem('session_user')
+    sessionStorage.getItem('session_user') || localStorage.getItem('session_user'),
   ) //
 
   if (!user) {
@@ -89,7 +90,7 @@ const fetchRepairJobList = async () => {
  */
 function getAuthHeaders() {
   const token = sessionStorage.getItem('token') || localStorage.getItem('token')
-  
+
   return { Authorization: `Bearer ${token}` } //
 }
 
@@ -97,11 +98,11 @@ const calculateStockStatusKey = (quantity) => {
   if (quantity <= 0) {
     return 'out_of_stock'
   }
-  
+
   if (quantity < 10) {
     return 'low_stock'
   }
-  
+
   return 'in_stock'
 }
 
@@ -109,11 +110,11 @@ const calculateStockStatusLabel = (quantity) => {
   if (quantity <= 0) {
     return 'สินค้าหมด'
   }
-  
+
   if (quantity < 10) {
     return 'สินค้าใกล้หมด'
   }
-  
+
   return 'พร้อมใช้งาน'
 }
 
@@ -124,7 +125,7 @@ const calculateStockStatusLabel = (quantity) => {
 const fetchCategoryOptionList = async () => {
   try {
     const response = await fetch(`${API_BASE_URL}/category`, { headers: getAuthHeaders() })
-    
+
     if (!response.ok) {
       throw new Error('Load categories fail')
     }
@@ -141,10 +142,10 @@ const fetchCategoryOptionList = async () => {
  */
 const fetchStockItemList = async () => {
   isLoading.value = true
-  
+
   try {
     const token = sessionStorage.getItem('token') || localStorage.getItem('token')
-    
+
     if (!token) {
       Swal.fire('แจ้งเตือน', 'กรุณาเข้าสู่ระบบก่อนใช้งาน', 'warning')
       router.push('/login')
@@ -225,24 +226,24 @@ const cartStep = ref('list')
 
 const cartQtyById = computed(() => {
   const quantityMap = new Map()
-  
+
   for (const item of cartItemList.value) {
     quantityMap.set(item.id, (quantityMap.get(item.id) || 0) + item.qty)
   }
-  
+
   return quantityMap
 })
 
 const getBaseQty = (id) => {
   const stockItem = stockItemList.value.find((item) => item.id === id)
-  
+
   return stockItem ? Number(stockItem.quantity || 0) : 0
 }
 
 const getAvailableQty = (id) => {
   const baseQty = getBaseQty(id)
   const inCartQty = cartQtyById.value.get(id) || 0
-  
+
   return Math.max(0, baseQty - inCartQty)
 }
 
@@ -250,7 +251,7 @@ const bounceCart = () => {
   if (!cartBtn.value) {
     return
   }
-  
+
   cartBtn.value.classList.add('cart-bounce')
   setTimeout(() => cartBtn.value.classList.remove('cart-bounce'), 300)
 }
@@ -270,7 +271,7 @@ const addToCart = (payload) => {
   }
 
   const available = getAvailableQty(product.id)
-  
+
   if (available <= 0) {
     Swal.fire({
       icon: 'warning',
@@ -281,7 +282,7 @@ const addToCart = (payload) => {
   }
 
   const foundItem = cartItemList.value.find((item) => item.id === product.id)
-  
+
   if (foundItem) {
     foundItem.qty++
   } else {
@@ -330,7 +331,7 @@ const confirmWithdraw = async (formData) => {
     })
 
     const responseBody = await response.json()
-    
+
     if (!response.ok) {
       throw new Error(responseBody.message)
     }
@@ -341,7 +342,7 @@ const confirmWithdraw = async (formData) => {
     isCartOpen.value = false
     cartStep.value = 'list'
     selectedRepairCode.value = null
-    
+
     try {
       sessionStorage.removeItem('selected_rf_code')
     } catch {}
@@ -363,7 +364,7 @@ onMounted(() => {
       selectedRepairCode.value = code
     }
   } catch {}
-  
+
   fetchRepairJobList()
   loadTechnicianProfile()
   fetchCategoryOptionList()
@@ -374,7 +375,7 @@ onBeforeUnmount(() => {
   try {
     sessionStorage.removeItem('selected_rf_code')
   } catch {}
-  
+
   selectedRepairCode.value = null
 })
 </script>
@@ -572,7 +573,8 @@ onBeforeUnmount(() => {
             "
             class="inline-flex items-center h-10 px-4 bg-blue-600 text-white rounded-lg"
           >
-            <img src="/icon/cart.png" alt="" class="h-7 w-7" /> ตะกร้า {{ totalInCart }}
+            <Icon icon="typcn:shopping-cart" width="24" height="24" style="color: #ffffff" /> ตะกร้า
+            {{ totalInCart }}
           </button>
         </div>
       </div>
@@ -719,9 +721,9 @@ onBeforeUnmount(() => {
 
               <button
                 @click="removeFromCart(item.id)"
-                class="text-red-500 hover:text-red-600 bg-red-500 h-8 justify-center border rounded-md"
+                class="flex items-center justify-center w-8 h-8 text-white transition bg-red-500 rounded-md cursor-pointer sm:w-9 sm:h-8 hover:bg-red-600"
               >
-                <img src="/icon/bin-icon.svg" alt="ลบ" />
+                <Icon icon="mdi:bin-outline" width="24" height="24" style="color: #ffffff" />
               </button>
             </div>
           </div>

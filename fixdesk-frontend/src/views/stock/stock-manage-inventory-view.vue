@@ -7,7 +7,7 @@ import TableComponent from '@/components/table-component.vue'
 import TableActions from '@/components/table-actions-component.vue'
 import CardSummaryComponent from '@/components/card-home-component.vue'
 import ImportButtonComponent from '@/components/button/import-button-component.vue'
-
+import { Icon } from '@iconify/vue'
 
 const showImportModal = ref(false)
 
@@ -800,7 +800,7 @@ onBeforeUnmount(() => {
     <div class="flex items-center justify-between mb-6">
       <h1 class="text-2xl font-bold text-gray-800">รายการคลัง</h1>
       <div class="flex flex-col gap-2 sm:flex-row">
-        <ImportButtonComponent @click="showImportModal = true"/>
+        <ImportButtonComponent @click="showImportModal = true" />
 
         <button
           @click="showAddModal = true"
@@ -863,7 +863,7 @@ onBeforeUnmount(() => {
                   v-model="selectedStatusList"
                   class="w-4 h-4 text-green-600 rounded"
                 />
-                <span class="ml-2">พร้อมใช้งาน (In Stock)</span>
+                <span class="ml-2">พร้อมใช้งาน</span>
               </label>
 
               <label class="flex items-center py-1 cursor-pointer hover:bg-gray-50">
@@ -873,7 +873,7 @@ onBeforeUnmount(() => {
                   v-model="selectedStatusList"
                   class="w-4 h-4 text-orange-500 rounded"
                 />
-                <span class="ml-2">ใกล้หมด (Low Stock)</span>
+                <span class="ml-2">ใกล้หมด</span>
               </label>
 
               <label class="flex items-center py-1 cursor-pointer hover:bg-gray-50">
@@ -883,7 +883,7 @@ onBeforeUnmount(() => {
                   v-model="selectedStatusList"
                   class="w-4 h-4 text-red-600 rounded"
                 />
-                <span class="ml-2">สินค้าหมด (Out of Stock)</span>
+                <span class="ml-2">สินค้าหมด</span>
               </label>
             </div>
           </div>
@@ -1155,10 +1155,7 @@ onBeforeUnmount(() => {
               >
                 <div class="flex flex-col items-center justify-center pt-5 pb-6">
                   <div :class="['transition-all duration-200', isDragOver ? 'scale-110' : '']">
-                    <img
-                      src="/icon/image-up-icon.svg"
-                      :class="['w-10 h-10 mb-2', isDragOver ? 'opacity-80' : 'opacity-70']"
-                    />
+                    <Icon icon="ri:image-upload-line" width="60" height="60" style="color: gray" />
                   </div>
 
                   <p
@@ -1426,7 +1423,7 @@ onBeforeUnmount(() => {
                 @drop.prevent="handleEditDrop"
               >
                 <div class="flex flex-col items-center justify-center pt-5 pb-6">
-                  <img src="/icon/image-up-icon.svg" class="w-10 h-10 mb-2 opacity-70" />
+                  รองรับรูปภาพเท่านั้น
                   <p class="mt-1 text-xs text-gray-400">รองรับรูปภาพเท่านั้น (สูงสุด 1 รูป)</p>
                   <p class="mt-1 text-xs text-gray-500">สามารถแนบรูปภาพประกอบได้</p>
 

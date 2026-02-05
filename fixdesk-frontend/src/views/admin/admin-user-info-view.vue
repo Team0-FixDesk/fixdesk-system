@@ -1349,12 +1349,7 @@ function handleImportError(message) {
         <div class="flex items-center justify-between mb-4">
           <div class="flex items-center gap-3">
             <div class="p-2 bg-blue-100 rounded-full">
-              <Icon
-                icon="fluent:person-12-filled"
-                width="35"
-                height="35"
-                style="color: #8e8e8e"
-              />
+              <Icon icon="fluent:person-12-filled" width="35" height="35" style="color: #8e8e8e" />
             </div>
             <h2 class="text-lg font-bold text-black">จัดการตำแหน่งช่าง</h2>
           </div>
@@ -1382,7 +1377,7 @@ function handleImportError(message) {
                 class="flex items-center justify-center w-8 h-8 text-white transition bg-yellow-400 rounded-md cursor-pointer sm:w-9 sm:h-8 hover:bg-yellow-500"
                 title="แก้ไข"
               >
-                <img src="/icon/edit-icon.svg" class="w-4 h-4" />
+                <Icon icon="fluent:edit-24-regular" width="24" height="24" style="color: #ffffff" />
               </button>
               <button
                 type="button"
@@ -1390,7 +1385,7 @@ function handleImportError(message) {
                 class="flex items-center justify-center w-8 h-8 text-white transition bg-red-500 rounded-md cursor-pointer sm:w-9 sm:h-8 hover:bg-red-600"
                 title="ลบ"
               >
-                <img src="/icon/bin-icon.svg" class="w-4 h-4" />
+                <Icon icon="mdi:bin-outline" width="24" height="24" style="color: #ffffff" />
               </button>
             </div>
           </div>

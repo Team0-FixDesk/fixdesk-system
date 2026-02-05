@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import TableComponent from '@/components/table-component.vue'
+import InfoButtonComponent from '@/components/button/info-button-component.vue'
 
 defineOptions({ name: 'TechnicianRequisitionListView' })
 
@@ -111,12 +112,10 @@ const filteredRows = computed(() => {
     const locationText = String(row[1].location).toLowerCase()
     const status = row[3]
 
-    const isKeywordMatched =
-      requisitionCode.includes(keyword) || locationText.includes(keyword)
+    const isKeywordMatched = requisitionCode.includes(keyword) || locationText.includes(keyword)
 
     const isStatusMatched =
-      selectedStatusList.value.length === 0 ||
-      selectedStatusList.value.includes(status)
+      selectedStatusList.value.length === 0 || selectedStatusList.value.includes(status)
 
     const isDateMatched =
       !dateFilter ||
@@ -149,10 +148,7 @@ onMounted(() => {
   fetchMyRequisitions()
   document.addEventListener('click', handleClickOutside)
 
-  if (
-    route.query.status &&
-    ['waiting', 'approved', 'rejected'].includes(route.query.status)
-  ) {
+  if (route.query.status && ['waiting', 'approved', 'rejected'].includes(route.query.status)) {
     selectedStatusList.value = [route.query.status]
   }
 })
@@ -228,23 +224,24 @@ onBeforeUnmount(() => {
       :perPage="10"
       :statusStockColumn="3"
       :columnAlign="['left', 'left', 'left', 'center']"
-      @detail="(row)=>goToRepairDetail(row.repairFormCode)"
-      >
-        <template #cell-0="{ row }">
-          <a
-            href="#"
-            @click.prevent="goToRepairDetail(row[1].repairFormCode)"
-            class="text-blue-600 hover:text-blue-800 underline"
-          >
-            {{ row[0] }}
-          </a>
-
-        </template>
+      @detail="(row) => goToRepairDetail(row.repairFormCode)"
+    >
+      <template #cell-0="{ row }">
+        <a
+          href="#"
+          @click.prevent="goToRepairDetail(row[1].repairFormCode)"
+          class="text-blue-600 hover:text-blue-800 underline"
+        >
+          {{ row[0] }}
+        </a>
+      </template>
       <template #cell-2="{ row }">
         <div class="space-y-1 text-sm">
           <div v-for="(item, index) in row[2]" :key="index" class="flex items-center">
             <span class="flex-1 truncate">{{ truncateItemName(item) }}</span>
-            <span class="shrink-0 text-gray-500 w-8 text-right">x{{ extractItemQuantity(item) }}</span>
+            <span class="shrink-0 text-gray-500 w-8 text-right"
+              >x{{ extractItemQuantity(item) }}</span
+            >
           </div>
         </div>
       </template>
@@ -258,14 +255,7 @@ onBeforeUnmount(() => {
       </template>
 
       <template #cell-4="{ row }">
-        <div class="flex justify-center">
-          <button
-            @click="goToRepairDetail(row[1].repairFormCode)"
-            class="px-2 py-2 rounded-md bg-blue-500 text-white"
-          >
-            <img src="/icon/info-icon.svg" class="h-4 w-4" />
-          </button>
-        </div>
+        <InfoButtonComponent @click="goToRepairDetail(row[1].repairFormCode)" />
       </template>
     </TableComponent>
   </div>

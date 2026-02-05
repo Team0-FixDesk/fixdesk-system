@@ -147,7 +147,7 @@ onBeforeUnmount(() => {
       @click="toggleMenu"
       title="เมนู"
     >
-      <Icon icon="charm:menu-kebab" width="16" height="16" style="color: #FFFFFF" />
+      <Icon icon="charm:menu-kebab" width="16" height="16" style="color: #ffffff" />
     </button>
 
     <!-- Dropdown Menu -->
@@ -170,8 +170,11 @@ onBeforeUnmount(() => {
           "
           class="w-full text-left px-3 py-2 rounded-md hover:bg-gray-100 flex items-center gap-2"
         >
-          <img
-            src="/icon/info-icon.svg"
+          <Icon
+            icon="material-symbols:info-outline-rounded"
+            width="36"
+            height="36"
+            style="color: #ffffff"
             class="bg-blue-400 hover:bg-blue-600 rounded-md p-1 h-6 w-6"
           />
           รายละเอียด
@@ -280,8 +283,11 @@ onBeforeUnmount(() => {
             "
             class="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2"
           >
-            <img
-              src="/icon/edit-icon.svg"
+            <Icon
+              icon="fluent:edit-24-regular"
+              width="36"
+              height="36"
+              style="color: #ffffff"
               class="bg-amber-400 hover:bg-amber-600 rounded-md p-1 h-6 w-6"
             />
             แก้ไข
@@ -297,9 +303,12 @@ onBeforeUnmount(() => {
             "
             class="w-full text-left px-3 py-2 hover:bg-gray-100 text-red-600 flex items-center gap-2"
           >
-            <img
-              src="/icon/bin-icon.svg"
-              class="bg-red-400 hover:bg-red-600 rounded-md p-1 h-6 w-6"
+            <Icon
+              icon="mdi:bin-outline"
+              width="24"
+              height="24"
+              style="color: #ffffff"
+              class="bg-red-400 hover:bg-red-900 rounded-md"
             />
             ลบ
           </button>
@@ -364,10 +373,14 @@ onBeforeUnmount(() => {
             "
             class="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2"
           >
-            <img
-              src="/icon/edit-icon.svg"
+            <Icon
+              icon="fluent:edit-24-regular"
+              width="36"
+              height="36"
+              style="color: #ffffff"
               class="bg-amber-400 hover:bg-amber-600 rounded-md p-1 h-6 w-6"
             />
+
             แก้ไข
           </button>
           <div class="border-t border-gray-300 mx-1"></div>
@@ -381,9 +394,12 @@ onBeforeUnmount(() => {
             "
             class="w-full text-left px-3 py-2 hover:bg-gray-100 text-red-600 flex items-center gap-2"
           >
-            <img
-              src="/icon/bin-icon.svg"
-              class="bg-red-400 hover:bg-red-600 rounded-md p-1 h-6 w-6"
+            <Icon
+              icon="mdi:bin-outline"
+              width="24"
+              height="24"
+              style="color: #ffffff"
+              class="bg-red-400 hover:bg-red-900 rounded-md"
             />
             ลบ
           </button>
@@ -402,7 +418,13 @@ onBeforeUnmount(() => {
             "
             class="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2"
           >
-            <img src="/icon/edit-icon.svg" class="bg-amber-400 rounded-md p-1 h-6 w-6" />
+            <Icon
+              icon="fluent:edit-24-regular"
+              width="36"
+              height="36"
+              style="color: #ffffff"
+              class="bg-amber-400 hover:bg-amber-600 rounded-md p-1 h-6 w-6"
+            />
             แก้ไข
           </button>
 
@@ -417,7 +439,13 @@ onBeforeUnmount(() => {
             "
             class="w-full text-left px-3 py-2 hover:bg-gray-100 text-red-600 flex items-center gap-2"
           >
-            <img src="/icon/bin-icon.svg" class="bg-red-400 rounded-md p-1 h-6 w-6" />
+            <Icon
+              icon="mdi:bin-outline"
+              width="24"
+              height="24"
+              style="color: #ffffff"
+              class="bg-red-400 hover:bg-red-900 rounded-md"
+            />
             ลบ
           </button>
         </template>

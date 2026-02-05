@@ -7,6 +7,7 @@ import TableComponent from '@/components/table-component.vue'
 import repairButton from '@/components/button/repair-button-component.vue'
 import CardHomeComponent from '@/components/card-home-component.vue'
 import { useUserProfile } from '@/composables/useUserProfile'
+import InfoButtonComponent from '@/components/button/info-button-component.vue'
 
 defineOptions({ name: 'StockHomeView' })
 
@@ -384,12 +385,7 @@ onMounted(() => {
           @Detail="openDetail"
         >
           <template #cell-2="{ row }">
-            <button
-              @click="openDetail(row[0])"
-              class="flex items-center justify-center p-2 rounded-md bg-[#1E48D1] hover:bg-[#163A9B]"
-            >
-              <img src="/icon/info-icon.svg" class="h-4 w-4" />
-            </button>
+            <InfoButtonComponent @click="openDetail(row[0])" />
           </template>
         </TableComponent>
       </div>

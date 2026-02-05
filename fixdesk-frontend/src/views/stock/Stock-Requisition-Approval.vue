@@ -9,6 +9,7 @@ import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import Sweetalert from 'sweetalert2'
 import BackButtonComponent from '@/components/button/back-button-component.vue'
+import { Icon } from '@iconify/vue'
 
 
 defineOptions({ name: 'StockWithdrawApproveView' })
@@ -244,13 +245,14 @@ function goBack() {
                   :src="item.img"
                   :alt="item.name"
                   class="w-full h-full rounded-lg border bg-gray-100 object-cover"
-                  @error="(e) => (e.target.src = '/icon/no-image-icon.svg')"
+                  @error="item.img = null"
                 />
+
                 <div
                   v-else
-                  class="w-full h-full rounded-lg border bg-gray-100 flex items-center justify-center text-xs text-gray-400"
+                  class="w-full h-full rounded-lg border bg-gray-100 flex items-center justify-center"
                 >
-                  ไม่มีรูป
+                  <Icon icon="ix:no-image" width="48" height="48" style="color: #8e8e8e" />
                 </div>
               </div>
 
