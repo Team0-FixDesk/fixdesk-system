@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { jwtDecode } from 'jwt-decode'
+import { Icon } from '@iconify/vue'
 
 /* ===================== Config ===================== */
 const API_BASE = import.meta.env.VITE_API_BASE
@@ -158,10 +159,7 @@ const handleLogin = async () => {
               aria-label="คำอธิบายการจำฉันไว้"
               tabindex="0"
             >
-              <img
-                src="/icon/circle-info-icon.svg"
-                class="opacity-30 hover:opacity-100 transition"
-              />
+              <Icon icon="fluent:info-16-filled" width="16" height="16" style="color: #8e8e8e" />
               <!-- Tooltip -->
               <div
                 class="absolute bottom-full left-0 mt-2 w-72 p-3 text-xs text-white bg-gray-800 rounded-lg opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity pointer-events-none text-left"

@@ -4,7 +4,11 @@ import { useRoute, useRouter } from 'vue-router'
 import RepairStatusTimeline from '@/components/status-timeline-component.vue'
 import assignJobModalComponent from '@/components/modal/assign-job-modal-component.vue'
 import AcceptJobModalComponent from '@/components/modal/accept-job-modal-component.vue'
+import BackButtonComponent from '@/components/button/back-button-component.vue'
+
 import Swal from 'sweetalert2'
+import { Icon } from '@iconify/vue'
+
 import { usePhoneFormat } from '@/composables/usePhoneFormat'
 import { useAuthToken } from '@/composables/useAuthToken'
 import { jwtDecode } from 'jwt-decode'
@@ -512,13 +516,7 @@ onMounted(() => {
         <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
             <div class="flex items-center gap-4 mb-6">
-              <div
-                class="w-11 h-11 rounded-lg bg-gray-50 border border-gray-300 flex items-center justify-center cursor-pointer hover:bg-gray-200 transition"
-                @click="goBack"
-              >
-                <img src="/icon/back-icon.svg" class="w-6 h-6 sm:w-5 sm:h-5" />
-              </div>
-
+              <BackButtonComponent @click="goBack" />
               <div class="flex flex-col leading-tight">
                 <h1 class="text-lg sm:text-xl font-bold text-gray-600">รายละเอียดงานซ่อม</h1>
 
@@ -784,7 +782,7 @@ onMounted(() => {
         <div class="space-y-6">
           <div class="bg-white border border-gray-200 rounded-xl p-4 sm:p-6 shadow-sm">
             <div class="border-b border-gray-300 pb-2 mb-4 flex items-center gap-2">
-              <img src="/icon/user-icon2.svg" class="w-10 h-10" />
+              <Icon icon="fluent:person-12-filled" width="40" height="40" style="color: #8e8e8e" />
               <h2 class="text-base sm:text-lg font-semibold text-gray-800">ข้อมูลผู้แจ้ง</h2>
             </div>
 
@@ -803,7 +801,7 @@ onMounted(() => {
 
           <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm h-[427px]">
             <div class="border-b border-gray-300 pb-2 mb-4 flex items-center gap-2">
-              <img src="/icon/time-icon.svg" class="w-8 h-8" />
+              <Icon icon="fluent:clock-16-filled" width="40" height="40" style="color: #8e8e8e" />
               <h2 class="text-base sm:text-lg font-semibold text-gray-800">สถานะการดำเนินงาน</h2>
 
               <button
@@ -886,7 +884,12 @@ onMounted(() => {
                         @click="closeStatusPopup"
                         class="ml-auto p-1 hover:bg-gray-100 rounded transition"
                       >
-                        <img src="/icon/close-icon.svg" class="w-5 h-5" />
+                        <Icon
+                          icon="radix-icons:cross-2"
+                          width="24"
+                          height="24"
+                          style="color: #8e8e8e"
+                        />
                       </button>
                     </div>
 
@@ -899,7 +902,12 @@ onMounted(() => {
                         <div
                           class="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center group-hover:bg-green-200 transition"
                         >
-                          <img src="/icon/approved-white-icon.svg" class="w-5 h-5" />
+                          <Icon
+                            icon="fluent:checkmark-32-filled"
+                            width="18"
+                            height="18"
+                            style="color: #ffffff"
+                          />
                         </div>
                         <div class="text-left">
                           <p class="text-sm font-medium text-gray-800 group-hover:text-green-700">

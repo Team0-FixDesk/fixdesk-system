@@ -1,8 +1,9 @@
 <script setup>
-import { ref, watch, onMounted} from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import { jwtDecode } from 'jwt-decode'
 import Swal from 'sweetalert2'
 import { usePhoneFormat } from '@/composables/usePhoneFormat'
+import { Icon } from '@iconify/vue'
 
 defineExpose({ forceClose })
 
@@ -53,7 +54,6 @@ const errors = ref({
 })
 
 onMounted(() => {
-
   const token = localStorage.getItem('token') || sessionStorage.getItem('token')
   if (token) {
     try {
@@ -76,7 +76,6 @@ function forceClose() {
   showDropdown.value = false
   closeAllPopup()
 }
-
 
 function toggleDropdown() {
   if (!props.expanded) return
@@ -435,7 +434,12 @@ watch(
         <div class="p-6 sm:p-8">
           <div class="flex items-center gap-3 mb-4 sm:mb-6 border-b border-gray-100 pb-4">
             <div class="p-2 bg-blue-600 rounded-full">
-              <img src="\icon\sidebar\user-icon.svg" class="w-6 h-6 sm:w-7 sm:h-7" />
+              <Icon
+                icon="fluent:person-square-16-regular"
+                width="36"
+                height="36"
+                style="color: #FFFFFF"
+              />
             </div>
             <h2 class="text-black text-xl sm:text-2xl font-bold">ตั้งค่าบัญชี</h2>
           </div>

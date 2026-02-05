@@ -9,7 +9,7 @@ import { useRouter } from 'vue-router'
   Imports (components)
 ========================= */
 import CardHomeComponent from '@/components/card-home-component.vue'
-import repairButtonComponent from '@/components/repair-button-component.vue'
+import repairButtonComponent from '@/components/button/repair-button-component.vue'
 import TableComponent from '@/components/table-component.vue'
 
 /* =========================
@@ -114,14 +114,7 @@ function mapRepairToRow(r) {
   const rawDate = toDateSafe(r.rf_create_at)
 
   return {
-    row: [
-      r.rf_code,
-      r.tt_name,
-      buildDetailHtml(r),
-      r.rf_urgency,
-      r.rf_user_status,
-      '',
-    ],
+    row: [r.rf_code, r.tt_name, buildDetailHtml(r), r.rf_urgency, r.rf_user_status, ''],
     meta: r,
     rawDate,
   }
@@ -217,8 +210,8 @@ const rowsForDisplay = computed(() => filteredRequests.value.map((item) => item.
 /* =========================
   Computed: Stats
 ========================= */
-const allTasks = computed(() =>
-  repairRequests.value.filter((r) => isCurrentMonth(r) && r.meta?.rf_user_status).length
+const allTasks = computed(
+  () => repairRequests.value.filter((r) => isCurrentMonth(r) && r.meta?.rf_user_status).length,
 )
 
 const todayTasks = computed(() => repairRequests.value.filter((r) => isToday(r)).length)

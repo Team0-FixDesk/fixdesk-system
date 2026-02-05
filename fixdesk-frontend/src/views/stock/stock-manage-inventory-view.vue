@@ -6,6 +6,8 @@ import ImportStockModal from '@/components/import-excel-stock-component.vue'
 import TableComponent from '@/components/table-component.vue'
 import TableActions from '@/components/table-actions-component.vue'
 import CardSummaryComponent from '@/components/card-home-component.vue'
+import ImportButtonComponent from '@/components/button/import-button-component.vue'
+
 
 const showImportModal = ref(false)
 
@@ -798,13 +800,7 @@ onBeforeUnmount(() => {
     <div class="flex items-center justify-between mb-6">
       <h1 class="text-2xl font-bold text-gray-800">รายการคลัง</h1>
       <div class="flex flex-col gap-2 sm:flex-row">
-        <button
-          @click="showImportModal = true"
-          class="inline-flex items-center justify-center sm:justify-start w-full sm:w-auto h-10 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-900 text-white font-medium shadow-sm transition"
-        >
-          <img src="/icon/plus-icon.svg" class="w-4 h-4" />
-          Import
-        </button>
+        <ImportButtonComponent @click="showImportModal = true"/>
 
         <button
           @click="showAddModal = true"
