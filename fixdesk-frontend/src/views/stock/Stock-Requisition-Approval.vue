@@ -8,6 +8,9 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import Sweetalert from 'sweetalert2'
+import BackButtonComponent from '@/components/button/back-button-component.vue'
+import { Icon } from '@iconify/vue'
+
 
 defineOptions({ name: 'StockWithdrawApproveView' })
 
@@ -203,15 +206,7 @@ function goBack() {
       <div class="bg-white rounded-xl shadow-sm p-4 mb-4 border border-slate-200">
         <div class="flex items-start sm:items-center justify-between">
           <div class="flex items-center gap-4">
-            <button
-              type="button"
-              class="w-11 h-11 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center hover:bg-slate-100 active:scale-[0.98] transition"
-              @click="goBack"
-              aria-label="ย้อนกลับ"
-              title="ย้อนกลับ"
-            >
-              <img src="/icon/back-icon.svg" class="w-6 h-6" />
-            </button>
+            <BackButtonComponent @click="goBack" />
 
             <div>
               <h1 class="text-xl font-bold text-slate-900">อนุมัติการเบิกของ</h1>
@@ -250,13 +245,14 @@ function goBack() {
                   :src="item.img"
                   :alt="item.name"
                   class="w-full h-full rounded-lg border bg-gray-100 object-cover"
-                  @error="(e) => (e.target.src = '/icon/no-image-icon.svg')"
+                  @error="item.img = null"
                 />
+
                 <div
                   v-else
-                  class="w-full h-full rounded-lg border bg-gray-100 flex items-center justify-center text-xs text-gray-400"
+                  class="w-full h-full rounded-lg border bg-gray-100 flex items-center justify-center"
                 >
-                  ไม่มีรูป
+                  <Icon icon="ix:no-image" width="48" height="48" style="color: #8e8e8e" />
                 </div>
               </div>
 
@@ -288,8 +284,6 @@ function goBack() {
                           :checked="item.status === 'approved'"
                           @change="approveItem(item.id, 'approved')"
                         />
-
-                        <img src="/icon/approved-icon.svg" class="w-5 h-5 shrink-0" alt="" />
                         <span>อนุมัติ</span>
                       </label>
 
@@ -312,8 +306,6 @@ function goBack() {
                           :checked="item.status === 'rejected'"
                           @change="approveItem(item.id, 'rejected')"
                         />
-
-                        <img src="/icon/rejected-icon.svg" class="w-5 h-5 shrink-0" alt="" />
                         <span>ไม่อนุมัติ</span>
                       </label>
                     </template>

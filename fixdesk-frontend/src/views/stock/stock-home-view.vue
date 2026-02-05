@@ -4,9 +4,10 @@ import { useRouter } from 'vue-router'
 import ApexChart from 'vue3-apexcharts'
 
 import TableComponent from '@/components/table-component.vue'
-import repairButton from '@/components/repair-button-component.vue'
+import repairButton from '@/components/button/repair-button-component.vue'
 import CardHomeComponent from '@/components/card-home-component.vue'
 import { useUserProfile } from '@/composables/useUserProfile'
+import InfoButtonComponent from '@/components/button/info-button-component.vue'
 
 defineOptions({ name: 'StockHomeView' })
 
@@ -61,11 +62,11 @@ async function fetchDashboard() {
           row: [
             item.sf_code,
             'วันที่: ' +
-            new Date(item.sf_create_at).toLocaleDateString('th-TH') +
-            '<br>ผู้ขอเบิก: ' +
-            item.requester +
-            '<br>หน่วยงาน: ' +
-            item.us_department,
+              new Date(item.sf_create_at).toLocaleDateString('th-TH') +
+              '<br>ผู้ขอเบิก: ' +
+              item.requester +
+              '<br>หน่วยงาน: ' +
+              item.us_department,
             '',
           ],
         }))
@@ -85,17 +86,17 @@ const statItems = computed(() => [
     value: stockForms.value.filter((f) => {
       const createDate = new Date(f.sf_create_at)
       const currentDate = new Date()
-      return createDate.getMonth() === currentDate.getMonth() &&
+      return (
+        createDate.getMonth() === currentDate.getMonth() &&
         createDate.getFullYear() === currentDate.getFullYear()
+      )
     }).length,
     label: 'คำขอในเดือนนี้',
     colorClass: 'text-blue-600',
   },
   {
     value: stockForms.value.filter(
-      (f) =>
-        f.sf_status === 'approved' &&
-        isSameDay(f.sf_create_at, today),
+      (f) => f.sf_status === 'approved' && isSameDay(f.sf_create_at, today),
     ).length,
     label: 'เบิกออกวันนี้',
     colorClass: 'text-green-600',
@@ -109,7 +110,7 @@ const statItems = computed(() => [
     value: stockForms.value.filter((f) => f.sf_status === 'rejected').length,
     label: 'ไม่อนุมัติ',
     colorClass: 'text-red-600',
-  }
+  },
 ])
 
 // ==================== Helpers ====================
@@ -265,7 +266,6 @@ onMounted(() => {
   fetchDashboard()
   fetchUserProfile()
 })
-
 </script>
 
 <template>
@@ -312,21 +312,28 @@ onMounted(() => {
 
           <!-- Segmented Switch -->
           <div class="flex bg-gray-100 rounded-lg p-1">
-            <button class="px-4 py-1 text-sm rounded-md transition"
+            <button
+              class="px-4 py-1 text-sm rounded-md transition"
               :class="chartMode === 'request' ? 'bg-white shadow text-blue-600' : 'text-gray-500'"
-              @click="chartMode = 'request'">
+              @click="chartMode = 'request'"
+            >
               คำขอเบิก
             </button>
-            <button class="px-4 py-1 text-sm rounded-md transition"
+            <button
+              class="px-4 py-1 text-sm rounded-md transition"
               :class="chartMode === 'stock' ? 'bg-white shadow text-blue-600' : 'text-gray-500'"
-              @click="chartMode = 'stock'">
+              @click="chartMode = 'stock'"
+            >
               คลังสินค้า
             </button>
           </div>
         </div>
 
-        <ApexChart height="320" :options="chartOptions"
-          :series="chartMode === 'request' ? requestSeries : stockSeries" />
+        <ApexChart
+          height="320"
+          :options="chartOptions"
+          :series="chartMode === 'request' ? requestSeries : stockSeries"
+        />
         <!-- Color Legend -->
         <div class="flex flex-wrap gap-6 mt-4 text-sm text-gray-600">
           <!-- ===== Request Mode ===== -->
@@ -375,12 +382,10 @@ onMounted(() => {
           :columnAlign="['left', 'left', 'center']"
           :id-column-index="0"
           :id-column-as-link="true"
-          @Detail="openDetail">
+          @Detail="openDetail"
+        >
           <template #cell-2="{ row }">
-            <button @click="openDetail(row[0])"
-              class="flex items-center justify-center p-2 rounded-md bg-[#1E48D1] hover:bg-[#163A9B]">
-              <img src="/icon/info-icon.svg" class="h-4 w-4" />
-            </button>
+            <InfoButtonComponent @click="openDetail(row[0])" />
           </template>
         </TableComponent>
       </div>

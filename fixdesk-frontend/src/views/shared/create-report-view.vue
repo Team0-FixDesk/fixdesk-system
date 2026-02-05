@@ -5,6 +5,9 @@ import html2canvas from 'html2canvas'
 import { jwtDecode } from 'jwt-decode'
 import Swal from 'sweetalert2'
 
+import GarudaIcon from '@/assets/icons/Garuda.svg'
+
+
 // Refs
 const documentRef = ref(null)
 const exportWrapper = ref(null)
@@ -244,7 +247,7 @@ onMounted(() => {
               <div ref="exportWrapper" class="export-wrapper">
                 <div ref="documentRef" class="pdf-document">
                   <div class="pdf-header">
-                    <img src="/icon/Garuda.svg" alt="ครุฑ" class="garuda-icon" />
+                    <img :src="GarudaIcon" alt="ครุฑ" class="garuda-icon" />
                     <h1 class="pdf-title">บันทึกข้อความ</h1>
                   </div>
                   <div class="pdf-info">

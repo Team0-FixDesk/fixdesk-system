@@ -3,6 +3,8 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import TableComponent from '@/components/table-component.vue'
 import RepairFilterBar from '@/components/filters/repair-filter-bar-component.vue'
+import InfoButtonComponent from '@/components/button/info-button-component.vue'
+
 import Sweetalert from 'sweetalert2'
 
 defineOptions({ name: 'StockWithdrawListView' })
@@ -152,14 +154,7 @@ onMounted(() => {
       @detail="openDetail"
     >
       <template #cell-4="{ row }">
-        <div class="flex justify-center">
-          <button
-            @click="openDetail(row[0])"
-            class="flex items-center gap-2 px-2 py-2 rounded-md bg-blue-500 text-white hover:bg-blue-600"
-          >
-            <img src="/icon/info-icon.svg" class="h-4 w-4" />
-          </button>
-        </div>
+        <InfoButtonComponent @click="openDetail(row[0])" />
       </template>
     </TableComponent>
   </div>

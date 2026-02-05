@@ -6,11 +6,10 @@ import Sweetalert from 'sweetalert2'
 
 import TableComponent from '@/components/table-component.vue'
 import TableActions from '@/components/table-actions-component.vue'
-import RepairButton from '@/components/repair-button-component.vue'
+import RepairButton from '@/components/button/repair-button-component.vue'
 import RepairFilterBar from '@/components/filters/repair-filter-bar-component.vue'
 
 import { useAuthToken } from '@/composables/useAuthToken'
-
 
 defineOptions({ name: 'MyListView' })
 
@@ -31,7 +30,6 @@ const tableColumns = [
 
 const tableRows = ref([])
 const openMenuId = ref(null)
-
 
 const { token, userId, isAuthenticated, logout } = useAuthToken()
 
@@ -88,7 +86,6 @@ async function loadMyRepairs() {
     console.error('Load my repairs failed:', error.message)
   }
 }
-
 
 /* ===================== Computed ===================== */
 const filteredRows = computed(() => {

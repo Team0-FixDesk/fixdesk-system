@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 
 import TableComponent from '@/components/table-component.vue'
+import InfoButtonComponent from '@/components/button/info-button-component.vue'
 
 const router = useRouter()
 const API_BASE = import.meta.env.VITE_API_BASE
@@ -104,14 +105,7 @@ onMounted(() => {
     >
       <!-- Actions -->
       <template #cell-3="{ row }">
-        <div class="flex justify-center">
-          <button
-            @click="goToDetail(row[0])"
-            class="flex items-center gap-2 px-2 py-2 text-white bg-blue-500 rounded-md hover:bg-blue-600"
-          >
-            <img src="/icon/info-icon.svg" class="w-4 h-4" />
-          </button>
-        </div>
+        <InfoButtonComponent @click="goToDetail(row[0])" />
       </template>
     </TableComponent>
   </div>

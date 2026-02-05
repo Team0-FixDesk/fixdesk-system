@@ -2,7 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import TableComponent from '@/components/table-component.vue'
-import repairButton from '@/components/repair-button-component.vue'
+import repairButton from '@/components/button/repair-button-component.vue'
 import RepairStatusTimeline from '@/components/status-timeline-component.vue'
 import { useAuthToken } from '@/composables/useAuthToken'
 import { useUserProfile } from '@/composables/useUserProfile'
@@ -256,7 +256,10 @@ onMounted(() => {
       <div class="col-span-8 bg-white rounded-xl border border-slate-200 shadow-sm p-5">
         <div class="border-b border-slate-200 pb-2 mb-4">
           <h2 class="text-xl font-bold mb-1">รายการที่ฉันแจ้งซ่อม</h2>
-          <p class="text-xs text-gray-500">7 รายการแจ้งซ่อมล่าสุด (เรียงจากวันที่แจ้ง) สามารถกดรายการแจ้งซ่อมในตารางเพื่อดูรายละเอียด</p>
+          <p class="text-xs text-gray-500">
+            7 รายการแจ้งซ่อมล่าสุด (เรียงจากวันที่แจ้ง)
+            สามารถกดรายการแจ้งซ่อมในตารางเพื่อดูรายละเอียด
+          </p>
         </div>
 
         <TableComponent

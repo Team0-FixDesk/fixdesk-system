@@ -4,6 +4,8 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import CardHomeComponent from '@/components/card-home-component.vue'
 import TableComponent from '@/components/table-component.vue'
+import InfoButtonComponent from '@/components/button/info-button-component.vue'
+
 import { jwtDecode } from 'jwt-decode' // ตรวจสอบว่ามีบรรทัดนี้
 
 const router = useRouter()
@@ -346,7 +348,7 @@ const openDetail = (rfCode) => {
         :perPage="5"
         :statusStockColumn="3"
         :columnAlign="['left', 'left', 'left', 'center']"
-        @detail="(row)=>openDetail(row.rf_code)"
+        @detail="(row) => openDetail(row.rf_code)"
       >
         <template #cell-0="{ row }">
           <a
@@ -356,7 +358,6 @@ const openDetail = (rfCode) => {
           >
             {{ row[0] }}
           </a>
-
         </template>
         <!-- รายการของ -->
         <template #cell-2="{ row }">
@@ -378,14 +379,7 @@ const openDetail = (rfCode) => {
 
         <!-- ปุ่ม -->
         <template #cell-4="{ row }">
-          <div class="flex justify-center">
-            <button
-              @click="openDetail(row[1].rf_code)"
-              class="flex items-center gap-2 px-2 py-2 text-white bg-blue-500 rounded-md hover:bg-blue-600"
-            >
-              <img src="/icon/info-icon.svg" class="w-4 h-4" />
-            </button>
-          </div>
+          <InfoButtonComponent @click="openDetail(row[1].rf_code)" />
         </template>
       </TableComponent>
     </div>

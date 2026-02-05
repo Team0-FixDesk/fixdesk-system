@@ -2,6 +2,10 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { jwtDecode } from 'jwt-decode'
+import { Icon } from '@iconify/vue'
+
+import LogoFIXDESK from '@/assets/icons/Logo.png'
+import Logo92Tech from '@/assets/icons/92Tech-logo.png'
 
 /* ===================== Config ===================== */
 const API_BASE = import.meta.env.VITE_API_BASE
@@ -116,11 +120,11 @@ const handleLogin = async () => {
       <!-- โลโก้ -->
       <div class="flex flex-col items-center justify-center flex-1">
         <img
+          :src="Logo92Tech"
           alt="92 Tech logo"
           class="hidden md:block absolute top-4 left-4 w-10"
-          src="/icon/92Tech-logo.png"
         />
-        <img alt="FixDesk logo" class="w-48 h-auto" src="/icon/Logo.png" />
+        <img :src="LogoFIXDESK" alt="FixDesk logo" class="w-48 h-auto" />
       </div>
 
       <!-- ฟอร์มล็อกอิน -->
@@ -158,10 +162,7 @@ const handleLogin = async () => {
               aria-label="คำอธิบายการจำฉันไว้"
               tabindex="0"
             >
-              <img
-                src="/icon/circle-info-icon.svg"
-                class="opacity-30 hover:opacity-100 transition"
-              />
+              <Icon icon="fluent:info-16-filled" width="16" height="16" style="color: #8e8e8e" />
               <!-- Tooltip -->
               <div
                 class="absolute bottom-full left-0 mt-2 w-72 p-3 text-xs text-white bg-gray-800 rounded-lg opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity pointer-events-none text-left"

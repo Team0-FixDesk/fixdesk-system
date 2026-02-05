@@ -3,6 +3,8 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import TableComponent from '@/components/table-component.vue'
 import RepairFilterBar from '@/components/filters/repair-filter-bar-component.vue'
+import InfoButtonComponent from '@/components/button/info-button-component.vue'
+
 import Sweetalert from 'sweetalert2'
 
 defineOptions({ name: 'StockWithdrawHistoryView' })
@@ -55,10 +57,8 @@ async function loadStockForms() {
     if (!res.ok) throw new Error(data.message)
 
     tableRows.value = data
-      .filter(item =>
-        ['approved', 'rejected', 'completed'].includes(item.sf_status),
-      )
-      .map(item => ({
+      .filter((item) => ['approved', 'rejected', 'completed'].includes(item.sf_status))
+      .map((item) => ({
         row: [
           item.sf_code, // 0
           item.us_department || '-', // 1
@@ -99,7 +99,7 @@ async function loadStockForms() {
 const filteredRows = computed(() => {
   const q = searchInput.value.toLowerCase()
 
-  return tableRows.value.filter(item => {
+  return tableRows.value.filter((item) => {
     const row = item.row
     const status = row[3]
 
@@ -109,12 +109,10 @@ const filteredRows = computed(() => {
       row[2].toLowerCase().includes(q)
 
     const matchesStatus =
-      selectedStatuses.value.length === 0 ||
-      selectedStatuses.value.includes(status)
+      selectedStatuses.value.length === 0 || selectedStatuses.value.includes(status)
 
     const matchesDate =
-      !selectedDate.value ||
-      toLocalYMD(item.meta.createdDate) === selectedDate.value
+      !selectedDate.value || toLocalYMD(item.meta.createdDate) === selectedDate.value
 
     return matchesSearch && matchesStatus && matchesDate
   })
@@ -147,7 +145,7 @@ onMounted(() => {
     <!-- Table -->
     <TableComponent
       :columns="columns"
-      :rows="filteredRows.map(i => i.row)"
+      :rows="filteredRows.map((i) => i.row)"
       :perPage="10"
       :statusStockColumn="3"
       :columnAlign="['left', 'left', 'left', 'center', 'center']"
@@ -156,14 +154,7 @@ onMounted(() => {
       @detail="openDetail"
     >
       <template #cell-4="{ row }">
-        <div class="flex justify-center">
-          <button
-            @click="openDetail(row[0])"
-            class="flex items-center gap-2 px-2 py-2 rounded-md bg-blue-500 text-white hover:bg-blue-600"
-          >
-            <img src="/icon/info-icon.svg" class="h-4 w-4" />
-          </button>
-        </div>
+        <InfoButtonComponent @click="openDetail(row[0])" />
       </template>
     </TableComponent>
   </div>

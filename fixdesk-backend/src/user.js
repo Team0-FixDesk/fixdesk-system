@@ -479,9 +479,9 @@ router.put("/users/:id", authMiddleware, async (req, res) => {
 
   //import ข้อมูลผู้ใช้จาก Excel
   router.post("/users/import", authMiddleware, async (req, res) => {
-    //ไว้มาลบทีหลัง
+    // ไว้มาลบทีหลัง
     console.log("🔥 /users/import HIT");
-    console.log("BODY:", req.body);
+    // console.log("BODY:", req.body); // comment ไว้ถ้าข้อมูลเยอะ เดี๋ยวรก log
 
     const { users } = req.body;
     const results = [];
@@ -491,15 +491,16 @@ router.put("/users/:id", authMiddleware, async (req, res) => {
       return res.status(400).json({ message: "No users to import" });
     }
 
-    const hashedPassword = await bcrypt.hash(DEFAULT_PASSWORD, 10);
+    // ย้าย bcrypt ไปทำใน loop เพราะแต่ละคนรหัสผ่านไม่เหมือนกัน
+    // const hashedPassword = await bcrypt.hash(DEFAULT_PASSWORD, 10);
     const phoneRegex = /^\d{9,10}$/;
-
 
     for (const [i, u] of users.entries()) {
       try {
-         // ตรวจสอบ field ทั้งหมด
+        // 1. ตรวจสอบ field ทั้งหมด (รวม password และ position)
         if (
           !u.username ||
+          !u.password || // ✅ เพิ่ม: ต้องมี password
           !u.first_name_th ||
           !u.last_name_th ||
           !u.first_name_en ||
@@ -509,12 +510,15 @@ router.put("/users/:id", authMiddleware, async (req, res) => {
           !u.department ||
           !u.role_name ||
           !u.title_name ||
-          !u.job_title
+          !u.position // ✅ แก้ไข: รับเป็น u.position (ตาม frontend)
         ) {
           throw new Error("Missing required fields");
         }
 
-        
+        // 2. Hash Password ของแต่ละคน
+        const hashedPassword = await bcrypt.hash(u.password, 10);
+
+        // Map ตัวแปร
         const us_user_name = u.username;
         const us_first_name_th = u.first_name_th;
         const us_last_name_th = u.last_name_th;
@@ -522,9 +526,11 @@ router.put("/users/:id", authMiddleware, async (req, res) => {
         const us_last_name_en = u.last_name_en;
         const us_phone = u.phone;
         const us_department = u.department;
-        const us_job_title = u.job_title;
 
-        
+        // ✅ Map position จาก frontend ไปเข้าตัวแปร us_job_title ของ DB
+        const us_job_title = u.position;
+
+        // 3. หา Role ID
         const [roleRows] = await db
           .promise()
           .query("SELECT role_id FROM role WHERE role_name = ?", [u.role_name]);
@@ -532,27 +538,25 @@ router.put("/users/:id", authMiddleware, async (req, res) => {
         if (!roleRows.length) throw new Error("Invalid role");
         const us_role_id = roleRows[0].role_id;
 
-       // คำนำหน้าชื่อ
+        // 4. หา Title ID (คำนำหน้าชื่อ)
         const [titleRows] = await db
           .promise()
           .query("SELECT ttn_id FROM title_name WHERE ttn_title_th = ?", [
             u.title_name,
           ]);
 
-        //title ไม่ตรงกับที่มีใน db
         if (!titleRows.length) {
           throw new Error("Invalid title_name");
         }
 
         const us_ttn_id = titleRows[0].ttn_id;
-       
-        // ค่า default = null (สำหรับ role ที่ไม่ใช่ Technician)
+
+        // 5. จัดการ Technician Type
         let us_tt_id = null;
 
-        // ถ้า role เป็น Technician ต้องมี ตำแหน่ง
         if (u.role_name === "Technician") {
           if (!u.technician_type) {
-            throw new Error("Technician must have position");
+            throw new Error("Technician must have position (technician_type)");
           }
 
           const [ttRows] = await db
@@ -566,7 +570,7 @@ router.put("/users/:id", authMiddleware, async (req, res) => {
           us_tt_id = ttRows[0].tt_id;
         }
 
-        //ตรวจ username ซ้ำ
+        // 6. ตรวจ username ซ้ำ
         const [dup] = await db
           .promise()
           .query("SELECT us_id FROM user WHERE us_user_name = ?", [
@@ -575,7 +579,7 @@ router.put("/users/:id", authMiddleware, async (req, res) => {
 
         if (dup.length) throw new Error("Username already exists");
 
-        //insert ข้อมูลลง db
+        // 7. Insert ข้อมูลลง DB
         await db.promise().query(
           `INSERT INTO user (
           us_user_name,
@@ -593,7 +597,7 @@ router.put("/users/:id", authMiddleware, async (req, res) => {
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             us_user_name,
-            hashedPassword,
+            hashedPassword, // ✅ ใช้ password ที่ hash ใหม่ของคนนั้นๆ
             us_ttn_id,
             us_department,
             us_phone,
@@ -603,8 +607,8 @@ router.put("/users/:id", authMiddleware, async (req, res) => {
             us_last_name_en,
             us_role_id,
             us_tt_id,
-            us_job_title
-          ]
+            us_job_title, // ✅ ใช้ค่าที่รับมาจาก position
+          ],
         );
 
         results.push({ index: i, username: us_user_name });

@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onMounted, onBeforeUnmount, ref, nextTick } from 'vue'
+import { Icon } from '@iconify/vue'
 
 const props = defineProps({
   rowId: {
@@ -71,7 +72,6 @@ function emitAndClose(eventName, payload) {
   emit(eventName, payload)
   emit('toggle-menu', null)
 }
-
 
 function calculatePosition() {
   if (!buttonRef.value) return
@@ -147,7 +147,7 @@ onBeforeUnmount(() => {
       @click="toggleMenu"
       title="เมนู"
     >
-      <img src="/icon/Kebab.svg" class="w-5 h-5" />
+      <Icon icon="charm:menu-kebab" width="16" height="16" style="color: #ffffff" />
     </button>
 
     <!-- Dropdown Menu -->
@@ -162,11 +162,19 @@ onBeforeUnmount(() => {
         <!-- ทุก role ใช้ได้ -->
         <button
           v-if="role !== 'stock'"
-          @click="() =>{emit('toggle-menu', null); emit('detail', row)}"
+          @click="
+            () => {
+              emit('toggle-menu', null)
+              emit('detail', row)
+            }
+          "
           class="w-full text-left px-3 py-2 rounded-md hover:bg-gray-100 flex items-center gap-2"
         >
-          <img
-            src="/icon/info-icon.svg"
+          <Icon
+            icon="material-symbols:info-outline-rounded"
+            width="36"
+            height="36"
+            style="color: #ffffff"
             class="bg-blue-400 hover:bg-blue-600 rounded-md p-1 h-6 w-6"
           />
           รายละเอียด
@@ -198,7 +206,12 @@ onBeforeUnmount(() => {
           <!-- ปิดงาน (in_progress, outsource) -->
           <button
             v-if="normalizedStatus === 'in_progress' || normalizedStatus === 'outsource'"
-            @click="() =>{emit('toggle-menu', null); emit('close-job', row)}"
+            @click="
+              () => {
+                emit('toggle-menu', null)
+                emit('close-job', row)
+              }
+            "
             class="w-full text-left px-3 py-2 rounded-md hover:bg-green-50 flex items-center gap-2 group"
           >
             <div
@@ -262,11 +275,19 @@ onBeforeUnmount(() => {
         <!-- Admin / Location -->
         <template v-if="role === 'admin' || role === 'location'">
           <button
-            @click="() =>{emit('toggle-menu', null); emit('edit', row)}"
+            @click="
+              () => {
+                emit('toggle-menu', null)
+                emit('edit', row)
+              }
+            "
             class="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2"
           >
-            <img
-              src="/icon/edit-icon.svg"
+            <Icon
+              icon="fluent:edit-24-regular"
+              width="36"
+              height="36"
+              style="color: #ffffff"
               class="bg-amber-400 hover:bg-amber-600 rounded-md p-1 h-6 w-6"
             />
             แก้ไข
@@ -274,12 +295,20 @@ onBeforeUnmount(() => {
           <div class="border-t border-gray-300 mx-1"></div>
 
           <button
-            @click="() =>{emit('toggle-menu', null); emit('delete', row)}"
+            @click="
+              () => {
+                emit('toggle-menu', null)
+                emit('delete', row)
+              }
+            "
             class="w-full text-left px-3 py-2 hover:bg-gray-100 text-red-600 flex items-center gap-2"
           >
-            <img
-              src="/icon/bin-icon.svg"
-              class="bg-red-400 hover:bg-red-600 rounded-md p-1 h-6 w-6"
+            <Icon
+              icon="mdi:bin-outline"
+              width="24"
+              height="24"
+              style="color: #ffffff"
+              class="bg-red-400 hover:bg-red-900 rounded-md"
             />
             ลบ
           </button>
@@ -294,8 +323,11 @@ onBeforeUnmount(() => {
             @click="emitAndClose('assign', row)"
             class="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2"
           >
-            <img
-              src="/icon/arrow-right.svg"
+            <Icon
+              icon="fluent:arrow-right-12-regular"
+              width="16"
+              height="16"
+              style="color: #ffffff"
               class="bg-green-400 hover:bg-green-600 rounded-md p-1 h-6 w-6"
             />
             มอบหมายงาน
@@ -333,24 +365,41 @@ onBeforeUnmount(() => {
         <template v-if="role === 'user'">
           <button
             v-if="normalizedStatus === 'pending'"
-            @click="() =>{emit('toggle-menu', null); emit('edit', row)}"
+            @click="
+              () => {
+                emit('toggle-menu', null)
+                emit('edit', row)
+              }
+            "
             class="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2"
           >
-            <img
-              src="/icon/edit-icon.svg"
+            <Icon
+              icon="fluent:edit-24-regular"
+              width="36"
+              height="36"
+              style="color: #ffffff"
               class="bg-amber-400 hover:bg-amber-600 rounded-md p-1 h-6 w-6"
             />
+
             แก้ไข
           </button>
           <div class="border-t border-gray-300 mx-1"></div>
           <button
             v-if="normalizedStatus === 'pending'"
-            @click="() =>{emit('toggle-menu', null); emit('delete', row)}"
+            @click="
+              () => {
+                emit('toggle-menu', null)
+                emit('delete', row)
+              }
+            "
             class="w-full text-left px-3 py-2 hover:bg-gray-100 text-red-600 flex items-center gap-2"
           >
-            <img
-              src="/icon/bin-icon.svg"
-              class="bg-red-400 hover:bg-red-600 rounded-md p-1 h-6 w-6"
+            <Icon
+              icon="mdi:bin-outline"
+              width="24"
+              height="24"
+              style="color: #ffffff"
+              class="bg-red-400 hover:bg-red-900 rounded-md"
             />
             ลบ
           </button>
@@ -361,20 +410,42 @@ onBeforeUnmount(() => {
           <div class="border-t border-gray-200 my-1"></div>
 
           <button
-            @click="() =>{emit('toggle-menu', null); emit('edit', row)}"
+            @click="
+              () => {
+                emit('toggle-menu', null)
+                emit('edit', row)
+              }
+            "
             class="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2"
           >
-            <img src="/icon/edit-icon.svg" class="bg-amber-400 rounded-md p-1 h-6 w-6" />
+            <Icon
+              icon="fluent:edit-24-regular"
+              width="36"
+              height="36"
+              style="color: #ffffff"
+              class="bg-amber-400 hover:bg-amber-600 rounded-md p-1 h-6 w-6"
+            />
             แก้ไข
           </button>
 
           <div class="border-t border-gray-200 my-1"></div>
 
           <button
-            @click="() =>{emit('toggle-menu', null); emit('delete', row)}"
+            @click="
+              () => {
+                emit('toggle-menu', null)
+                emit('delete', row)
+              }
+            "
             class="w-full text-left px-3 py-2 hover:bg-gray-100 text-red-600 flex items-center gap-2"
           >
-            <img src="/icon/bin-icon.svg" class="bg-red-400 rounded-md p-1 h-6 w-6" />
+            <Icon
+              icon="mdi:bin-outline"
+              width="24"
+              height="24"
+              style="color: #ffffff"
+              class="bg-red-400 hover:bg-red-900 rounded-md"
+            />
             ลบ
           </button>
         </template>
