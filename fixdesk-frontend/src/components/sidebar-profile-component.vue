@@ -4,6 +4,14 @@ import { jwtDecode } from 'jwt-decode'
 import Swal from 'sweetalert2'
 import { usePhoneFormat } from '@/composables/usePhoneFormat'
 import { Icon } from '@iconify/vue'
+import ChevronDownIcon from '@/assets/icons/sidebar/chevron-down-icon.svg'
+import ChevronUpIcon from '@/assets/icons/sidebar/chevron-up-icon.svg'
+import LogoutIcon from '@/assets/icons/sidebar/logout-icon.svg'
+import PersonIcon from '@/assets/icons/sidebar/person-icon.svg'
+import SettingIcon from '@/assets/icons/sidebar/settings-icon.svg'
+
+
+
 
 defineExpose({ forceClose })
 
@@ -369,7 +377,7 @@ watch(
   >
     <!-- ไอคอนผู้ใช้ -->
     <div class="flex items-center justify-center w-10 h-10 rounded-full bg-blue-600 shrink-0">
-      <img src="/icon/sidebar/person-icon.svg" alt="User Icon" class="w-6 h-6" />
+      <img :src="PersonIcon" alt="User Icon" class="w-6 h-6" />
     </div>
 
     <!-- ชื่อ: แสดงเฉพาะตอนขยาย -->
@@ -381,7 +389,7 @@ watch(
     <img
       v-if="props.expanded"
       :src="
-        showDropdown ? '/icon/sidebar/chevron-down-icon.svg' : '/icon/sidebar/chevron-up-icon.svg'
+        showDropdown ? ChevronDownIcon : ChevronUpIcon
       "
       alt="Chevron Icon"
       class="w-5 h-5 ml-auto transition-transform duration-200"
@@ -396,7 +404,7 @@ watch(
         @click.stop="openProfilePopup"
         class="flex items-center w-full gap-2 px-4 py-2 text-left hover:bg-blue-800 transition-all"
       >
-        <img src="/icon/sidebar/settings-icon.svg" class="w-4 h-4" />
+        <img :src="SettingIcon" class="w-4 h-4" />
         <span class="text-white text-sm">ตั้งค่าบัญชี</span>
       </button>
 
@@ -412,7 +420,7 @@ watch(
         @click="logout"
         class="flex items-center w-full gap-2 px-4 py-2 text-left hover:bg-blue-800 transition-all"
       >
-        <img src="/icon/sidebar/logout-icon.svg" class="w-4 h-4" />
+        <img :src="LogoutIcon" class="w-4 h-4" />
         <span class="text-white text-sm">ออกจากระบบ</span>
       </button>
     </div>
@@ -546,12 +554,7 @@ watch(
         <div class="p-6 sm:p-8">
           <div class="flex items-center gap-3 mb-4 sm:mb-6 border-b border-gray-100 pb-4">
             <div class="p-2 bg-blue-600 rounded-full">
-              <Icon
-                icon="fluent:edit-24-regular"
-                width="24"
-                height="24"
-                style="color: #ffffff"
-              />
+              <Icon icon="fluent:edit-24-regular" width="24" height="24" style="color: #ffffff" />
             </div>
             <h2 class="text-black text-xl sm:text-2xl font-bold">ตั้งค่ารหัสผ่าน</h2>
           </div>

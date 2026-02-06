@@ -1156,8 +1156,9 @@ onBeforeUnmount(() => {
                     'อาคาร'
                   : 'อาคาร'
               }}
-              <img
-                src="/icon/sidebar/chevron-down-icon.svg"
+              <Icon
+                icon="meteor-icons:chevron-down"
+                style="color: gray"
                 class="w-4 h-4 opacity-70 transition-transform duration-200"
                 :class="{ 'rotate-180': showBuildingFilter }"
               />
@@ -1205,8 +1206,9 @@ onBeforeUnmount(() => {
                   ? floors.find((f) => f.floor_id == selectedFloor)?.floor_name || 'ชั้น'
                   : 'ชั้น'
               }}
-              <img
-                src="/icon/sidebar/chevron-down-icon.svg"
+              <Icon
+                icon="meteor-icons:chevron-down"
+                style="color: gray"
                 class="w-4 h-4 opacity-70 transition-transform duration-200"
                 :class="{ 'rotate-180': showFloorFilter }"
               />
@@ -1320,7 +1322,12 @@ onBeforeUnmount(() => {
         <!-- Header with icon -->
         <div class="flex items-center gap-3 mb-6">
           <div class="bg-blue-400 p-3 rounded-full">
-            <Icon icon="material-symbols:info-outline-rounded" width="24" height="24"  style="color: #FFFFFF" />
+            <Icon
+              icon="material-symbols:info-outline-rounded"
+              width="24"
+              height="24"
+              style="color: #ffffff"
+            />
           </div>
           <h2 class="text-xl font-bold text-gray-800">รายละเอียดสถานที่</h2>
         </div>
@@ -1731,7 +1738,7 @@ onBeforeUnmount(() => {
         <!-- Header with icon -->
         <div class="flex items-center gap-3 mb-6">
           <div class="bg-orange-400 p-3 rounded-full">
-            <Icon icon="fluent:edit-24-regular" width="24" height="24" style="color: #FFFFFF" />
+            <Icon icon="fluent:edit-24-regular" width="24" height="24" style="color: #ffffff" />
           </div>
           <h2 class="text-xl font-bold text-gray-800">
             แก้ไข{{
