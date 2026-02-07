@@ -5,19 +5,19 @@ import LogoFIXDESK from '@/assets/icons/LogoFIXDESK-logo.png'
 import HomeIcon from '@/assets/icons/sidebar/home-icon.svg'
 import RepairIcon from '@/assets/icons/sidebar/repair-icon.svg'
 import ListIcon from '@/assets/icons/sidebar/list-icon.svg'
-import DashboardIcon from '@/assets/icons/sidebar/dashboard-icon.svg'
-import ReportIcon from '@/assets/icons/sidebar/report-icon.svg'
+// import DashboardIcon from '@/assets/icons/sidebar/dashboard-icon.svg'
+// import ReportIcon from '@/assets/icons/sidebar/report-icon.svg'
 
 // สถานะเปิด/ปิด sidebar
 const isOpen = ref(false)
 
 // รายการเมนู
 const menus = [
-  { icon: HomeIcon, label: 'หน้าหลัก', path: '/main/manager-home' },
+  { icon: HomeIcon, label: 'หน้าหลัก', path: '/main/Dashboard' },
   { icon: RepairIcon, label: 'แจ้งซ่อม', path: '/main/repair-request' },
   { icon: ListIcon, label: 'รายการของฉัน', path: '/main/my-list' },
-  { icon: DashboardIcon, label: 'หน้าสรุปผล', path: '/main/information-summary' },
-  { icon: ReportIcon, label: 'สร้างรายงาน', path: '/main/manage-report' },
+  // { icon: DashboardIcon, label: 'หน้าสรุปผล', path: '/main/information-summary' },
+  // { icon: ReportIcon, label: 'สร้างรายงาน', path: '/main/manage-report' },
 ]
 </script>
 

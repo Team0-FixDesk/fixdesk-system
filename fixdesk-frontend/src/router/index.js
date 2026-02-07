@@ -9,8 +9,8 @@ import MainLayout from '../layouts/main-layout.vue'
 // SHARED
 import RepairRequestView from '../views/shared/repair-request-view.vue'
 import MyListView from '../views/shared/my-list-view.vue'
-import CreateReportView from '../views/shared/create-report-view.vue'
-import manageReportView from '../views/shared/manage-report-view.vue'
+import CreateReportView from '../views/admin/create-report-view.vue'
+import manageReportView from '../views/admin/manage-report-view.vue'
 
 // USER
 import UserHomeView from '../views/user/user-home-view.vue'
@@ -64,7 +64,7 @@ const router = createRouter({
           component: AdminManageLocationView,
           meta: { roles: ['Admin'] },
         },
-        { path: 'manager-home', component: ManagerHomeView, meta: { roles: ['Manager'] } },
+        { path: 'Dashboard', component: ManagerHomeView, meta: { roles: ['Manager', 'Admin'] } },
         { path: 'information-summary', component: ManagerSummaryView, meta: { roles: ['Manager', 'Admin'] } },
 
         { path: 'technician-home', component: TechnicianHomeView, meta: { roles: ['Technician'] } },
