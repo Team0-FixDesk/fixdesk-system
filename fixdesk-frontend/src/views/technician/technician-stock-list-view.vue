@@ -425,8 +425,9 @@ onBeforeUnmount(() => {
               class="flex items-center gap-1 border border-gray-300 rounded-lg px-4 py-2 bg-white text-gray-700 hover:bg-gray-50"
             >
               หมวดหมู่
-              <img
-                src="/icon/sidebar/chevron-down-icon.svg"
+              <Icon
+                icon="meteor-icons:chevron-down"
+                style="color: gray"
                 class="w-4 h-4 opacity-70 transition-transform"
                 :class="{ 'rotate-180': isCategoryFilterVisible }"
               />
@@ -518,8 +519,9 @@ onBeforeUnmount(() => {
               class="flex items-center gap-1 border border-gray-300 rounded-lg px-4 py-2 bg-white text-gray-700 hover:bg-gray-50"
             >
               สถานะ
-              <img
-                src="/icon/sidebar/chevron-down-icon.svg"
+              <Icon
+                icon="meteor-icons:chevron-down"
+                style="color: gray"
                 class="w-4 h-4 opacity-70 transition-transform"
                 :class="{ 'rotate-180': isStatusFilterVisible }"
               />

@@ -1,16 +1,17 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import Swal from 'sweetalert2'
+import { Icon } from '@iconify/vue'
 
 const props = defineProps({
   repairCode: {
     type: String,
-    required: true
+    required: true,
   },
   currentUserId: {
     type: [Number, String],
-    default: null
-  }
+    default: null,
+  },
 })
 
 const emit = defineEmits(['close', 'success'])
@@ -46,7 +47,7 @@ const filteredTechnicians = computed(() =>
       `${t.us_first_name} ${t.us_last_name}`.toLowerCase().includes(searchTech.value.toLowerCase())
 
     return matchType && matchSearch
-  })
+  }),
 )
 
 // Methods
@@ -82,11 +83,11 @@ async function fetchTechnicians() {
 
     // Auto-select ตัวเองในโหมดทีม
     if (props.currentUserId) {
-        // ตรวจสอบว่าตัวเองอยู่ในลิสต์ไหม
-        const me = techs.find(t => t.us_id === props.currentUserId)
-        if (me) {
-            selectedTeam.value = [me.us_id]
-        }
+      // ตรวจสอบว่าตัวเองอยู่ในลิสต์ไหม
+      const me = techs.find((t) => t.us_id === props.currentUserId)
+      if (me) {
+        selectedTeam.value = [me.us_id]
+      }
     }
   } catch (err) {
     console.error('❌ โหลดข้อมูลช่างไม่สำเร็จ:', err)
@@ -98,7 +99,7 @@ async function checkAssignmentCount(rf_code) {
   try {
     const res = await fetch(
       `${API_BASE}/repair-assignment/count?rf_code=${encodeURIComponent(rf_code)}`,
-      { headers: getAuthHeaders() }
+      { headers: getAuthHeaders() },
     )
     if (!res.ok) return null
     const payload = await res.json()
@@ -167,14 +168,14 @@ async function confirmAccept() {
           animation: false,
           showConfirmButton: false,
           timer: 3000,
-          timerProgressBar: true
+          timerProgressBar: true,
         })
         Toast.fire({
           title: 'เกิดข้อผิดพลาด',
           text: payload.message || 'ไม่สามารถรับงานได้',
           icon: 'error',
           background: '#fee2e2',
-          color: '#dc2626'
+          color: '#dc2626',
         })
         return
       }
@@ -196,14 +197,14 @@ async function confirmAccept() {
         animation: false,
         showConfirmButton: false,
         timer: 3000,
-        timerProgressBar: true
+        timerProgressBar: true,
       })
       Toast.fire({
         title: 'เกิดข้อผิดพลาด',
         text: 'ขณะรับงาน',
         icon: 'error',
         background: '#fee2e2',
-        color: '#dc2626'
+        color: '#dc2626',
       })
     }
     return
@@ -218,13 +219,13 @@ async function confirmAccept() {
         animation: false,
         showConfirmButton: false,
         timer: 2000,
-        timerProgressBar: true
+        timerProgressBar: true,
       })
       Toast.fire({
         title: 'โปรดเลือกช่างอย่างน้อย 1 คน',
         icon: 'warning',
         background: '#fef3c7',
-        color: '#d97706'
+        color: '#d97706',
       })
       return
     }
@@ -248,14 +249,14 @@ async function confirmAccept() {
           animation: false,
           showConfirmButton: false,
           timer: 3000,
-          timerProgressBar: true
+          timerProgressBar: true,
         })
         Toast.fire({
           title: 'เกิดข้อผิดพลาด',
           text: payload.message || 'มอบหมายทีมไม่สำเร็จ',
           icon: 'error',
           background: '#fee2e2',
-          color: '#dc2626'
+          color: '#dc2626',
         })
         return
       }
@@ -273,14 +274,14 @@ async function confirmAccept() {
           animation: false,
           showConfirmButton: false,
           timer: 3000,
-          timerProgressBar: true
+          timerProgressBar: true,
         })
         Toast.fire({
           title: 'เกิดข้อผิดพลาด',
           text: p2.message || 'รับงานหลังมอบหมายทีมไม่สำเร็จ',
           icon: 'error',
           background: '#fee2e2',
-          color: '#dc2626'
+          color: '#dc2626',
         })
         return
       }
@@ -295,14 +296,14 @@ async function confirmAccept() {
         animation: false,
         showConfirmButton: false,
         timer: 3000,
-        timerProgressBar: true
+        timerProgressBar: true,
       })
       Toast.fire({
         title: 'เกิดข้อผิดพลาด',
         text: 'ขณะมอบหมายทีม/รับงาน',
         icon: 'error',
         background: '#fee2e2',
-        color: '#dc2626'
+        color: '#dc2626',
       })
     }
   }
@@ -351,8 +352,9 @@ onBeforeUnmount(() => {
               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none flex justify-between items-center bg-white text-gray-700 h-10"
             >
               <span class="truncate">{{ selectedType || 'ประเภทช่างทั้งหมด' }}</span>
-              <img
-                src="/icon/sidebar/chevron-down-icon.svg"
+              <Icon
+                icon="meteor-icons:chevron-down"
+                style="color: gray"
                 class="w-4 h-4 opacity-70 transition-transform duration-200 flex-shrink-0"
                 :class="{ 'rotate-180': showAssignTypeFilter }"
               />

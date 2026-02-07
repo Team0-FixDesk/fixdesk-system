@@ -25,7 +25,7 @@ const menus = [
   { icon: LogsListIcon, label: 'รายการเบิกของ', path: '/main/stock-withdraw-list' },
   { icon: HistoryListIcon, label: 'ประวัติการเบิกของ', path: '/main/stock-withdraw-history' },
   { icon: UserIcon, label: 'ข้อมูลผู้ใช้', path: '/main/admin-user-info' },
-  { icon: DashboardIcon, label: 'หน้าสรุปผล', path: '/main/information-summary' },
+  { icon: DashboardIcon, label: 'หน้าสรุปผล', path: '/main/Dashboard' },
   { icon: BuildingIcon, label: 'จัดการสถานที่', path: '/main/admin-manage-location' },
   { icon: ReportIcon, label: 'สร้างรายงาน', path: '/main/manage-report' },
 ]

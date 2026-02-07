@@ -816,8 +816,9 @@ function handleImportError(message) {
               class="flex items-center h-10 gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg"
             >
               บทบาท
-              <img
-                src="/icon/sidebar/chevron-down-icon.svg"
+              <Icon
+                icon="meteor-icons:chevron-down"
+                style="color: gray"
                 class="w-4 h-4 transition-transform duration-200 opacity-70"
                 :class="{ 'rotate-180': showRoleFilter }"
               />
@@ -844,8 +845,9 @@ function handleImportError(message) {
               class="flex items-center h-10 gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg"
             >
               ตำแหน่ง
-              <img
-                src="/icon/sidebar/chevron-down-icon.svg"
+              <Icon
+                icon="meteor-icons:chevron-down"
+                style="color: gray"
                 class="w-4 h-4 transition-transform duration-200 opacity-70"
                 :class="{ 'rotate-180': showTechFilter }"
               />

@@ -1,9 +1,10 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import Swal from 'sweetalert2'
+import { Icon } from '@iconify/vue'
 
 const props = defineProps({
-  repairId: { type: [String, Number], required: true }
+  repairId: { type: [String, Number], required: true },
 })
 
 // ส่ง Event กลับไปหาแม่
@@ -43,14 +44,14 @@ async function fetchTechnicians() {
       animation: false,
       showConfirmButton: false,
       timer: 3000,
-      timerProgressBar: true
+      timerProgressBar: true,
     })
     Toast.fire({
       title: 'เกิดข้อผิดพลาด',
       text: 'ไม่สามารถโหลดรายชื่อช่างได้',
       icon: 'error',
       background: '#fee2e2',
-      color: '#dc2626'
+      color: '#dc2626',
     })
   }
 }
@@ -63,7 +64,7 @@ const filteredTechnicians = computed(() =>
       !searchTech.value ||
       `${t.us_first_name} ${t.us_last_name}`.toLowerCase().includes(searchTech.value.toLowerCase())
     return matchType && matchSearch
-  })
+  }),
 )
 
 // Methods
@@ -90,13 +91,13 @@ async function confirmAssign() {
       animation: false,
       showConfirmButton: false,
       timer: 2000,
-      timerProgressBar: true
+      timerProgressBar: true,
     })
     Toast.fire({
       title: 'กรุณาเลือกช่างผู้รับผิดชอบ',
       icon: 'warning',
       background: '#fef3c7',
-      color: '#d97706'
+      color: '#d97706',
     })
     return
   }
@@ -104,14 +105,14 @@ async function confirmAssign() {
   loadingAssign.value = true
   try {
     // ดึง user id จาก token
-    let assignedBy = null;
-    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    let assignedBy = null
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token')
     if (token) {
       try {
-        const decoded = (await import('jwt-decode')).default(token);
-        assignedBy = decoded.us_id || decoded.id;
+        const decoded = (await import('jwt-decode')).default(token)
+        assignedBy = decoded.us_id || decoded.id
       } catch (err) {
-        assignedBy = null;
+        assignedBy = null
       }
     }
 
@@ -136,14 +137,14 @@ async function confirmAssign() {
           animation: false,
           showConfirmButton: false,
           timer: 2500,
-          timerProgressBar: true
+          timerProgressBar: true,
         })
         Toast.fire({
           title: 'แจ้งเตือน',
           text: msg,
           icon: 'info',
           background: '#e0f2fe',
-          color: '#0277bd'
+          color: '#0277bd',
         })
         emit('success')
         emit('close')
@@ -162,17 +163,16 @@ async function confirmAssign() {
       didOpen: (toast) => {
         toast.addEventListener('mouseenter', Swal.stopTimer)
         toast.addEventListener('mouseleave', Swal.resumeTimer)
-      }
+      },
     })
     Toast.fire({
       title: 'มอบหมายงานเรียบร้อยแล้ว',
       icon: 'success',
       background: '#f0f9ff',
-      color: '#1e3a8a'
+      color: '#1e3a8a',
     })
     emit('success')
     emit('close')
-
   } catch (err) {
     const Toast = Swal.mixin({
       toast: true,
@@ -180,14 +180,14 @@ async function confirmAssign() {
       animation: false,
       showConfirmButton: false,
       timer: 3000,
-      timerProgressBar: true
+      timerProgressBar: true,
     })
     Toast.fire({
       title: 'เกิดข้อผิดพลาด',
       text: err.message,
       icon: 'error',
       background: '#fee2e2',
-      color: '#dc2626'
+      color: '#dc2626',
     })
   } finally {
     loadingAssign.value = false
@@ -223,8 +223,9 @@ onBeforeUnmount(() => {
             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none flex justify-between items-center bg-white text-gray-700 h-10"
           >
             <span class="truncate">{{ selectedType || 'ประเภทช่างทั้งหมด' }}</span>
-            <img
-              src="/icon/sidebar/chevron-down-icon.svg"
+            <Icon
+              icon="meteor-icons:chevron-down"
+              style="color: gray"
               class="w-4 h-4 opacity-70 transition-transform duration-200 flex-shrink-0"
               :class="{ 'rotate-180': showAssignTypeFilter }"
             />
