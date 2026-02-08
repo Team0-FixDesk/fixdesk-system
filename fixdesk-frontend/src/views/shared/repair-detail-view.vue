@@ -1,17 +1,23 @@
 <script setup>
+defineOptions({ name: 'RepairDetailView' })
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+
+import Swal from 'sweetalert2'
+import { Icon } from '@iconify/vue'
+import { jwtDecode } from 'jwt-decode'
+
 import RepairStatusTimeline from '@/components/status-timeline-component.vue'
 import assignJobModalComponent from '@/components/modal/assign-job-modal-component.vue'
 import AcceptJobModalComponent from '@/components/modal/accept-job-modal-component.vue'
 import BackButtonComponent from '@/components/button/back-button-component.vue'
 
-import Swal from 'sweetalert2'
-import { Icon } from '@iconify/vue'
-
 import { usePhoneFormat } from '@/composables/usePhoneFormat'
 import { useAuthToken } from '@/composables/useAuthToken'
-import { jwtDecode } from 'jwt-decode'
+
+import { formatFullThaiDate } from '@/utils/date.util'
+import { buildTimelineFromRepair } from '@/utils/repairTimeline.util'
+import { getUserStatusBadge, getUrgencyBadge } from '@/utils/badge.util'
 
 // --- Constants ---
 const API_BASE_URL = import.meta.env.VITE_API_BASE
@@ -289,49 +295,6 @@ async function fetchRepairDetail() {
   }
 }
 
-// --- Formatting Helpers ---
-
-function getUserStatusBadge(status) {
-  let badgeHtml = ''
-  switch (status) {
-    case 'pending':
-      badgeHtml = `<span class="inline-flex justify-center items-center w-28 sm:w-36 h-7 sm:h-8 px-3 rounded-full bg-amber-50 text-amber-500 font-semibold text-xs sm:text-sm">รอดำเนินการ</span>`
-      break
-    case 'in_progress':
-      badgeHtml = `<span class="inline-flex justify-center items-center w-28 sm:w-36 h-7 sm:h-8 px-3 rounded-full bg-blue-100 text-blue-600 font-semibold text-xs sm:text-sm">กำลังดำเนินการ</span>`
-      break
-    case 'outsource':
-      badgeHtml = `<span class="inline-flex justify-center items-center w-28 sm:w-36 h-7 sm:h-8 px-3 rounded-full bg-purple-100 text-purple-600 font-semibold text-xs sm:text-sm">จ้างช่างภายนอก</span>`
-      break
-    case 'done':
-      badgeHtml = `<span class="inline-flex justify-center items-center w-28 sm:w-36 h-7 sm:h-8 px-3 rounded-full bg-green-100 text-green-600 font-semibold text-xs sm:text-sm">ดำเนินการเสร็จสิ้น</span>`
-      break
-    default:
-      badgeHtml = `<span class="inline-flex justify-center items-center w-28 sm:w-36 h-7 sm:h-8 px-3 rounded-full bg-gray-100 text-gray-500 font-semibold text-xs sm:text-sm">ยกเลิก</span>`
-  }
-
-  return badgeHtml
-}
-
-function getUrgencyBadge(urgency) {
-  let badgeHtml = ''
-  switch (urgency) {
-    case 'high':
-      badgeHtml = `<span class="inline-flex justify-center items-center w-28 sm:w-36 h-7 sm:h-8 px-3 rounded-full bg-red-100 text-red-600 font-semibold text-xs sm:text-sm">เร่งด่วนมาก</span>`
-      break
-    case 'medium':
-      badgeHtml = `<span class="inline-flex justify-center items-center w-28 sm:w-36 h-7 sm:h-8 px-3 rounded-full bg-amber-50 text-amber-500 font-semibold text-xs sm:text-sm">เร่งด่วน</span>`
-      break
-    case 'low':
-      badgeHtml = `<span class="inline-flex justify-center items-center w-28 sm:w-36 h-7 sm:h-8 px-3 rounded-full bg-green-100 text-green-600 font-semibold text-xs sm:text-sm">ไม่เร่งด่วน</span>`
-      break
-    default:
-      badgeHtml = `<span class="inline-flex justify-center items-center px-4 py-1.5 rounded-full bg-gray-100 text-gray-500 font-medium text-xs sm:text-sm">-</span>`
-  }
-
-  return badgeHtml
-}
-
 // Media Modal Logic
 const showLightbox = ref(false)
 const currentMediaIndex = ref(0)
@@ -359,80 +322,6 @@ function prevMedia() {
   if (currentMediaIndex.value > 0) {
     currentMediaIndex.value--
   }
-}
-
-function formatDateTimeTH(value) {
-  if (!value) return null
-
-  const date = new Date(value).toLocaleDateString('th-TH', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  })
-
-  const time = new Date(value).toLocaleTimeString('th-TH', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  })
-
-  return `${date} เวลา ${time}`
-}
-
-function formatFullThaiDate(dateValue) {
-  if (!dateValue) return '-'
-
-  const date = new Date(dateValue)
-
-  return date.toLocaleDateString('th-TH', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  })
-}
-
-function buildTimelineFromRepair(repairData) {
-  const timelineStepList = []
-  const statusConfigs = [
-    { key: 'rf_create_at', title: 'รอดำเนินการ', description: 'ระบบได้รับใบแจ้งซ่อมของคุณแล้ว' },
-    {
-      key: 'rf_in_process_at',
-      title: 'กำลังดำเนินการ',
-      description: 'เจ้าหน้าที่กำลังดำเนินการซ่อมแซม',
-    },
-    { key: 'rf_done_at', title: 'ดำเนินการเสร็จสิ้น', description: 'งานซ่อมเสร็จเรียบร้อยแล้ว' },
-  ]
-
-  let lastReachedIndex = -1
-  statusConfigs.forEach((status, index) => {
-    if (repairData[status.key]) {
-      lastReachedIndex = index
-    }
-  })
-
-  statusConfigs.forEach((status, index) => {
-    const isReached = index <= lastReachedIndex
-    const isCurrent = index === lastReachedIndex
-    const isLastStep = index === statusConfigs.length - 1
-
-    let stepState = 'upcoming'
-    if (isReached) {
-      if (isLastStep || !isCurrent) {
-        stepState = 'completed'
-      } else {
-        stepState = 'current'
-      }
-    }
-
-    timelineStepList.push({
-      displayTime: repairData[status.key] ? formatDateTimeTH(repairData[status.key]) : null,
-      title: status.title,
-      description: isReached ? status.description : null,
-      stepState,
-    })
-  })
-
-  return timelineStepList
 }
 
 // --- Withdrawal Logic ---

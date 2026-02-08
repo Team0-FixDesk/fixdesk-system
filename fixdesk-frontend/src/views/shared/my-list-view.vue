@@ -1,12 +1,11 @@
 <script setup>
-/* ===================== Imports ===================== */
+defineOptions({ name: 'MyListView' })
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import Sweetalert from 'sweetalert2'
 
 import { extractThaiDateFromCell } from '@/utils/date.util'
 import { buildRepairDescription } from '@/utils/repairRow.util'
-
 
 import TableComponent from '@/components/table-component.vue'
 import TableActions from '@/components/table-actions-component.vue'
@@ -15,14 +14,10 @@ import RepairFilterBar from '@/components/filters/repair-filter-bar-component.vu
 
 import { useAuthToken } from '@/composables/useAuthToken'
 
-defineOptions({ name: 'MyListView' })
-
-/* ===================== Router & Config ===================== */
 const router = useRouter()
 const route = useRoute()
 const API_BASE = import.meta.env.VITE_API_BASE
 
-/* ===================== Table Structure ===================== */
 const tableColumns = [
   'หมายเลขแจ้งซ่อม',
   'ประเภทงาน',
