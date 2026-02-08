@@ -10,6 +10,11 @@ import { useUserProfile } from '@/composables/useUserProfile'
 
 import InfoButtonComponent from '@/components/button/info-button-component.vue'
 
+import { getAllProducts, getAllStockForms } from '@/services/stock'
+import { useAuthToken } from '@/composables/useAuthToken'
+
+const { token, isAuthenticated, logout } = useAuthToken()
+
 defineOptions({ name: 'StockHomeView' })
 
 // ==================== Router / API ====================
@@ -44,34 +49,35 @@ const columns = ['รหัสใบเบิก', 'รายละเอีย�
 async function fetchDashboard() {
   loading.value = true
   try {
-    const resProducts = await fetch(`${API_BASE}/show-stock`, {
-      headers: getAuthHeaders(),
-    })
-    if (resProducts.ok) products.value = await resProducts.json()
-
-    const resForms = await fetch(`${API_BASE}/stock-forms`, {
-      headers: getAuthHeaders(),
-    })
-    if (resForms.ok) {
-      stockForms.value = await resForms.json()
-
-      tableRowsList.value = stockForms.value
-        .filter((i) => i.sf_status === 'waiting')
-        .sort((a, b) => new Date(b.sf_create_at) - new Date(a.sf_create_at))
-        .slice(0, 5)
-        .map((item) => ({
-          row: [
-            item.sf_code,
-            'วันที่: ' +
-              new Date(item.sf_create_at).toLocaleDateString('th-TH') +
-              '<br>ผู้ขอเบิก: ' +
-              item.requester +
-              '<br>หน่วยงาน: ' +
-              item.us_department,
-            '',
-          ],
-        }))
+    if (!isAuthenticated.value) {
+      logout()
+      return
     }
+
+    const [p, forms] = await Promise.all([
+      getAllProducts(token.value),
+      getAllStockForms(token.value),
+    ])
+
+    products.value = p
+    stockForms.value = forms
+
+    tableRowsList.value = stockForms.value
+      .filter((i) => i.sf_status === 'waiting')
+      .sort((a, b) => new Date(b.sf_create_at) - new Date(a.sf_create_at))
+      .slice(0, 5)
+      .map((item) => ({
+        row: [
+          item.sf_code,
+          'วันที่: ' +
+            new Date(item.sf_create_at).toLocaleDateString('th-TH') +
+            '<br>ผู้ขอเบิก: ' +
+            item.requester +
+            '<br>หน่วยงาน: ' +
+            item.us_department,
+          '',
+        ],
+      }))
   } catch (err) {
     console.error(err)
   } finally {

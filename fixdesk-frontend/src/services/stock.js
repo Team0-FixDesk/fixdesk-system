@@ -15,3 +15,25 @@ export const getStockForms = async (token, userId) => {
 
   return res.json()
 }
+
+const API_BASE = import.meta.env.VITE_API_BASE
+
+const authHeaders = (token) => ({
+  Authorization: `Bearer ${token}`,
+})
+
+export const getAllProducts = async (token) => {
+  const res = await fetch(`${API_BASE}/show-stock`, {
+    headers: authHeaders(token),
+  })
+  if (!res.ok) throw new Error('Fetch products failed')
+  return res.json()
+}
+
+export const getAllStockForms = async (token) => {
+  const res = await fetch(`${API_BASE}/stock-forms`, {
+    headers: authHeaders(token),
+  })
+  if (!res.ok) throw new Error('Fetch stock forms failed')
+  return res.json()
+}
