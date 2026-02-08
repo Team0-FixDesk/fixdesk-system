@@ -15,7 +15,7 @@ const API_BASE = import.meta.env.VITE_API_BASE
 
 // ==================== Table ====================
 const columns = ['รหัสใบเบิกของ', 'หน่วยงาน', 'รายละเอียด', 'สถานะการเบิก', 'ตัวดำเนินการ']
-const tableRows = ref([])
+const tableRowsList = ref([])
 
 // ==================== Filters (ใช้กับ RepairFilterBar) ====================
 const searchInput = ref('')
@@ -56,7 +56,7 @@ async function loadStockForms() {
     const data = await res.json()
     if (!res.ok) throw new Error(data.message)
 
-    tableRows.value = data
+    tableRowsList.value = data
       .filter((item) => ['approved', 'rejected', 'completed'].includes(item.sf_status))
       .map((item) => ({
         row: [
@@ -99,7 +99,7 @@ async function loadStockForms() {
 const filteredRows = computed(() => {
   const q = searchInput.value.toLowerCase()
 
-  return tableRows.value.filter((item) => {
+  return tableRowsList.value.filter((item) => {
     const row = item.row
     const status = row[3]
 

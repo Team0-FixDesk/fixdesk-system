@@ -1,13 +1,9 @@
 <script setup>
-/* ===================== Imports ===================== */
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import axios from 'axios'
+import { searchRepair } from '@/services/public'
 
 import LogoFIXDESK from '@/assets/icons/LogoFIXDESK-logo.png'
-
-// ====== CONFIG API URL ======
-const API_BASE = import.meta.env.VITE_API_BASE
 
 /* ===================== Router ===================== */
 const router = useRouter()
@@ -64,20 +60,14 @@ const handleSearch = async (page = 1) => {
   currentPage.value = page
 
   try {
-    const response = await axios.get(`${API_BASE}/public/search`, {
-      params: {
-        keyword: keyword.value,
-        page: currentPage.value,
-        limit: pageSize,
-      },
-    })
+    const data = await searchRepair(keyword.value, currentPage.value, pageSize)
 
-    results.value = (response.data.data || []).map((item) => ({
+    results.value = (data.data || []).map((item) => ({
       ...item,
       step: convertStatusToStep(item.rf_user_status),
     }))
 
-    totalItems.value = response.data.total
+    totalItems.value = data.total
     totalPages.value = Math.ceil(totalItems.value / pageSize)
 
     // เปลี่ยนหน้าแล้ว scroll กลับขึ้นบน

@@ -499,7 +499,7 @@ function extractNumber(str) {
 
 // แก้ไข tableRows ให้มี ID เป็นคอลัมน์แรก
 // Table rows (ใช้ TableComponent ใหม่)
-const tableRows = computed(() => {
+const tableRowsList = computed(() => {
   return displayData.value.map((item) => {
     return [
       item.id, // 0: primary ID
@@ -1283,7 +1283,7 @@ onBeforeUnmount(() => {
       <div class="-mx-2 sm:mx-0 overflow-x-auto">
         <TableComponent
           :columns="columns"
-          :rows="tableRows"
+          :rows="tableRowsList"
           :perPage="10"
           :idColumnIndex="0"
           :hiddenColumns="[0]"

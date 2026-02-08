@@ -1,29 +1,17 @@
 <script setup>
-/* =========================
-  Imports (external)
-========================= */
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 
-/* =========================
-  Imports (components)
-========================= */
+import { getAdminRepairs } from '@/services/repair'
+
 import CardHomeComponent from '@/components/card-home-component.vue'
-import repairButtonComponent from '@/components/button/repair-button-component.vue'
+import RepairButtonComponent from '@/components/button/repair-button-component.vue'
 import TableComponent from '@/components/table-component.vue'
 import InfoButtonComponent from '@/components/button/info-button-component.vue'
 
-
-/* =========================
-  Imports (composables)
-========================= */
 import { useUserProfile } from '@/composables/useUserProfile.js'
 import { useAuthToken } from '@/composables/useAuthToken'
 
-/* =========================
-  Constants
-========================= */
-const API_BASE = import.meta.env.VITE_API_BASE
 const TH_LOCALE = 'th-TH'
 
 const STATUS = {
@@ -34,20 +22,11 @@ const STATUS = {
   cancelled: 'cancelled',
 }
 
-/* =========================
-  Router
-========================= */
 const router = useRouter()
 
-/* =========================
-  Composables
-========================= */
 const { token, isAuthenticated, logout } = useAuthToken()
-const { displayName, displayDepartment, fetchUserProfile } = useUserProfile(API_BASE)
+const { displayName, displayDepartment, fetchUserProfile } = useUserProfile()
 
-/* =========================
-  State
-========================= */
 const repairRequests = ref([])
 const loading = ref(false)
 const error = ref(null)
@@ -141,22 +120,11 @@ async function fetchRepairRequests() {
       return
     }
 
-    const response = await fetch(`${API_BASE}/admin/repairs`, {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${token.value}`,
-        'Content-Type': 'application/json',
-      },
-    })
-
-    const payload = await response.json().catch(() => null)
-
-    if (!response.ok) {
-      throw new Error(payload?.message || 'โหลดข้อมูลล้มเหลว')
-    }
+    const payload = await getAdminRepairs(token.value)
 
     const repairs = normalizeRepairs(payload)
     repairRequests.value = repairs.map(mapRepairToRow)
+
   } catch (e) {
     error.value = e?.message || 'เกิดข้อผิดพลาด'
   } finally {
@@ -292,7 +260,7 @@ onMounted(() => {
       </div>
 
       <div class="flex space-x-2">
-        <repairButtonComponent />
+        <RepairButtonComponent />
       </div>
     </div>
 
@@ -320,7 +288,7 @@ onMounted(() => {
         @detail="goToRepairDetail"
       >
         <template #cell-5="{ row }">
-            <InfoButtonComponent @click="goToRepairDetail(row[0])"/>
+          <InfoButtonComponent @click="goToRepairDetail(row[0])" />
         </template>
       </TableComponent>
     </div>

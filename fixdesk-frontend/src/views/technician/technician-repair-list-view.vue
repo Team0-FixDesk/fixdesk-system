@@ -21,7 +21,7 @@ const API_BASE = import.meta.env.VITE_API_BASE
    Reactive State
 ======================== */
 const tokenData = ref(null)
-const tableRows = ref([])
+const tableRowsList = ref([])
 const openMenuId = ref(null)
 
 const searchQuery = ref('')
@@ -84,7 +84,7 @@ async function loadRepairs() {
     }
 
     const data = await res.json()
-    tableRows.value = data
+    tableRowsList.value = data
       .filter(r => allowedStatuses.includes(r.rf_user_status))
       .map(formatRow)
   } catch (err) {
@@ -131,7 +131,7 @@ function formatRow(r) {
 const filteredRows = computed(() => {
   const query = searchQuery.value.toLowerCase()
 
-  return tableRows.value.filter(row => {
+  return tableRowsList.value.filter(row => {
     const matchSearch = row[0].toLowerCase().includes(query) || row[1].toLowerCase().includes(query)
     const matchStatus = selectedStatusFilter.value === 'all' || row[2] === selectedStatusFilter.value
     return matchSearch && matchStatus

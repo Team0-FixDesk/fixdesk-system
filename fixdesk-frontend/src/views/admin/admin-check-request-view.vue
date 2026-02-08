@@ -57,7 +57,7 @@ const openMenuId = ref(null)
   State (Table)
 ========================= */
 const tableColumns = TABLE_COLUMNS
-const tableRows = ref([])
+const tableRowsList = ref([])
 
 /* =========================
   Helpers (reusable functions)
@@ -151,7 +151,7 @@ function mapRepairToTableRow(repair) {
 async function loadAdminRepairs() {
   try {
     const repairs = await fetchAdminRepairs()
-    tableRows.value = repairs.map(mapRepairToTableRow)
+    tableRowsList.value = repairs.map(mapRepairToTableRow)
   } catch (error) {
     console.error('Failed to load admin repairs:', error?.message || error)
   }
@@ -163,7 +163,7 @@ async function loadAdminRepairs() {
 const filteredRows = computed(() => {
   const search = (searchInput.value || '').toLowerCase()
 
-  return tableRows.value.filter((item) => {
+  return tableRowsList.value.filter((item) => {
     const row = item.row
     const urgency = row[2]
     const status = row[3]

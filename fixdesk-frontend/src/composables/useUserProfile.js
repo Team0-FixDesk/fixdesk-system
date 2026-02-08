@@ -1,7 +1,9 @@
 import { ref } from 'vue'
 import { useAuthToken } from '@/composables/useAuthToken'
 
-export function useUserProfile(API_BASE) {
+export function useUserProfile() {
+  const API_BASE = import.meta.env.VITE_API_BASE
+
   const { token, userId } = useAuthToken()
 
   const displayName = ref('ผู้ใช้งาน')
@@ -28,6 +30,7 @@ export function useUserProfile(API_BASE) {
 
       if (user.us_first_name_th) {
         displayName.value = `${user.us_first_name_th} ${user.us_last_name_th || ''}`.trim()
+
         displayDepartment.value = user.us_department
       }
     } catch (err) {

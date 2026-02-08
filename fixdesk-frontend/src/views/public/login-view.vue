@@ -3,13 +3,10 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { jwtDecode } from 'jwt-decode'
 import { Icon } from '@iconify/vue'
+import { login } from '@/services/auth'
 
 import LogoFIXDESK from '@/assets/icons/Logo.png'
 import Logo92Tech from '@/assets/icons/92Tech-logo.png'
-
-/* ===================== Config ===================== */
-const API_BASE = import.meta.env.VITE_API_BASE
-const LOGIN_URL = `${API_BASE}/login`
 
 const router = useRouter()
 
@@ -18,7 +15,7 @@ const username = ref('')
 const password = ref('')
 const errorMessage = ref('')
 const isLoading = ref(false)
-const rememberMe = ref(false)
+const isRememberMe = ref(false)
 
 /* ===================== Actions ===================== */
 // LOGIN FUNCTION
@@ -43,21 +40,9 @@ const handleLogin = async () => {
   isLoading.value = true
 
   try {
-    const response = await fetch(LOGIN_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        user_name: username.value.trim(),
-        password: password.value.trim(),
-      }),
-    })
+    const data = await login(username.value.trim(), password.value.trim())
 
-    const data = await response.json()
-    if (!response.ok) {
-      throw new Error(data.message || 'LOGIN_FAILED')
-    }
-
-    const storage = rememberMe.value ? localStorage : sessionStorage
+    const storage = isRememberMe.value ? localStorage : sessionStorage
 
     // เก็บ token
     storage.setItem('token', data.token)
@@ -150,7 +135,7 @@ const handleLogin = async () => {
 
           <label class="flex items-center gap-2 text-sm text-gray-700 relative">
             <input
-              v-model="rememberMe"
+              v-model="isRememberMe"
               type="checkbox"
               class="h-4 w-4 rounded border-gray-300 text-[#1E48D1] focus:ring-[#1E48D1]"
             />

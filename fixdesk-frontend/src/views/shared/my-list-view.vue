@@ -28,7 +28,7 @@ const tableColumns = [
   'ตัวดำเนินการ',
 ]
 
-const tableRows = ref([])
+const tableRowsList = ref([])
 const openMenuId = ref(null)
 
 const { token, userId, isAuthenticated, logout } = useAuthToken()
@@ -64,7 +64,7 @@ async function loadMyRepairs() {
       throw new Error(data.message || 'LOAD_FAILED')
     }
 
-    tableRows.value = data.map((repair) => {
+    tableRowsList.value = data.map((repair) => {
       const location = repair.bd_name
         ? `${repair.bd_name} ${repair.fl_name} ${repair.room_name}`
         : '-'
@@ -92,7 +92,7 @@ const filteredRows = computed(() => {
   const search = searchInput.value.toLowerCase()
   const dateFilter = selectedDate.value
 
-  return tableRows.value.filter((row) => {
+  return tableRowsList.value.filter((row) => {
     const dateFromRow = extractThaiDate(row[2])
     const code = String(row[0]).toLowerCase()
     const type = String(row[1]).toLowerCase()
@@ -160,7 +160,7 @@ async function deleteRepair(repairCode) {
     const data = await response.json()
     if (!response.ok) throw new Error(data.message)
 
-    tableRows.value = tableRows.value.filter((row) => row[0] !== repairCode)
+    tableRowsList.value = tableRowsList.value.filter((row) => row[0] !== repairCode)
 
     Sweetalert.fire({
       toast: true,

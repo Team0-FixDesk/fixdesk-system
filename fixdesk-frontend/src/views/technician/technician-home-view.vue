@@ -2,45 +2,26 @@
 defineOptions({ name: 'TechnicianHomeView' })
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthToken } from '@/composables/useAuthToken'
+import { useUserProfile } from '@/composables/useUserProfile'
+
+import { getTechnicianRepairs } from '@/services/repair'
+import { getStockForms } from '@/services/stock'
+
 import CardHomeComponent from '@/components/card-home-component.vue'
 import TableComponent from '@/components/table-component.vue'
 import InfoButtonComponent from '@/components/button/info-button-component.vue'
 
-import { jwtDecode } from 'jwt-decode' // ตรวจสอบว่ามีบรรทัดนี้
-
 const router = useRouter()
-const API_BASE = import.meta.env.VITE_API_BASE
+
+const { token, userId, isAuthenticated, logout } = useAuthToken()
+const { displayName, fetchUserProfile } = useUserProfile()
 
 // --- State ---
 const repairRequests = ref([])
 const stockForms = ref([])
 const loading = ref(false)
 const loadingStock = ref(false)
-const technicianName = ref('เจ้าหน้าที่')
-
-const fetchUserProfile = async () => {
-  const token = localStorage.getItem('token') || sessionStorage.getItem('token')
-  if (!token) return
-
-  try {
-    const decoded = jwtDecode(token)
-    const userId = decoded.us_id // หรือ field id ใน token ของคุณ
-
-    const res = await fetch(`${API_BASE}/users/${userId}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-
-    if (res.ok) {
-      const userData = await res.json()
-      if (userData.us_first_name_th) {
-        technicianName.value =
-          `${userData.us_first_name_th} ${userData.us_last_name_th || ''}`.trim()
-      }
-    }
-  } catch (err) {
-    console.error('โหลดข้อมูลผู้ใช้ไม่สำเร็จ', err)
-  }
-}
 
 const sortedRepairs = computed(() => {
   return [...repairRequests.value]
@@ -137,19 +118,18 @@ function getBadgeHtml(text, type) {
 // --- Fetch Data Functions ---
 const fetchRepairRequests = async () => {
   loading.value = true
+
   try {
-    const token = localStorage.getItem('token') || sessionStorage.getItem('token')
-    if (!token) return
+    if (!isAuthenticated.value) {
+      logout()
+      return
+    }
 
-    const res = await fetch(`${API_BASE}/technician/repairs`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-    if (!res.ok) throw new Error('Fetch failed')
+    const data = await getTechnicianRepairs(token.value)
 
-    const data = await res.json()
     repairRequests.value = data.map((item) => ({
       ...item,
-      rawDate: item.rf_create_at, // เก็บ raw date เพื่อ sort
+      rawDate: item.rf_create_at,
       status: mapStatus(item.rf_user_status),
       urgency: mapUrgency(item.rf_urgency),
     }))
@@ -162,26 +142,15 @@ const fetchRepairRequests = async () => {
 
 const fetchStockForms = async () => {
   loadingStock.value = true
+
   try {
-    const token = localStorage.getItem('token') || sessionStorage.getItem('token')
-    if (!token) return
-
-    const decoded = jwtDecode(token)
-    const userId = decoded.us_id
-
-    let res = await fetch(`${API_BASE}/stock-forms/${userId}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-
-    if (!res.ok && res.status === 404) {
-      res = await fetch(`${API_BASE}/stock-forms`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+    if (!isAuthenticated.value) {
+      logout()
+      return
     }
 
-    if (!res.ok) throw new Error('Fetch stock failed')
+    const data = await getStockForms(token.value, userId.value)
 
-    const data = await res.json()
     stockForms.value = data.map((item) => ({
       ...item,
       rawDate: item.sf_create_at,
@@ -194,6 +163,7 @@ const fetchStockForms = async () => {
     loadingStock.value = false
   }
 }
+
 function truncateItem(text, maxWords = 5) {
   if (!text) return ''
   const [name] = text.split(' x')
@@ -269,7 +239,7 @@ const openDetail = (rfCode) => {
 <template>
   <div class="p-8 mx-auto bg-white shadow-md rounded-xl max-w-8xl">
     <div class="mb-6">
-      <h1 class="text-2xl font-bold text-gray-800">{{ technicianName }}</h1>
+      <h1 class="text-2xl font-bold text-gray-800">{{ displayName }}</h1>
       <p class="mt-1 text-sm text-gray-600">
         ตรวจสอบสถานะงานซ่อมและจัดการรายการเบิกจ่ายวัสดุอุปกรณ์
       </p>

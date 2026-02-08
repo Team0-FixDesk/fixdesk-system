@@ -7,6 +7,7 @@ import TableComponent from '@/components/table-component.vue'
 import repairButton from '@/components/button/repair-button-component.vue'
 import CardHomeComponent from '@/components/card-home-component.vue'
 import { useUserProfile } from '@/composables/useUserProfile'
+
 import InfoButtonComponent from '@/components/button/info-button-component.vue'
 
 defineOptions({ name: 'StockHomeView' })
@@ -15,7 +16,7 @@ defineOptions({ name: 'StockHomeView' })
 const router = useRouter()
 const API_BASE = import.meta.env.VITE_API_BASE
 
-const { displayName, displayDepartment, fetchUserProfile } = useUserProfile(API_BASE)
+const { displayName, displayDepartment, fetchUserProfile } = useUserProfile()
 
 function getAuthHeaders() {
   const token = localStorage.getItem('token') || sessionStorage.getItem('token')
@@ -25,7 +26,7 @@ function getAuthHeaders() {
 // ==================== State ====================
 const products = ref([])
 const stockForms = ref([])
-const tableRows = ref([])
+const tableRowsList = ref([])
 const loading = ref(false)
 
 // 🔀 สวิตช์กราฟ
@@ -54,7 +55,7 @@ async function fetchDashboard() {
     if (resForms.ok) {
       stockForms.value = await resForms.json()
 
-      tableRows.value = stockForms.value
+      tableRowsList.value = stockForms.value
         .filter((i) => i.sf_status === 'waiting')
         .sort((a, b) => new Date(b.sf_create_at) - new Date(a.sf_create_at))
         .slice(0, 5)
@@ -377,7 +378,7 @@ onMounted(() => {
 
         <TableComponent
           :columns="columns"
-          :rows="tableRows.map((i) => i.row)"
+          :rows="tableRowsList.map((i) => i.row)"
           :perPage="5"
           :columnAlign="['left', 'left', 'center']"
           :id-column-index="0"
