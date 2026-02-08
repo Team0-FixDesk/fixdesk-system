@@ -4,6 +4,10 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import Sweetalert from 'sweetalert2'
 
+import { extractThaiDateFromCell } from '@/utils/date.util'
+import { buildRepairDescription } from '@/utils/repairRow.util'
+
+
 import TableComponent from '@/components/table-component.vue'
 import TableActions from '@/components/table-actions-component.vue'
 import RepairButton from '@/components/button/repair-button-component.vue'
@@ -39,12 +43,6 @@ const selectedStatuses = ref([])
 const selectedUrgencies = ref([])
 const selectedDate = ref('')
 
-/* ===================== Utils ===================== */
-function extractThaiDate(cell) {
-  const match = cell.match(/วันที่แจ้ง:\s*([\d/]+)/)
-  return match ? match[1] : null
-}
-
 /* ===================== Data Loader ===================== */
 async function loadMyRepairs() {
   if (!isAuthenticated.value) {
@@ -65,18 +63,11 @@ async function loadMyRepairs() {
     }
 
     tableRowsList.value = data.map((repair) => {
-      const location = repair.bd_name
-        ? `${repair.bd_name} ${repair.fl_name} ${repair.room_name}`
-        : '-'
 
       return [
         repair.rf_code,
         repair.tt_name,
-        'วันที่แจ้ง: ' +
-          new Date(repair.rf_create_at).toLocaleDateString('th-TH') +
-          '<br>' +
-          'สถานที่: ' +
-          location,
+        buildRepairDescription(repair),
         repair.rf_urgency,
         repair.rf_user_status,
         '',
@@ -93,7 +84,7 @@ const filteredRows = computed(() => {
   const dateFilter = selectedDate.value
 
   return tableRowsList.value.filter((row) => {
-    const dateFromRow = extractThaiDate(row[2])
+    const dateFromRow = extractThaiDateFromCell(row[2])
     const code = String(row[0]).toLowerCase()
     const type = String(row[1]).toLowerCase()
     const location = String(row[2]).toLowerCase()

@@ -4,6 +4,9 @@ import { useRouter } from 'vue-router'
 
 import { getRepairStats, getMyRepairs, getRepairDetail } from '@/services/repair'
 
+import { formatDateTH } from '@/utils/date.util'
+import { buildTimelineFromRepair } from '@/utils/repairTimeline.util'
+
 import CardHomeComponent from '@/components/card-home-component.vue'
 import TableComponent from '@/components/table-component.vue'
 import RepairButton from '@/components/button/repair-button-component.vue'
@@ -86,13 +89,6 @@ async function fetchRepairStats() {
   }
 }
 
-// ฟังก์ชันอื่นๆ (คงเดิม)
-function formatDateTH(dateStr) {
-  if (!dateStr) return '-'
-
-  return new Date(dateStr).toLocaleDateString('th-TH')
-}
-
 async function fetchRecentRepairs() {
   if (!isAuthenticated.value) {
     logout()
@@ -141,62 +137,6 @@ async function loadTimelineForCode(code) {
   } finally {
     isTimelineLoading.value = false
   }
-}
-
-function formatDateTimeTH(value) {
-  if (!value) return null
-  const date = new Date(value).toLocaleDateString('th-TH', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  })
-  const time = new Date(value).toLocaleTimeString('th-TH', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  })
-
-  return `${date} เวลา ${time}`
-}
-
-function buildTimelineFromRepair(repairData) {
-  const timelineStepsList = []
-  const statusConfigsList = [
-    { key: 'rf_create_at', title: 'รอดำเนินการ', description: 'ระบบได้รับใบแจ้งซ่อมของคุณแล้ว' },
-    {
-      key: 'rf_in_process_at',
-      title: 'กำลังดำเนินการ',
-      description: 'เจ้าหน้าที่กำลังดำเนินการซ่อมแซม',
-    },
-    { key: 'rf_done_at', title: 'ดำเนินการเสร็จสิ้น', description: 'งานซ่อมเสร็จเรียบร้อยแล้ว' },
-  ]
-
-  let lastReachedIndex = -1
-  statusConfigsList.forEach((status, index) => {
-    if (repairData[status.key]) lastReachedIndex = index
-  })
-
-  statusConfigsList.forEach((status, index) => {
-    const isReached = index <= lastReachedIndex
-    const isCurrent = index === lastReachedIndex
-    const isLastStep = index === statusConfigsList.length - 1
-
-    let stepState = 'upcoming'
-    if (isReached) {
-      if (isLastStep) stepState = 'completed'
-      else if (isCurrent) stepState = 'current'
-      else stepState = 'completed'
-    }
-
-    timelineStepsList.push({
-      displayTime: repairData[status.key] ? formatDateTimeTH(repairData[status.key]) : null,
-      title: status.title,
-      description: isReached ? status.description : null,
-      stepState,
-    })
-  })
-
-  return timelineStepsList
 }
 
 // 2. Computed สำหรับ Rows ที่จะแสดง (แปลง recentRepairs ให้เป็น Array ของ Array)

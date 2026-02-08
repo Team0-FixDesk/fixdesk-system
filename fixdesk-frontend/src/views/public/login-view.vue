@@ -1,98 +1,19 @@
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { jwtDecode } from 'jwt-decode'
 import { Icon } from '@iconify/vue'
-import { login } from '@/services/auth'
+import { useLogin } from '@/composables/useLogin'
 
 import LogoFIXDESK from '@/assets/icons/Logo.png'
 import Logo92Tech from '@/assets/icons/92Tech-logo.png'
 
-const router = useRouter()
+const {
+  username,
+  password,
+  errorMessage,
+  isLoading,
+  isRememberMe,
+  handleLogin
+} = useLogin()
 
-/* ===================== State ===================== */
-const username = ref('')
-const password = ref('')
-const errorMessage = ref('')
-const isLoading = ref(false)
-const isRememberMe = ref(false)
-
-/* ===================== Actions ===================== */
-// LOGIN FUNCTION
-const handleLogin = async () => {
-  errorMessage.value = ''
-
-  if (!username.value.trim() && !password.value.trim()) {
-    errorMessage.value = 'กรุณากรอกชื่อผู้ใช้และรหัสผ่าน'
-    return
-  }
-
-  if (!username.value.trim()) {
-    errorMessage.value = 'กรุณากรอกชื่อผู้ใช้'
-    return
-  }
-
-  if (!password.value.trim()) {
-    errorMessage.value = 'กรุณากรอกรหัสผ่าน'
-    return
-  }
-
-  isLoading.value = true
-
-  try {
-    const data = await login(username.value.trim(), password.value.trim())
-
-    const storage = isRememberMe.value ? localStorage : sessionStorage
-
-    // เก็บ token
-    storage.setItem('token', data.token)
-
-    // decode token
-    const payload = jwtDecode(data.token)
-
-    // เก็บข้อมูลผู้ใช้ (ไม่ใช่ข้อมูลลับ)
-    const sessionUser = {
-      id: payload.us_id,
-      username: payload.us_user_name,
-      fullName: `${payload.us_prefix_th || ''}${payload.us_first_name_th || ''} ${payload.us_last_name_th || ''}`,
-      department: payload.us_department,
-      role: payload.role_name,
-    }
-
-    storage.setItem('session_user', JSON.stringify(sessionUser))
-
-    // redirect ตาม role
-    switch (payload.role_name) {
-      case 'Admin':
-        router.push('/main/admin-home')
-        break
-      case 'Technician':
-        router.push('/main/technician-home')
-        break
-      case 'Stock':
-        router.push('/main/stock-home')
-        break
-      case 'Manager':
-        router.push('/main/manager-home')
-        break
-      default:
-        router.push('/main/user-home')
-        break
-    }
-  } catch (error) {
-    console.error('Login failed:', error.message)
-
-    if (error.message.includes('ชื่อผู้ใช้')) {
-      errorMessage.value = 'ไม่พบชื่อผู้ใช้นี้ในระบบ'
-    } else if (error.message.includes('รหัสผ่าน')) {
-      errorMessage.value = 'รหัสผ่านไม่ถูกต้อง'
-    } else {
-      errorMessage.value = 'เข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่อีกครั้ง'
-    }
-  } finally {
-    isLoading.value = false
-  }
-}
 </script>
 
 <template>
@@ -102,7 +23,6 @@ const handleLogin = async () => {
     <div
       class="relative bg-white/95 rounded-xl shadow-xl w-full max-w-md sm:max-w-xl lg:max-w-3xl flex flex-col lg:flex-row items-center gap-8 p-10"
     >
-      <!-- โลโก้ -->
       <div class="flex flex-col items-center justify-center flex-1">
         <img
           :src="Logo92Tech"
@@ -112,7 +32,6 @@ const handleLogin = async () => {
         <img :src="LogoFIXDESK" alt="FixDesk logo" class="w-48 h-auto" />
       </div>
 
-      <!-- ฟอร์มล็อกอิน -->
       <div class="flex-1 flex flex-col items-center">
         <h1 class="text-3xl font-bold text-[#1E48D1] mb-6">เข้าสู่ระบบ</h1>
 
@@ -141,14 +60,12 @@ const handleLogin = async () => {
             />
             <span>จำฉันไว้</span>
 
-            <!-- Info icon -->
             <span
               class="group relative inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full text-gray-400 cursor-pointer select-none hover:text-gray-600 transition"
               aria-label="คำอธิบายการจำฉันไว้"
               tabindex="0"
             >
               <Icon icon="fluent:info-16-filled" width="16" height="16" style="color: #8e8e8e" />
-              <!-- Tooltip -->
               <div
                 class="absolute bottom-full left-0 mt-2 w-72 p-3 text-xs text-white bg-gray-800 rounded-lg opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity pointer-events-none text-left"
               >
@@ -171,7 +88,6 @@ const handleLogin = async () => {
           </button>
         </form>
 
-        <!-- Error message (reserved space) -->
         <div class="min-h-[1.25rem] mt-3">
           <p v-if="errorMessage" class="text-red-600 text-center text-sm font-medium">
             {{ errorMessage }}

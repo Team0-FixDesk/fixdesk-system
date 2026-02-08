@@ -1,105 +1,30 @@
 <script setup>
-import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { searchRepair } from '@/services/public'
+import { useRepairSearch } from '@/composables/useRepairSearch'
+import { getStatusText, getStatusBadgeClass, getStepColor } from '@/utils/repairStatus.util'
 
 import LogoFIXDESK from '@/assets/icons/LogoFIXDESK-logo.png'
 
-/* ===================== Router ===================== */
 const router = useRouter()
 
-/* ===================== State ===================== */
-const keyword = ref('')
-const loading = ref(false)
-const errorMessage = ref('')
-const searched = ref(false)
-const results = ref([])
+const {
+  keyword,
+  loading,
+  errorMessage,
+  searched,
+  results,
+  currentPage,
+  totalPages,
+  handleSearch,
+  goPrevPage,
+  goNextPage,
+} = useRepairSearch()
 
-// Pagination
-const currentPage = ref(1)
-const pageSize = 5
-const totalItems = ref(0)
-const totalPages = ref(1)
-
-/* ===================== Constants ===================== */
-const STATUS_TEXT_MAP = {
-  pending: 'รอดำเนินการ',
-  in_progress: 'กำลังดำเนินการ',
-  done: 'ดำเนินการเสร็จสิ้น',
-}
-
-const STATUS_BADGE_MAP = {
-  pending: 'bg-blue-200 text-blue-600',
-  in_progress: 'bg-amber-100 text-amber-600',
-  done: 'bg-green-100 text-green-600',
-}
-
-// แปลง status → step
-const STATUS_STEP_MAP = {
-  pending: 1,
-  in_progress: 2,
-  done: 3,
-}
-
-/* ===================== Helpers ===================== */
-const getStatusText = (status) => STATUS_TEXT_MAP[status] || 'ไม่ทราบสถานะ'
-const getStatusBadgeClass = (status) => STATUS_BADGE_MAP[status]
-const convertStatusToStep = (status) => STATUS_STEP_MAP[status] || 1
-const getStepColor = (currentStep, targetStep) => {
-  if (currentStep < targetStep) return 'text-slate-400'
-  return 'text-green-600'
-}
-
-/* ===================== Actions ===================== */
-const handleSearch = async (page = 1) => {
-  if (!keyword.value.trim()) return
-
-  loading.value = true
-  errorMessage.value = ''
-  searched.value = true
-  currentPage.value = page
-
-  try {
-    const data = await searchRepair(keyword.value, currentPage.value, pageSize)
-
-    results.value = (data.data || []).map((item) => ({
-      ...item,
-      step: convertStatusToStep(item.rf_user_status),
-    }))
-
-    totalItems.value = data.total
-    totalPages.value = Math.ceil(totalItems.value / pageSize)
-
-    // เปลี่ยนหน้าแล้ว scroll กลับขึ้นบน
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  } catch (error) {
-    console.error('Search failed:', error.message)
-    errorMessage.value = 'เกิดข้อผิดพลาดในการค้นหา'
-  } finally {
-    loading.value = false
-  }
-}
-
-const goPrevPage = () => {
-  if (currentPage.value > 1) {
-    handleSearch(currentPage.value - 1)
-  }
-}
-
-const goNextPage = () => {
-  if (currentPage.value < totalPages.value) {
-    handleSearch(currentPage.value + 1)
-  }
-}
-
-const goToLogin = () => {
-  router.push('/login')
-}
+const goToLogin = () => router.push('/login')
 </script>
 
 <template>
   <div class="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 flex flex-col items-center">
-    <!-- Navbar -->
     <header class="w-full max-w-6xl flex justify-between items-center py-6 px-6">
       <div class="flex items-center gap-3 text-3xl font-semibold text-slate-800">
         <img :src="LogoFIXDESK" alt="FixDesk Logo" class="w-10 h-10 object-contain" />
@@ -114,7 +39,6 @@ const goToLogin = () => {
       </button>
     </header>
 
-    <!-- Hero Section -->
     <section class="mt-6 mb-12 text-center">
       <h1 class="text-3xl font-bold text-slate-800 tracking-tight">ตรวจสอบสถานะงานซ่อม</h1>
       <p class="text-lg text-slate-500 mt-2">
@@ -122,7 +46,6 @@ const goToLogin = () => {
       </p>
     </section>
 
-    <!-- Search Card -->
     <div class="w-full max-w-4xl bg-white p-8 shadow-md rounded-3xl border border-slate-200 mb-7">
       <label class="text-slate-600 font-medium">
         ค้นหางานซ่อมด้วยหมายเลขแจ้งซ่อม / ชื่อผู้แจ้ง / หน่วยงาน (ระบุอย่างใดอย่างหนึ่ง)
@@ -149,12 +72,9 @@ const goToLogin = () => {
       </div>
     </div>
 
-    <!-- Results Section -->
     <div class="w-full max-w-4xl">
-      <!-- Loading -->
       <div v-if="loading" class="text-center py-10 text-slate-500 animate-pulse">กำลังค้นหา...</div>
 
-      <!-- Error -->
       <div
         v-if="errorMessage && !loading"
         class="bg-red-50 text-red-600 p-5 rounded-2xl border border-red-200 shadow mb-5"
@@ -162,7 +82,6 @@ const goToLogin = () => {
         {{ errorMessage }}
       </div>
 
-      <!-- No Result -->
       <div
         v-if="!loading && searched && results.length === 0"
         class="bg-white p-8 rounded-3xl shadow text-center border border-slate-200"
@@ -170,7 +89,6 @@ const goToLogin = () => {
         <p class="text-slate-500 text-lg">ไม่พบรายการที่ค้นหา</p>
       </div>
 
-      <!-- Found -->
       <p v-if="results.length > 0" class="text-slate-500 mb-3 text-md">
         พบ {{ totalItems }} รายการ
       </p>
@@ -207,7 +125,6 @@ const goToLogin = () => {
           </p>
         </div>
 
-        <!-- Status Progress -->
         <div class="mt-6 flex items-center gap-3 text-sm font-medium">
           <span :class="getStepColor(item.step, 1)">● รอดำเนินการ</span>
           <span class="text-slate-400">→</span>
@@ -216,7 +133,7 @@ const goToLogin = () => {
           <span :class="getStepColor(item.step, 3)">● ดำเนินการเสร็จสิ้น</span>
         </div>
       </div>
-      <!-- Pagination -->
+
       <div v-if="totalPages > 1" class="flex justify-center items-center gap-4 mt-10">
         <button
           @click="goPrevPage"
