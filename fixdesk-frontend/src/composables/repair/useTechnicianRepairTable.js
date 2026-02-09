@@ -1,5 +1,5 @@
 import { computed } from 'vue'
-import { getBadgeHtml } from '@/utils/badgeHtml.util'
+import { createBadgeHtml } from '@/utils/badgeHtml.util'
 
 export function useTechnicianRepairTable(repairRequests, router) {
   const sortedRepairs = computed(() => {
@@ -14,8 +14,8 @@ export function useTechnicianRepairTable(repairRequests, router) {
       r.rf_problem || '-',
       r.department_name || '-',
       `${r.building_name || ''} ${r.room_name || ''}`,
-      getBadgeHtml(r.urgency, 'urgency'),
-      getBadgeHtml(r.status, 'status'),
+      createBadgeHtml(r.urgency, 'urgency'),
+      createBadgeHtml(r.status, 'status'),
     ])
   })
 

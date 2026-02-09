@@ -2,10 +2,10 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 
-import { getRepairStats, getMyRepairs, getRepairDetail } from '@/services/repair'
+import { getRepairStatistics, getMyRepairList, getRepairDetailByCode } from '@/services/repair'
 
-import { formatDateTH } from '@/utils/date.util'
-import { buildTimelineFromRepair } from '@/utils/repairTimeline.util'
+import { formatThaiShortDate } from '@/utils/date.util'
+import { createRepairTimelineData } from '@/utils/repairTimeline.util'
 
 import CardHomeComponent from '@/components/card-home-component.vue'
 import TableComponent from '@/components/table-component.vue'
@@ -74,7 +74,7 @@ async function fetchRepairStats() {
   }
 
   try {
-    const data = await getRepairStats(
+    const data = await getRepairStatistics(
       userId.value,
       token.value
     )
@@ -97,7 +97,7 @@ async function fetchRecentRepairs() {
   }
 
   try {
-    const data = await getMyRepairs(userId.value, token.value)
+    const data = await getMyRepairList(userId.value, token.value)
 
     const sortedRepairList = data.sort(
       (a, b) => new Date(b.rf_create_at) - new Date(a.rf_create_at),
@@ -127,10 +127,10 @@ async function loadTimelineForCode(code) {
 
   isTimelineLoading.value = true
   try {
-    const data = await getRepairDetail(code)
+    const data = await getRepairDetailByCode(code)
 
     selectedRepairDetail.value = data
-    selectedTimelineStepsList.value = buildTimelineFromRepair(data)
+    selectedTimelineStepsList.value = createRepairTimelineData(data)
   } catch (err) {
     console.error('โหลด timeline ไม่สำเร็จ:', err)
     selectedTimelineStepsList.value = []
@@ -142,7 +142,7 @@ async function loadTimelineForCode(code) {
 // 2. Computed สำหรับ Rows ที่จะแสดง (แปลง recentRepairs ให้เป็น Array ของ Array)
 const tableRowsList = computed(() => {
   return allMyRepairsList.value.map((item) => [
-    formatDateTH(item.rf_create_at),
+    formatThaiShortDate(item.rf_create_at),
     item.rf_code,
     item.tt_name || '-',
     item.rf_urgency,

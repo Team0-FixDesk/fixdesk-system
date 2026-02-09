@@ -1,7 +1,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.store'
-import { roleToRoute } from '@/utils/auth.util'
+import { getRoutePathByUserRole } from '@/utils/auth.util'
 
 export function useLogin() {
   const router = useRouter()
@@ -34,9 +34,9 @@ export function useLogin() {
     isLoading.value = true
 
     try {
-      const user = await authStore.login(username.value, password.value, isRememberMe.value)
+      const user = await authStore.loginUserAccount(username.value, password.value, isRememberMe.value)
 
-      router.push(roleToRoute(user.role))
+      router.push(getRoutePathByUserRole(user.role))
     } catch (error) {
       console.error('Login failed:', error.message)
 

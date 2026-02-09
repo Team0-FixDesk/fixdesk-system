@@ -1,39 +1,56 @@
-export const getStockForms = async (token, userId) => {
-  const API_BASE = import.meta.env.VITE_API_BASE
+const API_BASE_URL = import.meta.env.VITE_API_BASE
 
-  let res = await fetch(`${API_BASE}/stock-forms/${userId}`, {
-    headers: { Authorization: `Bearer ${token}` },
+// ช่วยลดโค้ดซ้ำ เวลาต้องใส่ Token ในหลายๆ ฟังก์ชัน
+const createAuthHeaders = (userAuthenticationToken) => ({
+  Authorization: `Bearer ${userAuthenticationToken}`,
+})
+
+// 1. ฟังก์ชันดึงใบเบิกสินค้า (มีระบบสำรองถ้าไม่เจอ)
+export async function getStockForms(userAuthenticationToken, targetUserId) {
+  // ลองดึงใบเบิกของ User คนนี้ก่อน
+  let apiResponse = await fetch(`${API_BASE_URL}/stock-forms/${targetUserId}`, {
+    headers: createAuthHeaders(userAuthenticationToken),
   })
 
-  if (!res.ok && res.status === 404) {
-    res = await fetch(`${API_BASE}/stock-forms`, {
-      headers: { Authorization: `Bearer ${token}` },
+  // ถ้าเซิร์ฟเวอร์บอกว่าไม่พบข้อมูลของคนนี้ (404) ให้เปลี่ยนไปดึง "ใบเบิกทั้งหมด" มาแสดงแทน
+  if (!apiResponse.ok && apiResponse.status === 404) {
+    apiResponse = await fetch(`${API_BASE_URL}/stock-forms`, {
+      headers: createAuthHeaders(userAuthenticationToken),
     })
   }
 
-  if (!res.ok) throw new Error('Fetch stock failed')
+  // ถ้าสุดท้ายยังดึงไม่ได้ (Error) ให้แจ้งเตือน
+  if (!apiResponse.ok) {
+    throw new Error('Fetch stock failed')
+  }
 
-  return res.json()
+  return apiResponse.json()
 }
 
-const API_BASE = import.meta.env.VITE_API_BASE
-
-const authHeaders = (token) => ({
-  Authorization: `Bearer ${token}`,
-})
-
-export const getAllProducts = async (token) => {
-  const res = await fetch(`${API_BASE}/show-stock`, {
-    headers: authHeaders(token),
+// 2. ฟังก์ชันดึงรายการสินค้าทั้งหมดในสต็อก
+export async function getAllProductList(userAuthenticationToken) {
+  // ดึงข้อมูลสินค้าทั้งหมด โดยแนบ Token ยืนยันตัวตนไปด้วย
+  const apiResponse = await fetch(`${API_BASE_URL}/show-stock`, {
+    headers: createAuthHeaders(userAuthenticationToken),
   })
-  if (!res.ok) throw new Error('Fetch products failed')
-  return res.json()
+
+  if (!apiResponse.ok) {
+    throw new Error('Fetch products failed')
+  }
+
+  return apiResponse.json()
 }
 
-export const getAllStockForms = async (token) => {
-  const res = await fetch(`${API_BASE}/stock-forms`, {
-    headers: authHeaders(token),
+// 3. ฟังก์ชันดึงใบเบิกสินค้าทั้งหมด (แบบเจาะจง)
+export async function getAllStockFormList(userAuthenticationToken) {
+  // ดึงข้อมูลใบเบิกทั้งหมดทันที
+  const apiResponse = await fetch(`${API_BASE_URL}/stock-forms`, {
+    headers: createAuthHeaders(userAuthenticationToken),
   })
-  if (!res.ok) throw new Error('Fetch stock forms failed')
-  return res.json()
+
+  if (!apiResponse.ok) {
+    throw new Error('Fetch stock forms failed')
+  }
+
+  return apiResponse.json()
 }

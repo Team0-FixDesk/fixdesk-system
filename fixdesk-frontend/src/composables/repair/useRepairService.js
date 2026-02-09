@@ -1,4 +1,4 @@
-import { decodeJwt } from '@/utils/jwt.util'
+import { decodeJwtToken } from '@/utils/jwt.util'
 
 export function useRepairService(API_BASE_URL) {
   async function fetchRepairDetail(repairCode) {
@@ -17,7 +17,7 @@ export function useRepairService(API_BASE_URL) {
       throw new Error('Token not found')
     }
 
-    const userPayload = decodeJwt(token)
+    const userPayload = decodeJwtToken(token)
 
     const formDataToSend = new FormData()
 
@@ -54,7 +54,7 @@ export function useRepairService(API_BASE_URL) {
 
     if (!token) throw new Error('Token not found')
 
-    const userPayload = decodeJwt(token)
+    const userPayload = decodeJwtToken(token)
 
     let response
 

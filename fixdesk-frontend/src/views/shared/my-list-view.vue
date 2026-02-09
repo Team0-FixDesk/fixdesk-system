@@ -4,8 +4,8 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import Sweetalert from 'sweetalert2'
 
-import { extractThaiDateFromCell } from '@/utils/date.util'
-import { buildRepairDescription } from '@/utils/repairRow.util'
+import { extractDateFromCellContent } from '@/utils/date.util'
+import { createRepairDescriptionHtml } from '@/utils/repairRow.util'
 
 import TableComponent from '@/components/table-component.vue'
 import TableActions from '@/components/table-actions-component.vue'
@@ -62,7 +62,7 @@ async function loadMyRepairs() {
       return [
         repair.rf_code,
         repair.tt_name,
-        buildRepairDescription(repair),
+        createRepairDescriptionHtml(repair),
         repair.rf_urgency,
         repair.rf_user_status,
         '',
@@ -79,7 +79,7 @@ const filteredRows = computed(() => {
   const dateFilter = selectedDate.value
 
   return tableRowsList.value.filter((row) => {
-    const dateFromRow = extractThaiDateFromCell(row[2])
+    const dateFromRow = extractDateFromCellContent(row[2])
     const code = String(row[0]).toLowerCase()
     const type = String(row[1]).toLowerCase()
     const location = String(row[2]).toLowerCase()

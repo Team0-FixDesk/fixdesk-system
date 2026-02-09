@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import { getTechnicianRepairs } from '@/services/repair'
+import { getTechnicianRepairList } from '@/services/repair'
 
 export function useTechnicianRepairs(tokenRef, isAuthenticatedRef, logout) {
   const repairRequests = ref([])
@@ -25,7 +25,7 @@ export function useTechnicianRepairs(tokenRef, isAuthenticatedRef, logout) {
         return
       }
 
-      const data = await getTechnicianRepairs(tokenRef.value)
+      const data = await getTechnicianRepairList(tokenRef.value)
 
       repairRequests.value = data.map((item) => ({
         ...item,

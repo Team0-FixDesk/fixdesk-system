@@ -1,7 +1,7 @@
 <script setup>
 import { useRouter } from 'vue-router'
 import { useRepairSearch } from '@/composables/useRepairSearch'
-import { getStatusText, getStatusBadgeClass, getStepColor } from '@/utils/repairStatus.util'
+import { getRepairStatusLabel, getRepairStatusColorClass, getProgressBarColor } from '@/utils/repairStatus.util'
 
 import LogoFIXDESK from '@/assets/icons/LogoFIXDESK-logo.png'
 
@@ -103,9 +103,9 @@ const goToLogin = () => router.push('/login')
 
           <span
             class="px-3 py-1 text-sm rounded-full"
-            :class="getStatusBadgeClass(item.rf_user_status)"
+            :class="getRepairStatusColorClass(item.rf_user_status)"
           >
-            {{ getStatusText(item.rf_user_status) }}
+            {{ getRepairStatusLabel(item.rf_user_status) }}
           </span>
         </div>
 
@@ -126,11 +126,11 @@ const goToLogin = () => router.push('/login')
         </div>
 
         <div class="mt-6 flex items-center gap-3 text-sm font-medium">
-          <span :class="getStepColor(item.step, 1)">● รอดำเนินการ</span>
+          <span :class="getProgressBarColor(item.step, 1)">● รอดำเนินการ</span>
           <span class="text-slate-400">→</span>
-          <span :class="getStepColor(item.step, 2)">● กำลังดำเนินการ</span>
+          <span :class="getProgressBarColor(item.step, 2)">● กำลังดำเนินการ</span>
           <span class="text-slate-400">→</span>
-          <span :class="getStepColor(item.step, 3)">● ดำเนินการเสร็จสิ้น</span>
+          <span :class="getProgressBarColor(item.step, 3)">● ดำเนินการเสร็จสิ้น</span>
         </div>
       </div>
 

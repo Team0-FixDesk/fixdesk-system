@@ -1,41 +1,54 @@
 import { defineStore } from 'pinia'
 import { jwtDecode } from 'jwt-decode'
-import { login as loginService } from '@/services/auth'
+import { loginUser } from '@/services/auth'
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
-    token: null,
-    user: null,
+    userAuthenticationToken: null, // โทเคนสำหรับยืนยันตัวตน
+    userInformation: null,         // ข้อมูลของผู้ใช้งานที่ล็อกอินอยู่
   }),
 
   actions: {
-    async login(username, password, remember) {
-      const data = await loginService(username, password)
+    // ฟังก์ชันสำหรับเข้าสู่ระบบ
+    // รับค่า: ชื่อผู้ใช้, รหัสผ่าน, และสถานะการจำรหัสผ่าน (True/False)
+    async loginUserAccount(username, password, isRememberMeChecked) {
+      // 1. ส่งข้อมูลไปตรวจสอบที่เซิร์ฟเวอร์ (เรียกใช้ Service ที่ทำไว้ก่อนหน้านี้)
+      const apiResponse = await loginUser(username, password)
 
-      const payload = jwtDecode(data.token)
+      // 2. แกะข้อมูลที่ซ่อนอยู่ใน Token (เช่น รหัสพนักงาน, ชื่อ, ตำแหน่ง) ออกมาใช้งาน
+      const decodedTokenPayload = jwtDecode(apiResponse.token)
 
-      const user = {
-        id: payload.us_id,
-        username: payload.us_user_name,
-        role: payload.role_name,
+      // 3. จัดเตรียมข้อมูลผู้ใช้ให้พร้อมสำหรับการเก็บ
+      const userProfile = {
+        id: decodedTokenPayload.us_id,
+        username: decodedTokenPayload.us_user_name,
+        role: decodedTokenPayload.role_name,
       }
 
-      const storage = remember ? localStorage : sessionStorage
+      // ถ้าติ๊ก "จำฉันไว้" -> เก็บลง localStorage (ปิด browser ไม่หาย)
+      // ถ้าไม่ติ๊ก -> เก็บลง sessionStorage (ปิด browser แล้วหาย)
+      const targetStorage = isRememberMeChecked ? localStorage : sessionStorage
 
-      storage.setItem('token', data.token)
-      storage.setItem('session_user', JSON.stringify(user))
+      // บันทึกข้อมูลลงใน Browser ตามที่เลือกไว้
+      targetStorage.setItem('token', apiResponse.token)
+      targetStorage.setItem('session_user', JSON.stringify(userProfile))
 
-      this.token = data.token
-      this.user = user
+      // อัปเดตข้อมูลเข้าไปใน State กลางของแอปพลิเคชัน
+      this.userAuthenticationToken = apiResponse.token
+      this.userInformation = userProfile
 
-      return user
+      return userProfile
     },
 
-    logout() {
+    // ฟังก์ชันสำหรับออกจากระบบ
+    logoutUser() {
+      // ล้างข้อมูลทุกอย่างออกจากเครื่อง ทั้งแบบถาวรและชั่วคราว
       localStorage.clear()
       sessionStorage.clear()
-      this.token = null
-      this.user = null
+
+      // รีเซ็ตค่าใน State ให้กลับเป็นค่าเริ่มต้น (ว่างเปล่า)
+      this.userAuthenticationToken = null
+      this.userInformation = null
     },
   },
 })

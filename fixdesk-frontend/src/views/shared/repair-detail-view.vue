@@ -15,9 +15,9 @@ import BackButtonComponent from '@/components/button/back-button-component.vue'
 import { usePhoneFormat } from '@/composables/usePhoneFormat'
 import { useAuthToken } from '@/composables/useAuthToken'
 
-import { formatFullThaiDate } from '@/utils/date.util'
-import { buildTimelineFromRepair } from '@/utils/repairTimeline.util'
-import { getUserStatusBadge, getUrgencyBadge } from '@/utils/badge.util'
+import { formatThaiLongDate } from '@/utils/date.util'
+import { createRepairTimelineData } from '@/utils/repairTimeline.util'
+import { getRepairStatusBadge, getUrgencyLevelBadge } from '@/utils/badge.util'
 
 // --- Constants ---
 const API_BASE_URL = import.meta.env.VITE_API_BASE
@@ -279,7 +279,7 @@ async function fetchRepairDetail() {
 
     if (!res.ok) throw new Error(data.message || 'โหลดข้อมูลไม่สำเร็จ')
 
-    const timeline = buildTimelineFromRepair(data)
+    const timeline = createRepairTimelineData(data)
     repair.value = {
       ...data,
       timeline,
@@ -420,8 +420,8 @@ onMounted(() => {
             <div
               class="flex flex-wrap gap-2 sm:gap-3 justify-start md:justify-end items-center text-xs sm:text-sm"
             >
-              <span v-html="getUserStatusBadge(repair?.rf_user_status)"></span>
-              <span v-html="getUrgencyBadge(repair?.rf_urgency)"></span>
+              <span v-html="getRepairStatusBadge(repair?.rf_user_status)"></span>
+              <span v-html="getUrgencyLevelBadge(repair?.rf_urgency)"></span>
               <span
                 class="inline-flex justify-center items-center px-4 py-1.5 rounded-full bg-gray-100 text-gray-600 font-medium whitespace-nowrap"
               >
@@ -468,7 +468,7 @@ onMounted(() => {
           <div class="border border-gray-200 rounded-lg p-3 sm:p-4">
             <p class="text-xs sm:text-sm text-gray-500">แจ้งซ่อมเมื่อ</p>
             <p class="font-medium text-gray-800 text-sm sm:text-base">
-              {{ formatFullThaiDate(repair?.rf_create_at) }}
+              {{ formatThaiLongDate(repair?.rf_create_at) }}
             </p>
           </div>
         </div>

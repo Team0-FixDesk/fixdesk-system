@@ -12,7 +12,7 @@ import { useFileUpload } from '@/composables/useFileUpload'
 import { useRepairFormValidation } from '@/composables/repair/useRepairFormValidation'
 import { useRepairService } from '@/composables/repair/useRepairService'
 
-import { decodeJwt } from '@/utils/jwt.util'
+import { decodeJwtToken } from '@/utils/jwt.util'
 
 const { toDisplay } = usePhoneFormat()
 
@@ -100,7 +100,7 @@ onMounted(() => {
   const token = localStorage.getItem('token') || sessionStorage.getItem('token')
   if (!token) return
 
-  const userPayload = decodeJwt(token)
+  const userPayload = decodeJwtToken(token)
   repairFormData.value.reporterName =
     `${userPayload.us_prefix_th || ''}${userPayload.us_first_name_th || ''} ${userPayload.us_last_name_th || ''}`.trim()
   repairFormData.value.phoneNumber = toDisplay(userPayload.us_tel || '')

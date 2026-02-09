@@ -1,63 +1,83 @@
-const API_BASE = import.meta.env.VITE_API_BASE
+const API_BASE_URL = import.meta.env.VITE_API_BASE
 
-export const getRepairStats = async (userId, token) => {
-  const res = await fetch(`${API_BASE}/repair-stats/${userId}`, {
-    headers: { Authorization: `Bearer ${token}` },
+// 1. ฟังก์ชันดึงสถิติการแจ้งซ่อมของผู้ใช้
+export async function getRepairStatistics(targetUserId, userAuthenticationToken) {
+  // ยิง Request ไปขอข้อมูลสถิติ โดยแนบ Token ไปยืนยันตัวตนด้วย
+  const apiResponse = await fetch(`${API_BASE_URL}/repair-stats/${targetUserId}`, {
+    headers: { Authorization: `Bearer ${userAuthenticationToken}` },
   })
 
-  if (!res.ok) throw new Error('Load stats failed')
+  // ถ้าเซิร์ฟเวอร์ตอบกลับมาว่า "ไม่สำเร็จ" ให้แจ้ง Error ทันที
+  if (!apiResponse.ok) {
+    throw new Error('Load stats failed')
+  }
 
-  return res.json()
+  // แปลงข้อมูลที่ได้เป็น JSON แล้วส่งกลับไป
+  return apiResponse.json()
 }
 
-export const getMyRepairs = async (userId, token) => {
-  const res = await fetch(`${API_BASE}/my-repairs/${userId}`, {
-    headers: { Authorization: `Bearer ${token}` },
+// 2. ฟังก์ชันดึงรายการแจ้งซ่อม "ของฉัน"
+export async function getMyRepairList(targetUserId, userAuthenticationToken) {
+  // ดึงข้อมูลรายการซ่อมของ User คนนี้
+  const apiResponse = await fetch(`${API_BASE_URL}/my-repairs/${targetUserId}`, {
+    headers: { Authorization: `Bearer ${userAuthenticationToken}` },
   })
 
-  const data = await res.json()
-  if (!res.ok) throw new Error(data.message)
+  // แปลงข้อมูลที่ได้รับมาเก็บไว้ในตัวแปร
+  const responseData = await apiResponse.json()
 
-  return data
+  // ถ้ามีปัญหา ให้เอาข้อความจากเซิร์ฟเวอร์มาแจ้งเตือน
+  if (!apiResponse.ok) {
+    throw new Error(responseData.message)
+  }
+
+  return responseData
 }
 
-export const getRepairDetail = async (code) => {
-  const res = await fetch(`${API_BASE}/repair-requests/${code}`)
-  const data = await res.json()
+// 3. ฟังก์ชันดึงรายละเอียดการแจ้งซ่อม (ตามรหัสใบงาน)
+export async function getRepairDetailByCode(repairRequestCode) {
+  // ดึงข้อมูลใบงานตามรหัสที่ส่งเข้ามา
+  const apiResponse = await fetch(`${API_BASE_URL}/repair-requests/${repairRequestCode}`)
+  const responseData = await apiResponse.json()
 
-  if (!res.ok) throw new Error(data.message || 'โหลดข้อมูลไม่สำเร็จ')
+  if (!apiResponse.ok) {
+    throw new Error(responseData.message || 'โหลดข้อมูลไม่สำเร็จ')
+  }
 
-  return data
+  return responseData
 }
 
-export const getAdminRepairs = async (token) => {
-  const API_BASE = import.meta.env.VITE_API_BASE
-
-  const res = await fetch(`${API_BASE}/admin/repairs`, {
+// 4. ฟังก์ชันดึงรายการแจ้งซ่อมทั้งหมด (สำหรับ Admin)
+export async function getAdminRepairList(userAuthenticationToken) {
+  // ดึงข้อมูลรายการซ่อมทั้งหมด พร้อมระบุประเภทข้อมูลที่ต้องการ (JSON)
+  const apiResponse = await fetch(`${API_BASE_URL}/admin/repairs`, {
     headers: {
-      Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${userAuthenticationToken}`,
       'Content-Type': 'application/json',
     },
   })
 
-  const payload = await res.json().catch(() => null)
+  // พยายามแปลงข้อมูลเป็น JSON ถ้าแปลงไม่ได้ (เช่น error) ให้เป็น null ไว้ก่อน
+  const responseData = await apiResponse.json().catch(() => null)
 
-  if (!res.ok) {
-    throw new Error(payload?.message || 'โหลดข้อมูลล้มเหลว')
+  // ถ้าโหลดไม่สำเร็จ ให้แจ้ง Error
+  if (!apiResponse.ok) {
+    throw new Error(responseData?.message || 'โหลดข้อมูลล้มเหลว')
   }
 
-  return payload
+  return responseData
 }
 
-export const getTechnicianRepairs = async (token) => {
-  const API_BASE = import.meta.env.VITE_API_BASE
-
-  const res = await fetch(`${API_BASE}/technician/repairs`, {
-    headers: { Authorization: `Bearer ${token}` },
+// 5. ฟังก์ชันดึงงานซ่อมสำหรับช่างเทคนิค
+export async function getTechnicianRepairList(userAuthenticationToken) {
+  // ดึงรายการงานซ่อมส่วนของช่าง
+  const apiResponse = await fetch(`${API_BASE_URL}/technician/repairs`, {
+    headers: { Authorization: `Bearer ${userAuthenticationToken}` },
   })
 
-  if (!res.ok) throw new Error('Fetch failed')
+  if (!apiResponse.ok) {
+    throw new Error('Fetch failed')
+  }
 
-  return res.json()
+  return apiResponse.json()
 }
-

@@ -1,6 +1,6 @@
 import { ref } from 'vue'
-import { searchRepair } from '@/services/public'
-import { convertStatusToStep } from '@/utils/repairStatus.util'
+import { searchRepairList } from '@/services/public'
+import { getRepairStepNumber } from '@/utils/repairStatus.util'
 
 export function useRepairSearch() {
   const keyword = ref('')
@@ -23,11 +23,11 @@ export function useRepairSearch() {
     currentPage.value = page
 
     try {
-      const data = await searchRepair(keyword.value, currentPage.value, pageSize)
+      const data = await searchRepairList(keyword.value, currentPage.value, pageSize)
 
       results.value = (data.data || []).map((item) => ({
         ...item,
-        step: convertStatusToStep(item.rf_user_status),
+        step: getRepairStepNumber(item.rf_user_status),
       }))
 
       totalItems.value = data.total

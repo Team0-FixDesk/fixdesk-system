@@ -10,7 +10,7 @@ import { useUserProfile } from '@/composables/useUserProfile'
 
 import InfoButtonComponent from '@/components/button/info-button-component.vue'
 
-import { getAllProducts, getAllStockForms } from '@/services/stock'
+import { getAllProductList, getAllStockFormList } from '@/services/stock'
 import { useAuthToken } from '@/composables/useAuthToken'
 
 const { token, isAuthenticated, logout } = useAuthToken()
@@ -19,14 +19,10 @@ defineOptions({ name: 'StockHomeView' })
 
 // ==================== Router / API ====================
 const router = useRouter()
-const API_BASE = import.meta.env.VITE_API_BASE
 
 const { displayName, displayDepartment, fetchUserProfile } = useUserProfile()
 
-function getAuthHeaders() {
-  const token = localStorage.getItem('token') || sessionStorage.getItem('token')
-  return { Authorization: `Bearer ${token}` }
-}
+
 
 // ==================== State ====================
 const products = ref([])
@@ -55,8 +51,8 @@ async function fetchDashboard() {
     }
 
     const [p, forms] = await Promise.all([
-      getAllProducts(token.value),
-      getAllStockForms(token.value),
+      getAllProductList(token.value),
+      getAllStockFormList(token.value),
     ])
 
     products.value = p

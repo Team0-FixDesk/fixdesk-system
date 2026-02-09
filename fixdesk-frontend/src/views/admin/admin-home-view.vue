@@ -2,7 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 
-import { getAdminRepairs } from '@/services/repair'
+import { getAdminRepairList } from '@/services/repair'
 
 import CardHomeComponent from '@/components/card-home-component.vue'
 import RepairButtonComponent from '@/components/button/repair-button-component.vue'
@@ -120,7 +120,7 @@ async function fetchRepairRequests() {
       return
     }
 
-    const payload = await getAdminRepairs(token.value)
+    const payload = await getAdminRepairList(token.value)
 
     const repairs = normalizeRepairs(payload)
     repairRequests.value = repairs.map(mapRepairToRow)
