@@ -2,7 +2,7 @@
 import { ref, watch, onMounted } from 'vue'
 import { jwtDecode } from 'jwt-decode'
 import Swal from 'sweetalert2'
-import { usePhoneFormat } from '@/composables/usePhoneFormat'
+import { usePhoneNumberFormatter } from '@/composables/usePhoneFormat'
 import { Icon } from '@iconify/vue'
 import ChevronDownIcon from '@/assets/icons/sidebar/chevron-down-icon.svg'
 import ChevronUpIcon from '@/assets/icons/sidebar/chevron-up-icon.svg'
@@ -15,7 +15,7 @@ import SettingIcon from '@/assets/icons/sidebar/settings-icon.svg'
 
 defineExpose({ forceClose })
 
-const { toRaw, toDisplay, maskInput } = usePhoneFormat()
+const { toRaw, toDisplay, maskInput } = usePhoneNumberFormatter()
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
 

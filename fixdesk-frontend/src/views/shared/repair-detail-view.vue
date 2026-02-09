@@ -12,7 +12,7 @@ import assignJobModalComponent from '@/components/modal/assign-job-modal-compone
 import AcceptJobModalComponent from '@/components/modal/accept-job-modal-component.vue'
 import BackButtonComponent from '@/components/button/back-button-component.vue'
 
-import { usePhoneFormat } from '@/composables/usePhoneFormat'
+import { usePhoneNumberFormatter } from '@/composables/usePhoneFormat'
 import { useAuthToken } from '@/composables/useAuthToken'
 
 import { formatThaiLongDate } from '@/utils/date.util'
@@ -23,7 +23,7 @@ import { getRepairStatusBadge, getUrgencyLevelBadge } from '@/utils/badge.util'
 const API_BASE_URL = import.meta.env.VITE_API_BASE
 
 // --- Composables ---
-const { toDisplay } = usePhoneFormat()
+const { toDisplay } = usePhoneNumberFormatter()
 const { token, isAuthenticated, logout } = useAuthToken()
 const route = useRoute()
 const router = useRouter()

@@ -11,8 +11,8 @@ import BaseButton from '@/components/button/base/base-button-component.vue'
 
 import Sweetalert from 'sweetalert2'
 
-import { usePhoneFormat } from '@/composables/usePhoneFormat'
-const { toRaw, toDisplay, maskInput } = usePhoneFormat()
+import { usePhoneNumberFormatter } from '@/composables/usePhoneFormat'
+const { toRaw, toDisplay, maskInput } = usePhoneNumberFormatter()
 
 defineOptions({ name: 'AdminUserInfoView' })
 const API_BASE = import.meta.env.VITE_API_BASE

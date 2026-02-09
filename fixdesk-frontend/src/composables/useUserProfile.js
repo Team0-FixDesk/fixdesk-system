@@ -1,51 +1,72 @@
 import { ref } from 'vue'
 import { useAuthToken } from '@/composables/useAuthToken'
 
+// Composable สำหรับจัดการข้อมูลส่วนตัวของผู้ใช้ (Profile)
 export function useUserProfile() {
-  const API_BASE = import.meta.env.VITE_API_BASE
+  // [Standard] ค่าคงที่ใช้ตัวพิมพ์ใหญ่ (UPPER_SNAKE_CASE)
+  const API_BASE_URL = import.meta.env.VITE_API_BASE
 
-  const { token, userId } = useAuthToken()
+  // ดึงค่า Token และ UserId จาก Composable อื่น
+  // (เปลี่ยนชื่อตัวแปรให้ชัดเจนขึ้น เพื่อใช้ในไฟล์นี้)
+  const { token: userAuthenticationToken, userId: currentUserId } = useAuthToken()
 
-  const displayName = ref('ผู้ใช้งาน')
-  const displayDepartment = ref('หน่วยงาน')
-  const loading = ref(false)
-  const error = ref(null)
+  const userDisplayName = ref('ผู้ใช้งาน') // ชื่อที่จะแสดงบนหน้าจอ
+  const userDepartmentName = ref('หน่วยงาน') // ชื่อหน่วยงาน
+  const isProfileLoading = ref(false) // สถานะ "กำลังโหลด" (True/False)
+  const fetchProfileError = ref(null) // เก็บข้อความ Error (ถ้ามี)
 
-  const fetchUserProfile = async () => {
-    if (!token.value || !userId.value) return
+  // ฟังก์ชันดึงข้อมูลผู้ใช้จาก Server
+  const fetchUserProfileData = async () => {
+    // 1. ตรวจสอบก่อนว่ามี "กุญแจ (Token)" และ "รหัสประจำตัว (ID)" หรือยัง?
+    // ถ้าไม่มีอย่างใดอย่างหนึ่ง ให้จบการทำงานทันที (ไม่ต้องเสียเวลายิง API)
+    if (!userAuthenticationToken.value || !currentUserId.value) {
+      return
+    }
 
-    loading.value = true
-    error.value = null
+    // 2. เริ่มกระบวนการโหลด: เปิดสถานะ Loading และล้าง Error เก่าทิ้ง
+    isProfileLoading.value = true
+    fetchProfileError.value = null
 
     try {
-      const res = await fetch(`${API_BASE}/users/${userId.value}`, {
+      // 3. ยิง Request ไปขอข้อมูลจาก Server
+      const apiResponse = await fetch(`${API_BASE_URL}/users/${currentUserId.value}`, {
         headers: {
-          Authorization: `Bearer ${token.value}`,
+          Authorization: `Bearer ${userAuthenticationToken.value}`,
         },
       })
 
-      if (!res.ok) throw new Error('Fetch user failed')
-
-      const user = await res.json()
-
-      if (user.us_first_name_th) {
-        displayName.value = `${user.us_first_name_th} ${user.us_last_name_th || ''}`.trim()
-
-        displayDepartment.value = user.us_department
+      // ถ้า Server ตอบกลับมาว่ามีปัญหา (เช่น ไม่เจอ user นี้)
+      if (!apiResponse.ok) {
+        throw new Error('Fetch user failed')
       }
-    } catch (err) {
-      console.error('โหลดข้อมูลผู้ใช้ไม่สำเร็จ', err)
-      error.value = err.message || 'ไม่สามารถโหลดข้อมูลผู้ใช้ได้'
+
+      // 4. แปลงข้อมูลที่ได้มาเป็น Object
+      const userData = await apiResponse.json()
+
+      // 5. อัปเดตข้อมูลลงในตัวแปร State (เพื่อแสดงผลที่หน้าจอ)
+      if (userData.us_first_name_th) {
+        // เอาชื่อจริง + นามสกุล มาต่อกัน (ใช้ trim() ตัดช่องว่างหัวท้ายออก)
+        userDisplayName.value = `${userData.us_first_name_th} ${userData.us_last_name_th || ''}`.trim()
+
+        // อัปเดตชื่อหน่วยงาน
+        userDepartmentName.value = userData.us_department
+      }
+    } catch (errorObject) {
+      // กรณีเกิดข้อผิดพลาด (เน็ตหลุด, Server พัง)
+      console.error('โหลดข้อมูลผู้ใช้ไม่สำเร็จ:', errorObject)
+      fetchProfileError.value = errorObject.message || 'ไม่สามารถโหลดข้อมูลผู้ใช้ได้'
     } finally {
-      loading.value = false
+      // [Standard] ไม่ว่าจะสำเร็จหรือล้มเหลว ต้องปิดสถานะ Loading เสมอ
+      isProfileLoading.value = false
     }
   }
 
+  // ส่งตัวแปรและฟังก์ชันออกไปให้ Component ใช้งาน
   return {
-    displayName,
-    displayDepartment,
-    loading,
-    error,
-    fetchUserProfile,
+    userDisplayName, // ชื่อผู้ใช้
+    userDepartmentName, // หน่วยงาน
+    isProfileLoading, // สถานะโหลด
+    fetchProfileError, // ข้อความ error
+    fetchUserProfileData, // ฟังก์ชันสั่งโหลดข้อมูล
   }
 }

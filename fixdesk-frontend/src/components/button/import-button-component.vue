@@ -4,10 +4,8 @@ import BaseButtonComponent from './base/base-button-component.vue'
 </script>
 
 <template>
-  <BaseButtonComponent
-    class="h-10 px-4 bg-green-600 hover:bg-green-900 text-white rounded-lg shadow-sm"
-  >
-    <Icon icon="fluent:add-12-filled" width="20" height="20" />
-    Import
+  <BaseButtonComponent class="h-10 px-4 border-[1px] border-[#1E48D1] hover:bg-blue-50 text-[#1E48D1] rounded-lg shadow-sm">
+    <Icon icon="iconoir:import" width="24" height="24" style="color: #1E48D1 " />
+    Import Excel
   </BaseButtonComponent>
 </template>

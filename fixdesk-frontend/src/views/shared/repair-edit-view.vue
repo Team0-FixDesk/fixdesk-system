@@ -6,7 +6,7 @@ import { useRoute, useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
 import { Icon } from '@iconify/vue'
 
-import { usePhoneFormat } from '@/composables/usePhoneFormat'
+import { usePhoneNumberFormatter } from '@/composables/usePhoneFormat'
 import { useRepairLocationData } from '@/composables/location/useRepairLocationData'
 import { useFileUpload } from '@/composables/useFileUpload'
 import { useRepairFormValidation } from '@/composables/repair/useRepairFormValidation'
@@ -16,7 +16,7 @@ import { decodeJwtToken } from '@/utils/jwt.util'
 
 const route = useRoute()
 const router = useRouter()
-const { toDisplay } = usePhoneFormat()
+const { toDisplay } = usePhoneNumberFormatter()
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE
 

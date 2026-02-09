@@ -1,6 +1,6 @@
 <script setup>
 import { useRouter } from 'vue-router'
-import { useRepairSearch } from '@/composables/useRepairSearch'
+import { useRepairSearchProcess } from '@/composables/useRepairSearch'
 import { getRepairStatusLabel, getRepairStatusColorClass, getProgressBarColor } from '@/utils/repairStatus.util'
 
 import LogoFIXDESK from '@/assets/icons/LogoFIXDESK-logo.png'
@@ -18,7 +18,7 @@ const {
   handleSearch,
   goPrevPage,
   goNextPage,
-} = useRepairSearch()
+} = useRepairSearchProcess()
 
 const goToLogin = () => router.push('/login')
 </script>

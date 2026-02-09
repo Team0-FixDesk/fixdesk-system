@@ -3,11 +3,9 @@ const { authMiddleware } = require("../auth.middleware");
 const multer = require("multer");
 const XLSX = require("xlsx");
 
-
 module.exports = function LocationRoutes(db) {
   const router = express.Router();
   const upload = multer({ storage: multer.memoryStorage() });
-
 
   // เรียกข้อมูลตึกหรืออาคาร
   router.get("/buildings", (req, res) => {
@@ -279,7 +277,7 @@ module.exports = function LocationRoutes(db) {
                 .json({ message: "ไม่พบชั้นที่ต้องการแก้ไข" });
             }
             res.json({ message: "แก้ไขชั้นสำเร็จ" });
-          }
+          },
         );
       });
     });
@@ -412,7 +410,7 @@ module.exports = function LocationRoutes(db) {
               room_name: room_name.trim(),
               room_fl_id: room_fl_id,
             });
-          }
+          },
         );
       });
     });
@@ -474,9 +472,9 @@ module.exports = function LocationRoutes(db) {
                   .json({ message: "ไม่พบห้องที่ต้องการแก้ไข" });
               }
               res.json({ message: "แก้ไขห้องสำเร็จ" });
-            }
+            },
           );
-        }
+        },
       );
     });
   });
@@ -595,121 +593,93 @@ module.exports = function LocationRoutes(db) {
     });
   });
 
-  // =====================================================
-  // 🔥 IMPORT LOCATION FROM EXCEL (.xlsx) – FIXED
-  // =====================================================
-  router.post(
-  "/locations/import/xlsx",
-  upload.single("file"),
-  authMiddleware,
-  async (req, res) => {
-    if (!req.file) {
-      return res.status(400).json({ message: "กรุณาอัปโหลดไฟล์ Excel" })
+  router.post("/locations/import", authMiddleware, async (req, res) => {
+    const { locations } = req.body;
+
+    if (!Array.isArray(locations) || !locations.length) {
+      return res.status(400).json({ message: "ไม่มีข้อมูล" });
     }
 
     try {
-      // START TRANSACTION
-      await new Promise((resolve, reject) => {
-        db.beginTransaction(err => (err ? reject(err) : resolve()))
-      })
+      await db.promise().beginTransaction();
 
-      const workbook = XLSX.read(req.file.buffer, { type: "buffer" })
-      const sheet = workbook.Sheets[workbook.SheetNames[0]]
-      const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" })
+      for (const loc of locations) {
+        const building = loc.building_name?.trim();
+        const floor = loc.floor_name?.trim();
+        const room = loc.room_name?.trim();
 
-      if (!rows.length) {
-        throw new Error("ไฟล์ Excel ไม่มีข้อมูล")
-      }
+        if (!building || !floor || !room) continue;
 
-      for (const row of rows) {
-        const buildingName = String(row.bd_name || "").trim()
-        const floorName = String(row.fl_name || "").trim()
-        const roomName = String(row.room_name || "").trim()
+        // BUILDING
+        const [bRows] = await db
+          .promise()
+          .query("SELECT bd_id FROM building WHERE LOWER(bd_name)=LOWER(?)", [
+            building,
+          ]);
 
-        if (!buildingName || !floorName || !roomName) continue
+        let bd_id;
 
-        // ===== BUILDING =====
-        const bRows = await new Promise((resolve, reject) => {
-          db.query(
-            "SELECT bd_id FROM building WHERE LOWER(bd_name)=LOWER(?)",
-            [buildingName],
-            (err, rows) => (err ? reject(err) : resolve(rows))
-          )
-        })
-
-        let bd_id
         if (!bRows.length) {
-          const r = await new Promise((resolve, reject) => {
-            db.query(
-              "INSERT INTO building (bd_name) VALUES (?)",
-              [buildingName],
-              (err, result) => (err ? reject(err) : resolve(result))
-            )
-          })
-          bd_id = r.insertId
+          const [r] = await db
+            .promise()
+            .query("INSERT INTO building (bd_name) VALUES (?)", [building]);
+          bd_id = r.insertId;
         } else {
-          bd_id = bRows[0].bd_id
+          bd_id = bRows[0].bd_id;
         }
 
-        // ===== FLOOR =====
-        const fRows = await new Promise((resolve, reject) => {
-          db.query(
+        // FLOOR
+        const [fRows] = await db
+          .promise()
+          .query(
             "SELECT fl_id FROM floor WHERE LOWER(fl_name)=LOWER(?) AND fl_bd_id=?",
-            [floorName, bd_id],
-            (err, rows) => (err ? reject(err) : resolve(rows))
-          )
-        })
+            [floor, bd_id],
+          );
 
-        let fl_id
+        let fl_id;
+
         if (!fRows.length) {
-          const r = await new Promise((resolve, reject) => {
-            db.query(
-              "INSERT INTO floor (fl_name, fl_bd_id) VALUES (?, ?)",
-              [floorName, bd_id],
-              (err, result) => (err ? reject(err) : resolve(result))
-            )
-          })
-          fl_id = r.insertId
+          const [r] = await db
+            .promise()
+            .query("INSERT INTO floor (fl_name, fl_bd_id) VALUES (?,?)", [
+              floor,
+              bd_id,
+            ]);
+          fl_id = r.insertId;
         } else {
-          fl_id = fRows[0].fl_id
+          fl_id = fRows[0].fl_id;
         }
 
-        // ===== ROOM =====
-        const roomRows = await new Promise((resolve, reject) => {
-          db.query(
+        // ROOM
+        const [rRows] = await db
+          .promise()
+          .query(
             "SELECT room_id FROM room WHERE LOWER(room_name)=LOWER(?) AND room_fl_id=?",
-            [roomName, fl_id],
-            (err, rows) => (err ? reject(err) : resolve(rows))
-          )
-        })
+            [room, fl_id],
+          );
 
-        if (!roomRows.length) {
-          await new Promise((resolve, reject) => {
-            db.query(
-              "INSERT INTO room (room_name, room_fl_id) VALUES (?, ?)",
-              [roomName, fl_id],
-              err => (err ? reject(err) : resolve())
-            )
-          })
+        if (!rRows.length) {
+          await db
+            .promise()
+            .query("INSERT INTO room (room_name, room_fl_id) VALUES (?,?)", [
+              room,
+              fl_id,
+            ]);
         }
       }
 
-      // COMMIT
-      await new Promise((resolve, reject) => {
-        db.commit(err => (err ? reject(err) : resolve()))
-      })
+      await db.promise().commit();
 
-      res.json({ message: "นำเข้าข้อมูลสถานที่จาก Excel สำเร็จ" })
-
+      res.json({ message: "Import Location สำเร็จ" });
     } catch (err) {
-      db.rollback(() => {})
-      console.error("IMPORT ERROR:", err)
+      await db.promise().rollback();
+
       res.status(500).json({
-        message: "Import Excel ล้มเหลว",
+        message: "Import ล้มเหลว",
         error: err.message,
-      })
+      });
     }
-  }
-) 
+  });
+
   return router;
 };
