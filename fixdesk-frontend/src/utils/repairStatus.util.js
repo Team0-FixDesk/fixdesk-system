@@ -24,3 +24,22 @@ export const convertStatusToStep = (status) => STATUS_STEP_MAP[status] || 1
 
 export const getStepColor = (currentStep, targetStep) =>
   currentStep < targetStep ? 'text-slate-400' : 'text-green-600'
+
+export const mapUrgency = (u) =>
+  ({ high: 'เร่งด่วนมาก', medium: 'เร่งด่วน', low: 'ไม่เร่งด่วน' })[u] || 'เร่งด่วน'
+
+export const mapStatus = (s) =>
+  ({
+    pending: 'รอดำเนินการ',
+    in_progress: 'กำลังดำเนินการ',
+    done: 'เสร็จสิ้น',
+    cancel: 'ยกเลิก',
+  })[s] || 'รอดำเนินการ'
+
+export const mapStockStatus = (s) =>
+  ({
+    waiting: 'รอดำเนินการ',
+    approved: 'อนุมัติ',
+    rejected: 'ปฏิเสธ',
+    completed: 'เสร็จสิ้น',
+  })[s] || '-'
