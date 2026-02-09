@@ -59,11 +59,7 @@ const router = createRouter({
           meta: { roles: ['Admin'] },
         },
         { path: 'admin-user-info', component: AdminUserInfoView, meta: { roles: ['Admin'] } },
-        {
-          path: 'admin-manage-location',
-          component: AdminManageLocationView,
-          meta: { roles: ['Admin'] },
-        },
+        { path: 'admin-manage-location', component: AdminManageLocationView, meta: { roles: ['Admin'] } },
         { path: 'Dashboard', component: ManagerHomeView, meta: { roles: ['Manager', 'Admin'] } },
         { path: 'information-summary', component: ManagerSummaryView, meta: { roles: ['Manager', 'Admin'] } },
 
