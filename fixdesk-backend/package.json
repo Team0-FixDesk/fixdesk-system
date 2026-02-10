@@ -13,10 +13,11 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@line/bot-sdk": "^10.6.0",
     "apexcharts": "^5.3.6",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
-    "dotenv": "^17.2.3",
+    "dotenv": "^17.2.4",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.0.2",
