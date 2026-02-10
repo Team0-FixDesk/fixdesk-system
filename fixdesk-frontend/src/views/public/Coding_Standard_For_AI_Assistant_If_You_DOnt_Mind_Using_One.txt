@@ -1,0 +1,229 @@
+CODING STANDARD (AI-Readable, Low Token)
+
+System: FixDesk System (FDS)
+Version: 1.7.1
+Last Updated: 15 Jan 2569
+
+LANGUAGE
+- Use English for all code identifiers.
+
+GENERAL PRINCIPLES
+- Code must be readable and simple.
+- Avoid unnecessary complexity.
+- No meaningless short names.
+
+================================
+FRONT-END STANDARD
+================================
+
+VARIABLES
+- camelCase for normal variables.
+- Singular nouns.
+Example: userId, isActive
+
+ARRAY VARIABLES
+- camelCase + plural + suffix List.
+Example: userList, productList
+
+CONSTANTS
+- UPPER_SNAKE_CASE.
+Example: API_BASE_URL
+
+FUNCTIONS
+- camelCase.
+- Must be verbs.
+Example: fetchData(), saveUser()
+- Composables: use + description.
+Example: useUserAuth()
+
+FOLDERS
+- lowercase.
+- Group by module or feature.
+Example: components/admin
+
+FILES
+.vue
+- kebab-case.
+Example: login-view.vue
+- Component name: PascalCase and match filename.
+
+.js
+- lowercase, single word.
+Example: auth.js
+
+ROUTES
+- Path: lowercase kebab-case.
+Example: /admin-home
+- Name: kebab-case.
+Example: admin-home
+- Use meta.roles for access control.
+
+CODE FORMAT
+- Indentation: 1 tab.
+- Space around operators.
+- Blank line between logic sections.
+- Blank line before return.
+
+SECURITY
+- Always send token with protected API requests.
+- Never hardcode API keys.
+- Token storage:
+  - sessionStorage (default)
+  - localStorage only with limited token lifetime
+- Never store passwords on client.
+
+COMMENTS
+JS:
+- // single line
+- /* block */
+HTML:
+- <!-- comment -->
+CSS:
+- /* block only */
+
+================================
+BACK-END STANDARD
+================================
+
+LANGUAGE
+- Node.js / Express.
+
+VARIABLES
+- camelCase.
+- Meaningful names.
+
+FUNCTIONS
+- camelCase.
+- Verbs only.
+Example: getUser(), createOrder()
+
+FOLDERS
+- lowercase.
+- Group by responsibility.
+Example: routes/admin
+
+FORMAT
+- Same indentation and spacing rules as Front-end.
+
+SECURITY
+- Use JWT / OAuth2.
+- Always validate role before resource access.
+- No stack trace in responses.
+- Secrets in .env only.
+
+ERROR HANDLING
+- User-friendly error messages.
+- Log only necessary debug info.
+- Never log sensitive data.
+
+================================
+CODE LAYOUT (ALL)
+================================
+
+ORDER IN FILE
+1. External imports
+2. Internal imports
+3. Props / Options
+4. State
+5. Computed
+6. Functions
+7. Lifecycle logic
+
+FUNCTION STYLE
+- Arrow function: local or handlers.
+- Function declaration: reusable logic.
+
+================================
+DATABASE STANDARD (MySQL)
+================================
+
+DATABASE
+- snake_case.
+Example: fixdesk_db
+
+TABLES
+- snake_case.
+- Plural.
+Example: users
+
+COLUMNS
+- snake_case.
+- Clear meaning.
+Example: created_at
+
+================================
+GIT STANDARD
+================================
+
+COMMITS (Conventional Commits)
+Format:
+type(scope): description
+
+Types:
+- feat, fix, docs, style, refactor, perf, test, build
+
+Scopes:
+- front-end, back-end, database, api, lang
+
+BRANCHES
+- main: production only
+- develop: integration
+- feature/<desc>
+- bugfix/<desc>
+- hotfix/<desc>
+- release/<version>
+
+lowercase + kebab-case only.
+
+================================
+API STANDARD
+================================
+
+STYLE
+- RESTful.
+- JSON only.
+- One responsibility per endpoint.
+
+ENDPOINTS
+- lowercase kebab-case.
+- Use nouns only.
+Example:
+GET /api/users
+POST /api/repairs
+
+HTTP METHODS
+- GET, POST, PUT/PATCH, DELETE
+
+RESPONSE
+Success:
+{ data, message }
+
+Error:
+{ message }
+
+STATUS CODES
+200, 201, 400, 401, 403, 404, 500
+
+SECURITY
+- Authentication required.
+- Token middleware mandatory.
+
+================================
+REUSABLE CODE
+================================
+
+RULES
+- No duplicated logic.
+- No UI dependency.
+- No uncontrolled side effects.
+
+TYPES
+- Utility
+- Service
+- Composable / Hook
+- Middleware
+
+NAMING
+- Variables/Functions: camelCase
+- Files: kebab-case
+- Constants: UPPER_SNAKE_CASE
