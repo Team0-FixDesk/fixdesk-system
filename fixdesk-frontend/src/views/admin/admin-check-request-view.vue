@@ -13,6 +13,10 @@ import TableActions from '@/components/table-actions-component.vue'
 import AssignJobModalComponent from '@/components/modal/assign-job-modal-component.vue'
 import RepairFilterBar from '@/components/filters/repair-filter-bar-component.vue'
 
+import { useTruncateText } from '@/composables/useTruncateText.js'
+
+const { truncateSentences } = useTruncateText()
+
 /* =========================
   Constants
 ========================= */
@@ -22,13 +26,7 @@ const STORAGE_KEYS = {
   token: 'token',
 }
 
-const TABLE_COLUMNS = [
-  'หมายเลขแจ้งซ่อม',
-  'รายละเอียด',
-  'ความเร่งด่วน',
-  'สถานะงาน',
-  'การดำเนินการ',
-]
+const TABLE_COLUMNS = ['หมายเลขแจ้งซ่อม', 'รายละเอียด', 'ความเร่งด่วน', 'สถานะงาน', 'การดำเนินการ']
 
 const TH_LOCALE = 'th-TH'
 
@@ -57,7 +55,7 @@ const openMenuId = ref(null)
   State (Table)
 ========================= */
 const tableColumns = TABLE_COLUMNS
-const tableRows = ref([])
+const tableRowsList = ref([])
 
 /* =========================
   Helpers (reusable functions)
@@ -94,7 +92,15 @@ function buildRepairDetailHtml(repair) {
     (repair.department_name ?? '-') +
     '</br>' +
     'ประเภทแจ้งซ่อม : ' +
-    (repair.tt_name ?? '-')
+    (repair.tt_name ?? '-') +
+    '</br>' +
+    'รายละเอียด: ' +
+    truncateSentences(repair.rf_problem, 2) +
+    '</br>' +
+    'สถานที่: ' +
+    (repair.bd_name ?? '-') + ' ' +
+    (repair.fl_name ?? '-') + ' ' +
+    (repair.room_name ?? '-')
   )
 }
 
@@ -151,7 +157,7 @@ function mapRepairToTableRow(repair) {
 async function loadAdminRepairs() {
   try {
     const repairs = await fetchAdminRepairs()
-    tableRows.value = repairs.map(mapRepairToTableRow)
+    tableRowsList.value = repairs.map(mapRepairToTableRow)
   } catch (error) {
     console.error('Failed to load admin repairs:', error?.message || error)
   }
@@ -163,7 +169,7 @@ async function loadAdminRepairs() {
 const filteredRows = computed(() => {
   const search = (searchInput.value || '').toLowerCase()
 
-  return tableRows.value.filter((item) => {
+  return tableRowsList.value.filter((item) => {
     const row = item.row
     const urgency = row[2]
     const status = row[3]

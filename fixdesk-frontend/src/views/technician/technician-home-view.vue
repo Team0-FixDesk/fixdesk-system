@@ -1,240 +1,40 @@
 <script setup>
 defineOptions({ name: 'TechnicianHomeView' })
-import { ref, computed, onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthToken } from '@/composables/useAuthToken'
+import { useUserProfile } from '@/composables/useUserProfile'
+
 import CardHomeComponent from '@/components/card-home-component.vue'
 import TableComponent from '@/components/table-component.vue'
 import InfoButtonComponent from '@/components/button/info-button-component.vue'
 
-import { jwtDecode } from 'jwt-decode' // ตรวจสอบว่ามีบรรทัดนี้
+import { useTechnicianRepairs } from '@/composables/repair/useTechnicianRepairs'
+import { useTechnicianStockForms } from '@/composables/stock/useTechnicianStockForms'
+import { useTechnicianRepairTable } from '@/composables/repair/useTechnicianRepairTable'
+import { useTechnicianStockTable } from '@/composables/stock/useTechnicianStockTable'
+import { useTechnicianStats } from '@/composables/repair/useTechnicianStats'
 
 const router = useRouter()
-const API_BASE = import.meta.env.VITE_API_BASE
 
-// --- State ---
-const repairRequests = ref([])
-const stockForms = ref([])
-const loading = ref(false)
-const loadingStock = ref(false)
-const technicianName = ref('เจ้าหน้าที่')
-
-const fetchUserProfile = async () => {
-  const token = localStorage.getItem('token') || sessionStorage.getItem('token')
-  if (!token) return
-
-  try {
-    const decoded = jwtDecode(token)
-    const userId = decoded.us_id // หรือ field id ใน token ของคุณ
-
-    const res = await fetch(`${API_BASE}/users/${userId}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-
-    if (res.ok) {
-      const userData = await res.json()
-      if (userData.us_first_name_th) {
-        technicianName.value =
-          `${userData.us_first_name_th} ${userData.us_last_name_th || ''}`.trim()
-      }
-    }
-  } catch (err) {
-    console.error('โหลดข้อมูลผู้ใช้ไม่สำเร็จ', err)
-  }
-}
-
-const sortedRepairs = computed(() => {
-  return [...repairRequests.value]
-    .sort((a, b) => new Date(b.rawDate) - new Date(a.rawDate))
-    .slice(0, 5)
-})
-
-const repairTableRows = computed(() => {
-  return sortedRepairs.value.map((r) => [
-    r.rf_code,
-    r.rf_problem || '-',
-    r.department_name || '-',
-    `${r.building_name || ''} ${r.room_name || ''}`,
-    getBadgeHtml(r.urgency, 'urgency'),
-    getBadgeHtml(r.status, 'status'),
-  ])
-})
-
-// [เพิ่มใหม่] ส่งตัวนี้ไปให้ TableComponent (ผ่าน prop rawRows)
-const repairTableRaw = computed(() => {
-  return sortedRepairs.value.map((r) => ({
-    ticketId: r.rf_code, // หรือ id ที่คุณใช้เป็น key ในการเปิดหน้า detail
-    // ... อาจจะใส่ property อื่นๆ เผื่อไว้ก็ได้
-  }))
-})
-
-// [เพิ่มใหม่]
-const stockTableRows = computed(() => {
-  return stockForms.value.slice(0, 5).map((form) => {
-    const location = form.building_name || '-'
-    const items = form.items ? form.items.split('\n') : []
-
-    return [
-      form.sf_code, // 0
-      {
-        date: new Date(form.sf_create_at).toLocaleString('th-TH', {
-          dateStyle: 'medium',
-          timeStyle: 'short',
-        }),
-        location,
-        rf_code: form.rf_code, //  ตอนนี้จะมีค่า
-      },
-      items, //  ตอนนี้จะมีค่า
-      form.sf_status,
-      '',
-    ]
-  })
-})
-
-// --- [เพิ่มใหม่] Event Handler สำหรับคลิก Row ---
-const onRepairRowClick = (item) => {
-  const id = typeof item === 'object' && item !== null ? item.ticketId : item
-
-  if (id) {
-    router.push({
-      path: `/main/repair-detail/${id}`,
-      state: { fromTechnician: true },
-    })
-  } else {
-    console.warn('Invalid ID clicked:', item)
-  }
-}
-
-// --- Helper Functions ---
-const mapUrgency = (u) =>
-  ({ high: 'เร่งด่วนมาก', medium: 'เร่งด่วน', low: 'ไม่เร่งด่วน' })[u] || 'เร่งด่วน'
-const mapStatus = (s) =>
-  ({ pending: 'รอดำเนินการ', in_progress: 'กำลังดำเนินการ', done: 'เสร็จสิ้น', cancel: 'ยกเลิก' })[
-    s
-  ] || 'รอดำเนินการ'
-const mapStockStatus = (s) =>
-  ({ waiting: 'รอดำเนินการ', approved: 'อนุมัติ', rejected: 'ปฏิเสธ', completed: 'เสร็จสิ้น' })[
-    s
-  ] || '-'
-
-// Function to generate HTML badge string for TableComponent
-function getBadgeHtml(text, type) {
-  let colorClass = 'bg-gray-100 text-gray-600'
-
-  if (type === 'urgency') {
-    if (text === 'เร่งด่วนมาก') colorClass = 'bg-red-100 text-red-700'
-    else if (text === 'เร่งด่วน') colorClass = 'bg-amber-100 text-amber-700'
-    else colorClass = 'bg-green-100 text-green-700'
-  } else if (type === 'status') {
-    if (text === 'รอดำเนินการ' || text === 'waiting') colorClass = 'bg-amber-100 text-amber-700'
-    else if (text === 'กำลังดำเนินการ') colorClass = 'bg-blue-100 text-blue-700'
-    else if (text === 'เสร็จสิ้น' || text === 'อนุมัติ') colorClass = 'bg-green-100 text-green-700'
-    else if (text === 'ยกเลิก' || text === 'ปฏิเสธ') colorClass = 'bg-red-100 text-red-700'
-  }
-
-  return `<span class="inline-flex items-center justify-center h-8 font-medium rounded-full w-28 ${colorClass}">${text}</span>`
-}
-
-// --- Fetch Data Functions ---
-const fetchRepairRequests = async () => {
-  loading.value = true
-  try {
-    const token = localStorage.getItem('token') || sessionStorage.getItem('token')
-    if (!token) return
-
-    const res = await fetch(`${API_BASE}/technician/repairs`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-    if (!res.ok) throw new Error('Fetch failed')
-
-    const data = await res.json()
-    repairRequests.value = data.map((item) => ({
-      ...item,
-      rawDate: item.rf_create_at, // เก็บ raw date เพื่อ sort
-      status: mapStatus(item.rf_user_status),
-      urgency: mapUrgency(item.rf_urgency),
-    }))
-  } catch (err) {
-    console.error(err)
-  } finally {
-    loading.value = false
-  }
-}
-
-const fetchStockForms = async () => {
-  loadingStock.value = true
-  try {
-    const token = localStorage.getItem('token') || sessionStorage.getItem('token')
-    if (!token) return
-
-    const decoded = jwtDecode(token)
-    const userId = decoded.us_id
-
-    let res = await fetch(`${API_BASE}/stock-forms/${userId}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-
-    if (!res.ok && res.status === 404) {
-      res = await fetch(`${API_BASE}/stock-forms`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-    }
-
-    if (!res.ok) throw new Error('Fetch stock failed')
-
-    const data = await res.json()
-    stockForms.value = data.map((item) => ({
-      ...item,
-      rawDate: item.sf_create_at,
-      status: mapStockStatus(item.sf_status),
-      urgency: mapUrgency(item.sf_urgency),
-    }))
-  } catch (err) {
-    console.error(err)
-  } finally {
-    loadingStock.value = false
-  }
-}
-function truncateItem(text, maxWords = 5) {
-  if (!text) return ''
-  const [name] = text.split(' x')
-  const words = name.split(' ')
-  return words.length > maxWords ? words.slice(0, maxWords).join(' ') + '...' : name
-}
-
-function extractQuantity(item) {
-  if (!item) return 1
-  const match = item.match(/x\s*(\d+)/i)
-  return match ? Number(match[1]) : 1
-}
-
-// --- Stats for Cards ---
-const isToday = (d) => new Date(d).toDateString() === new Date().toDateString()
-const statItems = computed(() => [
-  {
-    value: repairRequests.value.filter((r) => isToday(r.rawDate)).length,
-    label: 'งานมอบหมายใหม่วันนี้',
-    colorClass: 'text-amber-500',
-    filterStatus: 'today',
-  },
-  {
-    value: repairRequests.value.filter((r) => r.rf_user_status === 'in_progress').length,
-    label: 'กำลังดำเนินการ',
-    colorClass: 'text-blue-600',
-    filterStatus: 'in_progress',
-  },
-  {
-    value: repairRequests.value.filter((r) => r.rf_user_status === 'done').length,
-    label: 'ดำเนินการเสร็จสิ้นทั้งหมด',
-    colorClass: 'text-green-600',
-    filterStatus: 'done',
-  },
-  {
-    value: repairRequests.value.filter((r) => r.rf_user_status === 'cancel').length,
-    label: 'งานที่ยกเลิก',
-    colorClass: 'text-red-600',
-    filterStatus: 'cancel',
-  },
-])
+const { token, userId, isAuthenticated, logout } = useAuthToken()
+const { repairRequests, fetchRepairRequests } = useTechnicianRepairs(token, isAuthenticated, logout)
+const { statItems } = useTechnicianStats(repairRequests)
+const { repairTableRows, repairTableRaw, onRepairRowClick } = useTechnicianRepairTable(
+  repairRequests,
+  router,
+)
+const { stockForms, fetchStockForms } = useTechnicianStockForms(
+  token,
+  userId,
+  isAuthenticated,
+  logout,
+)
+const { stockTableRows, truncateItem, extractQuantity, openDetail } = useTechnicianStockTable(
+  stockForms,
+  router,
+)
+const { displayName, fetchUserProfile } = useUserProfile()
 
 // --- Chart Data ---
 const donutChart = computed(() => {
@@ -252,24 +52,19 @@ const donutChart = computed(() => {
   }
 })
 
-// --- Actions ---
 const onCardClick = (item) =>
   router.push({ path: '/main/technician-repair-list', query: { status: item.filterStatus } })
 
 onMounted(() => {
   fetchRepairRequests()
   fetchStockForms()
-  fetchUserProfile()
 })
-const openDetail = (rfCode) => {
-  router.push(`/main/repair-detail/${rfCode}`)
-}
 </script>
 
 <template>
   <div class="p-8 mx-auto bg-white shadow-md rounded-xl max-w-8xl">
     <div class="mb-6">
-      <h1 class="text-2xl font-bold text-gray-800">{{ technicianName }}</h1>
+      <h1 class="text-2xl font-bold text-gray-800">{{ displayName }}</h1>
       <p class="mt-1 text-sm text-gray-600">
         ตรวจสอบสถานะงานซ่อมและจัดการรายการเบิกจ่ายวัสดุอุปกรณ์
       </p>
@@ -295,7 +90,7 @@ const openDetail = (rfCode) => {
         </div>
 
         <TableComponent
-          :columns="['เลขใบงาน', 'หัวข้อ', 'หน่วยงาน', 'สถานที่', 'ความเร่งด่วน', 'สถานะ']"
+          :columns="['เลขใบงาน', 'เรื่องที่แจ้ง', 'หน่วยงาน', 'สถานที่', 'ความเร่งด่วน', 'สถานะ']"
           :rows="repairTableRows"
           :rawRows="repairTableRaw"
           :perPage="5"

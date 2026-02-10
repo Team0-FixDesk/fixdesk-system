@@ -1,4 +1,4 @@
-export function usePhoneFormat() {
+export function usePhoneNumberFormatter() {
   // ดึงเฉพาะตัวเลข
   function normalize(value) {
     return value.replace(/\D/g, '')
@@ -20,7 +20,7 @@ export function usePhoneFormat() {
 
     if (digits.length <= 3) return digits
     if (digits.length <= 6) return `${digits.slice(0, 3)}-${digits.slice(3)}`
-    
+
     return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`
   }
 

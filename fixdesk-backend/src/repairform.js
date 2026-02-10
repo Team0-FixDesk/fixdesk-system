@@ -348,8 +348,12 @@ module.exports = function RepairFormRoutes(db) {
       SELECT
         rf.rf_id,
         rf.rf_code,
+        rf.rf_problem,
         rf.rf_create_at,
         rf.rf_user_status,
+        b.bd_name,
+        f.fl_name,
+        r.room_name,
         COALESCE(rf.rf_urgency, 'medium') AS rf_urgency,
         u.us_first_name_th AS us_first_name,
         u.us_last_name_th AS us_last_name,
@@ -361,6 +365,10 @@ module.exports = function RepairFormRoutes(db) {
       FROM repair_form rf
       LEFT JOIN user u ON rf.rf_us_id = u.us_id
       LEFT JOIN technician_type tt ON rf.rf_tt_id = tt.tt_id
+
+      LEFT JOIN room r ON rf.rf_room_id = r.room_id
+      LEFT JOIN floor f ON r.room_fl_id = f.fl_id
+      LEFT JOIN building b ON f.fl_bd_id = b.bd_id
       -- เชื่อมตารางมอบหมายงาน (เอาเฉพาะหัวหน้าทีม)
       LEFT JOIN repair_assignment ra ON rf.rf_id = ra.ra_rf_id AND ra.ra_is_lead = 1
       LEFT JOIN user tech ON ra.ra_us_id = tech.us_id

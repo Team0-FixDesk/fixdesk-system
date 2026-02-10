@@ -1,29 +1,26 @@
 <script setup>
-/** * การนำเข้า Library และ Component
- */
+defineOptions({ name: 'RepairRequestView' })
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+
 import Swal from 'sweetalert2'
-import { usePhoneFormat } from '@/composables/usePhoneFormat'
 import { Icon } from '@iconify/vue'
 
+import { usePhoneNumberFormatter } from '@/composables/usePhoneFormat'
+import { useRepairLocationData } from '@/composables/location/useRepairLocationData'
+import { useFileUpload } from '@/composables/useFileUpload'
+import { useRepairFormValidation } from '@/composables/repair/useRepairFormValidation'
+import { useRepairService } from '@/composables/repair/useRepairService'
 
-/** * การกำหนด Options / Props
- */
-const { toDisplay } = usePhoneFormat()
-defineOptions({ name: 'RepairRequestView' })
+import { decodeJwtToken } from '@/utils/jwt.util'
 
-/** * การประกาศตัวแปร State และค่าคงที่
- */
+const { toDisplay } = usePhoneNumberFormatter()
+
 const router = useRouter()
 const API_BASE_URL = import.meta.env.VITE_API_BASE
 const MAX_FILE_COUNT = 5
-const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB
 
-const isSubmitting = ref(false)
-const isDragOver = ref(false)
-const showPreviewModal = ref(false)
-const currentPreviewIndex = ref(0)
+const { createRepair } = useRepairService(API_BASE_URL)
 
 // ข้อมูลหลักในแบบฟอร์มแจ้งซ่อม
 const repairFormData = ref({
@@ -31,32 +28,42 @@ const repairFormData = ref({
   phoneNumber: '',
   department: '',
   repairType: '',
-  repairTypeList: [],
   building: '',
-  buildingList: [],
   floor: '',
-  floorList: [],
   room: '',
-  roomList: [],
   assetCode: '',
   problemDetail: '',
   issueDescription: '',
   urgency: '',
-  uploadedFileList: [],
 })
 
-// ข้อมูลข้อผิดพลาดสำหรับแต่ละฟิลด์
-const errorData = ref({
-  repairType: '',
-  building: '',
-  floor: '',
-  room: '',
-  problemDetail: '',
-  issueDescription: '',
-  urgency: '',
-})
+const {
+  repairTypeList,
+  buildingList,
+  floorList,
+  roomList,
+  fetchRepairTypeList,
+  fetchBuildingList,
+  fetchFloorList,
+  fetchRoomList,
+} = useRepairLocationData(API_BASE_URL)
 
-const filePreviewList = ref([]) // รายการไฟล์สำหรับแสดง Preview
+const {
+  isDragOver,
+  filePreviewList,
+  uploadedFileList,
+  onFileUpload,
+  onDragOver,
+  onDragLeave,
+  onDrop,
+  deleteFile,
+} = useFileUpload(API_BASE_URL)
+
+const { errorData, validateFormData, validateField } = useRepairFormValidation(repairFormData)
+
+const isSubmitting = ref(false)
+const showPreviewModal = ref(false)
+const currentPreviewIndex = ref(0)
 
 // ระดับความเร่งด่วน (Constant List)
 const URGENCY_LEVEL_LIST = [
@@ -64,190 +71,6 @@ const URGENCY_LEVEL_LIST = [
   { label: 'เร่งด่วน', value: 'medium', border: 'border-amber-400', bg: 'bg-amber-400' },
   { label: 'ไม่เร่งด่วน', value: 'low', border: 'border-green-600', bg: 'bg-green-600' },
 ]
-
-/** * ส่วนของฟังก์ชัน (Methods)
- */
-
-// ดึงข้อมูลประเภทงานซ่อม
-async function fetchRepairTypeList() {
-  try {
-    const response = await fetch(`${API_BASE_URL}/technician-types`)
-    if (!response.ok) throw new Error('โหลดข้อมูลประเภทไม่สำเร็จ')
-    const data = await response.json()
-    repairFormData.value.repairTypeList = data.map((item) => ({
-      id: item.tt_id,
-      name: item.tt_name,
-    }))
-  } catch (err) {
-    console.error('โหลดประเภทงานไม่สำเร็จ:', err)
-  }
-}
-
-// ดึงข้อมูลอาคาร
-async function fetchBuildingList() {
-  try {
-    const response = await fetch(`${API_BASE_URL}/buildings`)
-    if (!response.ok) throw new Error('โหลดข้อมูลอาคารไม่สำเร็จ')
-    const data = await response.json()
-    repairFormData.value.buildingList = data.map((b) => ({
-      id: b.building_id,
-      name: b.building_name,
-    }))
-  } catch (err) {
-    console.error('โหลดอาคารไม่สำเร็จ:', err)
-  }
-}
-
-// ดึงข้อมูลชั้นตามอาคาร
-async function fetchFloorList(buildingId) {
-  if (!buildingId) return
-  try {
-    const response = await fetch(`${API_BASE_URL}/floors/${buildingId}`)
-    if (!response.ok) throw new Error('โหลดข้อมูลชั้นไม่สำเร็จ')
-    const data = await response.json()
-    repairFormData.value.floorList = data.map((f) => ({
-      id: f.floor_id,
-      name: f.floor_name,
-    }))
-  } catch (err) {
-    console.error('โหลดชั้นไม่สำเร็จ:', err)
-  }
-}
-
-// ดึงข้อมูลห้องตามชั้น
-async function fetchRoomList(floorId) {
-  if (!floorId) return
-  try {
-    const response = await fetch(`${API_BASE_URL}/rooms/${floorId}`)
-    if (!response.ok) throw new Error('โหลดข้อมูลห้องไม่สำเร็จ')
-    const data = await response.json()
-    repairFormData.value.roomList = data.map((r) => ({
-      id: r.room_id,
-      name: r.room_name,
-    }))
-  } catch (err) {
-    console.error('โหลดห้องไม่สำเร็จ:', err)
-  }
-}
-
-// จัดการการอัปโหลดไฟล์
-function onFileUpload(event) {
-  const fileList = Array.from(event.target.files)
-  processFileList(fileList)
-}
-
-function onDragOver(event) {
-  event.preventDefault()
-  isDragOver.value = true
-}
-
-function onDragLeave(event) {
-  event.preventDefault()
-  isDragOver.value = false
-}
-
-function onDrop(event) {
-  event.preventDefault()
-  isDragOver.value = false
-  const fileList = Array.from(event.dataTransfer.files)
-  if (fileList.length > 0) {
-    processFileList(fileList)
-  }
-}
-
-// ตรวจสอบและประมวลผลไฟล์ที่ได้รับ
-function processFileList(fileList) {
-  // ตรวจสอบจำนวนไฟล์สูงสุด
-  if (repairFormData.value.uploadedFileList.length + fileList.length > MAX_FILE_COUNT) {
-    const Toast = Swal.mixin({
-      toast: true,
-      position: 'top-end',
-      timer: 2000,
-      timerProgressBar: true,
-    })
-    Toast.fire({
-      title: 'ไฟล์เกินกำหนด',
-      text: `สามารถอัพโหลดได้สูงสุด ${MAX_FILE_COUNT} ไฟล์`,
-      icon: 'warning',
-      background: '#fef3c7',
-      color: '#92400e',
-    })
-    return
-  }
-
-  // ตรวจสอบประเภทไฟล์
-  const allowedTypeList = [
-    'image/jpeg',
-    'image/jpg',
-    'image/png',
-    'image/gif',
-    'image/webp',
-    'video/mp4',
-    'video/avi',
-    'video/mov',
-    'video/wmv',
-  ]
-  const invalidFileList = fileList.filter((file) => !allowedTypeList.includes(file.type))
-
-  if (invalidFileList.length > 0) {
-    const Toast = Swal.mixin({
-      toast: true,
-      position: 'top-end',
-      timer: 2500,
-      timerProgressBar: true,
-    })
-    Toast.fire({
-      title: 'ประเภทไฟล์ไม่ถูกต้อง',
-      text: 'รองรับเฉพาะไฟล์รูปภาพและวิดีโอที่กำหนด',
-      icon: 'error',
-      background: '#fee2e2',
-      color: '#dc2626',
-    })
-    return
-  }
-
-  // ตรวจสอบขนาดไฟล์
-  const oversizedFileList = fileList.filter((file) => file.size > MAX_FILE_SIZE)
-  if (oversizedFileList.length > 0) {
-    const Toast = Swal.mixin({
-      toast: true,
-      position: 'top-end',
-      timer: 2000,
-      timerProgressBar: true,
-    })
-    Toast.fire({
-      title: 'ไฟล์ใหญ่เกินไป',
-      text: 'ขนาดไฟล์ต้องไม่เกิน 50MB',
-      icon: 'error',
-      background: '#fee2e2',
-      color: '#dc2626',
-    })
-    return
-  }
-
-  // สร้างรายการ Preview และเก็บไฟล์ลงใน State
-  fileList.forEach((file) => {
-    repairFormData.value.uploadedFileList.push(file)
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      filePreviewList.value.push({
-        name: file.name,
-        size: file.size,
-        type: file.type,
-        url: e.target.result,
-        isImage: file.type.startsWith('image/'),
-        isVideo: file.type.startsWith('video/'),
-      })
-    }
-    reader.readAsDataURL(file)
-  })
-}
-
-// ลบไฟล์ออกจากรายการ
-function deleteFile(index) {
-  repairFormData.value.uploadedFileList.splice(index, 1)
-  filePreviewList.value.splice(index, 1)
-}
 
 // ฟังก์ชันสำหรับ Preview Modal
 function openPreview(index) {
@@ -271,24 +94,6 @@ function prevPreview() {
   }
 }
 
-// ถอดรหัส Token
-function decodeJwtToken(token) {
-  try {
-    const base64Url = token.split('.')[1]
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
-    const jsonPayload = decodeURIComponent(
-      atob(base64)
-        .split('')
-        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-        .join(''),
-    )
-    return JSON.parse(jsonPayload)
-  } catch (err) {
-    console.error('ไม่สามารถ decode token ได้:', err)
-    return {}
-  }
-}
-
 /** * Lifecycle Hooks
  */
 onMounted(() => {
@@ -307,47 +112,35 @@ onMounted(() => {
 
 // บันทึกแบบฟอร์ม
 async function submitRepairRequest() {
-  if (!isValidFormData()) {
-    const Toast = Swal.mixin({
+  if (!validateFormData()) {
+    Swal.fire({
       toast: true,
       position: 'top-end',
-      showConfirmButton: false,
-      timer: 2500,
-      timerProgressBar: true,
-    })
-    Toast.fire({
-      title: 'ข้อมูลไม่ครบถ้วน',
-      text: 'กรุณากรอกข้อมูลให้ครบถ้วน',
       icon: 'warning',
+      title: 'ข้อมูลไม่ครบถ้วน',
+      timer: 2500,
+      showConfirmButton: false,
     })
     return
   }
 
   if (!repairFormData.value.urgency) {
-    const Toast = Swal.mixin({
+    Swal.fire({
       toast: true,
       position: 'top-end',
-      timer: 2500,
-      timerProgressBar: true,
-    })
-    Toast.fire({
-      title: 'ยังไม่ได้เลือกความเร่งด่วน',
-      text: 'กรุณาเลือกระดับความเร่งด่วนก่อนส่งแบบฟอร์ม',
       icon: 'warning',
-      background: '#fef3c7',
-      color: '#92400e',
+      title: 'ยังไม่ได้เลือกความเร่งด่วน',
+      timer: 2500,
+      showConfirmButton: false,
     })
     return
   }
 
   const confirmResult = await Swal.fire({
     title: 'ยืนยันการส่งแบบฟอร์มแจ้งซ่อม?',
-    text: 'กรุณาตรวจสอบข้อมูลให้ถูกต้องก่อนยืนยัน',
     icon: 'question',
     showCancelButton: true,
     confirmButtonText: 'ยืนยัน',
-    cancelButtonText: 'ยกเลิก',
-    confirmButtonColor: '#1E48D1',
   })
 
   if (!confirmResult.isConfirmed) return
@@ -359,87 +152,36 @@ async function submitRepairRequest() {
   })
 
   try {
-    const token = localStorage.getItem('token') || sessionStorage.getItem('token')
-    if (!token) throw new Error('ไม่พบ token')
-
-    const userPayload = decodeJwtToken(token)
-    let response
-
-    if (repairFormData.value.uploadedFileList.length > 0) {
-      const formDataToSend = new FormData()
-      formDataToSend.append('us_id', userPayload.us_id)
-      formDataToSend.append('phone_number', repairFormData.value.phoneNumber)
-      formDataToSend.append('repair_type_id', repairFormData.value.repairType)
-      formDataToSend.append('room_id', repairFormData.value.room)
-      formDataToSend.append('asset_code', repairFormData.value.assetCode || '')
-      formDataToSend.append('problem_detail', repairFormData.value.problemDetail)
-      formDataToSend.append('issue_description', repairFormData.value.issueDescription)
-      formDataToSend.append('urgency', repairFormData.value.urgency || 'medium')
-
-      repairFormData.value.uploadedFileList.forEach((file) => {
-        formDataToSend.append('files', file)
-      })
-
-      response = await fetch(`${API_BASE_URL}/repair-requests-with-files`, {
-        method: 'POST',
-        body: formDataToSend,
-      })
-    } else {
-      const bodyData = {
-        us_id: userPayload.us_id,
-        phone_number: repairFormData.value.phoneNumber,
-        repair_type_id: repairFormData.value.repairType,
-        room_id: repairFormData.value.room,
-        asset_code: repairFormData.value.assetCode || null,
-        problem_detail: repairFormData.value.problemDetail,
-        issue_description: repairFormData.value.issueDescription,
-        urgency: repairFormData.value.urgency || 'medium',
-      }
-
-      response = await fetch(`${API_BASE_URL}/repair-requests`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(bodyData),
-      })
-    }
-
-    const data = await response.json()
-    if (!response.ok) throw new Error(data.message || 'บันทึกข้อมูลไม่สำเร็จ')
+    await createRepair({
+      repairFormData: repairFormData.value,
+      uploadedFileList: uploadedFileList.value,
+    })
 
     Swal.close()
-    const Toast = Swal.mixin({
+
+    Swal.fire({
       toast: true,
       position: 'top-end',
-      timer: 2500,
-      timerProgressBar: true,
-    })
-    Toast.fire({
-      title: 'ส่งแบบฟอร์มสำเร็จ!',
-      text: 'ระบบได้บันทึกใบแจ้งซ่อมของคุณเรียบร้อยแล้ว',
       icon: 'success',
-      background: '#f0f9ff',
-      color: '#1e3a8a',
+      title: 'ส่งแบบฟอร์มสำเร็จ!',
+      timer: 2500,
+      showConfirmButton: false,
     })
 
     router.push('/main/my-list')
   } catch (err) {
-    console.error('บันทึกไม่สำเร็จ:', err)
+    console.error(err)
+
     Swal.close()
-    const Toast = Swal.mixin({
+
+    Swal.fire({
       toast: true,
       position: 'top-end',
-      timer: 3000,
-      timerProgressBar: true,
-    })
-    Toast.fire({
-      title: 'เกิดข้อผิดพลาด!',
-      text: 'ไม่สามารถส่งแบบฟอร์มได้ กรุณาลองใหม่อีกครั้ง',
       icon: 'error',
-      background: '#fee2e2',
-      color: '#dc2626',
+      title: 'ส่งแบบฟอร์มไม่สำเร็จ',
+      timer: 2500,
+      showConfirmButton: false,
     })
-  } finally {
-    isSubmitting.value = false
   }
 }
 
@@ -455,74 +197,6 @@ async function cancelRepairRequest() {
   })
   if (confirmResult.isConfirmed) {
     router.push('/main/my-list')
-  }
-}
-
-// ตรวจสอบความถูกต้องของข้อมูล
-function isValidFormData() {
-  let valid = true
-  errorData.value = {
-    repairType: '',
-    building: '',
-    floor: '',
-    room: '',
-    problemDetail: '',
-    issueDescription: '',
-    urgency: '',
-  }
-
-  if (!repairFormData.value.repairType) {
-    errorData.value.repairType = 'กรุณาเลือกประเภทงานซ่อม'
-    valid = false
-  }
-  if (!repairFormData.value.building) {
-    errorData.value.building = 'กรุณาเลือกอาคาร'
-    valid = false
-  }
-  if (!repairFormData.value.floor) {
-    errorData.value.floor = 'กรุณาเลือกชั้น'
-    valid = false
-  }
-  if (!repairFormData.value.room) {
-    errorData.value.room = 'กรุณาเลือกห้อง'
-    valid = false
-  }
-  if (!repairFormData.value.problemDetail.trim()) {
-    errorData.value.problemDetail = 'กรุณากรอกหัวข้อปัญหา'
-    valid = false
-  }
-  if (!repairFormData.value.issueDescription.trim()) {
-    errorData.value.issueDescription = 'กรุณากรอกสาเหตุ/อาการเสีย'
-    valid = false
-  }
-  return valid
-}
-
-// ตรวจสอบรายฟิลด์ (onInput / onChange)
-function validateField(field) {
-  switch (field) {
-    case 'repairType':
-      errorData.value.repairType = repairFormData.value.repairType ? '' : 'กรุณาเลือกประเภทงานซ่อม'
-      break
-    case 'building':
-      errorData.value.building = repairFormData.value.building ? '' : 'กรุณาเลือกอาคาร'
-      break
-    case 'floor':
-      errorData.value.floor = repairFormData.value.floor ? '' : 'กรุณาเลือกชั้น'
-      break
-    case 'room':
-      errorData.value.room = repairFormData.value.room ? '' : 'กรุณาเลือกห้อง'
-      break
-    case 'problemDetail':
-      errorData.value.problemDetail = repairFormData.value.problemDetail.trim()
-        ? ''
-        : 'กรุณากรอกหัวข้อปัญหา'
-      break
-    case 'issueDescription':
-      errorData.value.issueDescription = repairFormData.value.issueDescription.trim()
-        ? ''
-        : 'กรุณากรอกสาเหตุ/อาการเสีย'
-      break
   }
 }
 </script>
@@ -591,7 +265,7 @@ function validateField(field) {
               ]"
             >
               <option value="">กรุณาเลือกประเภท</option>
-              <option v-for="type in repairFormData.repairTypeList" :key="type.id" :value="type.id">
+              <option v-for="type in repairTypeList" :key="type.id" :value="type.id">
                 {{ type.name }}
               </option>
             </select>
@@ -645,8 +319,6 @@ function validateField(field) {
                 () => {
                   repairFormData.floor = ''
                   repairFormData.room = ''
-                  repairFormData.floorList = []
-                  repairFormData.roomList = []
 
                   fetchFloorList(repairFormData.building)
                   validateField('building')
@@ -658,7 +330,7 @@ function validateField(field) {
               ]"
             >
               <option value="">กรุณาเลือกอาคาร</option>
-              <option v-for="b in repairFormData.buildingList" :key="b.id" :value="b.id">
+              <option v-for="b in buildingList" :key="b.id" :value="b.id">
                 {{ b.name }}
               </option>
             </select>
@@ -677,7 +349,6 @@ function validateField(field) {
               @change="
                 () => {
                   repairFormData.room = ''
-                  repairFormData.roomList = []
 
                   fetchRoomList(repairFormData.floor)
                   validateField('floor')
@@ -689,7 +360,7 @@ function validateField(field) {
               ]"
             >
               <option value="">กรุณาเลือกชั้น</option>
-              <option v-for="f in repairFormData.floorList" :key="f.id" :value="f.id">
+              <option v-for="f in floorList" :key="f.id" :value="f.id">
                 {{ f.name }}
               </option>
             </select>
@@ -712,7 +383,7 @@ function validateField(field) {
               ]"
             >
               <option value="">กรุณาเลือกห้อง</option>
-              <option v-for="r in repairFormData.roomList" :key="r.id" :value="r.id">
+              <option v-for="r in roomList" :key="r.id" :value="r.id">
                 {{ r.name }}
               </option>
             </select>

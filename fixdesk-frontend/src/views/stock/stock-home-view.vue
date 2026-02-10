@@ -7,25 +7,27 @@ import TableComponent from '@/components/table-component.vue'
 import repairButton from '@/components/button/repair-button-component.vue'
 import CardHomeComponent from '@/components/card-home-component.vue'
 import { useUserProfile } from '@/composables/useUserProfile'
+
 import InfoButtonComponent from '@/components/button/info-button-component.vue'
+
+import { getAllProductList, getAllStockFormList } from '@/services/stock'
+import { useAuthToken } from '@/composables/useAuthToken'
+
+const { token, isAuthenticated, logout } = useAuthToken()
 
 defineOptions({ name: 'StockHomeView' })
 
 // ==================== Router / API ====================
 const router = useRouter()
-const API_BASE = import.meta.env.VITE_API_BASE
 
-const { displayName, displayDepartment, fetchUserProfile } = useUserProfile(API_BASE)
+const { displayName, displayDepartment, fetchUserProfile } = useUserProfile()
 
-function getAuthHeaders() {
-  const token = localStorage.getItem('token') || sessionStorage.getItem('token')
-  return { Authorization: `Bearer ${token}` }
-}
+
 
 // ==================== State ====================
 const products = ref([])
 const stockForms = ref([])
-const tableRows = ref([])
+const tableRowsList = ref([])
 const loading = ref(false)
 
 // 🔀 สวิตช์กราฟ
@@ -43,34 +45,35 @@ const columns = ['รหัสใบเบิก', 'รายละเอีย�
 async function fetchDashboard() {
   loading.value = true
   try {
-    const resProducts = await fetch(`${API_BASE}/show-stock`, {
-      headers: getAuthHeaders(),
-    })
-    if (resProducts.ok) products.value = await resProducts.json()
-
-    const resForms = await fetch(`${API_BASE}/stock-forms`, {
-      headers: getAuthHeaders(),
-    })
-    if (resForms.ok) {
-      stockForms.value = await resForms.json()
-
-      tableRows.value = stockForms.value
-        .filter((i) => i.sf_status === 'waiting')
-        .sort((a, b) => new Date(b.sf_create_at) - new Date(a.sf_create_at))
-        .slice(0, 5)
-        .map((item) => ({
-          row: [
-            item.sf_code,
-            'วันที่: ' +
-              new Date(item.sf_create_at).toLocaleDateString('th-TH') +
-              '<br>ผู้ขอเบิก: ' +
-              item.requester +
-              '<br>หน่วยงาน: ' +
-              item.us_department,
-            '',
-          ],
-        }))
+    if (!isAuthenticated.value) {
+      logout()
+      return
     }
+
+    const [p, forms] = await Promise.all([
+      getAllProductList(token.value),
+      getAllStockFormList(token.value),
+    ])
+
+    products.value = p
+    stockForms.value = forms
+
+    tableRowsList.value = stockForms.value
+      .filter((i) => i.sf_status === 'waiting')
+      .sort((a, b) => new Date(b.sf_create_at) - new Date(a.sf_create_at))
+      .slice(0, 5)
+      .map((item) => ({
+        row: [
+          item.sf_code,
+          'วันที่: ' +
+            new Date(item.sf_create_at).toLocaleDateString('th-TH') +
+            '<br>ผู้ขอเบิก: ' +
+            item.requester +
+            '<br>หน่วยงาน: ' +
+            item.us_department,
+          '',
+        ],
+      }))
   } catch (err) {
     console.error(err)
   } finally {
@@ -264,7 +267,6 @@ const chartOptions = computed(() => ({
 // ==================== Lifecycle ====================
 onMounted(() => {
   fetchDashboard()
-  fetchUserProfile()
 })
 </script>
 
@@ -377,7 +379,7 @@ onMounted(() => {
 
         <TableComponent
           :columns="columns"
-          :rows="tableRows.map((i) => i.row)"
+          :rows="tableRowsList.map((i) => i.row)"
           :perPage="5"
           :columnAlign="['left', 'left', 'center']"
           :id-column-index="0"

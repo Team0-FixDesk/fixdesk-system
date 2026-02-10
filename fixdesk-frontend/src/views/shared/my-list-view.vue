@@ -1,8 +1,11 @@
 <script setup>
-/* ===================== Imports ===================== */
+defineOptions({ name: 'MyListView' })
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import Sweetalert from 'sweetalert2'
+
+import { extractDateFromCellContent } from '@/utils/date.util'
+import { createRepairDescriptionHtml } from '@/utils/repairRow.util'
 
 import TableComponent from '@/components/table-component.vue'
 import TableActions from '@/components/table-actions-component.vue'
@@ -11,14 +14,10 @@ import RepairFilterBar from '@/components/filters/repair-filter-bar-component.vu
 
 import { useAuthToken } from '@/composables/useAuthToken'
 
-defineOptions({ name: 'MyListView' })
-
-/* ===================== Router & Config ===================== */
 const router = useRouter()
 const route = useRoute()
 const API_BASE = import.meta.env.VITE_API_BASE
 
-/* ===================== Table Structure ===================== */
 const tableColumns = [
   'หมายเลขแจ้งซ่อม',
   'ประเภทงาน',
@@ -28,7 +27,7 @@ const tableColumns = [
   'ตัวดำเนินการ',
 ]
 
-const tableRows = ref([])
+const tableRowsList = ref([])
 const openMenuId = ref(null)
 
 const { token, userId, isAuthenticated, logout } = useAuthToken()
@@ -38,12 +37,6 @@ const searchInput = ref('')
 const selectedStatuses = ref([])
 const selectedUrgencies = ref([])
 const selectedDate = ref('')
-
-/* ===================== Utils ===================== */
-function extractThaiDate(cell) {
-  const match = cell.match(/วันที่แจ้ง:\s*([\d/]+)/)
-  return match ? match[1] : null
-}
 
 /* ===================== Data Loader ===================== */
 async function loadMyRepairs() {
@@ -64,19 +57,12 @@ async function loadMyRepairs() {
       throw new Error(data.message || 'LOAD_FAILED')
     }
 
-    tableRows.value = data.map((repair) => {
-      const location = repair.bd_name
-        ? `${repair.bd_name} ${repair.fl_name} ${repair.room_name}`
-        : '-'
+    tableRowsList.value = data.map((repair) => {
 
       return [
         repair.rf_code,
         repair.tt_name,
-        'วันที่แจ้ง: ' +
-          new Date(repair.rf_create_at).toLocaleDateString('th-TH') +
-          '<br>' +
-          'สถานที่: ' +
-          location,
+        createRepairDescriptionHtml(repair),
         repair.rf_urgency,
         repair.rf_user_status,
         '',
@@ -92,8 +78,8 @@ const filteredRows = computed(() => {
   const search = searchInput.value.toLowerCase()
   const dateFilter = selectedDate.value
 
-  return tableRows.value.filter((row) => {
-    const dateFromRow = extractThaiDate(row[2])
+  return tableRowsList.value.filter((row) => {
+    const dateFromRow = extractDateFromCellContent(row[2])
     const code = String(row[0]).toLowerCase()
     const type = String(row[1]).toLowerCase()
     const location = String(row[2]).toLowerCase()
@@ -160,7 +146,7 @@ async function deleteRepair(repairCode) {
     const data = await response.json()
     if (!response.ok) throw new Error(data.message)
 
-    tableRows.value = tableRows.value.filter((row) => row[0] !== repairCode)
+    tableRowsList.value = tableRowsList.value.filter((row) => row[0] !== repairCode)
 
     Sweetalert.fire({
       toast: true,

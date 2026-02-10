@@ -1,23 +1,25 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
+
+import { getRepairStatistics, getMyRepairList, getRepairDetailByCode } from '@/services/repair'
+
+import { formatThaiShortDate } from '@/utils/date.util'
+import { createRepairTimelineData } from '@/utils/repairTimeline.util'
+
+import CardHomeComponent from '@/components/card-home-component.vue'
 import TableComponent from '@/components/table-component.vue'
-import repairButton from '@/components/button/repair-button-component.vue'
+import RepairButton from '@/components/button/repair-button-component.vue'
 import RepairStatusTimeline from '@/components/status-timeline-component.vue'
+
 import { useAuthToken } from '@/composables/useAuthToken'
 import { useUserProfile } from '@/composables/useUserProfile'
 
-// นำเข้า Component Card
-import cardHomeComponent from '@/components/card-home-component.vue'
-
-// ค่าพื้นฐานของ API
-const API_BASE = import.meta.env.VITE_API_BASE
-
 const { token, userId, isAuthenticated, logout } = useAuthToken()
-const { displayName, displayDepartment, fetchUserProfile } = useUserProfile(API_BASE)
+const { displayName, displayDepartment, fetchUserProfile } = useUserProfile()
 
 // ตัวแปรสำหรับ Card สถิติ
-const statsItems = ref([
+const statsItemsList = ref([
   {
     value: 0,
     label: 'แจ้งซ่อมทั้งหมด',
@@ -59,10 +61,10 @@ const selectedRepairDetail = ref(null)
 
 // ตัวแปรสถานะหลักของหน้า
 const router = useRouter()
-const allMyRepairs = ref([])
-const recentRepairs = ref([])
+const allMyRepairsList = ref([])
+const recentRepairsList = ref([])
 const selectedTrackingCode = ref('')
-const selectedTimelineSteps = ref([])
+const selectedTimelineStepsList = ref([])
 const isTimelineLoading = ref(false)
 
 async function fetchRepairStats() {
@@ -72,53 +74,40 @@ async function fetchRepairStats() {
   }
 
   try {
-    const res = await fetch(`${API_BASE}/repair-stats/${userId.value}`, {
-      headers: {
-        Authorization: `Bearer ${token.value}`,
-      },
-    })
+    const data = await getRepairStatistics(
+      userId.value,
+      token.value
+    )
 
-    if (!res.ok) throw new Error('Load stats failed')
+    statsItemsList.value[0].value = data.total || 0
+    statsItemsList.value[1].value = data.pending || 0
+    statsItemsList.value[2].value = data.in_progress || 0
+    statsItemsList.value[3].value = data.completed || 0
 
-    const data = await res.json()
-
-    statsItems.value[0].value = data.total || 0
-    statsItems.value[1].value = data.pending || 0
-    statsItems.value[2].value = data.in_progress || 0
-    statsItems.value[3].value = data.completed || 0
   } catch (err) {
     console.error(err)
   }
 }
 
-// ฟังก์ชันอื่นๆ (คงเดิม)
-function formatDateTH(dateStr) {
-  if (!dateStr) return '-'
-  return new Date(dateStr).toLocaleDateString('th-TH')
-}
-
 async function fetchRecentRepairs() {
   if (!isAuthenticated.value) {
     logout()
+
     return
   }
 
   try {
-    const res = await fetch(`${API_BASE}/my-repairs/${userId.value}`, {
-      headers: {
-        Authorization: `Bearer ${token.value}`,
-      },
-    })
+    const data = await getMyRepairList(userId.value, token.value)
 
-    const data = await res.json()
-    if (!res.ok) throw new Error(data.message)
+    const sortedRepairList = data.sort(
+      (a, b) => new Date(b.rf_create_at) - new Date(a.rf_create_at),
+    )
 
-    const sorted = data.sort((a, b) => new Date(b.rf_create_at) - new Date(a.rf_create_at))
+    allMyRepairsList.value = sortedRepairList
+    recentRepairsList.value = sortedRepairList.slice(0, 5)
 
-    allMyRepairs.value = sorted
-    recentRepairs.value = sorted.slice(0, 5)
-
-    const defaultRepair = sorted.find((r) => r.rf_user_status === 'in_progress') || sorted[0]
+    const defaultRepair =
+      sortedRepairList.find((r) => r.rf_user_status === 'in_progress') || sortedRepairList[0]
 
     if (defaultRepair) {
       selectedTrackingCode.value = defaultRepair.rf_code
@@ -131,83 +120,29 @@ async function fetchRecentRepairs() {
 
 async function loadTimelineForCode(code) {
   if (!code) {
-    selectedTimelineSteps.value = []
+    selectedTimelineStepsList.value = []
+
     return
   }
 
   isTimelineLoading.value = true
   try {
-    const res = await fetch(`${API_BASE}/repair-requests/${code}`)
-    const data = await res.json()
-    if (!res.ok) throw new Error(data.message || 'โหลดข้อมูลไม่สำเร็จ')
+    const data = await getRepairDetailByCode(code)
+
     selectedRepairDetail.value = data
-    selectedTimelineSteps.value = buildTimelineFromRepair(data)
+    selectedTimelineStepsList.value = createRepairTimelineData(data)
   } catch (err) {
     console.error('โหลด timeline ไม่สำเร็จ:', err)
-    selectedTimelineSteps.value = []
+    selectedTimelineStepsList.value = []
   } finally {
     isTimelineLoading.value = false
   }
 }
 
-function formatDateTimeTH(value) {
-  if (!value) return null
-  const date = new Date(value).toLocaleDateString('th-TH', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  })
-  const time = new Date(value).toLocaleTimeString('th-TH', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  })
-  return `${date} เวลา ${time}`
-}
-
-function buildTimelineFromRepair(repairData) {
-  const timelineSteps = []
-  const statusConfigs = [
-    { key: 'rf_create_at', title: 'รอดำเนินการ', description: 'ระบบได้รับใบแจ้งซ่อมของคุณแล้ว' },
-    {
-      key: 'rf_in_process_at',
-      title: 'กำลังดำเนินการ',
-      description: 'เจ้าหน้าที่กำลังดำเนินการซ่อมแซม',
-    },
-    { key: 'rf_done_at', title: 'ดำเนินการเสร็จสิ้น', description: 'งานซ่อมเสร็จเรียบร้อยแล้ว' },
-  ]
-
-  let lastReachedIndex = -1
-  statusConfigs.forEach((status, index) => {
-    if (repairData[status.key]) lastReachedIndex = index
-  })
-
-  statusConfigs.forEach((status, index) => {
-    const isReached = index <= lastReachedIndex
-    const isCurrent = index === lastReachedIndex
-    const isLastStep = index === statusConfigs.length - 1
-
-    let stepState = 'upcoming'
-    if (isReached) {
-      if (isLastStep) stepState = 'completed'
-      else if (isCurrent) stepState = 'current'
-      else stepState = 'completed'
-    }
-
-    timelineSteps.push({
-      displayTime: repairData[status.key] ? formatDateTimeTH(repairData[status.key]) : null,
-      title: status.title,
-      description: isReached ? status.description : null,
-      stepState,
-    })
-  })
-  return timelineSteps
-}
-
 // 2. Computed สำหรับ Rows ที่จะแสดง (แปลง recentRepairs ให้เป็น Array ของ Array)
-const tableRows = computed(() => {
-  return allMyRepairs.value.map((item) => [
-    formatDateTH(item.rf_create_at),
+const tableRowsList = computed(() => {
+  return allMyRepairsList.value.map((item) => [
+    formatThaiShortDate(item.rf_create_at),
     item.rf_code,
     item.tt_name || '-',
     item.rf_urgency,
@@ -216,8 +151,8 @@ const tableRows = computed(() => {
 })
 
 // 3. Computed สำหรับ Raw Rows (เพื่อให้ TableComponent รู้ ID เวลากด)
-const tableRawRows = computed(() => {
-  return allMyRepairs.value.map((item) => ({
+const tableRawRowsList = computed(() => {
+  return allMyRepairsList.value.map((item) => ({
     rf_code: item.rf_code,
   }))
 })
@@ -233,7 +168,6 @@ const onRowClick = (idOrItem) => {
 
 onMounted(() => {
   fetchRepairStats()
-  fetchUserProfile()
   fetchRecentRepairs()
 })
 </script>
@@ -245,11 +179,11 @@ onMounted(() => {
         <h1 class="text-2xl font-extrabold text-gray-900">สวัสดีคุณ{{ displayName }}</h1>
         <p class="text-lg font-semibold text-gray-700">{{ displayDepartment }}</p>
       </div>
-      <repairButton />
+      <RepairButton />
     </div>
 
     <div class="mt-8 mb-8">
-      <cardHomeComponent :items="statsItems" @click="onCardClick" />
+      <CardHomeComponent :items="statsItemsList" @click="onCardClick" />
     </div>
 
     <div class="grid grid-cols-12 gap-6">
@@ -264,8 +198,8 @@ onMounted(() => {
 
         <TableComponent
           :columns="['วันที่', 'หมายเลขแจ้งซ่อม', 'ประเภทงาน', 'ความเร่งด่วน', 'สถานะงาน']"
-          :rows="tableRows"
-          :rawRows="tableRawRows"
+          :rows="tableRowsList"
+          :rawRows="tableRawRowsList"
           :perPage="7"
           :columnAlign="['left', 'left', 'left', 'center', 'center']"
           mode="user"
@@ -349,7 +283,7 @@ onMounted(() => {
           <p v-if="isTimelineLoading" class="text-sm text-gray-400 text-center py-4">
             กำลังโหลดสถานะการดำเนินงาน...
           </p>
-          <RepairStatusTimeline v-else :timeline-steps="selectedTimelineSteps" />
+          <RepairStatusTimeline v-else :timeline-steps="selectedTimelineStepsList" />
         </div>
       </div>
     </div>

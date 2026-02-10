@@ -20,7 +20,7 @@ const TABLE_COLUMNS = [
   'ตัวดำเนินการ',
 ]
 
-const tableRows = ref([])
+const tableRowsList = ref([])
 
 // ===================== Filters & Search =====================
 const searchKeyword = ref('')
@@ -72,7 +72,7 @@ async function fetchMyRequisitions() {
     const responseData = await response.json()
     if (!response.ok) throw new Error(responseData.message || 'โหลดข้อมูลล้มเหลว')
 
-    tableRows.value = responseData.map((form) => {
+    tableRowsList.value = responseData.map((form) => {
       const locationName = form.building_name || '-'
       const itemList = form.items ? form.items.split('\n') : []
 
@@ -106,7 +106,7 @@ const filteredRows = computed(() => {
   const keyword = searchKeyword.value.toLowerCase()
   const dateFilter = selectedDate.value
 
-  return tableRows.value.filter((row) => {
+  return tableRowsList.value.filter((row) => {
     const requisitionCode = String(row[0]).toLowerCase()
     const requisitionDateText = String(row[1].date)
     const locationText = String(row[1].location).toLowerCase()

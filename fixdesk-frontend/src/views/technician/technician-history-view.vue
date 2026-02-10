@@ -9,9 +9,9 @@ const router = useRouter()
 const API_BASE = import.meta.env.VITE_API_BASE
 
 // Columns ของตาราง
-const tableColumns = ['หมายเลขแจ้งซ่อม', 'รายละเอียด', 'สถานะ', 'การดำเนินการ']
+const tableColumnsList = ['หมายเลขแจ้งซ่อม', 'รายละเอียด', 'สถานะ', 'การดำเนินการ']
 
-const tableRows = ref([])
+const tableRowsList = ref([])
 const searchInput = ref('')
 
 // โหลดข้อมูล
@@ -26,7 +26,7 @@ async function loadRepairHistory() {
     const data = await res.json()
     if (!res.ok) throw new Error(data.message)
 
-    tableRows.value = data.map((item) => {
+    tableRowsList.value = data.map((item) => {
       const fullName = `${item.us_first_name || ''} ${item.us_last_name || ''}`.trim()
 
       return [
@@ -58,7 +58,7 @@ async function loadRepairHistory() {
 const filteredRows = computed(() => {
   const search = searchInput.value.toLowerCase()
 
-  return tableRows.value
+  return tableRowsList.value
     .filter((row) => row[2] === 'done') // ✔ แสดงเฉพาะงานที่เสร็จสิ้น
     .filter((row) => {
       const code = String(row[0]).toLowerCase()
@@ -94,7 +94,7 @@ onMounted(() => {
 
     <!-- Table -->
     <TableComponent
-      :columns="tableColumns"
+      :columns="tableColumnsList"
       :rows="filteredRows"
       :perPage="10"
       :statusColumn="2"
