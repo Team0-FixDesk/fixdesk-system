@@ -1,16 +1,12 @@
 <script setup>
-// ============================================
 // นำเข้าโมดูลและห้องสมุด
-// ============================================
 import { Icon } from '@iconify/vue'  // นำเข้าคอมโพเนนต์ Icon สำหรับแสดงไอคอน
 import { useLogin } from '@/composables/useLogin'  // นำเข้า composable สำหรับกระบวนการเข้าสู่ระบบ
 
 import LogoFIXDESK from '@/assets/icons/Logo.png'  // นำเข้ารูปโลโก้ FixDesk
 import Logo92Tech from '@/assets/icons/92Tech-logo.png'  // นำเข้ารูปโลโก้ 92 Tech
 
-// ============================================
 // ดึงข้อมูลและฟังก์ชันจาก composable
-// ============================================
 const {
   username,  // ชื่อผู้ใช้ที่ป้อนเข้า
   password,  // รหัสผ่านที่ป้อนเข้า
@@ -23,9 +19,7 @@ const {
 </script>
 
 <template>
-  <!-- ============================================  -->
   <!-- หัวข้อหลัก - พื้นหลังและการจัดเรียง -->
-  <!-- ============================================  -->
   <div
     class="min-h-screen flex items-center justify-center bg-gradient-to-b from-blue-50 to-blue-200 bg-center px-4"
   >

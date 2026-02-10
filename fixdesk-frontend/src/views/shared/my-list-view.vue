@@ -296,15 +296,15 @@ onMounted(() => {
         <!-- คอลัมน์ Action (ดัชนี 5) -->
         <template #cell-5="{ row }">
           <TableActions
-            :row-id="row[0]"  <!-- ID แถว -->
-            :open-menu-id="openMenuId"  <!-- ID เมนูที่เปิด -->
-            @toggle-menu="openMenuId = $event"  <!-- ตัวจัดการเปิด/ปิดเมนู -->
-            role="user"  <!-- บทบาทผู้ใช้ -->
-            :row="row"  <!-- ข้อมูลแถว -->
-            :status="row[4]"  <!-- สถานะ -->
-            @detail="openDetail(row[0])"  <!-- ตัวจัดการคลิกรายละเอียด -->
-            @edit="openEdit(row[0])"  <!-- ตัวจัดการคลิกแก้ไข -->
-            @delete="deleteRepair(row[0])"  <!-- ตัวจัดการคลิกลบ -->
+            :row-id="row[0]"  
+            :open-menu-id="openMenuId"  
+            @toggle-menu="openMenuId = $event"  
+            role="user"  
+            :row="row"  
+            :status="row[4]"  
+            @detail="openDetail(row[0])"  
+            @edit="openEdit(row[0])"  
+            @delete="deleteRepair(row[0])"  
           />
         </template>
       </TableComponent>

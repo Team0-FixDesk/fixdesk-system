@@ -1,7 +1,8 @@
 import { ref } from 'vue'
 import { useAuthToken } from '@/composables/useAuthToken'
 
-// Composable สำหรับจัดการข้อมูลส่วนตัวของผู้ใช้ (Profile)
+// Composable: ดึงและเก็บข้อมูลโปรไฟล์ผู้ใช้
+// คืนค่า state ที่หน้า UI ต้องการ (ชื่อ, หน่วยงาน, loading, error)
 export function useUserProfile() {
   // [Standard] ค่าคงที่ใช้ตัวพิมพ์ใหญ่ (UPPER_SNAKE_CASE)
   const API_BASE_URL = import.meta.env.VITE_API_BASE
