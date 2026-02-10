@@ -262,12 +262,12 @@ onMounted(() => {
     <!-- แถบตัวกรอง - ค้นหา, กรองสถานะ, ความเร่งด่วน, วันที่ -->
     <!-- ============================================  -->
     <RepairFilterBar
-      mode="repair"  <!-- โหมดแผนกซ่อมแซม -->
-      v-model:search="searchInput"  <!-- ข้อมูล v-model สำหรับค้นหา -->
-      v-model:statuses="selectedStatuses"  <!-- ข้อมูล v-model สำหรับสถานะ -->
-      v-model:urgencies="selectedUrgencies"  <!-- ข้อมูล v-model สำหรับความเร่งด่วน -->
-      v-model:date="selectedDate"  <!-- ข้อมูล v-model สำหรับวันที่ -->
-      @reset="resetFilters"  <!-- ตัวจัดการเหตุการณ์รีเซ็ตตัวกรอง -->
+      mode="repair"
+      v-model:search="searchInput"
+      v-model:statuses="selectedStatuses"
+      v-model:urgencies="selectedUrgencies"
+      v-model:date="selectedDate"
+      @reset="resetFilters"
     >
       <!-- ส่วนขวา: ปุ่มเพิ่มการซ่อมใหม่ -->
       <template #right>
@@ -280,15 +280,15 @@ onMounted(() => {
     <!-- ============================================  -->
     <div class="p-3 mx-auto max-w-8xl">
       <TableComponent
-        :columns="tableColumns"  <!-- ชื่อคอลัมน์ -->
-        :rows="filteredRows"  <!-- ข้อมูลแถวที่กรองแล้ว -->
-        :perPage="10"  <!-- จำนวนแถวต่อหน้า -->
-        :urgencyColumn="3"  <!-- ดัชนีคอลัมน์ความเร่งด่วน -->
-        :statusColumn="4"  <!-- ดัชนีคอลัมน์สถานะ -->
-        :columnAlign="['left', 'left', 'left', 'center', 'center', 'center']"  <!-- การจัดแนวคอลัมน์ -->
-        :id-column-index="0"  <!-- ดัชนีคอลัมน์ ID -->
-        :id-column-as-link="true"  <!-- แสดง ID เป็นลิงก์ -->
-        @detail="openDetail"  <!-- ตัวจัดการเหตุการณ์คลิกรายละเอียด -->
+        :columns="tableColumns"
+        :rows="filteredRows"
+        :perPage="10"
+        :urgencyColumn="3"
+        :statusColumn="4"
+        :columnAlign="['left', 'left', 'left', 'center', 'center', 'center']"
+        :id-column-index="0"
+        :id-column-as-link="true"
+        @detail="openDetail"
       >
         <!-- ============================================  -->
         <!-- เทมเพลต: คอลัมน์การกระทำ (ปุ่มแก้ไข/ลบ) -->
@@ -296,15 +296,15 @@ onMounted(() => {
         <!-- คอลัมน์ Action (ดัชนี 5) -->
         <template #cell-5="{ row }">
           <TableActions
-            :row-id="row[0]"  <!-- ID แถว -->
-            :open-menu-id="openMenuId"  <!-- ID เมนูที่เปิด -->
-            @toggle-menu="openMenuId = $event"  <!-- ตัวจัดการเปิด/ปิดเมนู -->
-            role="user"  <!-- บทบาทผู้ใช้ -->
-            :row="row"  <!-- ข้อมูลแถว -->
-            :status="row[4]"  <!-- สถานะ -->
-            @detail="openDetail(row[0])"  <!-- ตัวจัดการคลิกรายละเอียด -->
-            @edit="openEdit(row[0])"  <!-- ตัวจัดการคลิกแก้ไข -->
-            @delete="deleteRepair(row[0])"  <!-- ตัวจัดการคลิกลบ -->
+            :row-id="row[0]"
+            :open-menu-id="openMenuId"
+            @toggle-menu="openMenuId = $event"
+            role="user"
+            :row="row"
+            :status="row[4]"
+            @detail="openDetail(row[0])"
+            @edit="openEdit(row[0])"
+            @delete="deleteRepair(row[0])"
           />
         </template>
       </TableComponent>
