@@ -19,7 +19,7 @@ export async function getRepairStatistics(targetUserId, userAuthenticationToken)
 // 2. ฟังก์ชันดึงรายการแจ้งซ่อม "ของฉัน"
 export async function getMyRepairList(targetUserId, userAuthenticationToken) {
   // ดึงข้อมูลรายการซ่อมของ User คนนี้
-  const apiResponse = await fetch(`${API_BASE_URL}/my-repairs/${targetUserId}`, {
+  const apiResponse = await fetch(`${API_BASE_URL}/repair_forms/${targetUserId}`, {
     headers: { Authorization: `Bearer ${userAuthenticationToken}` },
   })
 

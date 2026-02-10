@@ -7,7 +7,7 @@ export const loginUser = async (username, password) => {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      user_name: username, // ส่งค่าตามที่หลังบ้านต้องการ
+      userName: username, // ส่งค่าตามที่หลังบ้านต้องการ
       password: password,
     }),
   })
