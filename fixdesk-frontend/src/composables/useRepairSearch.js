@@ -3,7 +3,6 @@ import { searchRepairList } from '@/services/public'
 import { getRepairStepNumber } from '@/utils/repairStatus.util'
 
 export function useRepairSearchProcess() {
-
   const searchKeyword = ref('') // คำที่ผู้ใช้พิมพ์ค้นหา
   const isSearchingLoading = ref(false) // สถานะ "กำลังค้นหา" (หมุนติ้วๆ)
   const searchErrorMessage = ref('') // ข้อความแจ้งเตือนเมื่อระบบมีปัญหา
@@ -73,15 +72,15 @@ export function useRepairSearchProcess() {
 
   // ส่งตัวแปรและฟังก์ชันออกไปให้หน้า HTML ใช้งาน
   return {
-    searchKeyword,
-    isSearchingLoading,
-    searchErrorMessage,
-    hasUserPerformedSearch,
-    searchResultList,
-    currentPageNumber,
-    totalPageCount,
-    executeSearchRepair,
-    goToPreviousPage,
-    goToNextPage,
+    keyword: searchKeyword,
+    loading: isSearchingLoading,
+    errorMessage: searchErrorMessage,
+    searched: hasUserPerformedSearch,
+    results: searchResultList,
+    currentPage: currentPageNumber,
+    totalPages: totalPageCount,
+    handleSearch: executeSearchRepair,
+    goPrevPage: goToPreviousPage,
+    goNextPage: goToNextPage,
   }
 }

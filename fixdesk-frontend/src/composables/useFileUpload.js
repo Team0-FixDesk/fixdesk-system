@@ -42,20 +42,10 @@ export function useFileUpload(API_BASE_URL, options = {}) {
       return
     }
 
-    const allowed = [
-      'image/jpeg',
-      'image/jpg',
-      'image/png',
-      'image/gif',
-      'image/webp',
-      'video/mp4',
-      'video/avi',
-      'video/mov',
-      'video/wmv',
-    ]
+    const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'video/mp4']
 
     if (fileList.some((f) => !allowed.includes(f.type))) {
-      toast('ประเภทไฟล์ไม่ถูกต้อง', 'รองรับเฉพาะรูปและวิดีโอ', 'error')
+      toast('ไฟล์ที่แนบมาไม่รองรับ', `รองรับเฉพาะ JPG PNG MP4`, 'error')
       return
     }
 
