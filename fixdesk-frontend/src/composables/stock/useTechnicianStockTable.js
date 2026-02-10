@@ -1,5 +1,7 @@
 import { computed } from 'vue'
 
+// Composable: แปลงแบบฟอร์มเบิก stock เป็นข้อมูลตารางสำหรับแสดงผล
+// จัดรูปแบบแถว, ตัดข้อความ, คำนวณจำนวน, และนำทางไปหน้า detail
 export function useTechnicianStockTable(stockForms, router) {
   const stockTableRows = computed(() => {
     return stockForms.value.slice(0, 5).map((form) => {
@@ -8,7 +10,7 @@ export function useTechnicianStockTable(stockForms, router) {
       return [
         form.sf_code,
         {
-          date: new Date(form.sf_create_at).toLocaleString('th-TH', {
+          date: new Date(form.createdAt).toLocaleString('th-TH', {
             dateStyle: 'medium',
             timeStyle: 'short',
           }),

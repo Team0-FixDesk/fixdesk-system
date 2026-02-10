@@ -1,5 +1,6 @@
 import { decodeJwtToken } from '@/utils/jwt.util'
-
+// Composable สำหรับ wrapper การเรียก API ที่เกี่ยวกับใบแจ้งซ่อม
+// คืนค่า: ฟังก์ชัน fetchRepairDetail, updateRepair, createRepair
 export function useRepairService(API_BASE_URL) {
   async function fetchRepairDetail(repairCode) {
     const response = await fetch(`${API_BASE_URL}/repair-requests/${repairCode}`)
@@ -21,6 +22,7 @@ export function useRepairService(API_BASE_URL) {
 
     const formDataToSend = new FormData()
 
+    // ข้อมูลผู้ใช้งานและฟิลด์จากฟอร์ม
     formDataToSend.append('us_id', userPayload.us_id)
     formDataToSend.append('phone_number', repairFormData.phoneNumber)
     formDataToSend.append('repair_type_id', repairFormData.repairType)

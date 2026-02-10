@@ -1,14 +1,14 @@
+// Composable: โหลดและจัดรูปแบบรายการงานสำหรับ Technician
+// คืน `repairList` และ `fetchRepairList()` เพื่อให้หน้าจอแสดงตารางได้เลย
 import { ref } from 'vue'
 import Swal from 'sweetalert2'
-
 export function useTechnicianRepairList(API_BASE, token, isAuthenticated, logout) {
   const repairList = ref([])
 
   const allowedStatuses = ['pending', 'in_progress', 'outsource']
 
-  function formatRow(r) {
+  function formatRepairRow(r) {
     const fullName = `${r.us_first_name || ''} ${r.us_last_name || ''}`.trim()
-
     const place = [r.bd_name, r.fl_name, r.room_name].filter(Boolean).join(' / ') || '-'
 
     return [
@@ -31,9 +31,7 @@ export function useTechnicianRepairList(API_BASE, token, isAuthenticated, logout
       }
 
       const res = await fetch(`${API_BASE}/technician/repairs`, {
-        headers: {
-          Authorization: `Bearer ${token.value}`,
-        },
+        headers: { Authorization: `Bearer ${token.value}` },
       })
 
       if (res.status === 401) {
@@ -44,9 +42,7 @@ export function useTechnicianRepairList(API_BASE, token, isAuthenticated, logout
 
       const data = await res.json()
 
-      repairList.value = data
-        .filter((r) => allowedStatuses.includes(r.rf_user_status))
-        .map(formatRow)
+      repairList.value = data.filter((r) => allowedStatuses.includes(r.rf_user_status)).map(formatRepairRow)
     } catch (err) {
       Swal.fire({
         toast: true,

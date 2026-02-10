@@ -1,5 +1,6 @@
 import { computed } from 'vue'
-
+// Composable: คำนวณตัวเลขสถิติงานสำหรับ Technician
+// นับประเมิณวันนี้, กำลังทำ, เสร็จ, ยกเลิก เพื่อแสดง dashboard
 export function useTechnicianStats(repairRequests) {
   function isToday(date) {
     if (!date) return false
@@ -9,7 +10,7 @@ export function useTechnicianStats(repairRequests) {
 
   const statItems = computed(() => [
     {
-      value: repairRequests.value.filter((r) => isToday(r.rawDate)).length,
+      value: repairRequests.value.filter((r) => isToday(r.createdAt)).length,
       label: 'งานมอบหมายใหม่วันนี้',
       colorClass: 'text-amber-500',
       filterStatus: 'today',

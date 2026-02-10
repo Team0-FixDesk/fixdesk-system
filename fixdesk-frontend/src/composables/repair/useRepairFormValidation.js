@@ -1,5 +1,6 @@
 import { ref } from 'vue'
-
+// Composable สำหรับตรวจสอบความถูกต้องของฟอร์มสร้าง/แก้ไขใบแจ้งซ่อม
+// คืนค่า: errorData, validateFormData, validateField, resetErrors
 export function useRepairFormValidation(repairFormData) {
   const errorData = ref({
     repairType: '',
