@@ -1,36 +1,58 @@
 <script setup>
-import { useRouter } from 'vue-router'
-import { useRepairSearchProcess } from '@/composables/useRepairSearch'
-import { getRepairStatusLabel, getRepairStatusColorClass, getProgressBarColor } from '@/utils/repairStatus.util'
+// ============================================
+// นำเข้าโมดูลและห้องสมุด
+// ============================================
+import { useRouter } from 'vue-router'  // นำเข้า useRouter สำหรับการนำทาง
+import { useRepairSearchProcess } from '@/composables/useRepairSearch'  // นำเข้า composable สำหรับกระบวนการค้นหาการซ่อม
+import { getRepairStatusLabel, getRepairStatusColorClass, getProgressBarColor } from '@/utils/repairStatus.util'  // นำเข้าฟังก์ชันสำหรับ จัดการสถานะการซ่อม
 
-import LogoFIXDESK from '@/assets/icons/LogoFIXDESK-logo.png'
+import LogoFIXDESK from '@/assets/icons/LogoFIXDESK-logo.png'  // นำเข้ารูปโลโก้ของระบบ
 
-const router = useRouter()
+// ============================================
+// การกำหนดค่าเราเตอร์และคอมโพสเบิล
+// ============================================
+const router = useRouter()  // สร้างอินสแตนซ์เราเตอร์สำหรับการนำทาง
 
+// ============================================
+// ดึงข้อมูลและสถานะจาก composable
+// ============================================
 const {
-  keyword,
-  loading,
-  errorMessage,
-  searched,
-  results,
-  currentPage,
-  totalPages,
-  handleSearch,
-  goPrevPage,
-  goNextPage,
+  keyword,  // คำค้นหาที่ผู้ใช้ป้อนเข้า
+  loading,  // สถานะการโหลด (จริง = กำลังค้นหา, เท็จ = เสร็จสิ้น)
+  errorMessage,  // ข้อความข้อผิดพลาด (หากมี)
+  searched,  // สถานะการค้นหา (จริง = ค้นหาแล้ว, เท็จ = ยังไม่ค้นหา)
+  results,  // รายการผลลัพธ์การค้นหา
+  currentPage,  // หน้าปัจจุบันของการแบ่งหน้า
+  totalPages,  // จำนวนหน้าทั้งหมด
+  handleSearch,  // ฟังก์ชันสำหรับการค้นหา
+  goPrevPage,  // ฟังก์ชันสำหรับไปหน้าก่อนหน้า
+  goNextPage,  // ฟังก์ชันสำหรับไปหน้าถัดไป
 } = useRepairSearchProcess()
 
+// ============================================
+// ฟังก์ชันสำหรับการนำทาง
+// ============================================
+/* ฟังก์ชัน: นำทางผู้ใช้ไปยังหน้าเข้าสู่ระบบ */
 const goToLogin = () => router.push('/login')
 </script>
 
 <template>
+  <!-- ============================================  -->
+  <!-- หัวข้อหลัก - แสดงพื้นหลังและเนื้อหารวม -->
+  <!-- ============================================  -->
   <div class="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 flex flex-col items-center">
+
+    <!-- ============================================  -->
+    <!-- ส่วนหัวเพจ - โลโก้และปุ่มเข้าสู่ระบบ -->
+    <!-- ============================================  -->
     <header class="w-full max-w-6xl flex justify-between items-center py-6 px-6">
+      <!-- โลโก้และชื่อแอพพลิเคชัน -->
       <div class="flex items-center gap-3 text-3xl font-semibold text-slate-800">
         <img :src="LogoFIXDESK" alt="FixDesk Logo" class="w-10 h-10 object-contain" />
         <span>FixDesk</span>
       </div>
 
+      <!-- ปุ่มเข้าสู่ระบบ -->
       <button
         @click="goToLogin"
         class="px-6 py-2 bg-slate-800 hover:bg-slate-500 border border-slate-300 rounded-lg shadow-sm flex items-center gap-2 transition font-semibold text-white"
@@ -39,19 +61,30 @@ const goToLogin = () => router.push('/login')
       </button>
     </header>
 
+    <!-- ============================================  -->
+    <!-- ส่วนตำแหน่งและคำอธิบาย - ชื่อเรื่องหลัก -->
+    <!-- ============================================  -->
     <section class="mt-6 mb-12 text-center">
+      <!-- ชื่อของหน้า -->
       <h1 class="text-3xl font-bold text-slate-800 tracking-tight">ตรวจสอบสถานะงานซ่อม</h1>
+      <!-- คำอธิบายหลัก -->
       <p class="text-lg text-slate-500 mt-2">
         ค้นหารายการแจ้งซ่อม ติดตามสถานะแบบเรียลไทม์ สะดวก รวดเร็ว
       </p>
     </section>
 
+    <!-- ============================================  -->
+    <!-- ส่วนค้นหา - กล่องค้นหาและปุ่มค้นหา -->
+    <!-- ============================================  -->
     <div class="w-full max-w-4xl bg-white p-8 shadow-md rounded-3xl border border-slate-200 mb-7">
+      <!-- ป้ายกำกับสำหรับกล่องค้นหา -->
       <label class="text-slate-600 font-medium">
         ค้นหางานซ่อมด้วยหมายเลขแจ้งซ่อม / ชื่อผู้แจ้ง / หน่วยงาน (ระบุอย่างใดอย่างหนึ่ง)
       </label>
 
+      <!-- แถวสำหรับกล่องค้นหาและปุ่มค้นหา -->
       <div class="flex gap-3 mt-3">
+        <!-- กล่องข้อความสำหรับการป้อนคำค้นหา -->
         <input
           v-model="keyword"
           type="text"
@@ -59,6 +92,7 @@ const goToLogin = () => router.push('/login')
           class="flex-1 px-5 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-400 transition"
         />
 
+        <!-- ปุ่มสำหรับค้นหา -->
         <button
           @click="handleSearch(1)"
           class="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-md transition active:scale-[0.97]"
@@ -67,14 +101,20 @@ const goToLogin = () => router.push('/login')
         </button>
       </div>
 
+      <!-- ตัวอย่างการค้นหา -->
       <div class="mt-3 text-sm text-slate-400">
         ตัวอย่างการค้นหา: RFXXXXXXXXXXX, สมชาย ใจดี, แผนก IT
       </div>
     </div>
 
+    <!-- ============================================  -->
+    <!-- ส่วนผลลัพธ์ - แสดงผลลัพธ์การค้นหา -->
+    <!-- ============================================  -->
     <div class="w-full max-w-4xl">
+      <!-- แสดงข้อความกำลังค้นหา -->
       <div v-if="loading" class="text-center py-10 text-slate-500 animate-pulse">กำลังค้นหา...</div>
 
+      <!-- แสดงข้อความข้อผิดพลาด (ถ้ามี) -->
       <div
         v-if="errorMessage && !loading"
         class="bg-red-50 text-red-600 p-5 rounded-2xl border border-red-200 shadow mb-5"
@@ -82,6 +122,7 @@ const goToLogin = () => router.push('/login')
         {{ errorMessage }}
       </div>
 
+      <!-- แสดงข้อความ "ไม่พบรายการ" เมื่อค้นหาแล้วแต่ไม่มีผลลัพธ์ -->
       <div
         v-if="!loading && searched && results.length === 0"
         class="bg-white p-8 rounded-3xl shadow text-center border border-slate-200"
@@ -89,18 +130,25 @@ const goToLogin = () => router.push('/login')
         <p class="text-slate-500 text-lg">ไม่พบรายการที่ค้นหา</p>
       </div>
 
+      <!-- แสดงจำนวนรายการที่พบ -->
       <p v-if="results.length > 0" class="text-slate-500 mb-3 text-md">
         พบ {{ totalItems }} รายการ
       </p>
 
+      <!-- ============================================  -->
+      <!-- ลูป: แสดงแต่ละรายการการซ่อม -->
+      <!-- ============================================  -->
       <div
         v-for="item in results"
         :key="item.rf_code"
         class="bg-white p-7 shadow-lg rounded-3xl border border-slate-200 hover:shadow-xl transition mb-6"
       >
+        <!-- แถวบนของการ์ด: หมายเลขแจ้งซ่อมและสถานะ -->
         <div class="flex justify-between items-start">
+          <!-- หมายเลขแจ้งซ่อม -->
           <p class="text-md font-semibold text-slate-700">เลขแจ้งซ่อม: {{ item.rf_code }}</p>
 
+          <!-- สถานะการซ่อม พร้อมสีพื้นหลัง -->
           <span
             class="px-3 py-1 text-sm rounded-full"
             :class="getRepairStatusColorClass(item.rf_user_status)"
@@ -109,32 +157,45 @@ const goToLogin = () => router.push('/login')
           </span>
         </div>
 
+        <!-- ข้อมูลรายละเอียดการซ่อม -->
         <div class="mt-2 space-y-1 text-slate-700">
+          <!-- ชื่อผู้แจ้ง -->
           <p>
             <strong class="text-slate-800">ผู้แจ้ง:</strong>
             {{ item.reporter_firstname }} {{ item.reporter_lastname }}
           </p>
+          <!-- หน่วยงานของผู้แจ้ง -->
           <p>
             <strong class="text-slate-800">หน่วยงาน:</strong>
             {{ item.reporter_department }}
           </p>
+          <!-- รายละเอียดปัญหา -->
           <p><strong class="text-slate-800">ปัญหา:</strong> {{ item.rf_problem }}</p>
+          <!-- สถานที่ (สัญลักษณ์สถาปัตยกรรม) -->
           <p class="text-slate-500">
             <strong class="text-slate-700">สถานที่:</strong>
             {{ item.building_name }} {{ item.floor_name }} {{ item.room_name }}
           </p>
         </div>
 
+        <!-- แถบความคืบหน้า - แสดงขั้นตอนของการซ่อม -->
         <div class="mt-6 flex items-center gap-3 text-sm font-medium">
+          <!-- ขั้นตอน 1: รอดำเนินการ -->
           <span :class="getProgressBarColor(item.step, 1)">● รอดำเนินการ</span>
           <span class="text-slate-400">→</span>
+          <!-- ขั้นตอน 2: กำลังดำเนินการ -->
           <span :class="getProgressBarColor(item.step, 2)">● กำลังดำเนินการ</span>
           <span class="text-slate-400">→</span>
+          <!-- ขั้นตอน 3: ดำเนินการเสร็จสิ้น -->
           <span :class="getProgressBarColor(item.step, 3)">● ดำเนินการเสร็จสิ้น</span>
         </div>
       </div>
 
+      <!-- ============================================  -->
+      <!-- ส่วนแบ่งหน้า - ปุ่มไปหน้าก่อนหน้าและถัดไป -->
+      <!-- ============================================  -->
       <div v-if="totalPages > 1" class="flex justify-center items-center gap-4 mt-10">
+        <!-- ปุ่มก่อนหน้า -->
         <button
           @click="goPrevPage"
           :disabled="currentPage === 1"
@@ -143,10 +204,12 @@ const goToLogin = () => router.push('/login')
           ก่อนหน้า
         </button>
 
+        <!-- แสดงหมายเลขหน้าปัจจุบันและจำนวนหน้าทั้งหมด -->
         <span class="text-slate-600 text-sm font-medium">
           หน้า {{ currentPage }} จาก {{ totalPages }}
         </span>
 
+        <!-- ปุ่มถัดไป -->
         <button
           @click="goNextPage"
           :disabled="currentPage === totalPages"
@@ -157,6 +220,9 @@ const goToLogin = () => router.push('/login')
       </div>
     </div>
 
+    <!-- ============================================  -->
+    <!-- ส่วนท้ายเพจ - ข้อมูลลิขสิทธิ์ -->
+    <!-- ============================================  -->
     <footer class="mt-16 text-slate-400 text-sm pb-10">
       92 Tech Co.,Ltd — 2025 FixDesk All rights reserved.
     </footer>
