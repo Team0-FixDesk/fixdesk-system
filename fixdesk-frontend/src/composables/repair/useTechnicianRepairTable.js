@@ -1,5 +1,8 @@
 import { computed } from 'vue'
 import { createBadgeHtml } from '@/utils/badgeHtml.util'
+import { useTruncateText } from '@/composables/useTruncateText.js'
+
+const { truncateSentences } = useTruncateText()
 
 export function useTechnicianRepairTable(repairRequests, router) {
   const sortedRepairs = computed(() => {
@@ -11,7 +14,7 @@ export function useTechnicianRepairTable(repairRequests, router) {
   const repairTableRows = computed(() => {
     return sortedRepairs.value.map((r) => [
       r.rf_code,
-      r.rf_problem || '-',
+      truncateSentences(r.rf_problem) || '-',
       r.department_name || '-',
       `${r.building_name || ''} ${r.room_name || ''}`,
       createBadgeHtml(r.urgency, 'urgency'),

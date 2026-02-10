@@ -168,7 +168,6 @@ const onRowClick = (idOrItem) => {
 
 onMounted(() => {
   fetchRepairStats()
-  fetchUserProfile()
   fetchRecentRepairs()
 })
 </script>

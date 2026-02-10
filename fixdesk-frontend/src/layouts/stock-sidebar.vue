@@ -19,7 +19,7 @@ const menus = [
   { icon: ListIcon, label: 'รายการของฉัน', path: '/main/my-list' },
   { icon: LogsListIcon, label: 'รายการเบิกของ', path: '/main/stock-withdraw-list' },
   { icon: HistoryListIcon, label: 'ประวัติการเบิกของ', path: '/main/stock-withdraw-history' },
-  { icon: StockIcon, label: 'จัดการคลัง', path: '/main/stock-manage-inventory' },
+  { icon: StockIcon, label: 'การจัดการคลัง', path: '/main/stock-manage-inventory' },
 ]
 </script>
 

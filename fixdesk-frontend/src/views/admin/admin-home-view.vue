@@ -11,6 +11,9 @@ import InfoButtonComponent from '@/components/button/info-button-component.vue'
 
 import { useUserProfile } from '@/composables/useUserProfile.js'
 import { useAuthToken } from '@/composables/useAuthToken'
+import { useTruncateText } from '@/composables/useTruncateText.js'
+
+const { truncateSentences } = useTruncateText()
 
 const TH_LOCALE = 'th-TH'
 
@@ -87,7 +90,15 @@ function buildDetailHtml(r) {
     reporterName +
     '</br>' +
     'หน่วยงาน: ' +
-    (r.department_name || '-')
+    (r.department_name || '-') +
+    '</br>' +
+    'รายละเอียด: ' +
+    truncateSentences(r.rf_problem, 1) +
+    '</br>' +
+    'สถานที่: ' +
+    (r.bd_name ?? '-') + ' ' +
+    (r.fl_name ?? '-') + ' ' +
+    (r.room_name ?? '-')
   )
 }
 
@@ -124,7 +135,6 @@ async function fetchRepairRequests() {
 
     const repairs = normalizeRepairs(payload)
     repairRequests.value = repairs.map(mapRepairToRow)
-
   } catch (e) {
     error.value = e?.message || 'เกิดข้อผิดพลาด'
   } finally {
@@ -239,7 +249,6 @@ function goToRepairDetail(ticketId) {
 ========================= */
 onMounted(() => {
   fetchRepairRequests()
-  fetchUserProfile()
 })
 </script>
 

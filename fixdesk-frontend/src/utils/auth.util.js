@@ -5,7 +5,7 @@ export function getRoutePathByUserRole(userRoleName) {
     Admin: '/main/admin-home',
     Technician: '/main/technician-home',
     Stock: '/main/stock-home',
-    Manager: '/main/manager-home',
+    Manager: '/main/dashboard',
   }
 
   // ถ้าเจอชื่อตำแหน่งในรายการ ให้ส่งลิ้งค์หน้านั้นกลับไป

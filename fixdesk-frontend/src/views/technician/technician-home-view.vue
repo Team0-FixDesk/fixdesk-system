@@ -58,7 +58,6 @@ const onCardClick = (item) =>
 onMounted(() => {
   fetchRepairRequests()
   fetchStockForms()
-  fetchUserProfile()
 })
 </script>
 
@@ -91,7 +90,7 @@ onMounted(() => {
         </div>
 
         <TableComponent
-          :columns="['เลขใบงาน', 'หัวข้อ', 'หน่วยงาน', 'สถานที่', 'ความเร่งด่วน', 'สถานะ']"
+          :columns="['เลขใบงาน', 'เรื่องที่แจ้ง', 'หน่วยงาน', 'สถานที่', 'ความเร่งด่วน', 'สถานะ']"
           :rows="repairTableRows"
           :rawRows="repairTableRaw"
           :perPage="5"

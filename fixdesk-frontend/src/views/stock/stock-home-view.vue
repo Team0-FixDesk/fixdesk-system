@@ -267,7 +267,6 @@ const chartOptions = computed(() => ({
 // ==================== Lifecycle ====================
 onMounted(() => {
   fetchDashboard()
-  fetchUserProfile()
 })
 </script>
 

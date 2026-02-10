@@ -60,7 +60,7 @@ const router = createRouter({
         },
         { path: 'admin-user-info', component: AdminUserInfoView, meta: { roles: ['Admin'] } },
         { path: 'admin-manage-location', component: AdminManageLocationView, meta: { roles: ['Admin'] } },
-        { path: 'Dashboard', component: ManagerHomeView, meta: { roles: ['Manager', 'Admin'] } },
+        { path: 'dashboard', component: ManagerHomeView, meta: { roles: ['Manager', 'Admin'] } },
         { path: 'information-summary', component: ManagerSummaryView, meta: { roles: ['Manager', 'Admin'] } },
 
         { path: 'technician-home', component: TechnicianHomeView, meta: { roles: ['Technician'] } },
@@ -201,7 +201,7 @@ function getHomeByRole(role) {
     case 'Technician':
       return '/main/technician-home'
     case 'Manager':
-      return '/main/manager-home'
+      return '/main/dashboard'
     case 'Stock':
       return '/main/stock-home'
     default:
