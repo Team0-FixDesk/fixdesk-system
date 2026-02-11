@@ -168,7 +168,7 @@ const filterCurrentWeek = (repairs) => {
   const sunday = new Date(monday)
   sunday.setDate(monday.getDate() + 6)
   sunday.setHours(23, 59, 59, 999)
-  
+
   const getYear = (dateStr) => new Date(dateStr).getFullYear()
   const getMonth = (dateStr) => new Date(dateStr).getMonth()
 
@@ -787,7 +787,6 @@ async function fetchDashboardData() {
 }
 onMounted(() => {
   fetchDashboardData()
-  fetchUserProfile()
 })
 </script>
 
