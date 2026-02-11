@@ -1,8 +1,8 @@
 <script setup>
 defineOptions({ name: 'MyListView' })  // กำหนดชื่อของ component สำหรับการ debug
-import { ref, computed, onMounted } from 'vue'  // นำเข้าฟังก์ชันโปรแกรมจาก Vue
-import { useRouter, useRoute } from 'vue-router'  // นำเข้า router และ route สำหรับการนำทาง
-import Sweetalert from 'sweetalert2'  // นำเข้า SweetAlert2 สำหรับแจ้งเตือน
+import { ref, computed, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import Sweetalert from 'sweetalert2'
 
 import { extractDateFromCellContent } from '@/utils/date.util'  // ฟังก์ชันสำหรับแยกวันที่จากเซลล์
 import { createRepairDescriptionHtml } from '@/utils/repairRow.util'  // ฟังก์ชันสำหรับสร้าง HTML รายละเอียดการซ่อม
@@ -19,7 +19,7 @@ const route = useRoute()  // สร้างอินสแตนซ์เส้
 const API_BASE = import.meta.env.VITE_API_BASE  // URL ที่ใช้เรียก API
 
 // โครงสร้างตาราง - ชื่อแต่ละคอลัมน์
-const tableColumns = [
+const tableColumnList = [
   'หมายเลขแจ้งซ่อม',
   'ประเภทงาน',
   'รายละเอียด',
@@ -37,8 +37,8 @@ const { token, userId, isAuthenticated, logout } = useAuthToken()
 
 // สถานะตัวกรอง (Filter)
 const searchInput = ref('')  // ค่าการค้นหา
-const selectedStatuses = ref([])  // สถานะที่เลือก
-const selectedUrgencies = ref([])  // ความเร่งด่วนที่เลือก
+const selectedStatuseList = ref([])  // สถานะที่เลือก
+const selectedUrgencieLsit = ref([])  // ความเร่งด่วนที่เลือก
 const selectedDate = ref('')  // วันที่ที่เลือก
 
 // ฟังก์ชันโหลดข้อมูล
@@ -106,11 +106,11 @@ const filteredRows = computed(() => {
 
     // ตรวจสอบความเร่งด่วน - หากไม่มีตัวกรอง จะแสดงทั้งหมด
     const matchesUrgency =
-      selectedUrgencies.value.length === 0 || selectedUrgencies.value.includes(urgency)
+      selectedUrgencieLsit.value.length === 0 || selectedUrgencieLsit.value.includes(urgency)
 
     // ตรวจสอบสถานะ - หากไม่มีตัวกรอง จะแสดงทั้งหมด
     const matchesStatus =
-      selectedStatuses.value.length === 0 || selectedStatuses.value.includes(status)
+      selectedStatuseList.value.length === 0 || selectedStatuseList.value.includes(status)
 
     // ตรวจสอบวันที่ - หากไม่มีตัวกรอง จะแสดงทั้งหมด
     const matchesDate =
@@ -120,35 +120,20 @@ const filteredRows = computed(() => {
   })
 })
 
-// ============================================
-// ฟังก์ชันการกระทำ (Actions)
-// ============================================
-/**
- * รีเซ็ตตัวกรองทั้งหมด
- */
+// รีเซ็ตตัวกรองทั้งหมด
 function resetFilters() {
-  selectedUrgencies.value = []  // รีเซ็ตความเร่งด่วน
-  selectedStatuses.value = []  // รีเซ็ตสถานะ
+  selectedUrgencieLsit.value = []  // รีเซ็ตความเร่งด่วน
+  selectedStatuseList.value = []  // รีเซ็ตสถานะ
   searchInput.value = ''  // รีเซ็ตค้นหา
   selectedDate.value = ''  // รีเซ็ตวันที่
 }
 
-// ============================================
-// ตัวจัดการการนำทาง
-// ============================================
 // นำทางไปยังหน้ารายละเอียดการซ่อม
 const openDetail = (code) => router.push(`/main/repair-detail/${code}`)
 // นำทางไปยังหน้าแก้ไขการซ่อม
 const openEdit = (code) => router.push(`/main/repair-edit/${code}`)
 
-// ============================================
-// ฟังก์ชันลบการซ่อม
-// ============================================
-/**
- * ลบรายการการซ่อม
- * แสดง Sweetalert เพื่อขอการยืนยัน
- * หากยืนยัน จะส่ง DELETE request ไปยัง API
- */
+// ลบรายการการซ่อม แสดง Sweetalert เพื่อขอการยืนยัน
 async function deleteRepair(repairCode) {
   if (!isAuthenticated.value) {  // ตรวจสอบการยืนยันตัวตน
     logout()  // ออกจากระบบหากไม่ได้รับการยืนยัน
@@ -211,39 +196,26 @@ async function deleteRepair(repairCode) {
   }
 }
 
-// ============================================
 // ลักษณะ Lifecycle
-// ============================================
-/**
- * ทำงานเมื่อคอมโพเนนต์โหลด
- * โหลดข้อมูลการซ่อม
- * ตั้งค่าตัวกรองจาก query parameters (ถ้ามี)
- */
 onMounted(() => {
   loadMyRepairs()  // โหลดข้อมูลการซ่อมของผู้ใช้
   // ตั้งค่าตัวกรองจาก query เช่น ?status=pending
   if (route.query.status && ['pending', 'in_progress', 'done'].includes(route.query.status)) {
-    selectedStatuses.value = [route.query.status]  // ตั้งค่าสถานะตัวกรอง
+    selectedStatuseList.value = [route.query.status]  // ตั้งค่าสถานะตัวกรอง
   }
 })
 </script>
 
 <template>
-  <!-- ============================================  -->
-  <!-- หลัก: คอนเทนเนอร์หลัก -->
-  <!-- ============================================  -->
   <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-7xl">
-    <!-- หัวข้อหลัก -->
     <h1 class="text-xl font-bold text-black mb-6">รายการของฉัน</h1>
 
-    <!-- ============================================  -->
     <!-- แถบตัวกรอง - ค้นหา, กรองสถานะ, ความเร่งด่วน, วันที่ -->
-    <!-- ============================================  -->
     <RepairFilterBar
       mode="repair"
       v-model:search="searchInput"
-      v-model:statuses="selectedStatuses"
-      v-model:urgencies="selectedUrgencies"
+      v-model:statuses="selectedStatuseList"
+      v-model:urgencies="selectedUrgencieLsit"
       v-model:date="selectedDate"
       @reset="resetFilters"
     >
@@ -253,12 +225,10 @@ onMounted(() => {
       </template>
     </RepairFilterBar>
 
-    <!-- ============================================  -->
     <!-- ตาราง - แสดงรายการการซ่อมของผู้ใช้ -->
-    <!-- ============================================  -->
     <div class="p-3 mx-auto max-w-8xl">
       <TableComponent
-        :columns="tableColumns"
+        :columns="tableColumnList"
         :rows="filteredRows"
         :perPage="10"
         :urgencyColumn="3"
@@ -268,9 +238,7 @@ onMounted(() => {
         :id-column-as-link="true"
         @detail="openDetail"
       >
-        <!-- ============================================  -->
         <!-- เทมเพลต: คอลัมน์การกระทำ (ปุ่มแก้ไข/ลบ) -->
-        <!-- ============================================  -->
         <!-- คอลัมน์ Action (ดัชนี 5) -->
         <template #cell-5="{ row }">
           <TableActions

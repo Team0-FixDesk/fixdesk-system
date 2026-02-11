@@ -1,10 +1,9 @@
 <script setup>
-// นำเข้าโมดูลและห้องสมุด
-import { Icon } from '@iconify/vue'  // นำเข้าคอมโพเนนต์ Icon สำหรับแสดงไอคอน
-import { useLogin } from '@/composables/useLogin'  // นำเข้า composable สำหรับกระบวนการเข้าสู่ระบบ
+import { Icon } from '@iconify/vue'
+import { useLogin } from '@/composables/useLogin'
 
-import LogoFIXDESK from '@/assets/icons/Logo.png'  // นำเข้ารูปโลโก้ FixDesk
-import Logo92Tech from '@/assets/icons/92Tech-logo.png'  // นำเข้ารูปโลโก้ 92 Tech
+import LogoFIXDESK from '@/assets/icons/Logo.png'
+import Logo92Tech from '@/assets/icons/92Tech-logo.png'
 
 // ดึงข้อมูลและฟังก์ชันจาก composable
 const {

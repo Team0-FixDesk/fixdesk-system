@@ -1,12 +1,12 @@
 <script setup>
 
-import { useRouter } from 'vue-router'  // นำเข้า useRouter สำหรับการนำทาง
-import { useRepairSearchProcess } from '@/composables/useRepairSearch'  // นำเข้า composable สำหรับกระบวนการค้นหาการซ่อม
-import { getRepairStatusLabel, getRepairStatusColorClass, getProgressBarColor } from '@/utils/repairStatus.util'  // นำเข้าฟังก์ชันสำหรับ จัดการสถานะการซ่อม
+import { useRouter } from 'vue-router'
+import { useRepairSearchProcess } from '@/composables/useRepairSearch'
+import { getRepairStatusLabel, getRepairStatusColorClass, getProgressBarColor } from '@/utils/repairStatus.util'
 
-import LogoFIXDESK from '@/assets/icons/LogoFIXDESK-logo.png'  // นำเข้ารูปโลโก้ของระบบ
+import LogoFIXDESK from '@/assets/icons/LogoFIXDESK-logo.png'
 
-const router = useRouter()  // สร้างอินสแตนซ์เราเตอร์สำหรับการนำทาง
+const router = useRouter()
 
 const {
   keyword,  // คำค้นหาที่ผู้ใช้ป้อนเข้า
@@ -32,7 +32,7 @@ const goToLogin = () => router.push('/login')
         <img :src="LogoFIXDESK" alt="FixDesk Logo" class="w-10 h-10 object-contain" />
         <span>FixDesk</span>
       </div>
-  
+
       <button
         @click="goToLogin"
         class="px-6 py-2 bg-slate-800 hover:bg-slate-500 border border-slate-300 rounded-lg shadow-sm flex items-center gap-2 transition font-semibold text-white"
