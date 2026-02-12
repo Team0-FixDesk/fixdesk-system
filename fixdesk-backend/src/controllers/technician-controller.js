@@ -44,16 +44,25 @@ module.exports = (techService) => {
     async updateType(req, res) {
       try {
         const { tt_name } = req.body;
+
         if (!tt_name?.trim())
           return res.status(400).json({ message: "กรุณากรอกชื่อประเภทงาน" });
 
         await techService.updateTechnicianType(req.params.id, tt_name.trim());
+
         res.json({ message: "แก้ไขข้อมูลสำเร็จ" });
       } catch (err) {
+        if (err.message === "DEPENDENCY_EXISTS")
+          return res
+            .status(400)
+            .json({ message: "ประเภทนี้ถูกใช้งานอยู่ แก้ไขไม่ได้" });
+
         if (err.message === "DUPLICATE_NAME")
           return res.status(400).json({ message: "ชื่อซ้ำในระบบ" });
+
         if (err.message === "NOT_FOUND")
           return res.status(404).json({ message: "ไม่พบข้อมูล" });
+
         res.status(500).json({ message: "แก้ไขข้อมูลไม่สำเร็จ" });
       }
     },
@@ -64,7 +73,9 @@ module.exports = (techService) => {
         res.json({ message: "ลบข้อมูลสำเร็จ" });
       } catch (err) {
         if (err.message === "DEPENDENCY_EXISTS")
-          return res.status(400).json({ message: "ลบไม่ได้ มีช่างใช้งานอยู่" });
+          return res
+            .status(400)
+            .json({ message: "ลบไม่ได้ มีการใช้งานอยู่ในแบบฟอร์ม" });
         if (err.message === "NOT_FOUND")
           return res.status(404).json({ message: "ไม่พบข้อมูล" });
         res.status(500).json({ message: "ลบข้อมูลไม่สำเร็จ" });
@@ -124,6 +135,11 @@ module.exports = (techService) => {
             targetStatus === "done" ? "ปิดงานสำเร็จ" : "ส่ง Outsource สำเร็จ",
         });
       } catch (err) {
+        if (err.message === "PENDING_STOCK_APPROVAL")
+          return res.status(400).json({
+            message: "ไม่สามารถปิดงานได้ มีใบเบิกที่รออนุมัติอยู่",
+          });
+
         if (err.message === "JOB_NOT_FOUND_OR_INVALID_STATUS")
           return res
             .status(400)
