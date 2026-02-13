@@ -1,5 +1,6 @@
 const path = require("path");
 const fs = require("fs");
+const lineNotification = require("./line-notification.service");
 
 module.exports = (db) => {
   return {
@@ -273,29 +274,71 @@ module.exports = (db) => {
           );
       }
 
+      // 6. ส่ง LINE Notification
+      try {
+        const [notifData] = await db.promise().query(`
+          SELECT 
+            rf.rf_code, rf.rf_problem, rf.rf_urgency,
+            CONCAT(tn_tech.ttn_title_th, tech.us_first_name_th, ' ', tech.us_last_name_th) AS technician_name,
+            CONCAT(tn_assign.ttn_title_th, assigner.us_first_name_th, ' ', assigner.us_last_name_th) AS assigned_by_name,
+            CONCAT(b.bd_name, ' ', f.fl_name, ' ', r.room_name) AS location,
+            tt.tt_name AS technician_type
+          FROM repair_form rf
+          LEFT JOIN user tech ON tech.us_id = ?
+          LEFT JOIN title_name tn_tech ON tech.us_ttn_id = tn_tech.ttn_id
+          LEFT JOIN user assigner ON assigner.us_id = ?
+          LEFT JOIN title_name tn_assign ON assigner.us_ttn_id = tn_assign.ttn_id
+          LEFT JOIN room r ON rf.rf_room_id = r.room_id
+          LEFT JOIN floor f ON r.room_fl_id = f.fl_id
+          LEFT JOIN building b ON f.fl_bd_id = b.bd_id
+          LEFT JOIN technician_type tt ON rf.rf_tt_id = tt.tt_id
+          WHERE rf.rf_id = ?
+        `, [techId, assignerId, rfId]);
+
+        if (notifData.length > 0) {
+          await lineNotification.notifyJobAssignment({
+            rf_code: notifData[0].rf_code,
+            technician_name: notifData[0].technician_name,
+            assigned_by_name: notifData[0].assigned_by_name,
+            repair_title: notifData[0].rf_problem,
+            location: notifData[0].location,
+            technician_type: notifData[0].technician_type,
+            urgency: notifData[0].rf_urgency,
+            is_team: false
+          });
+        }
+      } catch (lineError) {
+        console.error('LINE notification failed:', lineError.message);
+      }
+
       return { status: "SUCCESS" };
     },
 
     // --- ASSIGNMENT (Team) - Transactional ---
     async assignTeam(rfCode, techIds, leadId) {
-      const connection = await db.promise().getConnection();
+      console.log('🔍 assignTeam service - Input:', { rfCode, techIds, leadId });
       try {
-        await connection.beginTransaction();
+        // Start transaction
+        await db.promise().query("START TRANSACTION");
+        console.log('🔍 Transaction started');
 
         // 1. Lock & Get RF ID
-        const [rf] = await connection.query(
+        const [rf] = await db.promise().query(
           "SELECT rf_id FROM repair_form WHERE rf_code = ? FOR UPDATE",
           [rfCode],
         );
+        console.log('🔍 Repair form query result:', rf);
         if (!rf.length) throw new Error("REPAIR_NOT_FOUND");
         const rfId = rf[0].rf_id;
+        console.log('🔍 RF ID:', rfId);
 
         // 2. Verify Technicians
         const placeholders = techIds.map(() => "?").join(",");
-        const [techs] = await connection.query(
+        const [techs] = await db.promise().query(
           `SELECT us_id, us_role_id FROM user WHERE us_id IN (${placeholders})`,
           techIds,
         );
+        console.log('🔍 Technicians found:', techs);
 
         if (techs.length !== techIds.length)
           throw new Error("SOME_TECHS_NOT_FOUND");
@@ -303,10 +346,11 @@ module.exports = (db) => {
         if (nonTechs.length > 0) throw new Error("SOME_USERS_ARE_NOT_TECHS");
 
         // 3. Delete Old Assignments
-        await connection.query(
+        const [deleteResult] = await db.promise().query(
           "DELETE FROM repair_assignment WHERE ra_rf_id = ?",
           [rfId],
         );
+        console.log('🔍 Deleted old assignments:', deleteResult);
 
         // 4. Insert New Assignments
         const values = techIds.map((tid) => [
@@ -315,18 +359,69 @@ module.exports = (db) => {
           tid === leadId ? 1 : 0,
           new Date(),
         ]);
-        await connection.query(
+        console.log('🔍 Inserting assignments:', values);
+        await db.promise().query(
           "INSERT INTO repair_assignment (ra_rf_id, ra_us_id, ra_is_lead, ra_assigned_at) VALUES ?",
           [values],
         );
+        console.log('🔍 Assignments inserted');
 
-        await connection.commit();
+        // Commit transaction
+        await db.promise().query("COMMIT");
+        console.log('🔍 Transaction committed');
+
+        // Send LINE Notification
+        try {
+          const [notifData] = await db.promise().query(`
+            SELECT 
+              rf.rf_code, rf.rf_problem, rf.rf_urgency,
+              GROUP_CONCAT(CONCAT(tn.ttn_title_th, u.us_first_name_th, ' ', u.us_last_name_th) SEPARATOR ', ') AS technician_names,
+              CONCAT(b.bd_name, ' ', f.fl_name, ' ', r.room_name) AS location,
+              tt.tt_name AS technician_type
+            FROM repair_form rf
+            LEFT JOIN repair_assignment ra ON rf.rf_id = ra.ra_rf_id
+            LEFT JOIN user u ON ra.ra_us_id = u.us_id
+            LEFT JOIN title_name tn ON u.us_ttn_id = tn.ttn_id
+            LEFT JOIN room r ON rf.rf_room_id = r.room_id
+            LEFT JOIN floor f ON r.room_fl_id = f.fl_id
+            LEFT JOIN building b ON f.fl_bd_id = b.bd_id
+            LEFT JOIN technician_type tt ON rf.rf_tt_id = tt.tt_id
+            WHERE rf.rf_id = ?
+            GROUP BY rf.rf_id
+          `, [rfId]);
+
+          // ดึงชื่อหัวหน้าทีม (lead)
+          const [leadData] = await db.promise().query(`
+            SELECT CONCAT(tn.ttn_title_th, u.us_first_name_th, ' ', u.us_last_name_th) AS lead_name
+            FROM repair_assignment ra
+            LEFT JOIN user u ON ra.ra_us_id = u.us_id
+            LEFT JOIN title_name tn ON u.us_ttn_id = tn.ttn_id
+            WHERE ra.ra_rf_id = ? AND ra.ra_is_lead = 1
+            LIMIT 1
+          `, [rfId]);
+
+          if (notifData.length > 0) {
+            await lineNotification.notifyJobAssignment({
+              rf_code: notifData[0].rf_code,
+              technician_name: notifData[0].technician_names,
+              assigned_by_name: '-',
+              repair_title: notifData[0].rf_problem,
+              location: notifData[0].location,
+              technician_type: notifData[0].technician_type,
+              urgency: notifData[0].rf_urgency,
+              lead_name: leadData.length > 0 ? leadData[0].lead_name : null,
+              is_team: true
+            });
+          }
+        } catch (lineError) {
+          console.error('LINE notification failed:', lineError.message);
+        }
+
         return { assignedCount: techIds.length };
       } catch (error) {
-        await connection.rollback();
+        await db.promise().query("ROLLBACK");
+        console.error('🔍 Transaction rolled back due to error');
         throw error;
-      } finally {
-        connection.release();
       }
     },
 
@@ -341,6 +436,42 @@ module.exports = (db) => {
         WHERE rf.rf_code = ? AND ra.ra_us_id = ? AND rf.rf_user_status = 'pending'
       `;
       const [result] = await db.promise().query(sql, [rfCode, techId]);
+
+      // Send LINE Notification
+      if (result.affectedRows > 0) {
+        try {
+          const [notifData] = await db.promise().query(`
+            SELECT 
+              rf.rf_code, rf.rf_problem, rf.rf_urgency,
+              CONCAT(tn.ttn_title_th, u.us_first_name_th, ' ', u.us_last_name_th) AS technician_name,
+              CONCAT(b.bd_name, ' ', f.fl_name, ' ', r.room_name) AS location,
+              tt.tt_name AS technician_type
+            FROM repair_form rf
+            LEFT JOIN repair_assignment ra ON rf.rf_id = ra.ra_rf_id AND ra.ra_us_id = ?
+            LEFT JOIN user u ON ra.ra_us_id = u.us_id
+            LEFT JOIN title_name tn ON u.us_ttn_id = tn.ttn_id
+            LEFT JOIN room r ON rf.rf_room_id = r.room_id
+            LEFT JOIN floor f ON r.room_fl_id = f.fl_id
+            LEFT JOIN building b ON f.fl_bd_id = b.bd_id
+            LEFT JOIN technician_type tt ON rf.rf_tt_id = tt.tt_id
+            WHERE rf.rf_code = ?
+          `, [techId, rfCode]);
+
+          if (notifData.length > 0) {
+            await lineNotification.notifyJobAccepted({
+              rf_code: notifData[0].rf_code,
+              technician_name: notifData[0].technician_name,
+              repair_title: notifData[0].rf_problem,
+              location: notifData[0].location,
+              technician_type: notifData[0].technician_type,
+              urgency: notifData[0].rf_urgency
+            });
+          }
+        } catch (lineError) {
+          console.error('LINE notification failed:', lineError.message);
+        }
+      }
+
       return result.affectedRows;
     },
 

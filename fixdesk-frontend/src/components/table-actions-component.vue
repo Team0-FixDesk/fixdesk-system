@@ -319,7 +319,7 @@ onBeforeUnmount(() => {
         <template v-if="role === 'assign'">
           <!-- ยังไม่มอบหมาย -->
           <button
-            v-if="props.assignedTech == null"
+            v-if="!props.assignedTech"
             @click="emitAndClose('assign', row)"
             class="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2"
           >
