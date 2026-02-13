@@ -874,6 +874,7 @@ onBeforeUnmount(() => {
                 <span class="ml-2">สินค้าหมด</span>
               </label>
             </div>
+          </div>
 
           <div class="relative">
             <button
@@ -931,6 +932,7 @@ onBeforeUnmount(() => {
                 <span class="ml-2">{{ category.label }}</span>
               </label>
             </div>
+          </div>
 
           <transition name="fade">
             <button
