@@ -7,7 +7,7 @@ module.exports = (db) => {
 
     async getAllProducts() {
       const sql = `
-        SELECT pd.pd_id, pd.pd_asset_code, pd.pd_name, ct.ct_name, 
+        SELECT pd.pd_id, pd.pd_asset_code, pd.pd_name, ct.ct_name,
                pd.pd_quantity, un.units_name, pd.pd_updated_at, pd.pd_upload_image
         FROM products pd
         LEFT JOIN categories ct ON pd.pd_category_id = ct.ct_id
@@ -40,7 +40,7 @@ module.exports = (db) => {
 
       // 2. เพิ่มสินค้า
       const sql = `
-        INSERT INTO products 
+        INSERT INTO products
         (pd_asset_code, pd_name, pd_category_id, pd_quantity, pd_unit_id, pd_upload_image, pd_updated_at)
         VALUES (?, ?, ?, ?, ?, ?, NOW())
       `;
@@ -63,8 +63,8 @@ module.exports = (db) => {
 
       // 2. เตรียม SQL
       let sql = `
-        UPDATE products SET 
-          pd_asset_code=?, pd_name=?, pd_detail=?, pd_category_id=?, 
+        UPDATE products SET
+          pd_asset_code=?, pd_name=?, pd_detail=?, pd_category_id=?,
           pd_quantity=?, pd_unit_id=?, pd_updated_at=NOW()
       `;
       const params = [
@@ -178,7 +178,7 @@ module.exports = (db) => {
 
     async getStockForms(userId = null) {
       let sql = `
-    SELECT 
+    SELECT
       sf.sf_id,
       sf.sf_code,
       sf.sf_status,
@@ -224,7 +224,7 @@ module.exports = (db) => {
 
     async getStockFormDetail(code) {
       const sql = `
-        SELECT 
+        SELECT
           sf.sf_id, sf.sf_code, sf.sf_status, sf.sf_create_at,
           u.us_department, CONCAT(u.us_first_name_th, ' ', u.us_last_name_th) AS requester,
           b.bd_name, f.fl_name, r.room_name,
@@ -338,7 +338,7 @@ module.exports = (db) => {
       // 5. คำนวณสถานะรวมของใบเบิกใหม่ (Recalculate)
       const [stats] = await db.promise().query(
         `
-            SELECT 
+            SELECT
                 SUM(sfd_status = 'waiting') AS waiting,
                 SUM(sfd_status = 'approved') AS approved,
                 SUM(sfd_status = 'rejected') AS rejected
@@ -351,9 +351,8 @@ module.exports = (db) => {
       let newStatus = "waiting";
 
       if (waiting == 0) {
-        if (approved > 0 && rejected == 0) newStatus = "approved";
-        else if (approved == 0 && rejected > 0) newStatus = "rejected";
-        else if (approved > 0 && rejected > 0) newStatus = "partial";
+        if (approved > 0) newStatus = "approved";  // อนุมัติอย่างน้อย 1 ชิ้น
+        else newStatus = "rejected";  // ไม่อนุมัติทั้งหมด
       }
 
       await db
@@ -364,6 +363,113 @@ module.exports = (db) => {
         ]);
 
       return { itemStatus: status, formStatus: newStatus };
+    },
+
+    // อนุมัติ/ไม่อนุมัติ หลายรายการพร้อมกัน (Batch Update)
+    async updateMultipleItemsStatus(sfCode, items) {
+      const promisePool = db.promise();
+      const connection = await promisePool.getConnection();
+
+      try {
+        await connection.beginTransaction();
+
+        console.log('=== updateMultipleItemsStatus called ===');
+        console.log('sfCode:', sfCode);
+        console.log('items:', JSON.stringify(items, null, 2));
+
+        // 1. หา sf_id
+        const [sf] = await connection.query(
+          "SELECT sf_id FROM stock_form WHERE sf_code = ?",
+          [sfCode]
+        );
+        if (!sf.length) throw new Error("FORM_NOT_FOUND");
+        const sfId = sf[0].sf_id;
+        console.log('Found sfId:', sfId);
+
+        // 2. วน update แต่ละรายการ
+        for (const item of items) {
+          const { pd_id, status } = item;
+
+          console.log(`Processing item: pd_id=${pd_id}, status=${status}`);
+
+          if (!pd_id || !["approved", "rejected"].includes(status)) {
+            console.error('Invalid item data:', item);
+            throw new Error("INVALID_ITEM_DATA");
+          }
+
+          // ตรวจสอบสถานะปัจจุบัน
+          const [current] = await connection.query(
+            "SELECT sfd_qty, sfd_status FROM stock_form_detail WHERE sfd_sf_id = ? AND sfd_pd_id = ?",
+            [sfId, pd_id]
+          );
+
+          if (!current.length) {
+            console.error('Item not found:', sfId, pd_id);
+            throw new Error("ITEM_NOT_FOUND");
+          }
+
+          console.log('Current item status:', current[0].sfd_status);
+
+          // ข้ามรายการที่ดำเนินการแล้ว (ไม่ throw error)
+          if (current[0].sfd_status !== "waiting") {
+            console.log('Skipping already processed item');
+            continue;
+          }
+
+          // อัพเดตสถานะ
+          await connection.query(
+            "UPDATE stock_form_detail SET sfd_status = ? WHERE sfd_sf_id = ? AND sfd_pd_id = ?",
+            [status, sfId, pd_id]
+          );
+          console.log('Updated item status to:', status);
+
+          // ถ้า reject ต้องคืนของ
+          if (status === "rejected") {
+            await connection.query(
+              "UPDATE products SET pd_quantity = pd_quantity + ? WHERE pd_id = ?",
+              [current[0].sfd_qty, pd_id]
+            );
+            console.log('Returned quantity:', current[0].sfd_qty);
+          }
+        }
+
+        // 3. คำนวณสถานะรวมของใบเบิก
+        const [stats] = await connection.query(
+          `SELECT
+            SUM(sfd_status = 'waiting') AS waiting,
+            SUM(sfd_status = 'approved') AS approved,
+            SUM(sfd_status = 'rejected') AS rejected
+          FROM stock_form_detail WHERE sfd_sf_id = ?`,
+          [sfId]
+        );
+
+        const { waiting, approved, rejected } = stats[0];
+        console.log('Stats - waiting:', waiting, 'approved:', approved, 'rejected:', rejected);
+
+        let newStatus = "waiting";
+
+        if (waiting == 0) {
+          if (approved > 0) newStatus = "approved";  // อนุมัติอย่างน้อย 1 ชิ้น
+          else newStatus = "rejected";  // ไม่อนุมัติทั้งหมด
+        }
+
+        console.log('New form status:', newStatus);
+
+        await connection.query(
+          "UPDATE stock_form SET sf_status = ? WHERE sf_id = ?",
+          [newStatus, sfId]
+        );
+
+        await connection.commit();
+        console.log('Transaction committed successfully');
+        return { formStatus: newStatus };
+      } catch (error) {
+        console.error('Error in updateMultipleItemsStatus:', error);
+        await connection.rollback();
+        throw error;
+      } finally {
+        connection.release();
+      }
     },
 
     // อัปเดตสถานะใบเบิก (Manual)

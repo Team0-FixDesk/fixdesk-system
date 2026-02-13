@@ -236,6 +236,27 @@ module.exports = (stockService) => {
       }
     },
 
+    async updateMultipleItemsStatus(req, res) {
+      try {
+        const { sf_code, items } = req.body;
+        
+        if (!sf_code || !Array.isArray(items) || items.length === 0) {
+          return res.status(400).json({ message: "ข้อมูลไม่ถูกต้อง" });
+        }
+
+        const result = await stockService.updateMultipleItemsStatus(sf_code, items);
+        res.json({ message: "บันทึกผลการพิจารณาสำเร็จ", ...result });
+      } catch (err) {
+        if (err.message === "ALREADY_PROCESSED")
+          return res.status(400).json({ message: "รายการนี้ถูกดำเนินการไปแล้ว" });
+        if (err.message === "FORM_NOT_FOUND")
+          return res.status(404).json({ message: "ไม่พบใบเบิก" });
+        res
+          .status(500)
+          .json({ message: "บันทึกผลไม่สำเร็จ", error: err.message });
+      }
+    },
+
     async updateFormStatus(req, res) {
       try {
         const { sf_code, status } = req.body;

@@ -110,18 +110,6 @@ const loadDetail = async () => {
 
 onMounted(loadDetail)
 
-/**
- * อัปเดตสถานะหัวใบเบิกลง DB
- * IMPORTANT: ถ้า endpoint ของคุณชื่อไม่ใช่อันนี้ ให้บอกชื่อจริงแล้วผมปรับให้ตรง
- */
-const updateFormStatus = async (status) => {
-  await axios.put(
-    `${API}/stock-forms/update-status`,
-    { sf_code: sfCode, status },
-    { headers: { Authorization: `Bearer ${token}` } },
-  )
-}
-
 /* ================= METHODS ================= */
 const approveItem = (pdId, status) => {
   if (!canApprove.value) return
@@ -137,9 +125,22 @@ const confirmApprove = async () => {
     return
   }
 
+  const approvedCount = items.value.filter((it) => it.status === 'approved').length
+  const rejectedCount = items.value.filter((it) => it.status === 'rejected').length
+
+  let confirmText = 'ระบบจะบันทึกผลการพิจารณาและปิดงานใบเบิกนี้'
+
+  if (approvedCount > 0 && rejectedCount > 0) {
+    confirmText = `คุณเลือกอนุมัติ ${approvedCount} รายการ และไม่อนุมัติ ${rejectedCount} รายการ ระบบจะบันทึกผลการพิจารณา`
+  } else if (approvedCount > 0) {
+    confirmText = `คุณเลือกอนุมัติทั้งหมด ${approvedCount} รายการ`
+  } else if (rejectedCount > 0) {
+    confirmText = `คุณเลือกไม่อนุมัติทั้งหมด ${rejectedCount} รายการ`
+  }
+
   const result = await Sweetalert.fire({
     title: 'ยืนยันการทำรายการ?',
-    text: 'ระบบจะบันทึกผลการพิจารณาและปิดงานใบเบิกนี้',
+    text: confirmText,
     icon: 'question',
     showCancelButton: true,
     confirmButtonText: 'ยืนยัน',
@@ -152,30 +153,32 @@ const confirmApprove = async () => {
   try {
     isSubmitting.value = true
 
-    // 1) อัปเดตรายการย่อย
-    await Promise.all(
-      items.value.map((it) =>
-        axios.put(
-          `${API}/stock-forms/detail/update-item-status`,
-          {
-            sf_code: sfCode,
-            pd_id: it.id,
-            status: it.status,
-          },
-          { headers: { Authorization: `Bearer ${token}` } },
-        ),
-      ),
-    )
+    const payload = {
+      sf_code: sfCode,
+      items: items.value.map((it) => ({
+        pd_id: it.id,
+        status: it.status,
+      })),
+    }
 
-    // 2) อัปเดตสถานะหัวใบเป็น approved เสมอ
-    await updateFormStatus('approved')
+    console.log('Sending payload:', payload)
+
+    // ใช้ batch endpoint เพื่ออัปเดตทุกรายการพร้อมกัน
+    await axios.put(
+      `${API}/stock-forms/detail/update-items-status-batch`,
+      payload,
+      { headers: { Authorization: `Bearer ${token}` } },
+    )
 
     await Sweetalert.fire('สำเร็จ', 'บันทึกผลการพิจารณาและปิดงานใบเบิกเรียบร้อยแล้ว', 'success')
 
     await loadDetail()
   } catch (err) {
-    console.error(err)
-    Sweetalert.fire('ผิดพลาด', 'อัปเดตสถานะไม่สำเร็จ', 'error')
+    console.error('Error details:', err)
+    console.error('Error response:', err.response?.data)
+
+    const errorMsg = err.response?.data?.message || err.message || 'อัปเดตสถานะไม่สำเร็จ'
+    Sweetalert.fire('ผิดพลาด', errorMsg, 'error')
   } finally {
     isSubmitting.value = false
   }
