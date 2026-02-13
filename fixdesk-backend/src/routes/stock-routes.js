@@ -88,6 +88,11 @@ module.exports = (db) => {
     authMiddleware,
     stockController.updateItemStatus,
   );
+  router.put(
+    "/stock-forms/detail/update-items-status-batch",
+    authMiddleware,
+    stockController.updateMultipleItemsStatus,
+  );
 
   // --- Import ---
   router.post("/stock/import", authMiddleware, stockController.importStock);
