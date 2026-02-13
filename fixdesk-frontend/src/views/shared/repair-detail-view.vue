@@ -1,54 +1,55 @@
 <script setup>
-defineOptions({ name: 'RepairDetailView' })
+defineOptions({ name: 'RepairDetailView' }) // ชื่อคอมโพเนนต์สำหรับ debug
+
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
-import Swal from 'sweetalert2'
-import { Icon } from '@iconify/vue'
-import { jwtDecode } from 'jwt-decode'
+import Swal from 'sweetalert2' // SweetAlert2 สำหรับแจ้งเตือน
+import { Icon } from '@iconify/vue' // ไอคอน SVG จาก Iconify
+import { jwtDecode } from 'jwt-decode' // ถอดรหัส JWT token
 
-import RepairStatusTimeline from '@/components/status-timeline-component.vue'
-import assignJobModalComponent from '@/components/modal/assign-job-modal-component.vue'
-import AcceptJobModalComponent from '@/components/modal/accept-job-modal-component.vue'
-import BackButtonComponent from '@/components/button/back-button-component.vue'
+import RepairStatusTimeline from '@/components/status-timeline-component.vue' // แสดง Timeline สถานะ
+import assignJobModalComponent from '@/components/modal/assign-job-modal-component.vue' // Modal มอบหมายงาน
+import AcceptJobModalComponent from '@/components/modal/accept-job-modal-component.vue' // Modal รับงาน
+import BackButtonComponent from '@/components/button/back-button-component.vue' // ปุ่มกลับ
+import BaseButtonComponent from '@/components/button/base/base-button-component.vue' // ปุ่มกลับ
 
-import { usePhoneNumberFormatter } from '@/composables/usePhoneFormat'
-import { useAuthToken } from '@/composables/useAuthToken'
+import { usePhoneNumberFormatter } from '@/composables/usePhoneFormat' // จัดรูปแบบเบอร์โทร
+import { useAuthToken } from '@/composables/useAuthToken' // จัดการ token และการยืนยัน
 
-import { formatThaiLongDate } from '@/utils/date.util'
-import { createRepairTimelineData } from '@/utils/repairTimeline.util'
-import { getRepairStatusBadge, getUrgencyLevelBadge } from '@/utils/badge.util'
+import { formatThaiLongDate } from '@/utils/date.util' // จัดรูปแบบวันที่
+import { createRepairTimelineData } from '@/utils/repairTimeline.util' // สร้างข้อมูล timeline
+import { getRepairStatusBadge, getUrgencyLevelBadge } from '@/utils/badge.util' // จัดรูปแบบ badge
 
-// --- Constants ---
-const API_BASE_URL = import.meta.env.VITE_API_BASE
+const API_BASE_URL = import.meta.env.VITE_API_BASE // URL ของ API จากตัวแปร environment
 
-// --- Composables ---
-const { toDisplay } = usePhoneNumberFormatter()
-const { token, isAuthenticated, logout } = useAuthToken()
-const route = useRoute()
-const router = useRouter()
+const { toDisplay } = usePhoneNumberFormatter() // ฟังก์ชันจัดรูปแบบเบอร์โทร
+const { token, isAuthenticated, logout } = useAuthToken() // Token และฟังก์ชันจัดการการยืนยัน
+const route = useRoute() // ข้อมูลเส้นทาง Router ปัจจุบัน
+const router = useRouter() // ฟังก์ชัน navigate ของ Router
 
-// --- State Management ---
-const repair = ref(null)
-const isLoading = ref(true)
-const isError = ref(false)
-const repairCode = route.params.code
-const canAssign = ref(false)
-const canAccept = ref(false)
+const repair = ref(null) // ข้อมูลซ่อมแซม
+const isLoading = ref(true) // สถานะกำลังโหลด
+const isError = ref(false) // สถานะมีข้อผิดพลาด
+const repairCode = route.params.code // รหัสซ่อมแซมจาก URL params
+const canAssign = ref(false) // สามารถมอบหมายงานได้หรือไม่
+const canAccept = ref(false) // สามารถรับงานได้หรือไม่
 
-const showAssignPopup = ref(false)
-const showAcceptPopup = ref(false)
-const showStatusPopup = ref(false)
-const showTechSummaryModal = ref(false)
+// สถานะการแสดง/ซ่อน Modal
+const showAssignPopup = ref(false) // แสดง Modal มอบหมายงาน
+const showAcceptPopup = ref(false) // แสดง Modal รับงาน
+const showStatusPopup = ref(false) // แสดง Modal เปลี่ยนสถานะ
+const showTechSummaryModal = ref(false) // แสดง Modal สรุปจากช่างซ่อม
 
-// Array naming convention
-const mediaFileList = ref([])
-const technicianTypeList = ref([])
-const techSummary = ref('')
+// สถานะข้อมูลอื่น ๆ
+const mediaFileList = ref([]) // รายการไฟล์สื่อ
+const technicianTypeList = ref([]) // รายการประเภทช่างซ่อม
+const techSummary = ref('') // สรุปจากช่างซ่อม
 
 /**
  * ตรวจสอบสิทธิ์การเข้าใช้งาน
- * เพิ่มบรรทัดว่างก่อน return
+ * ฟังก์ชันนี้ตรวจสอบว่าผู้ใช้เข้าสู่ระบบแล้วหรือไม่
+ * ถ้าไม่มี token หรือหมดอายุจะแสดงเตือนและ logout
  */
 function requireAuth() {
   if (!isAuthenticated.value || !token.value) {
@@ -68,6 +69,10 @@ function requireAuth() {
   return true
 }
 
+/**
+ * ดึง ID ของผู้ใช้ปัจจุบันจาก JWT token
+ * ใช้ try-catch เพราะ token อาจไม่ valid
+ */
 const currentUserId = computed(() => {
   try {
     return token?.value ? jwtDecode(token.value)?.us_id : null
@@ -76,8 +81,11 @@ const currentUserId = computed(() => {
   }
 })
 
-// --- Logic Functions ---
-
+/**
+ * เปิด Modal สำหรับต่างๆ ตามสถานะ
+ * - pending: แสดง Modal รับงาน
+ * - in_progress: Toggle Modal เปลี่ยนสถานะ
+ */
 function openActionPopup() {
   const status = repair.value?.rf_user_status
 
@@ -89,10 +97,18 @@ function openActionPopup() {
   }
 }
 
+/**
+ * ปิด Modal เปลี่ยนสถานะ
+ */
 function closeStatusPopup() {
   showStatusPopup.value = false
 }
 
+/**
+ * จัดการการเลือกสถานะใหม่
+ * - done: ปิดงานพร้อมสรุป
+ * - outsource: ส่งงานให้ช่างภายนอก
+ */
 function handleSelectStatus(statusType) {
   if (statusType === 'done') {
     showStatusPopup.value = false
@@ -103,11 +119,19 @@ function handleSelectStatus(statusType) {
   }
 }
 
+/**
+ * เตรียมการแสดง Modal สรุปงานก่อนปิด
+ */
 function confirmCloseJobWithSummary() {
   techSummary.value = ''
   showTechSummaryModal.value = true
 }
 
+/**
+ * ปิดงานพร้อมสรุปผลการซ่อมแซม
+ * ส่ง PUT request ไปยัง API พร้อมสถานะ 'done' และสรุปงาน
+ * หลังสำเร็จนำเข้าไปยังรายการงานช่างซ่อม
+ */
 async function confirmCloseJob() {
   if (!requireAuth()) return
 
@@ -155,6 +179,11 @@ async function confirmCloseJob() {
   }
 }
 
+/**
+ * ส่งงานให้ช่างภายนอก
+ * แสดง confirmation dialog ก่อนส่ง
+ * ส่ง PUT request พร้อมสถานะ 'outsource'
+ */
 async function confirmOutsource() {
   const result = await Swal.fire({
     title: 'จ้างช่างภายนอก',
@@ -209,11 +238,18 @@ async function confirmOutsource() {
   }
 }
 
+/**
+ * หลังจากรับงานสำเร็จ ให้โหลดข้อมูลซ่อมแซมใหม่
+ */
 function handleAcceptSuccess() {
   fetchRepairDetail()
   showAcceptPopup.value = false
 }
 
+/**
+ * ตรวจสอบว่างานได้รับมอบหมายให้ช่างซ่อมแล้วหรือไม่
+ * ตรวจดูจากหลายเงื่อนไข: ID ช่างซ่อม, ฟ้อง assigned, ชื่อช่างซ่อม
+ */
 const isAssigned = computed(() => {
   const r = repair.value
   if (!r) return false
@@ -225,14 +261,24 @@ const isAssigned = computed(() => {
   return hasTechId || hasAssignFlag || hasTechName
 })
 
+/**
+ * เปิด Modal มอบหมายงาน
+ */
 function openAssignPopup() {
   showAssignPopup.value = true
 }
 
+/**
+ * หลังจากมอบหมายสำเร็จ ให้โหลดข้อมูลซ่อมแซมใหม่
+ */
 function handleAssignSuccess() {
   fetchRepairDetail()
 }
 
+/**
+ * ย้อนกลับไปหน้าก่อนหน้า
+ * ถ้าไม่มีประวัติให้กลับไปหน้ารายการซ่อมแซมของฉัน
+ */
 function goBack() {
   if (window.history.length > 1) {
     router.go(-1)
@@ -242,7 +288,9 @@ function goBack() {
 }
 
 /**
- * จัดการไฟล์มีเดียและเปลี่ยนชื่อตัวแปรให้ตรงตาม Standard
+ * จัดการไฟล์มีเดีย
+ * แปลง JSON string เป็น array และสร้างข้อมูลสำหรับแต่ละไฟล์
+ * รวมประเภท (รูป/วิดีโอ) และ URL สมบูรณ์
  */
 function processMediaFileList(rfImage) {
   if (!rfImage) {
@@ -272,6 +320,11 @@ function processMediaFileList(rfImage) {
   })
 }
 
+/**
+ * โหลดข้อมูลซ่อมแซมจาก API
+ * รวมการสร้าง timeline และประมวลผลไฟล์มีเดีย
+ * เพิ่ม query parameter เพื่อหลีกเลี่ยง cache
+ */
 async function fetchRepairDetail() {
   try {
     const res = await fetch(`${API_BASE_URL}/repair-requests/${repairCode}?_=${Date.now()}`)
@@ -295,15 +348,22 @@ async function fetchRepairDetail() {
   }
 }
 
-// Media Modal Logic
-const showLightbox = ref(false)
-const currentMediaIndex = ref(0)
+// ฟังก์ชันการแสดง Lightbox สำหรับมีเดีย
+const showLightbox = ref(false) // สถานะแสดง Lightbox
+const currentMediaIndex = ref(0) // ดัชนีไฟล์มีเดียปัจจุบัน
 
+/**
+ * เปิด Lightbox แสดงไฟล์มีเดีย
+ */
 function openMedia(index) {
   currentMediaIndex.value = index
   showLightbox.value = true
 }
 
+/**
+ * ปิด Lightbox
+ * หยุดการเล่นวิดีโอทั้งหมด
+ */
 function closeMedia() {
   showLightbox.value = false
   const videoElements = document.querySelectorAll('video')
@@ -312,19 +372,29 @@ function closeMedia() {
   })
 }
 
+/**
+ * แสดงไฟล์มีเดียถัดไป
+ */
 function nextMedia() {
   if (currentMediaIndex.value < mediaFileList.value.length - 1) {
     currentMediaIndex.value++
   }
 }
 
+/**
+ * แสดงไฟล์มีเดียก่อนหน้า
+ */
 function prevMedia() {
   if (currentMediaIndex.value > 0) {
     currentMediaIndex.value--
   }
 }
 
-// --- Withdrawal Logic ---
+// การถอนงาน (Withdrawal Logic)
+/**
+ * แสดงปุ่มถอนงาน
+ * หากสถานะ pending/done หรือมาจากหน้า technician ไม่แสดง
+ */
 const showWithdrawButton = computed(() => {
   if (!repair.value) return false
 
@@ -335,6 +405,9 @@ const showWithdrawButton = computed(() => {
   return true
 })
 
+/**
+ * โหลดรายการประเภทช่างซ่อมจาก API
+ */
 async function fetchTechnicianTypeList() {
   try {
     const res = await fetch(`${API_BASE_URL}/technician-types`)
@@ -347,6 +420,10 @@ async function fetchTechnicianTypeList() {
   }
 }
 
+/**
+ * จัดเก็บรหัสซ่อมแซมในหน่วยความจำเซดชั่น
+ * แล้วนำเข้าไปยังหน้ารายการสต็อค
+ */
 function handleRepairFrom(code) {
   try {
     sessionStorage.setItem('selected_rf_code', String(code))
@@ -356,6 +433,10 @@ function handleRepairFrom(code) {
   router.push('/main/technician-stock-list')
 }
 
+/**
+ * สร้าง HTML badge สำหรับสถานะสต็อค
+ * ตรวจสอบลักษณะของสถานะและคืนค่า HTML string
+ */
 function getStockStatusBadge(status) {
   const baseClass =
     'inline-flex items-center justify-center min-w-[110px] h-[20px] px-3 rounded-lg text-xs font-medium'
@@ -375,6 +456,7 @@ function getStockStatusBadge(status) {
   }
 }
 
+// Lifecycle Hooks - วัฏจักรชีวิตของคอมโพเนนต์
 onMounted(() => {
   const state = history.state || {}
   canAssign.value = !!state.fromAdmin
@@ -622,6 +704,12 @@ onMounted(() => {
           <div class="bg-white border border-gray-200 rounded-xl p-4 sm:p-6 shadow-sm">
             <div class="flex items-center justify-between mb-4 border-b border-gray-300 pb-2 mb-4">
               <h2 class="text-lg font-semibold text-gray-800">รายการเบิก</h2>
+              <div  v-if="canAccept && repair?.rf_user_status !== 'done' && repair?.rf_user_status !== 'pending'" class="relative">
+                <BaseButtonComponent class="border-2 border-gray-400 p-2 text-gray-500 rounded-lg hover:bg-gray-100 text-sm">
+                  <Icon icon="oui:return-key" width="24" height="24"  style="color: gray" />
+                  คืนอุปกรณ์
+                </BaseButtonComponent>
+              </div>
             </div>
 
             <div v-if="repair?.stock_items?.length" class="space-y-4 h-[250px] overflow-y-auto">

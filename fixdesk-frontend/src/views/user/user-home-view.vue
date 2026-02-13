@@ -16,7 +16,7 @@ import { useAuthToken } from '@/composables/useAuthToken'
 import { useUserProfile } from '@/composables/useUserProfile'
 
 const { token, userId, isAuthenticated, logout } = useAuthToken()
-const { displayName, displayDepartment, fetchUserProfile } = useUserProfile()
+const { displayName, displayDepartment} = useUserProfile()
 
 // ตัวแปรสำหรับ Card สถิติ
 const statsItemsList = ref([

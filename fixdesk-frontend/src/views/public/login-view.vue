@@ -5,18 +5,20 @@ import { useLogin } from '@/composables/useLogin'
 import LogoFIXDESK from '@/assets/icons/Logo.png'
 import Logo92Tech from '@/assets/icons/92Tech-logo.png'
 
+// ดึงข้อมูลและฟังก์ชันจาก composable
 const {
-  username,
-  password,
-  errorMessage,
-  isLoading,
-  isRememberMe,
-  handleLogin
+  username,  // ชื่อผู้ใช้ที่ป้อนเข้า
+  password,  // รหัสผ่านที่ป้อนเข้า
+  errorMessage,  // ข้อความข้อผิดพลาดจากการเข้าสู่ระบบ (หากมี)
+  isLoading,  // สถานะการโหลด (จริง = กำลังประมวลผล, เท็จ = เสร็จสิ้น)
+  isRememberMe,  // สถานะการบันทึกการเข้าสู่ระบบ
+  handleLogin  // ฟังก์ชันสำหรับการเข้าสู่ระบบ
 } = useLogin()
 
 </script>
 
 <template>
+  <!-- หัวข้อหลัก - พื้นหลังและการจัดเรียง -->
   <div
     class="min-h-screen flex items-center justify-center bg-gradient-to-b from-blue-50 to-blue-200 bg-center px-4"
   >
@@ -32,9 +34,9 @@ const {
         <img :src="LogoFIXDESK" alt="FixDesk logo" class="w-48 h-auto" />
       </div>
 
+      <!-- ส่วนฟอร์มเข้าสู่ระบบ -->
       <div class="flex-1 flex flex-col items-center">
         <h1 class="text-3xl font-bold text-[#1E48D1] mb-6">เข้าสู่ระบบ</h1>
-
         <form class="flex flex-col gap-4 w-full max-w-sm" @submit.prevent="handleLogin">
           <input
             v-model="username"
@@ -88,7 +90,10 @@ const {
           </button>
         </form>
 
+        <!-- ส่วนข้อมูลข้อผิดพลาด -->
+        <!-- Container สำหรับแสดงข้อความข้อผิดพลาด -->
         <div class="min-h-[1.25rem] mt-3">
+          <!-- แสดงข้อความข้อผิดพลาด (ถ้ามี) -->
           <p v-if="errorMessage" class="text-red-600 text-center text-sm font-medium">
             {{ errorMessage }}
           </p>
