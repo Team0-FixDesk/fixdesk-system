@@ -49,13 +49,23 @@ module.exports = (db) => {
 
     // แก้ไขประเภทงานช่าง
     async updateTechnicianType(id, name) {
-      // เช็คซ้ำ (ไม่นับตัวเอง)
-      const [check] = await db
+      // เช็คว่ามี repair ใช้อยู่ไหม
+      const [repairCheck] = await db
         .promise()
-        .query(
-          "SELECT COUNT(*) as count FROM technician_type WHERE LOWER(tt_name) = LOWER(?) AND tt_id != ?",
-          [name, id],
-        );
+        .query("SELECT COUNT(*) as count FROM repair_form WHERE rf_tt_id = ?", [
+          id,
+        ]);
+
+      if (repairCheck[0].count > 0) throw new Error("DEPENDENCY_EXISTS");
+
+      // เช็คชื่อซ้ำ
+      const [check] = await db.promise().query(
+        `SELECT COUNT(*) as count 
+     FROM technician_type 
+     WHERE LOWER(tt_name) = LOWER(?) AND tt_id != ?`,
+        [name, id],
+      );
+
       if (check[0].count > 0) throw new Error("DUPLICATE_NAME");
 
       const [res] = await db
@@ -64,22 +74,36 @@ module.exports = (db) => {
           name,
           id,
         ]);
+
       if (res.affectedRows === 0) throw new Error("NOT_FOUND");
+
       return true;
     },
-
     // ลบประเภทงานช่าง
     async deleteTechnicianType(id) {
-      // เช็คว่ามีคนใช้อยู่ไหม
-      const [check] = await db
+      // 1. เช็ค user ใช้อยู่ไหม
+      const [userCheck] = await db
         .promise()
         .query("SELECT COUNT(*) as count FROM user WHERE us_tt_id = ?", [id]);
-      if (check[0].count > 0) throw new Error("DEPENDENCY_EXISTS");
 
+      if (userCheck[0].count > 0) throw new Error("DEPENDENCY_EXISTS");
+
+      // 2. เช็ค repair_form ใช้อยู่ไหม  ⭐ จุดที่หายไป
+      const [repairCheck] = await db
+        .promise()
+        .query("SELECT COUNT(*) as count FROM repair_form WHERE rf_tt_id = ?", [
+          id,
+        ]);
+
+      if (repairCheck[0].count > 0) throw new Error("DEPENDENCY_EXISTS");
+
+      // 3. ลบจริง
       const [res] = await db
         .promise()
         .query("DELETE FROM technician_type WHERE tt_id = ?", [id]);
+
       if (res.affectedRows === 0) throw new Error("NOT_FOUND");
+
       return true;
     },
 
@@ -156,29 +180,63 @@ module.exports = (db) => {
 
     // ปิดงาน / ส่ง Outsource
     async closeJob(techId, rfCode, status, summary, imageAfter) {
+      // ⭐ ตรวจว่ามีใบเบิกค้างอยู่ไหม
+      const [pendingStock] = await db.promise().query(
+        `
+    SELECT 1
+    FROM stock_form sf
+    JOIN stock_form_detail sfd ON sfd.sfd_sf_id = sf.sf_id
+    JOIN repair_form rf ON rf.rf_id = sf.sf_rf_id
+    WHERE rf.rf_code = ?
+    AND sfd.sfd_status = 'waiting'
+    LIMIT 1
+    `,
+        [rfCode],
+      );
+
+      if (pendingStock.length > 0) {
+        throw new Error("PENDING_STOCK_APPROVAL");
+      }
+
+      // =========================
+      // Logic เดิมของคุณ
+      // =========================
+
       let updateFields = "";
       let params = [];
 
       if (status === "done") {
-        updateFields = `rf.rf_user_status = 'done', rf.rf_done_at = NOW(), rf.rf_tech_summary = ?, rf.rf_tech_image_after = ?`;
+        updateFields = `
+      rf.rf_user_status = 'done',
+      rf.rf_done_at = NOW(),
+      rf.rf_tech_summary = ?,
+      rf.rf_tech_image_after = ?
+    `;
         params = [summary, imageAfter, rfCode, techId];
       } else if (status === "outsource") {
-        updateFields = `rf.rf_user_status = 'outsource', rf.rf_is_outsourced = 1`;
+        updateFields = `
+      rf.rf_user_status = 'outsource',
+      rf.rf_is_outsourced = 1
+    `;
         params = [rfCode, techId];
       } else {
         throw new Error("INVALID_STATUS");
       }
 
       const sql = `
-            UPDATE repair_form rf
-            JOIN repair_assignment ra ON rf.rf_id = ra.ra_rf_id
-            SET ${updateFields}
-            WHERE rf.rf_code = ? AND ra.ra_us_id = ? AND rf.rf_user_status IN ('in_progress', 'outsource')
-        `;
+    UPDATE repair_form rf
+    JOIN repair_assignment ra ON rf.rf_id = ra.ra_rf_id
+    SET ${updateFields}
+    WHERE rf.rf_code = ?
+    AND ra.ra_us_id = ?
+    AND rf.rf_user_status IN ('in_progress', 'outsource')
+  `;
 
       const [result] = await db.promise().query(sql, params);
+
       if (result.affectedRows === 0)
         throw new Error("JOB_NOT_FOUND_OR_INVALID_STATUS");
+
       return true;
     },
 

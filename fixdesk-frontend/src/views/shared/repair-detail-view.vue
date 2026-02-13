@@ -1,80 +1,50 @@
 <script setup>
-// ============================================
-// กำหนดค่าคอมโพเนนต์และการตั้งค่า
-// ============================================
-defineOptions({ name: 'RepairDetailView' })  // ชื่อคอมโพเนนต์สำหรับ debug
+defineOptions({ name: 'RepairDetailView' }) // ชื่อคอมโพเนนต์สำหรับ debug
 
-// ============================================
-// นำเข้า Vue core modules
-// ============================================
-import { ref, onMounted, computed } from 'vue'  // Reactivity functions จาก Vue
-import { useRoute, useRouter } from 'vue-router'  // Router hooks
+import { ref, onMounted, computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
-// ============================================
-// นำเข้า third-party libraries
-// ============================================
-import Swal from 'sweetalert2'  // SweetAlert2 สำหรับแจ้งเตือน
-import { Icon } from '@iconify/vue'  // ไอคอน SVG จาก Iconify
-import { jwtDecode } from 'jwt-decode'  // ถอดรหัส JWT token
+import Swal from 'sweetalert2' // SweetAlert2 สำหรับแจ้งเตือน
+import { Icon } from '@iconify/vue' // ไอคอน SVG จาก Iconify
+import { jwtDecode } from 'jwt-decode' // ถอดรหัส JWT token
 
-// ============================================
-// นำเข้าคอมโพเนนต์ Vue
-// ============================================
-import RepairStatusTimeline from '@/components/status-timeline-component.vue'  // แสดง Timeline สถานะ
-import assignJobModalComponent from '@/components/modal/assign-job-modal-component.vue'  // Modal มอบหมายงาน
-import AcceptJobModalComponent from '@/components/modal/accept-job-modal-component.vue'  // Modal รับงาน
-import BackButtonComponent from '@/components/button/back-button-component.vue'  // ปุ่มกลับ
+import RepairStatusTimeline from '@/components/status-timeline-component.vue' // แสดง Timeline สถานะ
+import assignJobModalComponent from '@/components/modal/assign-job-modal-component.vue' // Modal มอบหมายงาน
+import AcceptJobModalComponent from '@/components/modal/accept-job-modal-component.vue' // Modal รับงาน
+import BackButtonComponent from '@/components/button/back-button-component.vue' // ปุ่มกลับ
+import BaseButtonComponent from '@/components/button/base/base-button-component.vue' // ปุ่มกลับ
 
-// ============================================
-// นำเข้า Composables
-// ============================================
-import { usePhoneNumberFormatter } from '@/composables/usePhoneFormat'  // จัดรูปแบบเบอร์โทร
-import { useAuthToken } from '@/composables/useAuthToken'  // จัดการ token และการยืนยัน
+import { usePhoneNumberFormatter } from '@/composables/usePhoneFormat' // จัดรูปแบบเบอร์โทร
+import { useAuthToken } from '@/composables/useAuthToken' // จัดการ token และการยืนยัน
 
-// ============================================
-// นำเข้า Utilities
-// ============================================
-import { formatThaiLongDate } from '@/utils/date.util'  // จัดรูปแบบวันที่
-import { createRepairTimelineData } from '@/utils/repairTimeline.util'  // สร้างข้อมูล timeline
-import { getRepairStatusBadge, getUrgencyLevelBadge } from '@/utils/badge.util'  // จัดรูปแบบ badge
+import { formatThaiLongDate } from '@/utils/date.util' // จัดรูปแบบวันที่
+import { createRepairTimelineData } from '@/utils/repairTimeline.util' // สร้างข้อมูล timeline
+import { getRepairStatusBadge, getUrgencyLevelBadge } from '@/utils/badge.util' // จัดรูปแบบ badge
 
-// ============================================
-// ค่าคงที่
-// ============================================
-const API_BASE_URL = import.meta.env.VITE_API_BASE  // URL ของ API จากตัวแปร environment
+const API_BASE_URL = import.meta.env.VITE_API_BASE // URL ของ API จากตัวแปร environment
 
-// ============================================
-// Composables และ Routing
-// ============================================
-const { toDisplay } = usePhoneNumberFormatter()  // ฟังก์ชันจัดรูปแบบเบอร์โทร
-const { token, isAuthenticated, logout } = useAuthToken()  // Token และฟังก์ชันจัดการการยืนยัน
-const route = useRoute()  // ข้อมูลเส้นทาง Router ปัจจุบัน
-const router = useRouter()  // ฟังก์ชัน navigate ของ Router
+const { toDisplay } = usePhoneNumberFormatter() // ฟังก์ชันจัดรูปแบบเบอร์โทร
+const { token, isAuthenticated, logout } = useAuthToken() // Token และฟังก์ชันจัดการการยืนยัน
+const route = useRoute() // ข้อมูลเส้นทาง Router ปัจจุบัน
+const router = useRouter() // ฟังก์ชัน navigate ของ Router
 
-// ============================================
-// สถานะหลักของคอมโพเนนต์
-// ============================================
-const repair = ref(null)  // ข้อมูลซ่อมแซม
-const isLoading = ref(true)  // สถานะกำลังโหลด
-const isError = ref(false)  // สถานะมีข้อผิดพลาด
-const repairCode = route.params.code  // รหัสซ่อมแซมจาก URL params
-const canAssign = ref(false)  // สามารถมอบหมายงานได้หรือไม่
-const canAccept = ref(false)  // สามารถรับงานได้หรือไม่
+const repair = ref(null) // ข้อมูลซ่อมแซม
+const isLoading = ref(true) // สถานะกำลังโหลด
+const isError = ref(false) // สถานะมีข้อผิดพลาด
+const repairCode = route.params.code // รหัสซ่อมแซมจาก URL params
+const canAssign = ref(false) // สามารถมอบหมายงานได้หรือไม่
+const canAccept = ref(false) // สามารถรับงานได้หรือไม่
 
-// ============================================
 // สถานะการแสดง/ซ่อน Modal
-// ============================================
-const showAssignPopup = ref(false)  // แสดง Modal มอบหมายงาน
-const showAcceptPopup = ref(false)  // แสดง Modal รับงาน
-const showStatusPopup = ref(false)  // แสดง Modal เปลี่ยนสถานะ
-const showTechSummaryModal = ref(false)  // แสดง Modal สรุปจากช่างซ่อม
+const showAssignPopup = ref(false) // แสดง Modal มอบหมายงาน
+const showAcceptPopup = ref(false) // แสดง Modal รับงาน
+const showStatusPopup = ref(false) // แสดง Modal เปลี่ยนสถานะ
+const showTechSummaryModal = ref(false) // แสดง Modal สรุปจากช่างซ่อม
 
-// ============================================
 // สถานะข้อมูลอื่น ๆ
-// ============================================
-const mediaFileList = ref([])  // รายการไฟล์สื่อ
-const technicianTypeList = ref([])  // รายการประเภทช่างซ่อม
-const techSummary = ref('')  // สรุปจากช่างซ่อม
+const mediaFileList = ref([]) // รายการไฟล์สื่อ
+const technicianTypeList = ref([]) // รายการประเภทช่างซ่อม
+const techSummary = ref('') // สรุปจากช่างซ่อม
 
 /**
  * ตรวจสอบสิทธิ์การเข้าใช้งาน
@@ -99,9 +69,6 @@ function requireAuth() {
   return true
 }
 
-// ============================================
-// Computed Properties - คุณสมบัติที่คำนวณ
-// ============================================
 /**
  * ดึง ID ของผู้ใช้ปัจจุบันจาก JWT token
  * ใช้ try-catch เพราะ token อาจไม่ valid
@@ -114,9 +81,6 @@ const currentUserId = computed(() => {
   }
 })
 
-// ============================================
-// ฟังก์ชันจัดการเหตุการณ์ (Event Handlers)
-// ============================================
 /**
  * เปิด Modal สำหรับต่างๆ ตามสถานะ
  * - pending: แสดง Modal รับงาน
@@ -384,11 +348,9 @@ async function fetchRepairDetail() {
   }
 }
 
-// ============================================
 // ฟังก์ชันการแสดง Lightbox สำหรับมีเดีย
-// ============================================
-const showLightbox = ref(false)  // สถานะแสดง Lightbox
-const currentMediaIndex = ref(0)  // ดัชนีไฟล์มีเดียปัจจุบัน
+const showLightbox = ref(false) // สถานะแสดง Lightbox
+const currentMediaIndex = ref(0) // ดัชนีไฟล์มีเดียปัจจุบัน
 
 /**
  * เปิด Lightbox แสดงไฟล์มีเดีย
@@ -428,9 +390,7 @@ function prevMedia() {
   }
 }
 
-// ============================================
 // การถอนงาน (Withdrawal Logic)
-// ============================================
 /**
  * แสดงปุ่มถอนงาน
  * หากสถานะ pending/done หรือมาจากหน้า technician ไม่แสดง
@@ -496,14 +456,7 @@ function getStockStatusBadge(status) {
   }
 }
 
-// ============================================
 // Lifecycle Hooks - วัฏจักรชีวิตของคอมโพเนนต์
-// ============================================
-/**
- * ทำงานหลังจากคอมโพเนนต์ถูก mount
- * ตั้งค่า canAssign และ canAccept จากประวัติการนำทาง
- * โหลดข้อมูลซ่อมแซมและประเภทช่างซ่อม
- */
 onMounted(() => {
   const state = history.state || {}
   canAssign.value = !!state.fromAdmin
@@ -751,6 +704,12 @@ onMounted(() => {
           <div class="bg-white border border-gray-200 rounded-xl p-4 sm:p-6 shadow-sm">
             <div class="flex items-center justify-between mb-4 border-b border-gray-300 pb-2 mb-4">
               <h2 class="text-lg font-semibold text-gray-800">รายการเบิก</h2>
+              <div  v-if="canAccept && repair?.rf_user_status !== 'done' && repair?.rf_user_status !== 'pending'" class="relative">
+                <BaseButtonComponent class="border-2 border-gray-400 p-2 text-gray-500 rounded-lg hover:bg-gray-100 text-sm">
+                  <Icon icon="oui:return-key" width="24" height="24"  style="color: gray" />
+                  คืนอุปกรณ์
+                </BaseButtonComponent>
+              </div>
             </div>
 
             <div v-if="repair?.stock_items?.length" class="space-y-4 h-[250px] overflow-y-auto">
