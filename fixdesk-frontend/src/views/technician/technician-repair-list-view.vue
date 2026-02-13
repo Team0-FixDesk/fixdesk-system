@@ -108,10 +108,8 @@ async function handleOutsource(code) {
     const res = await fetch(`${API_BASE}/technician/close-job/${code}`, {
       method: 'PUT',
       headers: {
-        headers: {
-          Authorization: `Bearer ${token.value}`,
-          'Content-Type': 'application/json',
-        },
+        Authorization: `Bearer ${token.value}`,
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({ status: 'outsource' }),
     })
@@ -148,10 +146,8 @@ async function confirmCloseJob() {
     const res = await fetch(`${API_BASE}/technician/close-job/${currentCloseJobCode.value}`, {
       method: 'PUT',
       headers: {
-        headers: {
-          Authorization: `Bearer ${token.value}`,
-          'Content-Type': 'application/json',
-        },
+        Authorization: `Bearer ${token.value}`,
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         status: 'done',
