@@ -16,6 +16,8 @@ module.exports = (db) => {
           OR user.us_first_name_th LIKE ?
           OR user.us_last_name_th LIKE ?
           OR user.us_department LIKE ?
+          OR CONCAT(user.us_first_name_th, ' ', user.us_last_name_th) LIKE ?
+          OR CONCAT(COALESCE(user.us_first_name_th, ''), COALESCE(user.us_last_name_th, '')) LIKE ?
       `;
 
       // 2. คำสั่ง SQL สำหรับดึงข้อมูลมาแสดง (Data)
@@ -41,6 +43,8 @@ module.exports = (db) => {
           OR user.us_first_name_th LIKE ?
           OR user.us_last_name_th LIKE ?
           OR user.us_department LIKE ?
+          OR CONCAT(user.us_first_name_th, ' ', user.us_last_name_th) LIKE ?
+          OR CONCAT(COALESCE(user.us_first_name_th, ''), COALESCE(user.us_last_name_th, '')) LIKE ?
         ORDER BY repairForm.rf_create_at DESC
         LIMIT ? OFFSET ?
       `;
@@ -51,7 +55,7 @@ module.exports = (db) => {
         new Promise((resolve, reject) => {
           db.query(
             countSqlStatement,
-            [searchKeyword, searchKeyword, searchKeyword, searchKeyword],
+            [searchKeyword, searchKeyword, searchKeyword, searchKeyword, searchKeyword, searchKeyword],
             (err, res) => {
               if (err) reject(err);
               else resolve(res);
@@ -63,6 +67,8 @@ module.exports = (db) => {
           db.query(
             dataSqlStatement,
             [
+              searchKeyword,
+              searchKeyword,
               searchKeyword,
               searchKeyword,
               searchKeyword,
