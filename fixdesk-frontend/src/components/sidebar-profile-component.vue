@@ -1,9 +1,21 @@
 <script setup>
-import { ref, onMounted, reactive } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import { jwtDecode } from 'jwt-decode'
 import Swal from 'sweetalert2'
-import { usePhoneFormat } from '@/composables/usePhoneFormat'
-const { toRaw, toDisplay, maskInput } = usePhoneFormat()
+import { usePhoneNumberFormatter } from '@/composables/usePhoneFormat'
+import { Icon } from '@iconify/vue'
+import ChevronDownIcon from '@/assets/icons/sidebar/chevron-down-icon.svg'
+import ChevronUpIcon from '@/assets/icons/sidebar/chevron-up-icon.svg'
+import LogoutIcon from '@/assets/icons/sidebar/logout-icon.svg'
+import PersonIcon from '@/assets/icons/sidebar/person-icon.svg'
+import SettingIcon from '@/assets/icons/sidebar/settings-icon.svg'
+
+
+
+
+defineExpose({ forceClose })
+
+const { toRaw, toDisplay, maskInput } = usePhoneNumberFormatter()
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
 
@@ -67,6 +79,11 @@ onMounted(() => {
     }
   }
 })
+
+function forceClose() {
+  showDropdown.value = false
+  closeAllPopup()
+}
 
 function toggleDropdown() {
   if (!props.expanded) return
@@ -340,16 +357,27 @@ function closeAllPopup() {
   showPopupPassword.value = false
   showPopupConfirm.value = false
 }
+
+watch(
+  () => props.expanded,
+  (newVal) => {
+    if (!newVal) {
+      showDropdown.value = false
+      closeAllPopup()
+    }
+  },
+)
 </script>
 
 <template>
   <footer
+    ref="rootRef"
     class="relative border-t border-blue-700 px-4 py-3 flex items-center gap-3 hover:bg-blue-800 transition-all duration-300 cursor-pointer select-none"
     @click="toggleDropdown"
   >
     <!-- ไอคอนผู้ใช้ -->
     <div class="flex items-center justify-center w-10 h-10 rounded-full bg-blue-600 shrink-0">
-      <img src="/icon/sidebar/person-icon.svg" alt="User Icon" class="w-6 h-6" />
+      <img :src="PersonIcon" alt="User Icon" class="w-6 h-6" />
     </div>
 
     <!-- ชื่อ: แสดงเฉพาะตอนขยาย -->
@@ -361,7 +389,7 @@ function closeAllPopup() {
     <img
       v-if="props.expanded"
       :src="
-        showDropdown ? '/icon/sidebar/chevron-down-icon.svg' : '/icon/sidebar/chevron-up-icon.svg'
+        showDropdown ? ChevronDownIcon : ChevronUpIcon
       "
       alt="Chevron Icon"
       class="w-5 h-5 ml-auto transition-transform duration-200"
@@ -373,10 +401,10 @@ function closeAllPopup() {
       class="absolute bottom-16 left-0 w-full bg-blue-900 rounded-lg shadow-lg py-2 z-50"
     >
       <button
-        @click="openProfilePopup"
+        @click.stop="openProfilePopup"
         class="flex items-center w-full gap-2 px-4 py-2 text-left hover:bg-blue-800 transition-all"
       >
-        <img src="/icon/sidebar/settings-icon.svg" class="w-4 h-4" />
+        <img :src="SettingIcon" class="w-4 h-4" />
         <span class="text-white text-sm">ตั้งค่าบัญชี</span>
       </button>
 
@@ -384,7 +412,7 @@ function closeAllPopup() {
         @click="openPasswordPopup"
         class="flex items-center w-full gap-2 px-4 py-2 text-left hover:bg-blue-800 transition-all"
       >
-        <img src="\icon\edit-icon.svg" class="w-4 h-4" />
+        <Icon icon="fluent:edit-24-regular" width="16" height="16" style="color: #ffffff" />
         <span class="text-white text-sm">ตั้งค่ารหัสผ่าน</span>
       </button>
 
@@ -392,7 +420,7 @@ function closeAllPopup() {
         @click="logout"
         class="flex items-center w-full gap-2 px-4 py-2 text-left hover:bg-blue-800 transition-all"
       >
-        <img src="/icon/sidebar/logout-icon.svg" class="w-4 h-4" />
+        <img :src="LogoutIcon" class="w-4 h-4" />
         <span class="text-white text-sm">ออกจากระบบ</span>
       </button>
     </div>
@@ -414,7 +442,12 @@ function closeAllPopup() {
         <div class="p-6 sm:p-8">
           <div class="flex items-center gap-3 mb-4 sm:mb-6 border-b border-gray-100 pb-4">
             <div class="p-2 bg-blue-600 rounded-full">
-              <img src="\icon\sidebar\user-icon.svg" class="w-6 h-6 sm:w-7 sm:h-7" />
+              <Icon
+                icon="fluent:person-square-16-regular"
+                width="36"
+                height="36"
+                style="color: #ffffff"
+              />
             </div>
             <h2 class="text-black text-xl sm:text-2xl font-bold">ตั้งค่าบัญชี</h2>
           </div>
@@ -471,9 +504,8 @@ function closeAllPopup() {
                   <input
                     v-model="editForm.us_phone"
                     type="tel"
-                    maxlength="10"
-                    @input="editForm.us_phone = toDisplay(editForm.us_phone)"
-                    class="w-full pl-3 pr-3 py-2 border border-gray-300 rounded-lg text-black text-sm sm:text-base focus:border-black focus:ring-0 focus:outline-none transition-colors"
+                    @input="maskInput($event.target)"
+                    class="w-full pl-3 pr-3 py-2 border border-gray-300 rounded-lg text-black"
                     placeholder="กรอกเบอร์โทร"
                   />
                 </div>
@@ -522,7 +554,7 @@ function closeAllPopup() {
         <div class="p-6 sm:p-8">
           <div class="flex items-center gap-3 mb-4 sm:mb-6 border-b border-gray-100 pb-4">
             <div class="p-2 bg-blue-600 rounded-full">
-              <img src="\icon\edit-icon.svg" class="w-6 h-6 sm:w-7 sm:h-7" />
+              <Icon icon="fluent:edit-24-regular" width="24" height="24" style="color: #ffffff" />
             </div>
             <h2 class="text-black text-xl sm:text-2xl font-bold">ตั้งค่ารหัสผ่าน</h2>
           </div>
@@ -617,9 +649,6 @@ function closeAllPopup() {
       >
         <div class="p-6 sm:p-8">
           <div class="flex items-center gap-3 mb-4 sm:mb-6 border-b border-gray-100 pb-4">
-            <div class="p-2 bg-blue-600 rounded-full text-blue-600">
-              <img src="\icon\circle-check-icon.svg" class="w-6 h-6 sm:w-7 sm:h-7" />
-            </div>
             <h2 class="text-black text-xl sm:text-2xl font-bold">ยืนยันตัวตน</h2>
           </div>
 

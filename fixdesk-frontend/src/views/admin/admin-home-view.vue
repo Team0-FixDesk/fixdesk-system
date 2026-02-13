@@ -1,167 +1,254 @@
 <script setup>
-import CardHomeComponent from '@/components/card-home-component.vue'
-import repairButtonComponent from '@/components/repair-button-component.vue'
-import TableComponent from '@/components/table-component.vue'
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+
+import { getAdminRepairList } from '@/services/repair'
+
+import CardHomeComponent from '@/components/card-home-component.vue'
+import RepairButtonComponent from '@/components/button/repair-button-component.vue'
+import TableComponent from '@/components/table-component.vue'
+import InfoButtonComponent from '@/components/button/info-button-component.vue'
+
 import { useUserProfile } from '@/composables/useUserProfile.js'
 import { useAuthToken } from '@/composables/useAuthToken'
+import { useTruncateText } from '@/composables/useTruncateText.js'
+
+const { truncateSentences } = useTruncateText()
+
+const TH_LOCALE = 'th-TH'
+
+const STATUS = {
+  inProgress: 'in_progress',
+  done: 'done',
+  completed: 'completed',
+  cancel: 'cancel',
+  cancelled: 'cancelled',
+}
 
 const router = useRouter()
 
-/* --- API state --- */
+const { token, isAuthenticated, logout } = useAuthToken()
+const { displayName, displayDepartment, fetchUserProfile } = useUserProfile()
+
 const repairRequests = ref([])
 const loading = ref(false)
 const error = ref(null)
 
-const API_BASE = import.meta.env.VITE_API_BASE
+/**
+ * today / in_progress / completed_7days / cancelled_7days
+ * null = show all
+ */
+const currentFilter = ref(null)
 
-const { displayName, displayDepartment, fetchUserProfile } = useUserProfile(API_BASE)
+/* =========================
+  Helpers (date)
+========================= */
+function toDateSafe(input) {
+  const d = new Date(input)
+  return Number.isNaN(d.getTime()) ? new Date(0) : d
+}
 
-/* --- Filter state --- */
-const currentFilter = ref(null) // today / in_progress / completed_7days / cancelled_7days
+function isSameDay(a, b) {
+  return a.toDateString() === b.toDateString()
+}
 
-/* --- Fetch API --- */
-const fetchRepairRequests = async () => {
+function isWithinLastDays(date, days) {
+  const now = new Date()
+  const diffMs = Math.abs(now - date)
+  return diffMs / (1000 * 60 * 60 * 24) <= days
+}
+
+function formatThaiDate(input) {
+  const d = toDateSafe(input)
+  if (d.getTime() === 0) return '-'
+  return d.toLocaleDateString(TH_LOCALE)
+}
+
+/* =========================
+  Helpers (status)
+========================= */
+function isCompletedStatus(status) {
+  return status === STATUS.done || status === STATUS.completed
+}
+
+function isCancelledStatus(status) {
+  return status === STATUS.cancel || status === STATUS.cancelled
+}
+
+/* =========================
+  Mapper
+========================= */
+function buildDetailHtml(r) {
+  const reporterName = `${r.us_first_name || ''} ${r.us_last_name || ''}`.trim()
+
+  // NOTE: คงรูปแบบ </br> เดิมไว้เพื่อไม่กระทบ UI ของ TableComponent
+  return (
+    'วันที่แจ้ง: ' +
+    formatThaiDate(r.rf_create_at) +
+    '</br>' +
+    'ชื่อผู้แจ้ง: ' +
+    reporterName +
+    '</br>' +
+    'หน่วยงาน: ' +
+    (r.department_name || '-') +
+    '</br>' +
+    'รายละเอียด: ' +
+    truncateSentences(r.rf_problem, 1) +
+    '</br>' +
+    'สถานที่: ' +
+    (r.bd_name ?? '-') + ' ' +
+    (r.fl_name ?? '-') + ' ' +
+    (r.room_name ?? '-')
+  )
+}
+
+function mapRepairToRow(r) {
+  const rawDate = toDateSafe(r.rf_create_at)
+
+  return {
+    row: [r.rf_code, r.tt_name, buildDetailHtml(r), r.rf_urgency, r.rf_user_status, ''],
+    meta: r,
+    rawDate,
+  }
+}
+
+function normalizeRepairs(payload) {
+  if (Array.isArray(payload)) return payload
+  if (Array.isArray(payload?.data)) return payload.data
+  return []
+}
+
+/* =========================
+  API
+========================= */
+async function fetchRepairRequests() {
   loading.value = true
   error.value = null
 
   try {
-    const { token, isAuthenticated, logout } = useAuthToken()
-
     if (!isAuthenticated.value) {
       logout()
       return
     }
 
-    const response = await fetch(`${API_BASE}/admin/repairs`, {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${token.value}`,
-        'Content-Type': 'application/json',
-      },
-    })
+    const payload = await getAdminRepairList(token.value)
 
-    if (!response.ok) throw new Error('โหลดข้อมูลล้มเหลว')
-
-    const data = await response.json()
-
-    repairRequests.value = data.map((r) => ({
-      row: [
-        r.rf_code,
-        r.tt_name,
-        'วันที่แจ้ง: ' +
-          new Date(r.rf_create_at).toLocaleDateString('th-TH') +
-          '</br>' +
-          'ชื่อผู้แจ้ง: ' +
-          `${r.us_first_name || ''} ${r.us_last_name || ''}`.trim() +
-          '</br>' +
-          'หน่วยงาน: ' +
-          r.department_name,
-        r.rf_urgency,
-        r.rf_user_status,
-        '',
-      ],
-      meta: r,
-      rawDate: new Date(r.rf_create_at),
-    }))
-  } catch (err) {
-    error.value = err.message
+    const repairs = normalizeRepairs(payload)
+    repairRequests.value = repairs.map(mapRepairToRow)
+  } catch (e) {
+    error.value = e?.message || 'เกิดข้อผิดพลาด'
   } finally {
     loading.value = false
   }
 }
 
-/* --- Helper --- */
-const isToday = (req) => {
-  const today = new Date()
-  return req.rawDate.toDateString() === today.toDateString()
+/* =========================
+  Filter helpers (ใช้ใน computed)
+========================= */
+function isToday(item) {
+  return isSameDay(item.rawDate, new Date())
 }
 
-const isWithin7Days = (req) => {
-  const today = new Date()
-  const diff = Math.abs(today - req.rawDate)
-  return diff / (1000 * 60 * 60 * 24) <= 7
+function isWithin7Days(item) {
+  return isWithinLastDays(item.rawDate, 7)
 }
 
-/* --- Filtered Rows --- */
+function isCurrentMonth(item) {
+  const now = new Date()
+  const d = item.rawDate
+  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()
+}
+
+/* =========================
+  Computed: Filtered Rows
+========================= */
 const filteredRequests = computed(() => {
-  if (!currentFilter.value) return repairRequests.value
+  const filterKey = currentFilter.value
+  if (!filterKey) return repairRequests.value
 
   return repairRequests.value.filter((item) => {
-    const status = item.meta.rf_user_status
+    const status = item.meta?.rf_user_status
 
-    switch (currentFilter.value) {
+    switch (filterKey) {
       case 'today':
         return isToday(item)
       case 'in_progress':
-        return status === 'in_progress'
+        return status === STATUS.inProgress
       case 'completed_7days':
-        return (status === 'done' || status === 'completed') && isWithin7Days(item)
+        return isCompletedStatus(status) && isWithin7Days(item)
       case 'cancelled_7days':
-        return (status === 'cancel' || status === 'cancelled') && isWithin7Days(item)
+        return isCancelledStatus(status) && isWithin7Days(item)
       default:
         return true
     }
   })
 })
 
-/* --- Table component rows --- */
+/* Table rows for display */
 const rowsForDisplay = computed(() => filteredRequests.value.map((item) => item.row))
 
-/* --- Stats --- */
-const todayTasks = computed(() => repairRequests.value.filter((r) => isToday(r)).length)
-const progressTasks = computed(
-  () => repairRequests.value.filter((r) => r.meta.rf_user_status === 'in_progress').length,
+/* =========================
+  Computed: Stats
+========================= */
+const allTasks = computed(
+  () => repairRequests.value.filter((r) => isCurrentMonth(r) && r.meta?.rf_user_status).length,
 )
+
+const todayTasks = computed(() => repairRequests.value.filter((r) => isToday(r)).length)
+
+const progressTasks = computed(
+  () => repairRequests.value.filter((r) => r.meta?.rf_user_status === STATUS.inProgress).length,
+)
+
 const completedTasks = computed(
   () =>
     repairRequests.value.filter(
-      (r) =>
-        (r.meta.rf_user_status === 'done' || r.meta.rf_user_status === 'completed') &&
-        isWithin7Days(r),
+      (r) => isCompletedStatus(r.meta?.rf_user_status) && isWithin7Days(r),
     ).length,
 )
-const allTasks = computed(() => repairRequests.value.filter((r) => r.meta.rf_user_status).length)
 
 const statItems = computed(() => [
   {
     value: allTasks.value,
-    label: 'รายการแจ้งซ่อมทั้งหมด',
+    label: 'รายการแจ้งซ่อมทั้งหมดในเดือนนี้',
     colorClass: 'text-red-500',
   },
   {
     value: todayTasks.value,
-    label: 'งานทั้งหมดวันนี้',
+    label: 'รายการแจ้งซ่อมทั้งหมดภายในวันนี้',
     colorClass: 'text-amber-500',
     filterKey: 'today',
   },
   {
     value: progressTasks.value,
-    label: 'กำลังดำเนินการ',
+    label: 'รายการแจ้งซ่อมที่กำลังดำเนินการ',
     colorClass: 'text-blue-500',
     filterKey: 'in_progress',
   },
   {
     value: completedTasks.value,
-    label: 'เสร็จสิ้น (7 วัน)',
+    label: 'รายการแจ้งซ่อมที่เสร็จสิ้นในระยะเวลา 7 วัน',
     colorClass: 'text-green-500',
     filterKey: 'completed_7days',
   },
 ])
 
-const handleCardClick = (item) => {
-  currentFilter.value = item.filterKey
+/* =========================
+  Actions (template ใช้งานชื่อเดิม)
+========================= */
+function handleCardClick(item) {
+  currentFilter.value = item?.filterKey ?? null
 }
 
-/* --- Actions --- */
-const goToRepairDetail = (ticketId) => {
+function goToRepairDetail(ticketId) {
   router.push(`/main/repair-detail/${ticketId}`)
 }
 
+/* =========================
+  Lifecycle
+========================= */
 onMounted(() => {
   fetchRepairRequests()
-  fetchUserProfile()
 })
 </script>
 
@@ -182,7 +269,7 @@ onMounted(() => {
       </div>
 
       <div class="flex space-x-2">
-        <repairButtonComponent />
+        <RepairButtonComponent />
       </div>
     </div>
 
@@ -205,16 +292,12 @@ onMounted(() => {
         :urgencyColumn="3"
         :statusColumn="4"
         :columnAlign="['left', 'left', 'left', 'center', 'center', 'center']"
+        :id-column-index="0"
+        :id-column-as-link="true"
+        @detail="goToRepairDetail"
       >
         <template #cell-5="{ row }">
-          <div class="flex justify-center">
-            <button
-              @click="goToRepairDetail(row[0])"
-              class="flex items-center gap-2 px-2 py-2 rounded-md bg-[#1E48D1] hover:bg-[#163A9B] text-white"
-            >
-              <img src="/icon/info-icon.svg" class="h-4 w-4" />
-            </button>
-          </div>
+          <InfoButtonComponent @click="goToRepairDetail(row[0])" />
         </template>
       </TableComponent>
     </div>

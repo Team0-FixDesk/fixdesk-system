@@ -3,6 +3,8 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import TableComponent from '@/components/table-component.vue'
 import RepairFilterBar from '@/components/filters/repair-filter-bar-component.vue'
+import InfoButtonComponent from '@/components/button/info-button-component.vue'
+
 import Sweetalert from 'sweetalert2'
 
 defineOptions({ name: 'StockWithdrawListView' })
@@ -13,7 +15,7 @@ const API_BASE = import.meta.env.VITE_API_BASE
 
 // ==================== Table ====================
 const columns = ['รหัสใบเบิกของ', 'หน่วยงาน', 'รายละเอียด', 'สถานะการเบิก', 'ตัวดำเนินการ']
-const tableRows = ref([])
+const tableRowsList = ref([])
 
 // ==================== Filters (ใช้กับ RepairFilterBar) ====================
 const searchInput = ref('')
@@ -54,7 +56,7 @@ async function loadStockForms() {
     const data = await res.json()
     if (!res.ok) throw new Error(data.message)
 
-    tableRows.value = data
+    tableRowsList.value = data
       .filter((item) => item.sf_status === 'waiting')
       .map((item) => ({
         row: [
@@ -97,7 +99,7 @@ async function loadStockForms() {
 const filteredRows = computed(() => {
   const q = searchInput.value.toLowerCase()
 
-  return tableRows.value.filter((item) => {
+  return tableRowsList.value.filter((item) => {
     const row = item.row
     const status = row[3]
 
@@ -147,16 +149,12 @@ onMounted(() => {
       :perPage="10"
       :statusStockColumn="3"
       :columnAlign="['left', 'left', 'left', 'center', 'center']"
+      :id-column-index="0"
+      :id-column-as-link="true"
+      @detail="openDetail"
     >
       <template #cell-4="{ row }">
-        <div class="flex justify-center">
-          <button
-            @click="openDetail(row[0])"
-            class="flex items-center gap-2 px-2 py-2 rounded-md bg-blue-500 text-white hover:bg-blue-600"
-          >
-            <img src="/icon/info-icon.svg" class="h-4 w-4" />
-          </button>
-        </div>
+        <InfoButtonComponent @click="openDetail(row[0])" />
       </template>
     </TableComponent>
   </div>

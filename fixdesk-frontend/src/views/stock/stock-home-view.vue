@@ -4,27 +4,30 @@ import { useRouter } from 'vue-router'
 import ApexChart from 'vue3-apexcharts'
 
 import TableComponent from '@/components/table-component.vue'
-import repairButton from '@/components/repair-button-component.vue'
+import repairButton from '@/components/button/repair-button-component.vue'
 import CardHomeComponent from '@/components/card-home-component.vue'
 import { useUserProfile } from '@/composables/useUserProfile'
+
+import InfoButtonComponent from '@/components/button/info-button-component.vue'
+
+import { getAllProductList, getAllStockFormList } from '@/services/stock'
+import { useAuthToken } from '@/composables/useAuthToken'
+
+const { token, isAuthenticated, logout } = useAuthToken()
 
 defineOptions({ name: 'StockHomeView' })
 
 // ==================== Router / API ====================
 const router = useRouter()
-const API_BASE = import.meta.env.VITE_API_BASE
 
-const { displayName, displayDepartment, fetchUserProfile } = useUserProfile(API_BASE)
+const { displayName, displayDepartment, fetchUserProfile } = useUserProfile()
 
-function getAuthHeaders() {
-  const token = localStorage.getItem('token') || sessionStorage.getItem('token')
-  return { Authorization: `Bearer ${token}` }
-}
+
 
 // ==================== State ====================
 const products = ref([])
 const stockForms = ref([])
-const tableRows = ref([])
+const tableRowsList = ref([])
 const loading = ref(false)
 
 // 🔀 สวิตช์กราฟ
@@ -42,34 +45,35 @@ const columns = ['รหัสใบเบิก', 'รายละเอีย�
 async function fetchDashboard() {
   loading.value = true
   try {
-    const resProducts = await fetch(`${API_BASE}/show-stock`, {
-      headers: getAuthHeaders(),
-    })
-    if (resProducts.ok) products.value = await resProducts.json()
-
-    const resForms = await fetch(`${API_BASE}/stock-forms`, {
-      headers: getAuthHeaders(),
-    })
-    if (resForms.ok) {
-      stockForms.value = await resForms.json()
-
-      tableRows.value = stockForms.value
-        .filter((i) => i.sf_status === 'waiting')
-        .sort((a, b) => new Date(b.sf_create_at) - new Date(a.sf_create_at))
-        .slice(0, 5)
-        .map((item) => ({
-          row: [
-            item.sf_code,
-            'วันที่: ' +
-              new Date(item.sf_create_at).toLocaleDateString('th-TH') +
-              '<br>ผู้ขอเบิก: ' +
-              item.requester +
-              '<br>หน่วยงาน: ' +
-              item.us_department,
-            '',
-          ],
-        }))
+    if (!isAuthenticated.value) {
+      logout()
+      return
     }
+
+    const [p, forms] = await Promise.all([
+      getAllProductList(token.value),
+      getAllStockFormList(token.value),
+    ])
+
+    products.value = p
+    stockForms.value = forms
+
+    tableRowsList.value = stockForms.value
+      .filter((i) => i.sf_status === 'waiting')
+      .sort((a, b) => new Date(b.sf_create_at) - new Date(a.sf_create_at))
+      .slice(0, 5)
+      .map((item) => ({
+        row: [
+          item.sf_code,
+          'วันที่: ' +
+            new Date(item.sf_create_at).toLocaleDateString('th-TH') +
+            '<br>ผู้ขอเบิก: ' +
+            item.requester +
+            '<br>หน่วยงาน: ' +
+            item.us_department,
+          '',
+        ],
+      }))
   } catch (err) {
     console.error(err)
   } finally {
@@ -82,15 +86,22 @@ const today = new Date()
 
 const statItems = computed(() => [
   {
-    value: products.value.length,
-    label: 'จำนวนรายการ',
+    value: stockForms.value.filter((f) => {
+      const createDate = new Date(f.sf_create_at)
+      const currentDate = new Date()
+      return (
+        createDate.getMonth() === currentDate.getMonth() &&
+        createDate.getFullYear() === currentDate.getFullYear()
+      )
+    }).length,
+    label: 'คำขอในเดือนนี้',
     colorClass: 'text-blue-600',
   },
   {
-    value: products.value.filter(
-      (p) => p.pd_updated_at && new Date(p.pd_updated_at).toDateString() === today.toDateString(),
+    value: stockForms.value.filter(
+      (f) => f.sf_status === 'approved' && isSameDay(f.sf_create_at, today),
     ).length,
-    label: 'ของเข้าใหม่วันนี้',
+    label: 'เบิกออกวันนี้',
     colorClass: 'text-green-600',
   },
   {
@@ -106,6 +117,10 @@ const statItems = computed(() => [
 ])
 
 // ==================== Helpers ====================
+function isSameDay(dateString, dateObj) {
+  return new Date(dateString).toDateString() === dateObj.toDateString()
+}
+
 function getLast7Days() {
   const days = []
   for (let i = 6; i >= 0; i--) {
@@ -252,9 +267,7 @@ const chartOptions = computed(() => ({
 // ==================== Lifecycle ====================
 onMounted(() => {
   fetchDashboard()
-  fetchUserProfile()
 })
-
 </script>
 
 <template>
@@ -274,7 +287,7 @@ onMounted(() => {
 
     <!-- Cards -->
     <div class="mb-8">
-      <CardHomeComponent :items="statItems" />
+      <CardHomeComponent :items="statItems" :item-unit="'คำร้อง'" />
     </div>
 
     <div class="flex gap-4">
@@ -366,17 +379,15 @@ onMounted(() => {
 
         <TableComponent
           :columns="columns"
-          :rows="tableRows.map((i) => i.row)"
+          :rows="tableRowsList.map((i) => i.row)"
           :perPage="5"
           :columnAlign="['left', 'left', 'center']"
+          :id-column-index="0"
+          :id-column-as-link="true"
+          @Detail="openDetail"
         >
           <template #cell-2="{ row }">
-            <button
-              @click="openDetail(row[0])"
-              class="flex items-center justify-center p-2 rounded-md bg-[#1E48D1] hover:bg-[#163A9B]"
-            >
-              <img src="/icon/info-icon.svg" class="h-4 w-4" />
-            </button>
+            <InfoButtonComponent @click="openDetail(row[0])" />
           </template>
         </TableComponent>
       </div>

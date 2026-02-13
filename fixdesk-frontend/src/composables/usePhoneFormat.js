@@ -1,41 +1,36 @@
-
-export function usePhoneFormat() {
-  /**
-   * แปลงเบอร์เป็นตัวเลขล้วน (สำหรับ validate / ส่ง API)
-   * เช่น "063-908-8998" → "0639088998"
-   */
-  function toRaw(value) {
-    return value ? value.replace(/\D/g, '').slice(0, 10) : ''
+// Composable สำหรับจัดการรูปแบบเบอร์โทร: แปลงเป็นตัวเลข, ตัดความยาว, และแมสก์สำหรับแสดง
+// คืนค่า: toRaw, toDisplay, maskInput
+export function usePhoneNumberFormatter() {
+  // ดึงเฉพาะตัวเลข
+  function normalize(value) {
+    return value.replace(/\D/g, '')
   }
 
-  /**
-   * แปลงให้เป็น format แสดงผล 063-908-8998
-   * ใช้ตอน fetch มาแสดงบนหน้า หรือเปิด modal/view
-   */
+  // จำกัดความยาวเบอร์โทรไม่เกิน 10 หลัก
+  function clamp(digits) {
+    return digits.slice(0, 10)
+  }
+
+  function toRaw(value) {
+    if (!value) return ''
+    return clamp(normalize(value))
+  }
+
   function toDisplay(value) {
     const digits = toRaw(value)
     if (!digits) return ''
 
-    let out = ''
-    if (digits.length > 0) out = digits.slice(0, 3)
-    if (digits.length > 3) out += '-' + digits.slice(3, 6)
-    if (digits.length > 6) out += '-' + digits.slice(6, 10)
-    return out
+    if (digits.length <= 3) return digits
+    if (digits.length <= 6) return `${digits.slice(0, 3)}-${digits.slice(3)}`
+
+    return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`
   }
 
-  /**
-   * Mask ระหว่างผู้ใช้พิมพ์ใน input
-   * ผูกกับ @input ได้เลย
-   */
+  // ใช้กับ @input ของ field: แปลงค่าใน ref ให้เป็นรูปแบบแสดง
   function maskInput(refValue) {
-    const digits = toRaw(refValue.value)
-
-    let out = ''
-    if (digits.length > 0) out = digits.slice(0, 3)
-    if (digits.length > 3) out += '-' + digits.slice(3, 6)
-    if (digits.length > 6) out += '-' + digits.slice(6, 10)
-
-    refValue.value = out // อัปเดตค่าใน input
+    const raw = normalize(refValue.value)
+    const clamped = clamp(raw)
+    refValue.value = toDisplay(clamped)
   }
 
   return {
