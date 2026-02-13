@@ -1,8 +1,6 @@
 const mysql = require("mysql2");
-
 require("dotenv").config();
 
-// กำหนดค่าการเชื่อมต่อฐานข้อมูล
 const databaseConfig = {
   host: process.env.DB_HOST || "localhost",
   user: process.env.DB_USER || "root",
@@ -10,18 +8,23 @@ const databaseConfig = {
   database: process.env.DB_NAME || "fixdesk_db",
   port: process.env.DB_PORT ? Number(process.env.DB_PORT) : 3306,
   charset: "utf8mb4",
+
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
 };
 
-// สร้างการเชื่อมต่อ
-const databaseConnection = mysql.createConnection(databaseConfig);
+// ⭐ ใช้ Pool แทน Connection
+const databasePool = mysql.createPool(databaseConfig);
 
-// เริ่มเชื่อมต่อและตรวจสอบ Error
-databaseConnection.connect((error) => {
+// ทดสอบการเชื่อมต่อครั้งแรก
+databasePool.getConnection((error, connection) => {
   if (error) {
     console.error("Database connection failed:", error);
-    process.exit(1); // จบการทำงานทันทีถ้าต่อไม่ได้
+    process.exit(1);
   }
   console.log("Connected to Database successfully");
+  connection.release();
 });
 
-module.exports = databaseConnection;
+module.exports = databasePool;
