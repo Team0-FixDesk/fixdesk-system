@@ -20,7 +20,7 @@ const withdrawDate = ref('')
   <div class="flex flex-col h-full w-full">
     <!-- ========== SECTION A: FORM AREA ========== -->
     <div class="pb-4 mb-4 border-b border-gray-200">
-      <h3 class="text-lg font-semibold text-gray-700 mb-4">ฟอร์มขอเบิกวัตถุ / อุปกรณ์</h3>
+      <h3 class="text-lg font-semibold text-gray-700 mb-4">ฟอร์มขอเบิกวัสดุ / อุปกรณ์</h3>
 
       <div class="space-y-4">
         <!-- ชื่อ + หน่วยงาน -->
