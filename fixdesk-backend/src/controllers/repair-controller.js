@@ -212,12 +212,14 @@ module.exports = (repairService) => {
 
     async assignTeam(req, res) {
       try {
+        console.log('🔍 assignTeam - Request body:', req.body);
         const { rf_code, technician_ids, lead_id } = req.body;
         if (!rf_code || !Array.isArray(technician_ids))
           return res.status(400).json({ message: "ข้อมูลไม่ครบ" });
 
         const techIds = technician_ids.map(Number).filter(Number.isFinite);
         const leadIdNum = lead_id ? Number(lead_id) : techIds[0];
+        console.log('🔍 assignTeam - Parsed data:', { rf_code, techIds, leadIdNum });
 
         if (techIds.length === 0)
           return res
@@ -235,6 +237,7 @@ module.exports = (repairService) => {
           lead_id: leadIdNum,
         });
       } catch (err) {
+        console.error('❌ assignTeam error:', err);
         res
           .status(500)
           .json({ message: "มอบหมายทีมไม่สำเร็จ", error: err.message });

@@ -178,25 +178,46 @@ module.exports = (db) => {
 
     async getStockForms(userId = null) {
       let sql = `
-        SELECT 
-          sf.sf_id, sf.sf_code, sf.sf_status, sf.sf_create_at,
-          u.us_department, CONCAT(u.us_first_name_th, ' ', u.us_last_name_th) AS requester,
-          b.bd_name, f.fl_name, r.room_name
-        FROM stock_form sf
-        LEFT JOIN user u ON u.us_id = sf.sf_us_id
-        LEFT JOIN repair_form rf ON sf.sf_rf_id = rf.rf_id
-        LEFT JOIN room r ON rf.rf_room_id = r.room_id
-        LEFT JOIN floor f ON r.room_fl_id = f.fl_id
-        LEFT JOIN building b ON f.fl_bd_id = b.bd_id
-      `;
+    SELECT 
+      sf.sf_id,
+      sf.sf_code,
+      sf.sf_status,
+      sf.sf_create_at,
+
+      rf.rf_code,
+
+      u.us_department,
+      CONCAT(u.us_first_name_th, ' ', u.us_last_name_th) AS requester,
+
+      b.bd_name,
+      f.fl_name,
+      r.room_name,
+
+      GROUP_CONCAT(
+        CONCAT(pd.pd_name, ' x', sfd.sfd_qty)
+        SEPARATOR '\\n'
+      ) AS items
+
+    FROM stock_form sf
+    LEFT JOIN user u ON u.us_id = sf.sf_us_id
+    LEFT JOIN repair_form rf ON sf.sf_rf_id = rf.rf_id
+    LEFT JOIN room r ON rf.rf_room_id = r.room_id
+    LEFT JOIN floor f ON r.room_fl_id = f.fl_id
+    LEFT JOIN building b ON f.fl_bd_id = b.bd_id
+
+    LEFT JOIN stock_form_detail sfd ON sfd.sfd_sf_id = sf.sf_id
+    LEFT JOIN products pd ON pd.pd_id = sfd.sfd_pd_id
+  `;
 
       const params = [];
+
       if (userId) {
         sql += ` WHERE sf.sf_us_id = ?`;
         params.push(userId);
       }
 
-      sql += ` ORDER BY sf.sf_id DESC`;
+      sql += ` GROUP BY sf.sf_id ORDER BY sf.sf_id DESC`;
+
       const [rows] = await db.promise().query(sql, params);
       return rows;
     },
