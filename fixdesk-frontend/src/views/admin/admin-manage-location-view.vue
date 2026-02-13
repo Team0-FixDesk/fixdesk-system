@@ -2,108 +2,21 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
+import { Icon } from '@iconify/vue'
+import ImportButtonComponent from '@/components/button/import-button-component.vue'
+import BaseButtonComponent from '@/components/button/base/base-button-component.vue'
+
 import TableComponent from '@/components/table-component.vue'
 import TableActionsComponent from '@/components/table-actions-component.vue'
+import ImportLocationModal from '@/components/modal/import-location-excel-component.vue'
 
 defineOptions({ name: 'AdminManageLocationView' })
 
 const router = useRouter()
 const API_BASE = import.meta.env.VITE_API_BASE
-const excelFile = ref(null)
-const isImporting = ref(false)
 const fileInput = ref(null)
 
-async function importExcel() {
-  if (!excelFile.value) {
-    await Swal.fire({
-      icon: 'warning',
-      title: 'กรุณาเลือกไฟล์',
-      text: 'กรุณาเลือกไฟล์ Excel (.xlsx)',
-    })
-    return
-  }
-
-  const confirm = await Swal.fire({
-    title: 'ยืนยันการนำเข้าไฟล์',
-    html: `
-      คุณต้องการนำเข้าไฟล์ Excel นี้หรือไม่?<br>
-      <small class="text-gray-500">ระบบจะเพิ่มข้อมูลสถานที่ลงในฐานข้อมูล</small>
-    `,
-    icon: 'question',
-    showCancelButton: true,
-    confirmButtonText: 'นำเข้า',
-    cancelButtonText: 'ยกเลิก',
-    reverseButtons: true,
-  })
-
-  if (!confirm.isConfirmed) {
-  resetFileInput()
-  return
-}
-
-
-  const formData = new FormData()
-  formData.append('file', excelFile.value)
-
-  try {
-    isImporting.value = true
-
-    const res = await fetch(`${API_BASE}/locations/import/xlsx`, {
-      method: 'POST',
-      headers: {
-        Authorization: getAuthHeaders().Authorization,
-      },
-      body: formData,
-    })
-
-    if (handleAuthError(res.status)) return
-
-    const contentType = res.headers.get('content-type')
-
-    let data = null
-    if (contentType && contentType.includes('application/json')) {
-      data = await res.json()
-    } else {
-  throw new Error('Backend response ไม่ใช่ JSON')
-}
-
-    if (!res.ok) {
-      throw new Error(data.message || 'Import ล้มเหลว')
-    }
-
-    await Swal.fire({
-      icon: 'success',
-      title: 'สำเร็จ',
-      text: 'นำเข้าข้อมูลจาก Excel เรียบร้อยแล้ว',
-    })
-
-    resetFileInput()
-await refreshData()
-
-  } catch (err) {
-  await Swal.fire({
-    icon: 'error',
-    title: 'Import ล้มเหลว',
-    text: err.message,
-  })
-  resetFileInput()
-}
- finally {
-    isImporting.value = false
-  }
-}
-
-function handleFileChange(e) {
-  excelFile.value = e.target.files[0]
-  importExcel()
-}
-
-function resetFileInput() {
-  excelFile.value = null
-  if (fileInput.value) {
-    fileInput.value.value = '' // ⭐ ตัวนี้แหละที่แก้ปัญหา
-  }
-}
+const showImportModal = ref(false)
 
 // Helper function to get auth headers
 const getAuthHeaders = () => {
@@ -148,6 +61,9 @@ const showViewModal = ref(false)
 const showAddModal = ref(false)
 const showEditModal = ref(false)
 
+const modalFloors = ref([])
+const bulkFloors = ref([])
+
 // Data for modals
 const viewData = ref({})
 const addForm = ref({
@@ -187,6 +103,22 @@ const errorMessages = ref({
 
 // VALIDATION FUNCTIONS
 function validateAlphanumeric(value, fieldName) {
+  if (fieldName === 'newFloorName' || (fieldName === 'name' && addForm.value.type === 'floor')) {
+    const numberRegex = /^[0-9]+$/
+    if (!value.trim()) {
+      validationErrors.value[fieldName] = true
+      errorMessages.value[fieldName] = `กรุณากรอกข้อมูล`
+      return false
+    }
+    if (!numberRegex.test(value)) {
+      validationErrors.value[fieldName] = true
+      errorMessages.value[fieldName] = `กรุณากรอกชั้นเป็นตัวเลขเท่านั้น`
+      return false
+    }
+    validationErrors.value[fieldName] = false
+    errorMessages.value[fieldName] = ''
+    return true
+  }
   const regex = /^[ก-๙a-zA-Z0-9\s/]*$/
 
   if (!value.trim()) {
@@ -197,8 +129,7 @@ function validateAlphanumeric(value, fieldName) {
 
   if (!regex.test(value)) {
     validationErrors.value[fieldName] = true
-    errorMessages.value[fieldName] =
-      `กรุณากรอกชื่อ${getFieldLabel(fieldName)}เป็นตัวอักษรไทย อังกฤษ ตัวเลข และ / เท่านั้น`
+    errorMessages.value[fieldName] = `กรุณากรอกชื่อ${getFieldLabel(fieldName)}เป็นตัวอักษรไทย อังกฤษ ตัวเลข และ / เท่านั้น`
     return false
   }
 
@@ -414,13 +345,7 @@ const displayData = computed(() => {
   // กรองด้วย search query
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase()
-    data = data.filter(
-      (item) =>
-        item.name.toLowerCase().includes(query) ||
-        item.building.toLowerCase().includes(query) ||
-        item.floor.toLowerCase().includes(query) ||
-        item.room.toLowerCase().includes(query),
-    )
+    data = data.filter((item) => item.name.toLowerCase().includes(query) || item.building.toLowerCase().includes(query) || item.floor.toLowerCase().includes(query) || item.room.toLowerCase().includes(query))
   }
 
   // กรองด้วยอาคารที่เลือก
@@ -479,7 +404,7 @@ function extractNumber(str) {
 
 // แก้ไข tableRows ให้มี ID เป็นคอลัมน์แรก
 // Table rows (ใช้ TableComponent ใหม่)
-const tableRows = computed(() => {
+const tableRowsList = computed(() => {
   return displayData.value.map((item) => {
     return [
       item.id, // 0: primary ID
@@ -732,16 +657,10 @@ async function saveAddLocation() {
   // Validate based on mode
   if (addForm.value.bulk_mode) {
     // Bulk create validation
-    if (
-      addForm.value.building_mode === 'new' &&
-      !validateAlphanumeric(addForm.value.new_building_name, 'newBuildingName')
-    ) {
+    if (addForm.value.building_mode === 'new' && !validateAlphanumeric(addForm.value.new_building_name, 'newBuildingName')) {
       return
     }
-    if (
-      addForm.value.floor_mode === 'new' &&
-      !validateAlphanumeric(addForm.value.new_floor_name, 'newFloorName')
-    ) {
+    if (addForm.value.floor_mode === 'new' && !validateAlphanumeric(addForm.value.new_floor_name, 'newFloorName')) {
       return
     }
     if (!validateAlphanumeric(addForm.value.room_name, 'roomName')) {
@@ -781,19 +700,9 @@ async function saveAddLocation() {
 
 async function saveSingleLocation() {
   try {
-    const endpoint =
-      addForm.value.type === 'building'
-        ? '/buildings'
-        : addForm.value.type === 'floor'
-          ? '/floors'
-          : '/rooms'
+    const endpoint = addForm.value.type === 'building' ? '/buildings' : addForm.value.type === 'floor' ? '/floors' : '/rooms'
 
-    const body =
-      addForm.value.type === 'building'
-        ? { bd_name: addForm.value.name }
-        : addForm.value.type === 'floor'
-          ? { fl_name: addForm.value.name, fl_bd_id: addForm.value.building_id }
-          : { room_name: addForm.value.name, room_fl_id: addForm.value.floor_id }
+    const body = addForm.value.type === 'building' ? { bd_name: addForm.value.name } : addForm.value.type === 'floor' ? { fl_name: addForm.value.name, fl_bd_id: addForm.value.building_id } : { room_name: addForm.value.name, room_fl_id: addForm.value.floor_id }
 
     const res = await fetch(`${API_BASE}${endpoint}`, {
       method: 'POST',
@@ -977,6 +886,19 @@ async function saveEditLocation() {
   if (!validateAlphanumeric(editForm.value.name, 'name')) {
     return
   }
+  const result = await Swal.fire({
+    title: 'ยืนยันการแก้ไขข้อมูล?',
+    text: 'คุณต้องการบันทึกการแก้ไขนี้หรือไม่?',
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'บันทึก',
+    cancelButtonText: 'ยกเลิก',
+    confirmButtonColor: '#f97316',
+  })
+
+  if (!result.isConfirmed) {
+    return
+  }
 
   try {
     const endpoint = '/rooms'
@@ -1045,7 +967,7 @@ async function handleModalBuildingChange() {
       })
       if (res.ok) {
         const data = await res.json()
-        floors.value = data.map((floor) => ({
+        modalFloors.value = data.map((floor) => ({
           floor_id: floor.floor_id,
           floor_name: floor.floor_name,
           building_id: addForm.value.building_id,
@@ -1066,7 +988,7 @@ async function handleBulkBuildingChange() {
       })
       if (res.ok) {
         const data = await res.json()
-        floors.value = data.map((floor) => ({
+        bulkFloors.value = data.map((floor) => ({
           floor_id: floor.floor_id,
           floor_name: floor.floor_name,
           building_id: addForm.value.building_id,
@@ -1083,6 +1005,22 @@ async function handleBulkBuildingChange() {
 async function refreshData() {
   await fetchAllData()
 }
+
+function handleImportSuccess() {
+  Swal.fire({
+    icon: 'success',
+    title: 'นำเข้าสถานที่เรียบร้อยแล้ว',
+  })
+  showImportModal.value = false
+}
+
+function handleImportError(message) {
+  Swal.fire({
+    icon: 'error',
+    title: message || 'นำเข้าสถานที่ไม่สำเร็จ',
+  })
+}
+
 
 // Lifecycle hooks
 onMounted(async () => {
@@ -1104,35 +1042,22 @@ onBeforeUnmount(() => {
       <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-4">
         <div class="flex flex-wrap items-center gap-3">
           <!-- ค้นหา -->
-          <input v-model="searchQuery" type="text" placeholder="ค้นหาอาคาร / ชั้น / ห้อง"
-            class="w-full sm:w-[260px] h-10 px-4 rounded-lg border border-gray-300 bg-white focus:ring-2 focus:ring-blue-500 text-gray-700" />
+          <input v-model="searchQuery" type="text" placeholder="ค้นหาอาคาร / ชั้น / ห้อง" class="w-full sm:w-[260px] h-10 px-4 rounded-lg border border-gray-300 bg-white focus:ring-2 focus:ring-blue-500 text-gray-700" />
 
           <!-- ฟิลเตอร์อาคาร -->
           <div class="relative">
-            <button @click.stop="toggleBuildingFilter"
-              class="h-10 flex items-center gap-2 border border-gray-300 rounded-lg px-4 py-2 bg-white text-gray-700">
-              {{
-                selectedBuilding
-                  ? buildings.find((b) => b.building_id == selectedBuilding)?.building_name ||
-                  'อาคาร'
-                  : 'อาคาร'
-              }}
-              <img src="/icon/sidebar/chevron-down-icon.svg"
-                class="w-4 h-4 opacity-70 transition-transform duration-200"
-                :class="{ 'rotate-180': showBuildingFilter }" />
+            <button @click.stop="toggleBuildingFilter" class="h-10 flex items-center gap-2 border border-gray-300 rounded-lg px-4 py-2 bg-white text-gray-700">
+              {{ selectedBuilding ? buildings.find((b) => b.building_id == selectedBuilding)?.building_name || 'อาคาร' : 'อาคาร' }}
+              <Icon icon="meteor-icons:chevron-down" style="color: gray" class="w-4 h-4 opacity-70 transition-transform duration-200" :class="{ 'rotate-180': showBuildingFilter }" />
             </button>
 
-            <div v-if="showBuildingFilter"
-              class="absolute mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg p-3 text-sm text-gray-700 z-10 max-h-60 overflow-y-auto">
+            <div v-if="showBuildingFilter" class="absolute mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg p-3 text-sm text-gray-700 z-10 max-h-60 overflow-y-auto">
               <label class="flex items-center py-1 hover:bg-gray-50 rounded px-2">
-                <input type="radio" :value="''" v-model="selectedBuilding" @change="handleBuildingChange"
-                  class="w-4 h-4 text-blue-600 border-gray-300" />
+                <input type="radio" :value="''" v-model="selectedBuilding" @change="handleBuildingChange" class="w-4 h-4 text-blue-600 border-gray-300" />
                 <span class="ml-2">ทุกอาคาร</span>
               </label>
-              <label v-for="building in buildings" :key="building.building_id"
-                class="flex items-center py-1 hover:bg-gray-50 rounded px-2">
-                <input type="radio" :value="building.building_id" v-model="selectedBuilding"
-                  @change="handleBuildingChange" class="w-4 h-4 text-blue-600 border-gray-300" />
+              <label v-for="building in buildings" :key="building.building_id" class="flex items-center py-1 hover:bg-gray-50 rounded px-2">
+                <input type="radio" :value="building.building_id" v-model="selectedBuilding" @change="handleBuildingChange" class="w-4 h-4 text-blue-600 border-gray-300" />
                 <span class="ml-2">{{ building.building_name }}</span>
               </label>
             </div>
@@ -1140,168 +1065,107 @@ onBeforeUnmount(() => {
 
           <!-- ฟิลเตอร์ชั้น -->
           <div class="relative">
-            <button @click.stop="toggleFloorFilter"
-              class="h-10 flex items-center gap-2 border border-gray-300 rounded-lg px-4 py-2 bg-white text-gray-700">
-              {{
-                selectedFloor
-                  ? floors.find((f) => f.floor_id == selectedFloor)?.floor_name || 'ชั้น'
-                  : 'ชั้น'
-              }}
-              <img src="/icon/sidebar/chevron-down-icon.svg"
-                class="w-4 h-4 opacity-70 transition-transform duration-200"
-                :class="{ 'rotate-180': showFloorFilter }" />
+            <button @click.stop="toggleFloorFilter" class="h-10 flex items-center gap-2 border border-gray-300 rounded-lg px-4 py-2 bg-white text-gray-700">
+              {{ selectedFloor ? floors.find((f) => f.floor_id == selectedFloor)?.floor_name || 'ชั้น' : 'ชั้น' }}
+              <Icon icon="meteor-icons:chevron-down" style="color: gray" class="w-4 h-4 opacity-70 transition-transform duration-200" :class="{ 'rotate-180': showFloorFilter }" />
             </button>
 
-            <div v-if="showFloorFilter"
-              class="absolute mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg p-3 text-sm text-gray-700 z-10 max-h-60 overflow-y-auto">
+            <div v-if="showFloorFilter" class="absolute mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg p-3 text-sm text-gray-700 z-10 max-h-60 overflow-y-auto">
               <label class="flex items-center py-1 hover:bg-gray-50 rounded px-2">
-                <input type="radio" :value="''" v-model="selectedFloor" @change="handleFloorChange"
-                  class="w-4 h-4 text-blue-600 border-gray-300" />
+                <input type="radio" :value="''" v-model="selectedFloor" @change="handleFloorChange" class="w-4 h-4 text-blue-600 border-gray-300" />
                 <span class="ml-2">ทุกชั้น</span>
               </label>
-              <label v-for="floor in filteredFloors" :key="floor.floor_id"
-                class="flex items-center py-1 hover:bg-gray-50 rounded px-2">
-                <input type="radio" :value="floor.floor_id" v-model="selectedFloor" @change="handleFloorChange"
-                  class="w-4 h-4 text-blue-600 border-gray-300" />
+              <label v-for="floor in filteredFloors" :key="floor.floor_id" class="flex items-center py-1 hover:bg-gray-50 rounded px-2">
+                <input type="radio" :value="floor.floor_id" v-model="selectedFloor" @change="handleFloorChange" class="w-4 h-4 text-blue-600 border-gray-300" />
                 <span class="ml-2">{{ floor.floor_name }}</span>
               </label>
             </div>
           </div>
 
           <!-- ล้างตัวกรอง -->
-          <button v-if="selectedBuilding || selectedFloor || searchQuery" @click="clearFilters"
-            class="text-blue-600 hover:text-blue-700 text-sm font-medium">
-            ล้างตัวกรอง
-          </button>
+          <button v-if="selectedBuilding || selectedFloor || searchQuery" @click="clearFilters" class="text-blue-600 hover:text-blue-700 text-sm font-medium">ล้างตัวกรอง</button>
         </div>
-
 
         <div class="flex items-center gap-3">
           <!-- Import Excel (ปุ่มรอง เข้าธีม) -->
-          <label class="inline-flex items-center gap-2 h-10 px-4 rounded-lg
-           border border-[#1E48D1]
-           text-[#1E48D1]
-           bg-white
-           hover:bg-blue-50
-           cursor-pointer
-           transition">
-            <input
-  ref="fileInput"
-  type="file"
-  accept=".xlsx"
-  class="hidden"
-  @change="handleFileChange"
-/>
-
-            Import Excel
-          </label>
+          <ImportButtonComponent @click="showImportModal = true">
+            <input ref="fileInput" type="file" accept=".xlsx" class="hidden" @change="handleFileChange" />
+            <Icon icon="fluent:add-12-filled" width="20" height="20" />
+          </ImportButtonComponent>
 
           <!-- เพิ่มสถานที่ (ปุ่มหลัก) -->
-          <button @click="openAddModal" class="inline-flex items-center justify-center h-10 px-4 rounded-lg
-           bg-[#1E48D1] hover:bg-[#1539a9]
-           text-white font-medium shadow-sm transition">
-            <img src="/icon/plus-icon.svg" class="w-4 h-4 mr-2" />
+          <BaseButtonComponent @click="openAddModal" class="inline-flex items-center justify-center h-10 px-4 rounded-lg bg-[#1E48D1] hover:bg-[#1539a9] text-white font-medium shadow-sm transition">
+            <Icon icon="fluent:add-12-filled" width="20" height="20" />
             เพิ่มสถานที่
-          </button>
+          </BaseButtonComponent>
         </div>
-
-
       </div>
 
       <!-- ตาราง -->
       <div class="-mx-2 sm:mx-0 overflow-x-auto">
-        <TableComponent :columns="columns" :rows="tableRows" :perPage="10" :idColumnIndex="0" :hiddenColumns="[0]"
-          :column-align="['left', 'left', 'left', 'left', 'center']" @detail="openViewModal" @edit="openEditModal"
-          @delete="confirmDelete">
+        <TableComponent :columns="columns" :rows="tableRowsList" :perPage="10" :idColumnIndex="0" :hiddenColumns="[0]" :column-align="['left', 'left', 'left', 'left', 'center']" @detail="openViewModal" @edit="openEditModal" @delete="confirmDelete">
           <!-- slot: action column -->
           <template #cell-4="{ row }">
-            <TableActionsComponent role="admin" :row-id="row[0]" :open-menu-id="openMenuId" :row="row" :status="null"
-              @toggle-menu="openMenuId = $event" @detail="openViewModal(row[0])" @edit="openEditModal(row[0])"
-              @delete="confirmDelete(row[0])" />
+            <TableActionsComponent role="admin" :row-id="row[0]" :open-menu-id="openMenuId" :row="row" :status="null" @toggle-menu="openMenuId = $event" @detail="openViewModal(row[0])" @edit="openEditModal(row[0])" @delete="confirmDelete(row[0])" />
           </template>
         </TableComponent>
       </div>
     </div>
 
     <!-- View Modal -->
-    <div v-if="showViewModal"
-      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-2 sm:px-0"
-      @click.self="closeViewModal">
+    <div v-if="showViewModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-2 sm:px-0" @click.self="closeViewModal">
       <div class="bg-white rounded-lg p-4 sm:p-6 md:p-8 w-full max-w-2xl shadow-xl max-h-[90vh] overflow-y-auto">
         <!-- Header with icon -->
         <div class="flex items-center gap-3 mb-6">
-          <div class="bg-blue-100 p-3 rounded-full">
-            <img src="/icon/info-icon.svg" alt="View Location" class="w-8 h-8" />
+          <div class="bg-blue-400 p-3 rounded-full">
+            <Icon icon="material-symbols:info-outline-rounded" width="24" height="24" style="color: #ffffff" />
           </div>
           <h2 class="text-xl font-bold text-gray-800">รายละเอียดสถานที่</h2>
         </div>
 
-        <p class="text-gray-600 text-sm mb-6">
-          ข้อมูล{{
-            viewData.type === 'building' ? 'อาคาร' : viewData.type === 'floor' ? 'ชั้น' : 'ห้อง'
-          }}
-        </p>
+        <p class="text-gray-600 text-sm mb-6">ข้อมูล{{ viewData.type === 'building' ? 'อาคาร' : viewData.type === 'floor' ? 'ชั้น' : 'ห้อง' }}</p>
 
         <div class="space-y-4">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1.5"> ประเภท </label>
-            <input :value="viewData.type === 'building' ? 'อาคาร' : viewData.type === 'floor' ? 'ชั้น' : 'ห้อง'
-              " type="text" disabled
-              class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed" />
+            <input :value="viewData.type === 'building' ? 'อาคาร' : viewData.type === 'floor' ? 'ชั้น' : 'ห้อง'" type="text" disabled class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed" />
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1.5">
-              ชื่อ{{
-                viewData.type === 'building' ? 'อาคาร' : viewData.type === 'floor' ? 'ชั้น' : 'ห้อง'
-              }}
-            </label>
-            <input :value="viewData.displayName ||
-              viewData.building_name ||
-              viewData.floor_name ||
-              viewData.room_name
-              " type="text" disabled
-              class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed" />
+            <label class="block text-sm font-medium text-gray-700 mb-1.5"> ชื่อ{{ viewData.type === 'building' ? 'อาคาร' : viewData.type === 'floor' ? 'ชั้น' : 'ห้อง' }} </label>
+            <input :value="viewData.displayName || viewData.building_name || viewData.floor_name || viewData.room_name" type="text" disabled class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed" />
           </div>
 
           <div v-if="viewData.type === 'floor' || viewData.type === 'room'">
             <label class="block text-sm font-medium text-gray-700 mb-1.5"> อาคาร </label>
-            <input :value="viewData.building_name || '-'" type="text" disabled
-              class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed" />
+            <input :value="viewData.building_name || '-'" type="text" disabled class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed" />
           </div>
 
           <div v-if="viewData.type === 'room'">
             <label class="block text-sm font-medium text-gray-700 mb-1.5"> ชั้น </label>
-            <input :value="viewData.floor_name || '-'" type="text" disabled
-              class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed" />
+            <input :value="viewData.floor_name || '-'" type="text" disabled class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed" />
           </div>
 
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1.5"> รหัส </label>
-            <input :value="viewData.building_id || viewData.floor_id || viewData.room_id || '-'" type="text" disabled
-              class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed" />
+            <input :value="viewData.building_id || viewData.floor_id || viewData.room_id || '-'" type="text" disabled class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed" />
           </div>
         </div>
 
         <!-- ปุ่มปิด -->
         <div class="flex justify-end mt-6">
-          <button type="button" @click="closeViewModal"
-            class="px-5 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-md font-medium transition">
-            ปิด
-          </button>
+          <button type="button" @click="closeViewModal" class="px-5 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-md font-medium transition">ปิด</button>
         </div>
       </div>
     </div>
 
     <!-- Add Modal -->
-    <div v-if="showAddModal"
-      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-2 sm:px-0"
-      @click.self="closeAddModal">
+    <div v-if="showAddModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-2 sm:px-0" @click.self="closeAddModal">
       <div class="bg-white rounded-lg p-8 w-full max-w-2xl shadow-xl max-h-[90vh] overflow-y-auto">
         <!-- Header with icon -->
         <div class="flex items-center gap-3 mb-6">
           <div class="bg-green-100 p-3 rounded-full">
-            <img src="/icon/plus-icon.svg" alt="Add Location" class="w-8 h-8" />
+            <Icon icon="fluent:add-12-filled" width="20" height="20" />
           </div>
           <h2 class="text-xl font-bold text-gray-800">เพิ่มสถานที่</h2>
         </div>
@@ -1310,8 +1174,7 @@ onBeforeUnmount(() => {
 
         <!-- โหมดการเพิ่ม -->
         <div class="space-y-4 mb-6">
-          <label class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400"
-            :class="addForm.bulk_mode ? 'border-blue-600 bg-blue-50' : 'border-gray-200'">
+          <label class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400" :class="addForm.bulk_mode ? 'border-blue-600 bg-blue-50' : 'border-gray-200'">
             <input type="radio" v-model="addForm.bulk_mode" :value="true" class="w-5 h-5 text-blue-600 mt-1" />
             <div class="ml-3">
               <div class="flex items-center gap-2">
@@ -1322,8 +1185,7 @@ onBeforeUnmount(() => {
             </div>
           </label>
 
-          <label class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400"
-            :class="!addForm.bulk_mode ? 'border-blue-600 bg-blue-50' : 'border-gray-200'">
+          <label class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400" :class="!addForm.bulk_mode ? 'border-blue-600 bg-blue-50' : 'border-gray-200'">
             <input type="radio" v-model="addForm.bulk_mode" :value="false" class="w-5 h-5 text-blue-600 mt-1" />
             <div class="ml-3">
               <div class="flex items-center gap-2">
@@ -1338,11 +1200,8 @@ onBeforeUnmount(() => {
         <div v-if="!addForm.bulk_mode" class="space-y-4">
           <!-- เลือกประเภท -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-              ประเภท <span class="text-red-500">*</span>
-            </label>
-            <select v-model="addForm.type"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-blue-400 focus:outline-none">
+            <label class="block text-sm font-medium text-gray-700 mb-2"> ประเภท <span class="text-red-500">*</span> </label>
+            <select v-model="addForm.type" class="w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-blue-400 focus:outline-none">
               <option value="building">อาคาร</option>
               <option value="floor">ชั้น</option>
               <option value="room">ห้อง</option>
@@ -1351,11 +1210,8 @@ onBeforeUnmount(() => {
 
           <!-- เลือกอาคาร (สำหรับชั้นและห้อง) -->
           <div v-if="addForm.type === 'floor' || addForm.type === 'room'">
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-              อาคาร <span class="text-red-500">*</span>
-            </label>
-            <select v-model="addForm.building_id" @change="handleModalBuildingChange"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-blue-400 focus:outline-none">
+            <label class="block text-sm font-medium text-gray-700 mb-2"> อาคาร <span class="text-red-500">*</span> </label>
+            <select v-model="addForm.building_id" @change="handleModalBuildingChange" class="w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-blue-400 focus:outline-none">
               <option value="">เลือกอาคาร</option>
               <option v-for="building in buildings" :key="building.building_id" :value="building.building_id">
                 {{ building.building_name }}
@@ -1365,13 +1221,10 @@ onBeforeUnmount(() => {
 
           <!-- เลือกชั้น (สำหรับห้อง) -->
           <div v-if="addForm.type === 'room'">
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-              ชั้น <span class="text-red-500">*</span>
-            </label>
-            <select v-model="addForm.floor_id" :disabled="!addForm.building_id"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-blue-400 focus:outline-none disabled:bg-gray-100">
+            <label class="block text-sm font-medium text-gray-700 mb-2"> ชั้น <span class="text-red-500">*</span> </label>
+            <select v-if="addForm.type === 'room'" v-model="addForm.floor_id" :disabled="!addForm.building_id" class="w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-blue-400 focus:outline-none disabled:bg-gray-100">
               <option value="">เลือกชั้น</option>
-              <option v-for="floor in floors" :key="floor.floor_id" :value="floor.floor_id">
+              <option v-for="floor in modalFloors" :key="floor.floor_id" :value="floor.floor_id">
                 {{ floor.floor_name }}
               </option>
             </select>
@@ -1380,20 +1233,10 @@ onBeforeUnmount(() => {
           <!-- ชื่อ -->
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">
-              ชื่อ{{
-                addForm.type === 'building' ? 'อาคาร' : addForm.type === 'floor' ? 'ชั้น' : 'ห้อง'
-              }}
+              ชื่อ{{ addForm.type === 'building' ? 'อาคาร' : addForm.type === 'floor' ? 'ชั้น' : 'ห้อง' }}
               <span class="text-red-500">*</span>
             </label>
-            <input v-model="addForm.name" type="text"
-              :placeholder="`ระบุชื่อ${addForm.type === 'building' ? 'อาคาร' : addForm.type === 'floor' ? 'ชั้น' : 'ห้อง'}`"
-              :class="[
-                'w-full px-3 py-2 border rounded-md focus:ring-2 focus:outline-none transition-colors',
-                validationErrors.name
-                  ? 'border-red-500 focus:ring-red-400 bg-red-50'
-                  : 'border-gray-300 focus:ring-blue-400',
-              ]" @input="() => validateAlphanumeric(addForm.name, 'name')"
-              @blur="() => validateAlphanumeric(addForm.name, 'name')" />
+            <input v-model="addForm.name" type="text" :placeholder="`ระบุชื่อ${addForm.type === 'building' ? 'อาคาร' : addForm.type === 'floor' ? 'ชั้น' : 'ห้อง'}`" :class="['w-full px-3 py-2 border rounded-md focus:ring-2 focus:outline-none transition-colors', validationErrors.name ? 'border-red-500 focus:ring-red-400 bg-red-50' : 'border-gray-300 focus:ring-blue-400']" @input="() => validateAlphanumeric(addForm.name, 'name')" @blur="() => validateAlphanumeric(addForm.name, 'name')" />
             <p v-if="validationErrors.name" class="text-red-500 text-sm mt-1">
               {{ errorMessages.name }}
             </p>
@@ -1411,9 +1254,7 @@ onBeforeUnmount(() => {
               <span class="text-sm font-medium">เลือกจากอาคารที่มีอยู่</span>
             </label>
 
-            <select v-if="addForm.building_mode === 'existing'" v-model="addForm.building_id"
-              @change="handleBulkBuildingChange"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 focus:outline-none">
+            <select v-if="addForm.building_mode === 'existing'" v-model="addForm.building_id" @change="handleBulkBuildingChange" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 focus:outline-none">
               <option value="">-- เลือกอาคาร --</option>
               <option v-for="building in buildings" :key="building.building_id" :value="building.building_id">
                 {{ building.building_name }}
@@ -1426,13 +1267,7 @@ onBeforeUnmount(() => {
             </label>
 
             <div v-if="addForm.building_mode === 'new'" class="space-y-2">
-              <input v-model="addForm.new_building_name" type="text" placeholder="ชื่ออาคารใหม่" :class="[
-                'w-full px-3 py-2 border rounded-md focus:ring-2 focus:outline-none transition-colors',
-                validationErrors.newBuildingName
-                  ? 'border-red-500 focus:ring-red-400 bg-red-50'
-                  : 'border-gray-300 focus:ring-blue-400',
-              ]" @input="() => validateAlphanumeric(addForm.new_building_name, 'newBuildingName')"
-                @blur="() => validateAlphanumeric(addForm.new_building_name, 'newBuildingName')" />
+              <input v-model="addForm.new_building_name" type="text" placeholder="ชื่ออาคารใหม่" :class="['w-full px-3 py-2 border rounded-md focus:ring-2 focus:outline-none transition-colors', validationErrors.newBuildingName ? 'border-red-500 focus:ring-red-400 bg-red-50' : 'border-gray-300 focus:ring-blue-400']" @input="() => validateAlphanumeric(addForm.new_building_name, 'newBuildingName')" @blur="() => validateAlphanumeric(addForm.new_building_name, 'newBuildingName')" />
               <p v-if="validationErrors.newBuildingName" class="text-red-500 text-sm mt-1">
                 {{ errorMessages.newBuildingName }}
               </p>
@@ -1444,21 +1279,20 @@ onBeforeUnmount(() => {
             <h3 class="font-semibold text-gray-800">ชั้น</h3>
 
             <label class="flex items-center gap-2">
-              <input type="radio" v-model="addForm.floor_mode" value="existing"
-                :disabled="addForm.building_mode === 'new' || !addForm.building_id"
-                class="w-4 h-4 text-blue-600 disabled:opacity-50" />
-              <span class="text-sm font-medium" :class="{
-                'text-gray-400': addForm.building_mode === 'new' || !addForm.building_id,
-              }">
+              <input type="radio" v-model="addForm.floor_mode" value="existing" :disabled="addForm.building_mode === 'new' || !addForm.building_id" class="w-4 h-4 text-blue-600 disabled:opacity-50" />
+              <span
+                class="text-sm font-medium"
+                :class="{
+                  'text-gray-400': addForm.building_mode === 'new' || !addForm.building_id,
+                }"
+              >
                 เลือกจากชั้นที่มีอยู่
               </span>
             </label>
 
-            <select v-if="addForm.floor_mode === 'existing'" v-model="addForm.floor_id"
-              :disabled="addForm.building_mode === 'new' || !addForm.building_id"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 focus:outline-none disabled:bg-gray-100">
+            <select v-if="addForm.floor_mode === 'existing'" v-model="addForm.floor_id" :disabled="addForm.building_mode === 'new' || !addForm.building_id" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 focus:outline-none disabled:bg-gray-100">
               <option value="">-- เลือกชั้น --</option>
-              <option v-for="floor in floors" :key="floor.floor_id" :value="floor.floor_id">
+              <option v-for="floor in bulkFloors" :key="floor.floor_id" :value="floor.floor_id">
                 {{ floor.floor_name }}
               </option>
             </select>
@@ -1469,13 +1303,7 @@ onBeforeUnmount(() => {
             </label>
 
             <div v-if="addForm.floor_mode === 'new'" class="space-y-2">
-              <input v-model="addForm.new_floor_name" type="text" placeholder="ชื่อชั้นใหม่" :class="[
-                'w-full px-3 py-2 border rounded-md focus:ring-2 focus:outline-none transition-colors',
-                validationErrors.newFloorName
-                  ? 'border-red-500 focus:ring-red-400 bg-red-50'
-                  : 'border-gray-300 focus:ring-blue-400',
-              ]" @input="() => validateAlphanumeric(addForm.new_floor_name, 'newFloorName')"
-                @blur="() => validateAlphanumeric(addForm.new_floor_name, 'newFloorName')" />
+              <input v-model="addForm.new_floor_name" type="text" placeholder="ชื่อชั้นใหม่" :class="['w-full px-3 py-2 border rounded-md focus:ring-2 focus:outline-none transition-colors', validationErrors.newFloorName ? 'border-red-500 focus:ring-red-400 bg-red-50' : 'border-gray-300 focus:ring-blue-400']" @input="() => validateAlphanumeric(addForm.new_floor_name, 'newFloorName')" @blur="() => validateAlphanumeric(addForm.new_floor_name, 'newFloorName')" />
               <p v-if="validationErrors.newFloorName" class="text-red-500 text-sm mt-1">
                 {{ errorMessages.newFloorName }}
               </p>
@@ -1487,13 +1315,7 @@ onBeforeUnmount(() => {
             <h3 class="font-semibold text-gray-800">ห้อง <span class="text-red-500">*</span></h3>
 
             <div class="space-y-2">
-              <input v-model="addForm.room_name" type="text" placeholder="ชื่อห้อง (ต้องระบุ)" :class="[
-                'w-full px-3 py-2 border rounded-md focus:ring-2 focus:outline-none transition-colors',
-                validationErrors.roomName
-                  ? 'border-red-500 focus:ring-red-400 bg-red-50'
-                  : 'border-gray-300 focus:ring-blue-400',
-              ]" @input="() => validateAlphanumeric(addForm.room_name, 'roomName')"
-                @blur="() => validateAlphanumeric(addForm.room_name, 'roomName')" />
+              <input v-model="addForm.room_name" type="text" placeholder="ชื่อห้อง (ต้องระบุ)" :class="['w-full px-3 py-2 border rounded-md focus:ring-2 focus:outline-none transition-colors', validationErrors.roomName ? 'border-red-500 focus:ring-red-400 bg-red-50' : 'border-gray-300 focus:ring-blue-400']" @input="() => validateAlphanumeric(addForm.room_name, 'roomName')" @blur="() => validateAlphanumeric(addForm.room_name, 'roomName')" />
               <p v-if="validationErrors.roomName" class="text-red-500 text-sm mt-1">
                 {{ errorMessages.roomName }}
               </p>
@@ -1504,33 +1326,21 @@ onBeforeUnmount(() => {
 
         <!-- ปุ่ม -->
         <div class="flex gap-3 mt-6">
-          <button type="button" @click="closeAddModal"
-            class="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors font-medium">
-            ยกเลิก
-          </button>
-          <button type="button" @click="saveAddLocation"
-            class="flex-1 px-4 py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-md transition-colors font-medium">
-            เพิ่มสถานที่
-          </button>
+          <button type="button" @click="closeAddModal" class="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors font-medium">ยกเลิก</button>
+          <button type="button" @click="saveAddLocation" class="flex-1 px-4 py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-md transition-colors font-medium">เพิ่มสถานที่</button>
         </div>
       </div>
     </div>
 
     <!-- Edit Modal -->
-    <div v-if="showEditModal"
-      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-2 sm:px-0"
-      @click.self="closeEditModal">
+    <div v-if="showEditModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-2 sm:px-0" @click.self="closeEditModal">
       <div class="bg-white rounded-lg p-8 w-full max-w-2xl shadow-xl max-h-[90vh] overflow-y-auto">
         <!-- Header with icon -->
         <div class="flex items-center gap-3 mb-6">
-          <div class="bg-orange-100 p-3 rounded-full">
-            <img src="/icon/edit-icon.svg" alt="Edit Location" class="w-8 h-8" />
+          <div class="bg-orange-400 p-3 rounded-full">
+            <Icon icon="fluent:edit-24-regular" width="24" height="24" style="color: #ffffff" />
           </div>
-          <h2 class="text-xl font-bold text-gray-800">
-            แก้ไข{{
-              editForm.type === 'building' ? 'อาคาร' : editForm.type === 'floor' ? 'ชั้น' : 'ห้อง'
-            }}
-          </h2>
+          <h2 class="text-xl font-bold text-gray-800">แก้ไข{{ editForm.type === 'building' ? 'อาคาร' : editForm.type === 'floor' ? 'ชั้น' : 'ห้อง' }}</h2>
         </div>
 
         <p class="text-gray-600 text-sm mb-6">คุณต้องการบันทึกการแก้ไขข้อมูลหรือไม่</p>
@@ -1539,41 +1349,28 @@ onBeforeUnmount(() => {
           <!-- แสดงประเภท (disabled) -->
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2"> ประเภท </label>
-            <input :value="editForm.type === 'building' ? 'อาคาร' : editForm.type === 'floor' ? 'ชั้น' : 'ห้อง'
-              " type="text" disabled
-              class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed" />
+            <input :value="editForm.type === 'building' ? 'อาคาร' : editForm.type === 'floor' ? 'ชั้น' : 'ห้อง'" type="text" disabled class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed" />
           </div>
 
           <!-- แสดงอาคาร (สำหรับชั้นและห้อง, disabled) -->
           <div v-if="editForm.type === 'floor' || editForm.type === 'room'">
             <label class="block text-sm font-medium text-gray-700 mb-2"> อาคาร </label>
-            <input :value="buildings.find((b) => b.building_id == editForm.building_id)?.building_name || '-'
-              " type="text" disabled
-              class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed" />
+            <input :value="buildings.find((b) => b.building_id == editForm.building_id)?.building_name || '-'" type="text" disabled class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed" />
           </div>
 
           <!-- แสดงชั้น (สำหรับห้อง, disabled) -->
           <div v-if="editForm.type === 'room'">
             <label class="block text-sm font-medium text-gray-700 mb-2"> ชั้น </label>
-            <input :value="floors.find((f) => f.floor_id == editForm.floor_id)?.floor_name || '-'" type="text" disabled
-              class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed" />
+            <input :value="floors.find((f) => f.floor_id == editForm.floor_id)?.floor_name || '-'" type="text" disabled class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed" />
           </div>
 
           <!-- ชื่อ -->
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">
-              ชื่อ{{
-                editForm.type === 'building' ? 'อาคาร' : editForm.type === 'floor' ? 'ชั้น' : 'ห้อง'
-              }}
+              ชื่อ{{ editForm.type === 'building' ? 'อาคาร' : editForm.type === 'floor' ? 'ชั้น' : 'ห้อง' }}
               <span class="text-red-500">*</span>
             </label>
-            <input v-model="editForm.name" type="text" :class="[
-              'w-full px-3 py-2 border rounded-md focus:ring-2 focus:outline-none transition-colors',
-              validationErrors.name
-                ? 'border-red-500 focus:ring-red-400 bg-red-50'
-                : 'border-gray-300 focus:ring-blue-400',
-            ]" @input="() => validateAlphanumeric(editForm.name, 'name')"
-              @blur="() => validateAlphanumeric(editForm.name, 'name')" />
+            <input v-model="editForm.name" type="text" :class="['w-full px-3 py-2 border rounded-md focus:ring-2 focus:outline-none transition-colors', validationErrors.name ? 'border-red-500 focus:ring-red-400 bg-red-50' : 'border-gray-300 focus:ring-blue-400']" @input="() => validateAlphanumeric(editForm.name, 'name')" @blur="() => validateAlphanumeric(editForm.name, 'name')" />
             <p v-if="validationErrors.name" class="text-red-500 text-sm mt-1">
               {{ errorMessages.name }}
             </p>
@@ -1582,18 +1379,13 @@ onBeforeUnmount(() => {
 
         <!-- ปุ่ม -->
         <div class="flex gap-3 mt-6">
-          <button type="button" @click="closeEditModal"
-            class="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors font-medium">
-            ยกเลิก
-          </button>
-          <button type="button" @click="saveEditLocation"
-            class="flex-1 px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-md transition-colors font-medium">
-            บันทึกการแก้ไข
-          </button>
+          <button type="button" @click="closeEditModal" class="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors font-medium">ยกเลิก</button>
+          <button type="button" @click="saveEditLocation" class="flex-1 px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-md transition-colors font-medium">บันทึกการแก้ไข</button>
         </div>
       </div>
     </div>
   </div>
+  <ImportLocationModal v-if="showImportModal" @close="showImportModal = false" @refresh="refreshData()" @success="handleImportSuccess" @error="handleImportError" />
 </template>
 
 <style scoped>

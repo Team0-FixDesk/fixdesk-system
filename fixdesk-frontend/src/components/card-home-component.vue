@@ -9,7 +9,7 @@
     >
       <div class="text-center">
         <h2 class="text-2xl font-bold" :class="item.colorClass">
-          {{ item.value }} {{ item.unit || 'งาน' }}
+          {{ item.value }} {{ itemUnit || 'งาน' }}
         </h2>
         <p class="text-gray-600 text-sm">{{ item.label }}</p>
       </div>
@@ -25,6 +25,11 @@ defineProps({
     type: Array,
     required: true,
     default: () => []
+  },
+  itemUnit: {
+    type: String,
+    required: false,
+    default: 'งาน'
   }
 })
 

@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue'
+import { Icon } from '@iconify/vue'
 
 /* ==================== Props ==================== */
 const props = defineProps({
@@ -52,9 +53,7 @@ const isStock = computed(() => props.mode === 'stock')
 
 /* ==================== UI Config ==================== */
 const searchPlaceholder = computed(() =>
-  isStock.value
-    ? 'ค้นหาใบเบิก / หน่วยงาน / รายละเอียด'
-    : 'ค้นหาใบแจ้งซ่อม / หน่วยงาน / ครุภัณฑ์',
+  isStock.value ? 'ค้นหาใบเบิก / หน่วยงาน / รายละเอียด' : 'ค้นหาใบแจ้งซ่อม / หน่วยงาน / ครุภัณฑ์',
 )
 
 /* ==================== Status Options ==================== */
@@ -86,30 +85,23 @@ function toggleUrgency() {
 }
 
 function toggleValue(list, value, emitName) {
-  emit(
-    emitName,
-    list.includes(value)
-      ? list.filter(v => v !== value)
-      : [...list, value],
-  )
+  emit(emitName, list.includes(value) ? list.filter((v) => v !== value) : [...list, value])
 }
 </script>
 
 <template>
   <div class="mb-6">
     <div class="flex flex-wrap items-center justify-between gap-3">
-
       <!-- LEFT -->
       <div class="flex flex-wrap items-center gap-3">
-
         <!-- Search -->
         <input
           :value="search"
           @input="emit('update:search', $event.target.value)"
           type="text"
-          :placeholder="searchPlaceholder"
-          class="w-[260px] h-10 px-4 rounded-lg border border-gray-300
-                 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+          placeholder="ค้นหาใบแจ้งซ่อมหรืออื่นๆ"
+          :title="searchPlaceholder"
+          class="w-[260px] h-10 px-4 rounded-lg border border-gray-300 text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none"
         />
 
         <!-- Date -->
@@ -124,12 +116,12 @@ function toggleValue(list, value, emitName) {
         <div v-if="isRepair && showUrgencies" class="relative">
           <button
             @click.stop="toggleUrgency"
-            class="flex items-center gap-1 border border-gray-300 rounded-lg
-                   px-4 py-2 bg-white hover:bg-gray-50 text-gray-700"
+            class="flex items-center gap-1 border border-gray-300 rounded-lg px-4 py-2 bg-white hover:bg-gray-50 text-gray-700"
           >
             ความเร่งด่วน
-            <img
-              src="/icon/sidebar/chevron-down-icon.svg"
+            <Icon
+              icon="meteor-icons:chevron-down"
+              style="color: gray"
               class="w-4 h-4 opacity-70 transition-transform"
               :class="{ 'rotate-180': isUrgencyOpen }"
             />
@@ -137,8 +129,7 @@ function toggleValue(list, value, emitName) {
 
           <div
             v-if="isUrgencyOpen"
-            class="absolute left-0 mt-2 w-48 bg-white border border-gray-200
-                   rounded-md shadow-lg p-3 z-50 text-sm"
+            class="absolute left-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg p-3 z-50 text-sm"
           >
             <label
               v-for="u in [
@@ -163,12 +154,12 @@ function toggleValue(list, value, emitName) {
         <div v-if="showStatus" class="relative">
           <button
             @click.stop="toggleStatus"
-            class="flex items-center gap-1 border border-gray-300 rounded-lg
-                   px-4 py-2 bg-white hover:bg-gray-50 text-gray-700"
+            class="flex items-center gap-1 border border-gray-300 rounded-lg px-4 py-2 bg-white hover:bg-gray-50 text-gray-700"
           >
             สถานะ
-            <img
-              src="/icon/sidebar/chevron-down-icon.svg"
+            <Icon
+              icon="meteor-icons:chevron-down"
+              style="color: gray"
               class="w-4 h-4 opacity-70 transition-transform"
               :class="{ 'rotate-180': isStatusOpen }"
             />
@@ -176,8 +167,7 @@ function toggleValue(list, value, emitName) {
 
           <div
             v-if="isStatusOpen"
-            class="absolute left-0 mt-2 w-48 bg-white border border-gray-200
-                   rounded-md shadow-lg p-3 z-50 text-sm"
+            class="absolute left-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg p-3 z-50 text-sm"
           >
             <label
               v-for="s in statusOptions"

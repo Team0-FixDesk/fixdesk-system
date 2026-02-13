@@ -3,19 +3,15 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 
 import TableComponent from '@/components/table-component.vue'
+import InfoButtonComponent from '@/components/button/info-button-component.vue'
 
 const router = useRouter()
 const API_BASE = import.meta.env.VITE_API_BASE
 
 // Columns ของตาราง
-const tableColumns = [
-  'หมายเลขแจ้งซ่อม',
-  'รายละเอียด',
-  'สถานะ',
-  'การดำเนินการ',
-]
+const tableColumnsList = ['หมายเลขแจ้งซ่อม', 'รายละเอียด', 'สถานะ', 'การดำเนินการ']
 
-const tableRows = ref([])
+const tableRowsList = ref([])
 const searchInput = ref('')
 
 // โหลดข้อมูล
@@ -30,19 +26,25 @@ async function loadRepairHistory() {
     const data = await res.json()
     if (!res.ok) throw new Error(data.message)
 
-    tableRows.value = data.map((item) => {
+    tableRowsList.value = data.map((item) => {
       const fullName = `${item.us_first_name || ''} ${item.us_last_name || ''}`.trim()
 
       return [
         item.rf_code, // 1 หมายเลขแจ้งซ่อม
-        "วันที่แจ้ง: "+new Date(item.rf_create_at).toLocaleDateString('th-TH')+"</br>"+
-        "ชื่อผู้แจ้ง: " + fullName + "</br>"
-        +"หน่วยงาน: "+
-        item.department_name+ "</br>"
-        +"เรื่องที่แจ้ง: "+
-        item.rf_problem + "</br>"
-        +"สถานที่: "+
-        `${item.building_name} ${item.floor_name} ${item.room_name}`.trim(),
+        'วันที่แจ้ง: ' +
+          new Date(item.rf_create_at).toLocaleDateString('th-TH') +
+          '<br />' +
+          'ชื่อผู้แจ้ง: ' +
+          fullName +
+          '<br />' +
+          'หน่วยงาน: ' +
+          item.department_name +
+          '<br />' +
+          'เรื่องที่แจ้ง: ' +
+          item.rf_problem +
+          '<br />' +
+          'สถานที่: ' +
+          `${item.building_name} ${item.floor_name} ${item.room_name}`.trim(),
         item.rf_user_status,
         '', // 7 actions
       ]
@@ -56,20 +58,13 @@ async function loadRepairHistory() {
 const filteredRows = computed(() => {
   const search = searchInput.value.toLowerCase()
 
-  return tableRows.value
+  return tableRowsList.value
     .filter((row) => row[2] === 'done') // ✔ แสดงเฉพาะงานที่เสร็จสิ้น
     .filter((row) => {
       const code = String(row[0]).toLowerCase()
-      const requester = String(row[1]).toLowerCase()
-      const dept = String(row[1]).toLowerCase()
-      const problem = String(row[1]).toLowerCase()
+      const text = String(row[1]).toLowerCase()
 
-      return (
-        code.includes(search) ||
-        requester.includes(search) ||
-        dept.includes(search) ||
-        problem.includes(search)
-      )
+      return code.includes(search) || text.includes(search)
     })
 })
 
@@ -84,8 +79,8 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-7xl">
-    <h1 class="text-xl font-bold text-black mb-6">ประวัติการแจ้งซ่อมของช่าง</h1>
+  <div class="p-8 mx-auto bg-white shadow-md rounded-xl max-w-7xl">
+    <h1 class="mb-6 text-xl font-bold text-black">ประวัติการแจ้งซ่อมของช่าง</h1>
 
     <!-- Search -->
     <div class="flex flex-wrap gap-3 mb-6">
@@ -99,23 +94,19 @@ onMounted(() => {
 
     <!-- Table -->
     <TableComponent
-      :columns="tableColumns"
+      :columns="tableColumnsList"
       :rows="filteredRows"
       :perPage="10"
       :statusColumn="2"
       :columnAlign="['left', 'left', 'center', 'center']"
+      :id-column-index="0"
+      :id-column-as-link="true"
+      @detail="goToDetail"
     >
       <!-- Actions -->
       <template #cell-3="{ row }">
-          <div class="flex justify-center">
-            <button
-              @click="goToDetail(row[0])"
-              class="flex items-center gap-2 px-2 py-2 rounded-md bg-blue-500 text-white hover:bg-blue-600"
-            >
-              <img src="/icon/info-icon.svg" class="h-4 w-4" />
-            </button>
-          </div>
-        </template>
+        <InfoButtonComponent @click="goToDetail(row[0])" />
+      </template>
     </TableComponent>
   </div>
 </template>

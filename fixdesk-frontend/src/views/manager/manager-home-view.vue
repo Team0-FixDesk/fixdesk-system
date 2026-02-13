@@ -2,12 +2,14 @@
 import { ref, computed, shallowRef, onMounted } from 'vue'
 import ApexChart from 'vue3-apexcharts'
 import { useUserProfile } from '@/composables/useUserProfile'
+import { useManagerDashboard } from '@/composables/useManagerDashboard'
 
 defineOptions({ name: 'ManagerHomeView' })
 
 const API_BASE = import.meta.env.VITE_API_BASE
 
 const { displayName, displayDepartment, fetchUserProfile } = useUserProfile(API_BASE)
+const { fetchDashboardData: fetchManagerDashboard } = useManagerDashboard()
 
 const monthLabels = [
   'มกราคม',
@@ -168,6 +170,16 @@ const filterCurrentWeek = (repairs) => {
   const sunday = new Date(monday)
   sunday.setDate(monday.getDate() + 6)
   sunday.setHours(23, 59, 59, 999)
+
+  const getYear = (dateStr) => new Date(dateStr).getFullYear()
+  const getMonth = (dateStr) => new Date(dateStr).getMonth()
+
+  const filterByYear = (items, year) =>
+    items.filter((i) => getYear(i.rf_create_at) === year)
+
+  const countByStatus = (items, status) =>
+    items.filter((i) => i.rf_user_status === status).length
+
 
   return repairs.filter((r) => {
     const d = new Date(r.rf_create_at)
@@ -727,19 +739,8 @@ function refreshDashboard() {
 }
 
 /* -----------------------------
-   API
+  Use composable to fetch dashboard data
 ----------------------------- */
-async function fetchRepairData() {
-  const response = await fetch(`${API_BASE}/admin/repairs`, { headers: getAuthHeaders() })
-  if (!response.ok) throw new Error('Failed to fetch repair data')
-  return response.json()
-}
-
-async function fetchTechnicianTypes() {
-  const response = await fetch(`${API_BASE}/technician-types`)
-  if (!response.ok) throw new Error('Failed to fetch technician types')
-  return response.json()
-}
 
 /* -----------------------------
    Fetch
@@ -749,9 +750,9 @@ async function fetchDashboardData() {
     isLoading.value = true
     error.value = null
 
-    const [repairs, techTypes] = await Promise.all([fetchRepairData(), fetchTechnicianTypes()])
-    allRepairs.value = repairs
-    allTechTypes.value = techTypes
+  const { repairs, techTypes } = await fetchManagerDashboard(API_BASE)
+  allRepairs.value = repairs
+  allTechTypes.value = techTypes
 
     const years = new Set()
     repairs.forEach((r) => years.add(new Date(r.rf_create_at).getFullYear()))
@@ -777,7 +778,6 @@ async function fetchDashboardData() {
 }
 onMounted(() => {
   fetchDashboardData()
-  fetchUserProfile()
 })
 </script>
 

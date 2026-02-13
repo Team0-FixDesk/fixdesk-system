@@ -1,17 +1,23 @@
 <script setup>
 import { ref } from 'vue'
 import SidebarProfile from '@/components/sidebar-profile-component.vue'
+import LogoFIXDESK from '@/assets/icons/LogoFIXDESK-logo.png'
+import HomeIcon from '@/assets/icons/sidebar/home-icon.svg'
+import RepairIcon from '@/assets/icons/sidebar/repair-icon.svg'
+import ListIcon from '@/assets/icons/sidebar/list-icon.svg'
+// import DashboardIcon from '@/assets/icons/sidebar/dashboard-icon.svg'
+// import ReportIcon from '@/assets/icons/sidebar/report-icon.svg'
 
 // สถานะเปิด/ปิด sidebar
 const isOpen = ref(false)
 
 // รายการเมนู
 const menus = [
-  { icon: '/icon/sidebar/home-icon.svg', label: 'หน้าหลัก', path: '/main/manager-home' },
-  { icon: '/icon/sidebar/repair-icon.svg', label: 'แจ้งซ่อม', path: '/main/repair-request' },
-  { icon: '/icon/sidebar/list-icon.svg', label: 'รายการของฉัน', path: '/main/my-list' },
-  { icon: '/icon/sidebar/dashboard-icon.svg', label: 'หน้าสรุปผล', path: '/main/manager-summary' },
-  { icon: '/icon/sidebar/report-icon.svg', label: 'สร้างรายงาน', path: '/main/manage-report' },
+  { icon: HomeIcon, label: 'หน้าหลัก', path: '/main/Dashboard' },
+  { icon: RepairIcon, label: 'แจ้งซ่อม', path: '/main/repair-request' },
+  { icon: ListIcon, label: 'รายการของฉัน', path: '/main/my-list' },
+  // { icon: DashboardIcon, label: 'หน้าสรุปผล', path: '/main/information-summary' },
+  // { icon: ReportIcon, label: 'สร้างรายงาน', path: '/main/manage-report' },
 ]
 </script>
 
@@ -24,7 +30,7 @@ const menus = [
   >
     <!-- โลโก้ -->
     <div class="flex items-center justify-start h-20 border-b border-blue-700 px-4">
-      <img src="/icon/LogoFIXDESK-logo.png" alt="FixDesk Logo" class="w-10 h-10 object-contain" />
+      <img :src="LogoFIXDESK" alt="FixDesk Logo" class="w-10 h-10 object-contain" />
       <span
         class="ml-3 text-2xl font-bold tracking-wide transition-opacity duration-300"
         :class="isOpen ? 'opacity-100 visible' : 'opacity-0 invisible'"
