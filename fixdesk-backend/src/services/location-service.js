@@ -229,7 +229,8 @@ module.exports = (db) => {
 
     /* ================== IMPORT & EXPORT ================== */
     async importLocations(locationList) {
-      const connection = db.promise();
+      const promisePool = db.promise();
+      const connection = await promisePool.getConnection();
       try {
         await connection.beginTransaction();
 
@@ -290,6 +291,8 @@ module.exports = (db) => {
       } catch (error) {
         await connection.rollback();
         throw error;
+      } finally {
+        connection.release();
       }
     },
   };
