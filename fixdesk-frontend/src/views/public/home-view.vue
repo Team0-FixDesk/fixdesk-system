@@ -1,3 +1,36 @@
+/**
+ * =====================================================================
+ * @file            home.view.vue
+ * @module          ตรวจสอบสถานะงานซ่อม
+ * @layer           View (Presentation Layer)
+ * @version         1.0.0
+ * @since           2025-10-17
+ * @lastModified    2026-02-17
+ * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล 
+ * ---------------------------------------------------------------------
+ * @description
+ *  หน้าจอสำหรับผู้ใช้งานภายนอกใช้ค้นหา และตรวจสอบสถานะงานซ่อม
+ *  รองรับการค้นหาด้วย:
+ *    - หมายเลขแจ้งซ่อม (rf_code)
+ *    - ชื่อผู้แจ้ง        (reporter)
+ *    - หน่วยงาน       (department)
+ *
+ * @requires
+ *   - vue-router
+ *   - @/composables/useRepairSearch
+ *   - @/utils/repairStatus.util
+ *
+ * @authors
+ *   - นายปฏิพัทธ์ จงนันทพันธ์กุล
+ *   - นายเศรษฐพงศ์ หอมชื่น
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *  - แก้ไขคำที่ใช้ให้เหมาะสม                    [2569-02-17, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *  - แก้ไขแถบสถานะความคืบหน้าของรายการแจ้งซ่อม  [2569-02-17, เศรษฐพงศ์ หอมชื่น]
+ * =====================================================================
+ */
+
 <script setup>
 
 import { useRouter } from 'vue-router'
@@ -43,14 +76,14 @@ const goToLogin = () => router.push('/login')
     <section class="mt-6 mb-12 text-center">
       <h1 class="text-3xl font-bold text-slate-800 tracking-tight">ตรวจสอบสถานะงานซ่อม</h1>
       <p class="text-lg text-slate-500 mt-2">
-        ค้นหารายการแจ้งซ่อม ติดตามสถานะแบบเรียลไทม์ สะดวก รวดเร็ว
+        ค้นหารายการแจ้งซ่อม ติดตามสถานะงานซ่อมได้สะดวก รวดเร็ว
       </p>
     </section>
 
     <div class="w-full max-w-4xl bg-white p-8 shadow-md rounded-3xl border border-slate-200 mb-7">
       <!-- ป้ายกำกับสำหรับกล่องค้นหา -->
       <label class="text-slate-600 font-medium">
-        ค้นหางานซ่อมด้วยหมายเลขแจ้งซ่อม / ชื่อผู้แจ้ง / หน่วยงาน (ระบุอย่างใดอย่างหนึ่ง)
+        ค้นหารายการแจ้งซ่อมด้วยหมายเลขแจ้งซ่อม ชื่อผู้แจ้งซ่อม หรือหน่วยงาน (ระบุอย่างใดอย่างหนึ่ง)
       </label>
 
       <div class="flex gap-3 mt-3">
@@ -71,12 +104,12 @@ const goToLogin = () => router.push('/login')
       </div>
 
       <div class="mt-3 text-sm text-slate-400">
-        ตัวอย่างการค้นหา: RFXXXXXXXXXXX, สมชาย ใจดี, แผนก IT
+        ตัวอย่างการค้นหา : RF20250217001, สมชาย ใจดี, แผนก IT
       </div>
     </div>
 
     <!-- ส่วนผลลัพธ์ - แสดงผลลัพธ์การค้นหา -->
-    <div class="w-full max-w-4xl">
+    <div class="w-full max-w-4xl">  
       <!-- แสดงข้อความกำลังค้นหา -->
       <div v-if="loading" class="text-center py-10 text-slate-500 animate-pulse">กำลังค้นหา...</div>
 
@@ -110,7 +143,7 @@ const goToLogin = () => router.push('/login')
         <!-- แถวบนของการ์ด: หมายเลขแจ้งซ่อมและสถานะ -->
         <div class="flex justify-between items-start">
           <!-- หมายเลขแจ้งซ่อม -->
-          <p class="text-md font-semibold text-slate-700">เลขแจ้งซ่อม: {{ item.rf_code }}</p>
+          <p class="text-md font-semibold text-slate-700">หมายเลขแจ้งซ่อม : {{ item.rf_code }}</p>
 
           <!-- สถานะการซ่อม -->
           <span
@@ -122,36 +155,37 @@ const goToLogin = () => router.push('/login')
         </div>
 
         <!-- ข้อมูลรายละเอียดการซ่อม -->
-        <div class="mt-2 space-y-1 text-slate-700">
+        <div class="mt-2 space-y-1 text-slate-800">
           <!-- ชื่อผู้แจ้ง -->
           <p>
-            <strong class="text-slate-800">ผู้แจ้ง:</strong>
+            <strong>ผู้แจ้งซ่อม :</strong>
             {{ item.reporter_firstname }} {{ item.reporter_lastname }}
           </p>
           <!-- หน่วยงานของผู้แจ้ง -->
           <p>
-            <strong class="text-slate-800">หน่วยงาน:</strong>
+            <strong>หน่วยงาน :</strong>
             {{ item.reporter_department }}
           </p>
           <!-- รายละเอียดปัญหา -->
-          <p><strong class="text-slate-800">ปัญหา:</strong> {{ item.rf_problem }}</p>
+          <p>
+            <strong>เรื่องที่แจ้ง :</strong> {{ item.rf_problem }}
+          </p>
           <!-- สถานที่ (สัญลักษณ์สถาปัตยกรรม) -->
-          <p class="text-slate-500">
-            <strong class="text-slate-700">สถานที่:</strong>
-            {{ item.building_name }} {{ item.floor_name }} {{ item.room_name }}
+          <p>
+            <strong>สถานที่ :</strong>
+            {{ item.building_name }} ชั้น {{ item.floor_name }} {{ item.room_name }}
           </p>
         </div>
 
         <!-- แถบความคืบหน้า - แสดงขั้นตอนของการซ่อม -->
         <div class="mt-6 flex items-center gap-3 text-sm font-medium">
-          <!-- ขั้นตอน 1: รอดำเนินการ -->
-          <span :class="getProgressBarColor(item.step, 1)">● รอดำเนินการ</span>
-          <span class="text-slate-400">→</span>
-          <!-- ขั้นตอน 2: กำลังดำเนินการ -->
-          <span :class="getProgressBarColor(item.step, 2)">● กำลังดำเนินการ</span>
-          <span class="text-slate-400">→</span>
-          <!-- ขั้นตอน 3: ดำเนินการเสร็จสิ้น -->
-          <span :class="getProgressBarColor(item.step, 3)">● ดำเนินการเสร็จสิ้น</span>
+          <span :class="getProgressBarColor(item.rf_user_status, 1)">● รอดำเนินการ</span>
+          <span class="text-slate-300">→</span>
+
+          <span :class="getProgressBarColor(item.rf_user_status, 2)">● กำลังดำเนินการ</span>
+          <span class="text-slate-300">→</span>
+
+          <span :class="getProgressBarColor(item.rf_user_status, 3)">● ดำเนินการเสร็จสิ้น</span>
         </div>
       </div>
       <!-- ส่วนแบ่งหน้า - ปุ่มไปหน้าก่อนหน้าและถัดไป -->
