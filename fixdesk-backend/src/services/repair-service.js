@@ -6,7 +6,7 @@
  * @version         : 1.0.0
  * @since           : 2026-02-17
  * @lastModified    : 2026-02-17
- * @lastModifiedBy  : นายพชร ไพศรีสกุล
+ * @lastModifiedBy  นราธิป แสนทวีสุข
  * ---------------------------------------------------------------------
  * @description
  *  Service Layer สำหรับจัดการตรรกะการทำงานหลักของระบบแจ้งซ่อม
@@ -66,6 +66,8 @@
  *   - เพิ่มการดึงข้อมูล stock_items ใน getRepairDetail
  *   - เพิ่มการเชื่อมโยงกับ stock_form และ stock_form_detail
  *     [2026-02-17, นายพชร ไพศรีสกุล]
+ *   - แก้ไข getRepairDetail ให้ส่ง assigner fields แยก (title, first_name, last_name) [2026-02-17, นราธิป แสนทวีสุข]
+ *   - เพิ่ม JOIN title_name tn_assigner สำหรับ assigner                             [2026-02-17, นราธิป แสนทวีสุข]
  * =====================================================================
  */
 
@@ -190,7 +192,10 @@ module.exports = (db) => {
           CONCAT(tn_tech.ttn_title_th, tech.us_first_name_th, ' ', tech.us_last_name_th) AS main_technician_name,
           tt_tech.tt_name AS main_technician_position,
           assigner.us_id AS assigner_id,
-          CONCAT(tn.ttn_title_th, assigner.us_first_name_th, ' ', assigner.us_last_name_th) AS assigner_name
+          CONCAT(tn_assigner.ttn_title_th, assigner.us_first_name_th, ' ', assigner.us_last_name_th) AS assigner_name,
+          tn_assigner.ttn_title_th AS assigner_title,
+          assigner.us_first_name_th AS assigner_first_name,
+          assigner.us_last_name_th AS assigner_last_name
         FROM repair_form rf
         LEFT JOIN room r ON rf.rf_room_id = r.room_id
         LEFT JOIN floor f ON r.room_fl_id = f.fl_id
@@ -203,6 +208,7 @@ module.exports = (db) => {
         LEFT JOIN title_name tn_tech ON tech.us_ttn_id = tn_tech.ttn_id
         LEFT JOIN technician_type tt_tech ON tech.us_tt_id = tt_tech.tt_id
         LEFT JOIN user assigner ON ra.ra_assigned_by = assigner.us_id
+        LEFT JOIN title_name tn_assigner ON assigner.us_ttn_id = tn_assigner.ttn_id
         WHERE rf.rf_code = ?
       `;
 
@@ -218,7 +224,13 @@ module.exports = (db) => {
           phone: r.reporter_phone,
           department: r.reporter_department,
         },
-        assigner: { id: r.assigner_id, name: r.assigner_name || "-" },
+        assigner: {
+          id: r.assigner_id,
+          name: r.assigner_name || "-",
+          title: r.assigner_title || "",
+          first_name: r.assigner_first_name || "",
+          last_name: r.assigner_last_name || "",
+        },
         main_technician: r.main_technician_name || "-",
         tech_position: r.main_technician_position || "-",
       };
