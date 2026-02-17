@@ -1,3 +1,39 @@
+/**
+ * =====================================================================
+ * @file            manage-report-view.vue
+ * @module          จัดการรายงานและสร้าง PDF แบบฟอร์มแจ้งซ่อม
+ * @layer           View (Presentation Layer)
+ * @version         1.0.0
+ * @since           2025-01-15
+ * @author          นราธิป แสนทวีสุข
+ * @lastModified    2026-02-17
+ * @lastModifiedBy  นราธิป แสนทวีสุข
+ * ---------------------------------------------------------------------
+ * @description
+ *  หน้าจอสำหรับผู้ดูแลระบบใช้ในการจัดการรายงานแจ้งซ่อม
+ *  รองรับฟีเจอร์:
+ *    - ค้นหาและกรองรายการแจ้งซ่อมตามเงื่อนไขต่างๆ
+ *    - สร้าง PDF แบบฟอร์มแจ้งซ่อมทีละรายการหรือหลายรายการ
+ *    - ดาวน์โหลดเป็นไฟล์เดียวหรือ ZIP (กรณีหลายไฟล์)
+ *    - แสดงข้อมูลครบถ้วน: ผู้แจ้ง, ผู้รับแจ้ง, ช่างผู้รับผิดชอบ, รายการวัสดุที่เบิก
+ *
+ * @requires
+ *   - vue-router
+ *   - jspdf (PDF generation)
+ *   - html2canvas (HTML to Canvas conversion)
+ *   - jszip (Multiple PDF packaging)
+ *   - sweetalert2 (Notifications)
+ *   - @/components/filters/repair-filter-bar-component.vue
+ *   - @/components/table-component.vue
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *  - แก้ไขคำในปุ่มให้ชัดเจนขึ้น                                          [2026-02-17, นราธิป แสนทวีสุข]
+ *  - แก้ไข reporter และ assigner name ให้แสดงคำนำหน้าชื่อ              [2026-02-17, นราธิป แสนทวีสุข]
+ *  - แก้ไขปัญหาตัวอักษรตกบรรทัดในปุ่ม CSV (whitespace-nowrap)           [2026-02-17, นราธิป แสนทวีสุข]
+ *  - ปรับ padding และขนาดตัวอักษรปุ่มให้ไม่ชิดขอบเกินไป (text-sm, p-3)    [2026-02-17, นราธิป แสนทวีสุข]
+ * =====================================================================
+ */
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
@@ -69,11 +105,21 @@ const getRepairFormHTML = (item, isPdf = false) => {
   const floor = item.floor_name || item.rf_floor || '..................';
   const room = item.room_name || item.rf_room || '..................';
   const detail = item.rf_detail || '........................................................................................................................................................................................\n........................................................................................................................................................................................';
-  const reporterName = item.reporter?.name;
+
+  // ใช้ name โดยตรง เพราะ API ไม่ส่ง title, first_name, last_name แยกมา
+  const reporterName = item.reporter?.name || '';
+
   const technician = item.main_technician || '...............................................................................................................';
   const techSummary = item.rf_tech_summary || '........................................................................................................................................................................................\n........................................................................................................................................................................................';
   const isOutsourced = item.rf_is_outsourced || false;
-  const assignerName = item.assigner?.name || '........................................................';
+
+  // รวมคำนำหน้า + ชื่อเต็มสำหรับผู้รับแจ้ง (ใช้ข้อมูลจาก backend)
+  const assignerTitle = item.assigner?.title || '';
+  const assignerFirstName = item.assigner?.first_name || '';
+  const assignerLastName = item.assigner?.last_name || '';
+  const assignerName = assignerTitle
+    ? `${assignerTitle}${assignerFirstName} ${assignerLastName}`.trim()
+    : item.assigner?.name || '........................................................';
 
   // --- กำหนด Style แยกกันระหว่าง Preview กับ PDF ---
   // ถ้าเป็น PDF: เพิ่ม padding-bottom และเส้นหนาขึ้น (แก้บั๊ก html2canvas)
@@ -616,24 +662,24 @@ onMounted(() => {
               </div>
             </div>
             <!-- Export and navigation buttons -->
-            <div class="bg-white rounded-xl shadow-sm p-4 space-y-3">
+            <div class="bg-white rounded-xl shadow-sm p-3 space-y-3">
               <button @click="downloadCSV"
-                class="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-lg transition-all shadow-sm">
+                class="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-3 rounded-lg transition-all shadow-sm text-sm">
                 <!-- CSV icon -->
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                ดาวน์โหลดสรุป CSV
+                <span class="whitespace-nowrap">ดาวน์โหลดสรุปรายงานประจำเดือน</span>
               </button>
               <button @click="goToCreateReport"
-                class="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-all shadow-sm">
+                class="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-all shadow-sm text-sm">
                 <!-- Go to create report icon -->
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                ไปหน้าสร้างบันทึกข้อความ
+                <span class="whitespace-nowrap">สร้างหนังสือบันทึกข้อความ</span>
               </button>
             </div>
           </div>
@@ -669,7 +715,7 @@ onMounted(() => {
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
-                    ดาวน์โหลด ({{ selectedItems.length }})
+                    ดาวน์โหลดใบแจ้งซ่อม ({{ selectedItems.length }})
                   </button>
                 </div>
               </div>

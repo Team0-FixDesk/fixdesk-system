@@ -1,3 +1,47 @@
+/**
+ * =====================================================================
+ * @file            repair-service.js
+ * @layer           Service (Business Logic Layer)
+ * @version         1.0.0
+ * @since           2025-01-10
+ * @author          พชร ไพศรีสกุล
+ * @lastModified    2026-02-17
+ * @lastModifiedBy  นราธิป แสนทวีสุข
+ * ---------------------------------------------------------------------
+ * @description
+ *  Service Layer สำหรับจัดการธุรกิจหลักของระบบแจ้งซ่อม
+ *  รองรับฟีเจอร์:
+ *    - สร้างและจัดการรหัสใบแจ้งซ่อม (RF Code Generation)
+ *    - CRUD operations สำหรับใบแจ้งซ่อม
+ *    - มอบหมายงานให้ช่างแบบเดี่ยวหรือทีม (Job Assignment)
+ *    - จัดการสถานะงานซ่อม (Status Management)
+ *    - ส่งการแจ้งเตือนผ่าน LINE Notification
+ *    - ดึงข้อมูลรายละเอียดพร้อม JOIN ตาราง user, title_name, location
+ *
+ * @dependencies
+ *   - mysql2/promise (Database connection)
+ *   - line-notification.service.js (LINE notifications)
+ *
+ * @exports
+ *   - generateRFCode(): สร้างรหัสใบแจ้งซ่อมอัตโนมัติ (RFyyyymmddnnn)
+ *   - createRepair(data): สร้างรายการแจ้งซ่อมใหม่
+ *   - getAdminRepairs(): ดึงรายการซ่อมทั้งหมดสำหรับ Admin
+ *   - getUserRepairs(userId): ดึงรายการซ่อมของ User
+ *   - getRepairDetail(code): ดึงรายละเอียดแจ้งซ่อมตาม rf_code
+ *   - updateRepair(code, data): แก้ไขข้อมูลใบแจ้งซ่อม
+ *   - deleteRepair(code): ลบใบแจ้งซ่อม
+ *   - assignIndividual(rfCode, techId, isLead, assignerId): มอบหมายงานให้ช่างคนเดียว
+ *   - assignTeam(rfCode, techIds, leadId): มอบหมายงานให้ทีม
+ *   - acceptJob(rfCode, techId): ช่างรับงาน
+ *   - getTechRepairs(techId): ดึงรายการงานของช่าง
+ *   - getStats(userId): สถิติการแจ้งซ่อมของ User
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *  - แก้ไข getRepairDetail ให้ส่ง assigner fields แยก (title, first_name, last_name) [2026-02-17, นราธิป แสนทวีสุข]
+ *  - เพิ่ม JOIN title_name tn_assigner สำหรับ assigner                             [2026-02-17, นราธิป แสนทวีสุข]
+ * =====================================================================
+ */
 const path = require("path");
 const fs = require("fs");
 const lineNotification = require("./line-notification.service");
@@ -119,7 +163,10 @@ module.exports = (db) => {
           CONCAT(tn_tech.ttn_title_th, tech.us_first_name_th, ' ', tech.us_last_name_th) AS main_technician_name,
           tt_tech.tt_name AS main_technician_position,
           assigner.us_id AS assigner_id,
-          CONCAT(tn.ttn_title_th, assigner.us_first_name_th, ' ', assigner.us_last_name_th) AS assigner_name
+          CONCAT(tn_assigner.ttn_title_th, assigner.us_first_name_th, ' ', assigner.us_last_name_th) AS assigner_name,
+          tn_assigner.ttn_title_th AS assigner_title,
+          assigner.us_first_name_th AS assigner_first_name,
+          assigner.us_last_name_th AS assigner_last_name
         FROM repair_form rf
         LEFT JOIN room r ON rf.rf_room_id = r.room_id
         LEFT JOIN floor f ON r.room_fl_id = f.fl_id
@@ -132,6 +179,7 @@ module.exports = (db) => {
         LEFT JOIN title_name tn_tech ON tech.us_ttn_id = tn_tech.ttn_id
         LEFT JOIN technician_type tt_tech ON tech.us_tt_id = tt_tech.tt_id
         LEFT JOIN user assigner ON ra.ra_assigned_by = assigner.us_id
+        LEFT JOIN title_name tn_assigner ON assigner.us_ttn_id = tn_assigner.ttn_id
         WHERE rf.rf_code = ?
       `;
 
@@ -147,7 +195,13 @@ module.exports = (db) => {
           phone: r.reporter_phone,
           department: r.reporter_department,
         },
-        assigner: { id: r.assigner_id, name: r.assigner_name || "-" },
+        assigner: {
+          id: r.assigner_id,
+          name: r.assigner_name || "-",
+          title: r.assigner_title || "",
+          first_name: r.assigner_first_name || "",
+          last_name: r.assigner_last_name || "",
+        },
         main_technician: r.main_technician_name || "-",
         tech_position: r.main_technician_position || "-",
       };
