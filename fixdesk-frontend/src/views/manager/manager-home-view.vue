@@ -1,3 +1,39 @@
+/**
+ * =====================================================================
+ * @file            manager-home.view.vue
+ * @module          หน้าหลักผู้บริหาร (Manager Dashboard)
+ * @layer           View (Presentation Layer)
+ * @version         1.0.0
+ * @since           2025-10-21
+ * @author          พชร ไพศรีสกุล
+ * @lastModified    2026-02-17
+ * @lastModifiedBy  เศรษฐพงศ์ หอมชื่น
+ * ---------------------------------------------------------------------
+ * @description
+ * หน้าจอแดชบอร์ดสำหรับผู้บริหาร เพื่อแสดงภาพรวมการดำเนินงานของระบบแจ้งซ่อม
+ * ประกอบด้วยการ์ดสรุปสถิติ และกราฟแสดงผลข้อมูลต่างๆ (ApexCharts) ได้แก่:
+ * - ปริมาณงานแจ้งซ่อมรายเดือน (Stacked Bar Chart)
+ * - สัดส่วนสถานะงานแจ้งซ่อมแบบรายสัปดาห์/รายเดือน (Pie Chart)
+ * - แนวโน้มปริมาณงานแจ้งซ่อมรายวันในสัปดาห์ปัจจุบัน (Line Chart)
+ * - อัตราความสำเร็จการปฏิบัติงานของช่างแต่ละแผนก (Horizontal Bar Chart)
+ * - ปริมาณงานแจ้งซ่อมจำแนกตามประเภท (Horizontal Bar Chart)
+ * - ปริมาณการแจ้งซ่อมจำแนกตามหน่วยงาน (Horizontal Bar Chart)
+ *
+ * @requires
+ * - vue
+ * - vue3-apexcharts
+ * - @/composables/useUserProfile
+ * - @/composables/useManagerDashboard
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ * - จัดทำ Dashboard ของ Manager                         [2569-01-13, เศรษฐพงศ์ หอมชื่น]
+ * - เพิ่มการตั้งค่าชื่อแกน (Title) แกน X และ Y ในทุกกราฟ       [2569-02-17, เศรษฐพงศ์ หอมชื่น]
+ * - ปรับปรุงการแสดงผลเส้นแกน (Axis Border)                 [2569-02-17, เศรษฐพงศ์ หอมชื่น]
+ * - ปรับแก้ Padding และ Responsive เพื่อป้องกันชื่อแกนตกขอบ    [2569-02-17, เศรษฐพงศ์ หอมชื่น]
+ * =====================================================================
+ */
+
 <script setup>
 import { ref, computed, shallowRef, onMounted } from 'vue'
 import ApexChart from 'vue3-apexcharts'
@@ -32,7 +68,7 @@ const GRID_STYLE = {
   strokeDashArray: 4,
   xaxis: { lines: { show: true } },
   yaxis: { lines: { show: true } },
-  padding: { left: 8, right: 8 },
+  padding: { left: 30, right: 20, bottom: 10, top: 0 },
 }
 
 const STATUS_COLORS = {
@@ -329,7 +365,15 @@ const monthlyStackedOptions = shallowRef({
     },
   },
 
-  yaxis: { labels: { formatter: (v) => `${Math.round(v)}` } },
+  yaxis: { 
+    title: { 
+      text: 'จำนวน (รายการ)', 
+      offsetX: 6,
+      style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' } 
+    },
+    axisBorder: { show: true, color: '#9CA3AF' },
+    labels: { formatter: (v) => `${Math.round(v)}` } 
+  },
 })
 
 const monthlyStackedSeries = ref([
@@ -421,7 +465,12 @@ const weeklyTrendOptions = shallowRef({
 
   xaxis: {
     categories: ['จันทร์', 'อังคาร', 'พุธ', 'พฤหัส', 'ศุกร์', 'เสาร์', 'อาทิตย์'],
-    tooltip: { enabled: false }, // กัน x-axis tooltip
+    tooltip: { enabled: false },
+    title: { 
+      text: 'วันในสัปดาห์', 
+      style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' } 
+    },
+    axisBorder: { show: true, color: '#9CA3AF' }
   },
 
   markers: { size: 5, hover: { size: 7 } },
@@ -458,7 +507,15 @@ const weeklyTrendOptions = shallowRef({
     },
   },
 
-  yaxis: { labels: { formatter: (v) => `${Math.round(v)}` } },
+  yaxis: { 
+    title: { 
+      text: 'จำนวน (รายการ)', 
+      offsetX: 6,
+      style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' } 
+    },
+    axisBorder: { show: true, color: '#9CA3AF' },
+    labels: { formatter: (v) => `${Math.round(v)}` } 
+  },
 })
 
 const weeklyTrendSeries = ref([
@@ -519,6 +576,19 @@ const efficiencyChartOptions = shallowRef({
     min: 0,
     max: 100,
     labels: { formatter: (v) => `${Math.round(v)}%` },
+    title: { 
+      text: 'อัตราสำเร็จ (%)', 
+      style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' } 
+    },
+    axisBorder: { show: true, color: '#9CA3AF' }
+  },
+  yaxis: {
+    title: { 
+      text: 'รายชื่อช่าง', 
+      offsetX: 6,
+      style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' } 
+    },
+    axisBorder: { show: true, color: '#9CA3AF' }
   },
   tooltip: {
     enabled: true,
@@ -597,7 +667,41 @@ const typeOptions = shallowRef({
   colors: ['#7c3aed'],
   plotOptions: { bar: { horizontal: true, borderRadius: 6 } },
   dataLabels: { enabled: false },
-  xaxis: { categories: ['ไม่มีข้อมูล'] },
+  xaxis: { 
+    categories: ['ไม่มีข้อมูล'],
+    title: { 
+      text: 'จำนวนงาน (รายการ)', 
+      style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' } 
+    },
+    axisBorder: { show: true, color: '#9CA3AF' },
+    labels: { formatter: (v) => `${Math.round(v)}` }
+  },
+  yaxis: {
+    title: { 
+      text: 'ประเภทงานซ่อม', 
+      offsetX: 6,
+      style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' } 
+    },
+    axisBorder: { show: true, color: '#9CA3AF' }
+  },
+  tooltip: {
+    enabled: true,
+    shared: false,
+    intersect: true,
+    followCursor: true,
+    y: { title: { formatter: () => '' } },
+    custom: ({ series, seriesIndex, dataPointIndex, w }) => {
+      const label = w.globals.labels?.[dataPointIndex] ?? ''
+      const val = series?.[seriesIndex]?.[dataPointIndex] ?? 0
+      const color = w.globals.colors?.[seriesIndex] ?? TYPE_COLORS.total
+
+      return buildTooltipHTML({
+        title: label,
+        rows: [{ label: 'จำนวนงาน', value: `${val} รายการ`, color }],
+        unitLabel: 'หน่วย: รายการ',
+      })
+    },
+  },
 
   tooltip: {
     enabled: true,
@@ -651,7 +755,23 @@ const deptOptions = shallowRef({
   colors: ['#166534'],
   plotOptions: { bar: { horizontal: true, borderRadius: 6 } },
   dataLabels: { enabled: false },
-  xaxis: { categories: ['ไม่มีข้อมูล'] },
+  xaxis: { 
+    categories: ['ไม่มีข้อมูล'],
+    title: { 
+      text: 'จำนวนแจ้งซ่อม (รายการ)', 
+      style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' } 
+    },
+    axisBorder: { show: true, color: '#9CA3AF' },
+    labels: { formatter: (v) => `${Math.round(v)}` }
+  },
+  yaxis: {
+    title: { 
+      text: 'หน่วยงาน', 
+      offsetX: 6,
+      style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' } 
+    },
+    axisBorder: { show: true, color: '#9CA3AF' }
+  },
 
   tooltip: {
     enabled: true,
@@ -728,14 +848,19 @@ function refreshDashboard() {
   const repairsInYear = allRepairs.value.filter(
     (r) => new Date(r.rf_create_at).getFullYear() === selectedYear.value,
   )
+  const repairsInMonth = filterRepairsByMonth(
+    allRepairs.value,
+    selectedYear.value,
+    selectedMonthIndex.value
+  )
 
   updateSummaryCards()
   updateMonthlyStackedChart(repairsInYear)
   updateStatusPieChart(repairsInYear)
   updateWeeklyTrendChart(repairsInYear)
   updateEfficiencyChart(repairsInYear)
-  updateTypeChart(repairsInYear)
-  updateDepartmentChart(repairsInYear)
+  updateTypeChart(repairsInMonth)
+  updateDepartmentChart(repairsInMonth)
 }
 
 /* -----------------------------
@@ -897,7 +1022,7 @@ onMounted(() => {
           <!-- งานซ่อมรายเดือน (Stacked) -->
           <div class="bg-white rounded-lg shadow p-6">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">
-              งานซ่อมรายเดือน - {{ formatYearDisplay(selectedYear) }}
+              ปริมาณงานแจ้งซ่อมรายเดือน - {{ formatYearDisplay(selectedYear) }}
             </h3>
 
             <ApexChart
@@ -940,7 +1065,7 @@ onMounted(() => {
           <!-- สถานะงานซ่อม (Pie) -->
           <div class="bg-white rounded-lg shadow p-6">
             <div class="flex items-center justify-between mb-4">
-              <h3 class="text-lg font-semibold text-gray-900">สถานะงานซ่อม</h3>
+              <h3 class="text-lg font-semibold text-gray-900">สัดส่วนสถานะงานแจ้งซ่อม</h3>
 
               <div class="flex p-1 bg-gray-100 rounded-xl">
                 <button
@@ -1009,10 +1134,10 @@ onMounted(() => {
 
         <!-- Row 2 -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <!-- แนวโน้มการแจ้งซ่อม (สัปดาห์ปัจจุบัน) -->
+          <!-- แนวโน้มปริมาณงานแจ้งซ่อมรายวัน (สัปดาห์ปัจจุบัน) -->
           <div class="bg-white rounded-lg shadow p-6">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">
-              แนวโน้มการแจ้งซ่อม (สัปดาห์ปัจจุบัน)
+              แนวโน้มปริมาณงานแจ้งซ่อมรายวัน (สัปดาห์ปัจจุบัน)
             </h3>
 
             <ApexChart
@@ -1059,7 +1184,7 @@ onMounted(() => {
           <!-- ประสิทธิภาพการซ่อม -->
           <div class="bg-white rounded-lg shadow p-6">
             <div class="flex items-center justify-between mb-4">
-              <h3 class="text-lg font-semibold text-gray-900">ประสิทธิภาพการซ่อม</h3>
+              <h3 class="text-lg font-semibold text-gray-900">อัตราความสำเร็จการปฏิบัติงานของช่างแต่ละแผนก</h3>
 
               <div class="flex p-1 bg-gray-100 rounded-xl">
                 <button
@@ -1114,9 +1239,9 @@ onMounted(() => {
 
         <!-- Bottom Row -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <!-- งานซ่อมแยกตามประเภท -->
+          <!-- ปริมาณงานแจ้งซ่อมจำแนกตามประเภท -->
           <div class="bg-white rounded-lg shadow p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">งานซ่อมแยกตามประเภท</h3>
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">ปริมาณงานแจ้งซ่อมจำแนกตามประเภท</h3>
 
             <ApexChart type="bar" height="380" :options="typeOptions" :series="typeSeries" />
 
@@ -1135,9 +1260,9 @@ onMounted(() => {
             </div>
           </div>
 
-          <!-- รายการแจ้งซ่อมแต่ละหน่วยงาน -->
+          <!-- ปริมาณการแจ้งซ่อมจำแนกตามหน่วยงาน -->
           <div class="bg-white rounded-lg shadow p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">รายการแจ้งซ่อมแต่ละหน่วยงาน</h3>
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">ปริมาณการแจ้งซ่อมจำแนกตามหน่วยงาน</h3>
 
             <ApexChart type="bar" height="380" :options="deptOptions" :series="deptSeries" />
 
