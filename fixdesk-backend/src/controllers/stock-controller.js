@@ -1,3 +1,39 @@
+/**
+ * =====================================================================
+ * @file            : stock-controller.js
+ * @module          : จัดการ Stock และ Stock Forms
+ * @layer           : Controller Layer (API Controller)
+ * @version         : 1.0.0
+ * @since           : 2026-02-17
+ * @lastModified    : 2026-02-17
+ * @lastModifiedBy  : นายพชร ไพศรีสกุล
+ * ---------------------------------------------------------------------
+ * @description
+ *  Controller สำหรับจัดการ API ของระบบคลังวัสดุ/อุปกรณ์
+ *  ทำหน้าที่รับ request จาก client และเรียกใช้ stockService
+ *  เพื่อดำเนินการ business logic และส่ง response กลับ
+ *
+ *  รองรับการทำงาน:
+ *    - จัดการสินค้า (เพิ่ม, แก้ไข, ลบ, แสดงรายการ)
+ *    - จัดการหมวดหมู่
+ *    - จัดการใบเบิกสินค้า
+ *    - เบิกสินค้า
+ *    - อนุมัติ/ปฏิเสธสินค้า
+ *    - คืนสินค้า
+ *
+ * @requires
+ *   - stock-service.js
+ *   - express
+ *
+ * @author
+ *   - นายพชร ไพศรีสกุล
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *  - เพิ่มระบบคืนสินค้า (returnItem)   [2026-02-17, นายพชร ไพศรีสกุล]
+ * =====================================================================
+ */
+
 module.exports = (stockService) => {
   return {
     /* --- Products --- */
@@ -239,16 +275,21 @@ module.exports = (stockService) => {
     async updateMultipleItemsStatus(req, res) {
       try {
         const { sf_code, items } = req.body;
-        
+
         if (!sf_code || !Array.isArray(items) || items.length === 0) {
           return res.status(400).json({ message: "ข้อมูลไม่ถูกต้อง" });
         }
 
-        const result = await stockService.updateMultipleItemsStatus(sf_code, items);
+        const result = await stockService.updateMultipleItemsStatus(
+          sf_code,
+          items,
+        );
         res.json({ message: "บันทึกผลการพิจารณาสำเร็จ", ...result });
       } catch (err) {
         if (err.message === "ALREADY_PROCESSED")
-          return res.status(400).json({ message: "รายการนี้ถูกดำเนินการไปแล้ว" });
+          return res
+            .status(400)
+            .json({ message: "รายการนี้ถูกดำเนินการไปแล้ว" });
         if (err.message === "FORM_NOT_FOUND")
           return res.status(404).json({ message: "ไม่พบใบเบิก" });
         res
@@ -281,6 +322,23 @@ module.exports = (stockService) => {
         res.json(result);
       } catch (err) {
         res.status(500).json({ message: "Import ล้มเหลว", error: err.message });
+      }
+    },
+    async returnItem(req, res) {
+      try {
+        const { sf_code, pd_id } = req.body;
+
+        const userId = req.user.us_id;
+
+        await stockService.returnItem(sf_code, pd_id, userId);
+
+        res.json({
+          message: "คืนอุปกรณ์สำเร็จ",
+        });
+      } catch (err) {
+        res.status(500).json({
+          message: err.message,
+        });
       }
     },
   };

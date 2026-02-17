@@ -1,3 +1,74 @@
+/**
+ * =====================================================================
+ * @file            : repair-service.js
+ * @module          : Business Logic สำหรับระบบแจ้งซ่อม
+ * @layer           : Service Layer (Business Logic Layer)
+ * @version         : 1.0.0
+ * @since           : 2026-02-17
+ * @lastModified    : 2026-02-17
+ * @lastModifiedBy  : นายพชร ไพศรีสกุล
+ * ---------------------------------------------------------------------
+ * @description
+ *  Service Layer สำหรับจัดการตรรกะการทำงานหลักของระบบแจ้งซ่อม
+ *  โดยทำหน้าที่เชื่อมต่อกับฐานข้อมูล และดำเนินการ business logic
+ *  ที่เกี่ยวข้องกับ lifecycle ของใบแจ้งซ่อม การมอบหมายงาน และการติดตามสถานะ
+ *
+ *  รองรับการทำงาน:
+ *    - สร้างใบแจ้งซ่อม และสร้างรหัสใบแจ้งซ่อมอัตโนมัติ
+ *    - แสดงรายการแจ้งซ่อม (Admin, User, Technician)
+ *    - แสดงรายละเอียดใบแจ้งซ่อม
+ *    - แก้ไข และลบใบแจ้งซ่อม
+ *    - มอบหมายช่างรายบุคคล และแบบทีม
+ *    - กำหนดหัวหน้าทีม (Lead Technician)
+ *    - รับงานซ่อม (acceptJob)
+ *    - เปลี่ยนสถานะงานซ่อม (pending, in_progress, done)
+ *    - ดึงข้อมูลวัสดุ/อุปกรณ์ที่เบิกจากระบบ stock
+ *    - ส่ง LINE Notification เมื่อมีการมอบหมายงาน หรือรับงาน
+ *
+ *  ใช้ Transaction ในกรณี:
+ *    - assignTeam (ป้องกัน assignment ไม่สมบูรณ์)
+ *
+ * @requires
+ *   - mysql2 (Database connection ผ่าน db instance)
+ *   - ./line-notification.service
+ *   - fs
+ *   - path
+ *
+ * @databaseTables
+ *   - repair_form
+ *   - repair_assignment
+ *   - user
+ *   - technician_type
+ *   - title_name
+ *   - room
+ *   - floor
+ *   - building
+ *   - stock_form
+ *   - stock_form_detail
+ *   - products
+ *
+ * @dataFlow
+ *   Controller → Service → Database
+ *
+ * @responsibility
+ *   - ประมวลผล business logic ของระบบแจ้งซ่อม
+ *   - ควบคุม transaction
+ *   - รวมข้อมูลจากหลายตาราง
+ *   - จัดรูปแบบข้อมูลก่อนส่งกลับ Controller
+ *   - เชื่อมต่อกับระบบ stock
+ *   - เชื่อมต่อกับ LINE Notification Service
+ *
+ * @author
+ *   - นายพชร ไพศรีสกุล
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *   - เพิ่มการดึงข้อมูล stock_items ใน getRepairDetail
+ *   - เพิ่มการเชื่อมโยงกับ stock_form และ stock_form_detail
+ *     [2026-02-17, นายพชร ไพศรีสกุล]
+ * =====================================================================
+ */
+
 const path = require("path");
 const fs = require("fs");
 const lineNotification = require("./line-notification.service");
@@ -154,7 +225,7 @@ module.exports = (db) => {
 
       // ดึง Stock Items (ของที่เบิก)
       const stockSql = `
-        SELECT pd.pd_id, pd.pd_name, pd.pd_asset_code, pd.pd_upload_image, sfd.sfd_qty, sfd.sfd_status
+        SELECT pd.pd_id, pd.pd_name, sf.sf_code,  pd.pd_asset_code, pd.pd_upload_image, sfd.sfd_qty, sfd.sfd_status
         FROM stock_form sf
         LEFT JOIN stock_form_detail sfd ON sfd.sfd_sf_id = sf.sf_id
         LEFT JOIN products pd ON pd.pd_id = sfd.sfd_pd_id
@@ -163,6 +234,7 @@ module.exports = (db) => {
       const [stockRows] = await db.promise().query(stockSql, [r.rf_id]);
       result.stock_items = stockRows.map((i) => ({
         id: i.pd_id,
+        sf_code: i.sf_code,
         name: i.pd_name,
         assetCode: i.pd_asset_code,
         qty: i.sfd_qty,
@@ -276,7 +348,8 @@ module.exports = (db) => {
 
       // 6. ส่ง LINE Notification
       try {
-        const [notifData] = await db.promise().query(`
+        const [notifData] = await db.promise().query(
+          `
           SELECT 
             rf.rf_code, rf.rf_problem, rf.rf_urgency,
             CONCAT(tn_tech.ttn_title_th, tech.us_first_name_th, ' ', tech.us_last_name_th) AS technician_name,
@@ -293,7 +366,9 @@ module.exports = (db) => {
           LEFT JOIN building b ON f.fl_bd_id = b.bd_id
           LEFT JOIN technician_type tt ON rf.rf_tt_id = tt.tt_id
           WHERE rf.rf_id = ?
-        `, [techId, assignerId, rfId]);
+        `,
+          [techId, assignerId, rfId],
+        );
 
         if (notifData.length > 0) {
           await lineNotification.notifyJobAssignment({
@@ -304,11 +379,11 @@ module.exports = (db) => {
             location: notifData[0].location,
             technician_type: notifData[0].technician_type,
             urgency: notifData[0].rf_urgency,
-            is_team: false
+            is_team: false,
           });
         }
       } catch (lineError) {
-        console.error('LINE notification failed:', lineError.message);
+        console.error("LINE notification failed:", lineError.message);
       }
 
       return { status: "SUCCESS" };
@@ -316,29 +391,36 @@ module.exports = (db) => {
 
     // --- ASSIGNMENT (Team) - Transactional ---
     async assignTeam(rfCode, techIds, leadId) {
-      console.log('🔍 assignTeam service - Input:', { rfCode, techIds, leadId });
+      console.log("🔍 assignTeam service - Input:", {
+        rfCode,
+        techIds,
+        leadId,
+      });
       try {
         // Start transaction
         await db.promise().query("START TRANSACTION");
-        console.log('🔍 Transaction started');
+        console.log("🔍 Transaction started");
 
         // 1. Lock & Get RF ID
-        const [rf] = await db.promise().query(
-          "SELECT rf_id FROM repair_form WHERE rf_code = ? FOR UPDATE",
-          [rfCode],
-        );
-        console.log('🔍 Repair form query result:', rf);
+        const [rf] = await db
+          .promise()
+          .query("SELECT rf_id FROM repair_form WHERE rf_code = ? FOR UPDATE", [
+            rfCode,
+          ]);
+        console.log("🔍 Repair form query result:", rf);
         if (!rf.length) throw new Error("REPAIR_NOT_FOUND");
         const rfId = rf[0].rf_id;
-        console.log('🔍 RF ID:', rfId);
+        console.log("🔍 RF ID:", rfId);
 
         // 2. Verify Technicians
         const placeholders = techIds.map(() => "?").join(",");
-        const [techs] = await db.promise().query(
-          `SELECT us_id, us_role_id FROM user WHERE us_id IN (${placeholders})`,
-          techIds,
-        );
-        console.log('🔍 Technicians found:', techs);
+        const [techs] = await db
+          .promise()
+          .query(
+            `SELECT us_id, us_role_id FROM user WHERE us_id IN (${placeholders})`,
+            techIds,
+          );
+        console.log("🔍 Technicians found:", techs);
 
         if (techs.length !== techIds.length)
           throw new Error("SOME_TECHS_NOT_FOUND");
@@ -346,11 +428,10 @@ module.exports = (db) => {
         if (nonTechs.length > 0) throw new Error("SOME_USERS_ARE_NOT_TECHS");
 
         // 3. Delete Old Assignments
-        const [deleteResult] = await db.promise().query(
-          "DELETE FROM repair_assignment WHERE ra_rf_id = ?",
-          [rfId],
-        );
-        console.log('🔍 Deleted old assignments:', deleteResult);
+        const [deleteResult] = await db
+          .promise()
+          .query("DELETE FROM repair_assignment WHERE ra_rf_id = ?", [rfId]);
+        console.log("🔍 Deleted old assignments:", deleteResult);
 
         // 4. Insert New Assignments
         const values = techIds.map((tid) => [
@@ -359,20 +440,23 @@ module.exports = (db) => {
           tid === leadId ? 1 : 0,
           new Date(),
         ]);
-        console.log('🔍 Inserting assignments:', values);
-        await db.promise().query(
-          "INSERT INTO repair_assignment (ra_rf_id, ra_us_id, ra_is_lead, ra_assigned_at) VALUES ?",
-          [values],
-        );
-        console.log('🔍 Assignments inserted');
+        console.log("🔍 Inserting assignments:", values);
+        await db
+          .promise()
+          .query(
+            "INSERT INTO repair_assignment (ra_rf_id, ra_us_id, ra_is_lead, ra_assigned_at) VALUES ?",
+            [values],
+          );
+        console.log("🔍 Assignments inserted");
 
         // Commit transaction
         await db.promise().query("COMMIT");
-        console.log('🔍 Transaction committed');
+        console.log("🔍 Transaction committed");
 
         // Send LINE Notification
         try {
-          const [notifData] = await db.promise().query(`
+          const [notifData] = await db.promise().query(
+            `
             SELECT 
               rf.rf_code, rf.rf_problem, rf.rf_urgency,
               GROUP_CONCAT(CONCAT(tn.ttn_title_th, u.us_first_name_th, ' ', u.us_last_name_th) SEPARATOR ', ') AS technician_names,
@@ -388,39 +472,44 @@ module.exports = (db) => {
             LEFT JOIN technician_type tt ON rf.rf_tt_id = tt.tt_id
             WHERE rf.rf_id = ?
             GROUP BY rf.rf_id
-          `, [rfId]);
+          `,
+            [rfId],
+          );
 
           // ดึงชื่อหัวหน้าทีม (lead)
-          const [leadData] = await db.promise().query(`
+          const [leadData] = await db.promise().query(
+            `
             SELECT CONCAT(tn.ttn_title_th, u.us_first_name_th, ' ', u.us_last_name_th) AS lead_name
             FROM repair_assignment ra
             LEFT JOIN user u ON ra.ra_us_id = u.us_id
             LEFT JOIN title_name tn ON u.us_ttn_id = tn.ttn_id
             WHERE ra.ra_rf_id = ? AND ra.ra_is_lead = 1
             LIMIT 1
-          `, [rfId]);
+          `,
+            [rfId],
+          );
 
           if (notifData.length > 0) {
             await lineNotification.notifyJobAssignment({
               rf_code: notifData[0].rf_code,
               technician_name: notifData[0].technician_names,
-              assigned_by_name: '-',
+              assigned_by_name: "-",
               repair_title: notifData[0].rf_problem,
               location: notifData[0].location,
               technician_type: notifData[0].technician_type,
               urgency: notifData[0].rf_urgency,
               lead_name: leadData.length > 0 ? leadData[0].lead_name : null,
-              is_team: true
+              is_team: true,
             });
           }
         } catch (lineError) {
-          console.error('LINE notification failed:', lineError.message);
+          console.error("LINE notification failed:", lineError.message);
         }
 
         return { assignedCount: techIds.length };
       } catch (error) {
         await db.promise().query("ROLLBACK");
-        console.error('🔍 Transaction rolled back due to error');
+        console.error("🔍 Transaction rolled back due to error");
         throw error;
       }
     },
@@ -440,7 +529,8 @@ module.exports = (db) => {
       // Send LINE Notification
       if (result.affectedRows > 0) {
         try {
-          const [notifData] = await db.promise().query(`
+          const [notifData] = await db.promise().query(
+            `
             SELECT 
               rf.rf_code, rf.rf_problem, rf.rf_urgency,
               CONCAT(tn.ttn_title_th, u.us_first_name_th, ' ', u.us_last_name_th) AS technician_name,
@@ -455,7 +545,9 @@ module.exports = (db) => {
             LEFT JOIN building b ON f.fl_bd_id = b.bd_id
             LEFT JOIN technician_type tt ON rf.rf_tt_id = tt.tt_id
             WHERE rf.rf_code = ?
-          `, [techId, rfCode]);
+          `,
+            [techId, rfCode],
+          );
 
           if (notifData.length > 0) {
             await lineNotification.notifyJobAccepted({
@@ -464,11 +556,11 @@ module.exports = (db) => {
               repair_title: notifData[0].rf_problem,
               location: notifData[0].location,
               technician_type: notifData[0].technician_type,
-              urgency: notifData[0].rf_urgency
+              urgency: notifData[0].rf_urgency,
             });
           }
         } catch (lineError) {
-          console.error('LINE notification failed:', lineError.message);
+          console.error("LINE notification failed:", lineError.message);
         }
       }
 

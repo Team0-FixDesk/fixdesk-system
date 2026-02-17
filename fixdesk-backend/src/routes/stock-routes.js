@@ -1,3 +1,48 @@
+/**
+ * =====================================================================
+ * @file            : stock-routes.js
+ * @module          : ระบบกำหนดเส้นทาง API สำหรับคลังวัสดุ/อุปกรณ์
+ * @layer           : Routing Layer (API Route Definition)
+ * @version         : 1.0.0
+ * @since           : 2026-02-17
+ * @lastModified    : 2026-02-17
+ * @lastModifiedBy  : นายพชร ไพศรีสกุล
+ * ---------------------------------------------------------------------
+ * @description
+ *  ไฟล์นี้กำหนดเส้นทาง (routes) สำหรับ API ที่เกี่ยวข้องกับระบบคลังวัสดุ/อุปกรณ์
+ *  และใบเบิกสินค้า (Stock Forms) โดยเชื่อมโยงระหว่าง HTTP endpoints,
+ *  middleware และ stockController เพื่อประมวลผลคำขอจาก client
+ *
+ *  รองรับการทำงาน:
+ *    - จัดการสินค้า (เพิ่ม, แก้ไข, ลบ, แสดงรายการ)
+ *    - จัดการหมวดหมู่สินค้า (Categories)
+ *    - แสดงหน่วยนับสินค้า (Units)
+ *    - จัดการใบเบิกสินค้า (Stock Forms)
+ *    - เบิกสินค้า (Withdraw)
+ *    - อนุมัติ/ปฏิเสธรายการสินค้า
+ *    - คืนสินค้า/อุปกรณ์ (Return Item)
+ *    - Import stock แบบ batch
+ *    - Upload รูปภาพสินค้า
+ *
+ * @requires
+ *   - express
+ *   - multer
+ *   - path
+ *   - fs
+ *   - ../middlewares/auth-middleware
+ *   - ../controllers/stock-controller
+ *   - ../services/stock-service
+ *
+ * @author
+ *   - นายพชร ไพศรีสกุล
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *  - เพิ่ม route คืนอุปกรณ์ (PUT /stock-forms/return-item)
+ *    [2026-02-17, นายพชร ไพศรีสกุล]
+ * =====================================================================
+ */
+
 const express = require("express");
 const multer = require("multer");
 const path = require("path");
@@ -96,6 +141,12 @@ module.exports = (db) => {
 
   // --- Import ---
   router.post("/stock/import", authMiddleware, stockController.importStock);
+
+  router.put(
+    "/stock-forms/return-item",
+    authMiddleware,
+    stockController.returnItem,
+  );
 
   return router;
 };
