@@ -288,7 +288,8 @@ module.exports = (db) => {
           u.us_department, CONCAT(u.us_first_name_th, ' ', u.us_last_name_th) AS requester,
           b.bd_name, f.fl_name, r.room_name,
           pd.pd_id, pd.pd_name, pd.pd_asset_code, pd.pd_detail, pd.pd_upload_image,
-          ct.ct_name AS category, sfd.sfd_qty, sfd.sfd_status
+          ct.ct_name AS category, sfd.sfd_qty, sfd.sfd_status,
+          rf.rf_code
         FROM stock_form sf
         LEFT JOIN user u ON u.us_id = sf.sf_us_id
         LEFT JOIN repair_form rf ON rf.rf_id = sf.sf_rf_id
