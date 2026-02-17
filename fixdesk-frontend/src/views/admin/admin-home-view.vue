@@ -1,3 +1,39 @@
+/**
+ * =====================================================================
+ * @file            admin-home-view.vue
+ * @module          หน้าหลักผู้ดูแลระบบ (Admin Dashboard)
+ * @layer           View (Presentation Layer)
+ * @version         1.0.0
+ * @since           2025-01-10
+ * @author          พชร ไพศรีสกุล, นราธิป แสนทวีสุข
+ * @lastModified    2026-02-17
+ * @lastModifiedBy  นราธิป แสนทวีสุข
+ * ---------------------------------------------------------------------
+ * @description
+ *  หน้าจอสำหรับผู้ดูแลระบบ แสดงภาพรวมและจัดการงานแจ้งซ่อม
+ *  รองรับฟีเจอร์:
+ *    - แสดงสถิติงานซ่อม (ทั้งหมด, วันนี้, กำลังดำเนินการ, เสร็จสิ้น)
+ *    - แสดงตารางรายการแจ้งซ่อมพร้อมรายละเอียด
+ *    - กรองข้อมูลตามสถานะและช่วงเวลา
+ *    - นำทางไปยังหน้ารายละเอียดแต่ละรายการ
+ *    - แสดงชื่อและหน่วยงานของผู้ใช้งาน
+ *
+ * @requires
+ *   - vue-router
+ *   - @/services/repair (getAdminRepairList)
+ *   - @/components/card-home-component.vue
+ *   - @/components/table-component.vue
+ *   - @/components/button/info-button-component.vue
+ *   - @/composables/useUserProfile
+ *   - @/composables/useAuthToken
+ *   - @/composables/useTruncateText
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *  - แก้ไขการเรียกใช้ useUserProfile ให้ตรงกับ API ที่ถูกต้อง (fetchUserProfileData) [2026-02-17, นราธิป แสนทวีสุข]
+ *  - แก้ไขชื่อตัวแปร displayName/displayDepartment เป็น userDisplayName/userDepartmentName [2026-02-17, นราธิป แสนทวีสุข]
+ * =====================================================================
+ */
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
@@ -28,7 +64,7 @@ const STATUS = {
 const router = useRouter()
 
 const { token, isAuthenticated, logout } = useAuthToken()
-const { displayName, displayDepartment, fetchUserProfile } = useUserProfile()
+const { userDisplayName, userDepartmentName, fetchUserProfileData } = useUserProfile()
 
 const repairRequests = ref([])
 const loading = ref(false)
@@ -248,6 +284,7 @@ function goToRepairDetail(ticketId) {
   Lifecycle
 ========================= */
 onMounted(() => {
+  fetchUserProfileData()
   fetchRepairRequests()
 })
 </script>
@@ -258,18 +295,14 @@ onMounted(() => {
     <div class="flex justify-between items-center mb-6">
       <div>
         <p class="text-2xl font-extrabold text-gray-900">
-          หน้าหลักผู้ดูแลระบบ สวัสดีคุณ {{ displayName }}
+          หน้าหลักผู้ดูแลระบบ สวัสดีคุณ {{ userDisplayName }}
         </p>
 
         <p class="text-lg font-semibold text-gray-700">
-          {{ displayDepartment }}
+          {{ userDepartmentName }}
         </p>
 
         <p class="text-sm text-gray-500">ตรวจสอบสถานะและดำเนินการงานแจ้งซ่อม</p>
-      </div>
-
-      <div class="flex space-x-2">
-        <RepairButtonComponent />
       </div>
     </div>
 
