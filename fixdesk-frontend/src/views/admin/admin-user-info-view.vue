@@ -3,7 +3,7 @@
  * @file            admin-user-info-view.vue
  * @module          มอดูลการจัดการผู้ใช้ - การจัดการข้อมูลผู้ใข้งาน 
  * @layer           View (Presentation Layer)
- * @version         1.0.0
+ * @version         1.0.1
  * @since           2025-10-21
  * @author          เศรษฐพงศ์ หอมชื่น
  * @lastModified    2026-02-18
@@ -1009,7 +1009,7 @@ function handleImportError(message) {
         <p v-else-if="isEditMode" class="mb-6 text-sm text-gray-600">
           ข้อมูลบัญชีผู้ใช้ (สามารถแก้ไขได้)
         </p>
-        <p v-else class="mb-6 text-sm text-gray-600">ข้อมูลบัญชีผู้ใช้ (สำหรับอ่านอย่างเดียว)</p>
+        <p v-else class="mb-6 text-sm text-gray-600">ข้อมูลบัญชีผู้ใช้ (ไม่สามารถแก้ไขได้)</p>
 
         <form @submit.prevent="handleUserModalSubmit">
           <div v-if="isViewMode" class="mb-3">
