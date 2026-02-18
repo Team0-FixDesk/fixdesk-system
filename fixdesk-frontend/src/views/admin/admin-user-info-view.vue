@@ -1,3 +1,50 @@
+/**
+ * =====================================================================
+ * @file            admin-user-info-view.vue
+ * @module          มอดูลการจัดการผู้ใช้ - การจัดการข้อมูลผู้ใข้งาน 
+ * @layer           View (Presentation Layer)
+ * @version         1.0.0
+ * @since           2025-10-21
+ * @author          เศรษฐพงศ์ หอมชื่น
+ * @lastModified    2026-02-18
+ * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
+ * ---------------------------------------------------------------------
+ * @description
+ *  หน้าจอสำหรับใช้จัดการข้อมูลผู้ใช้งานในระบบของผู้ดูแลระบบ
+ *  แสดงรายการของผู้ใช้งานระบบทั้งหมด
+ *   รองรับการค้นหาด้วย
+ *    - ชื่อ-นามสกุล (ภาษาไทย / ภาษาอังกฤษ)
+ *    - ชื่อผู้ใช้ (Username)
+ *    - หน่วยงาน
+ *    - กรองตาม:
+ *      - บทบาท (Role)
+ *      - ตำแหน่งช่าง (Technician Type)
+ *   - เพิ่มผู้ใช้งานใหม่
+ *   - แก้ไขข้อมูลผู้ใช้งาน
+ *   - ดูรายละเอียดของผู้ใช้งาน
+ *   - ลบผู้ใช้งาน
+ *   - นำเข้าข้อมูลผู้ใช้งานจากไฟล์ Excel
+ *   - จัดการตำแหน่งช่าง (เพิ่ม / แก้ไข / ลบ)
+ *
+ * @requires
+ *   - vue
+ *   - vue-router
+ *   - sweetalert2
+ *   - @iconify/vue
+ *   - @/components/table-component.vue
+ *   - @/components/table-actions-component.vue
+ *   - @/components/modal/import-user-excel-component.vue
+ *   - @/components/button/import-button-component.vue
+ *   - @/components/button/base/base-button-component.vue
+ *   - @/composables/usePhoneFormat
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *   - ปรับปรุงข้อความที่ใช้ให้เหมาะสม       [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - แก้ไขตำแหน่งของปุ่มยืินยันการแก้ไข/ลบ  [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ * =====================================================================
+ */
+
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import TableComponent from '@/components/table-component.vue'
@@ -325,7 +372,7 @@ async function confirmAddUser() {
   if (!validateUserForm()) return
   const result = await Sweetalert.fire({
     title: 'ยืนยันการเพิ่มผู้ใช้งาน?',
-    text: 'คุณต้องการเพิ่มผู้ใช้งานใหม่ในระบบหรือไม่?',
+    text: 'คุณต้องการเพิ่มผู้ใช้งานใหม่หรือไม่?',
     icon: 'question',
     showCancelButton: true,
     confirmButtonText: 'บันทึก',
@@ -372,9 +419,10 @@ async function confirmEditUser() {
   if (!validateUserForm()) return
   const result = await Sweetalert.fire({
     title: 'ยืนยันการแก้ไขข้อมูล?',
-    text: 'คุณต้องการบันทึกการแก้ไขนี้หรือไม่?',
+    text: 'คุณต้องการบันทึกการแก้ไขหรือไม่?',
     icon: 'question',
     showCancelButton: true,
+    reverseButtons: true,
     confirmButtonText: 'บันทึก',
     cancelButtonText: 'ยกเลิก',
     confirmButtonColor: '#f97316',
@@ -423,10 +471,11 @@ async function confirmEditUser() {
 // Function: Confirm Delete
 async function confirmDelete(username) {
   const result = await Sweetalert.fire({
-    title: 'ยืนยันการลบ?',
+    title: 'ยืนยันการลบข้อมูล?',
     text: `คุณแน่ใจหรือไม่ว่าต้องการลบ "${username}"?`,
     icon: 'warning',
     showCancelButton: true,
+    reverseButtons: true,
     confirmButtonText: 'ลบ',
     cancelButtonText: 'ยกเลิก',
     confirmButtonColor: '#dc2626',
@@ -800,20 +849,20 @@ function handleImportError(message) {
 
 <template>
   <div class="p-8 mx-auto bg-white shadow-md rounded-xl max-w-7xl">
-    <h1 class="mb-6 text-lg font-bold text-black sm:text-xl">จัดการผู้ใช้งานระบบ</h1>
+    <h1 class="mb-6 text-lg font-bold text-black sm:text-xl">จัดการข้อมูลผู้ใช้งานระบบ</h1>
     <div class="mb-6">
       <div class="flex flex-col gap-4 mb-4 md:flex-row md:items-center md:justify-between">
         <div class="relative z-40 flex flex-wrap items-center gap-3">
           <input
             v-model="searchQuery"
             type="text"
-            placeholder="ค้นหาชื่อผู้ใช้ / หน่วยงาน / บทบาท"
-            class="w-full sm:w-[260px] h-10 px-4 rounded-lg border border-gray-300 bg-white focus:ring-2 focus:ring-blue-500 text-gray-700"
+            placeholder="ค้นหารายการผู้ใช้"
+            class="w-full sm:w-[260px] h-10 px-4 rounded-lg border border-gray-300 bg-white focus:ring-2 focus:ring-blue-500 text-gray-500"
           />
           <div class="relative">
             <button
               @click.stop="toggleRoleFilter"
-              class="flex items-center h-10 gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg"
+              class="flex items-center h-10 gap-2 px-4 py-2 text-gray-500 bg-white border border-gray-300 rounded-lg"
             >
               บทบาท
               <Icon
@@ -842,7 +891,7 @@ function handleImportError(message) {
           <div class="relative">
             <button
               @click.stop="toggleTechFilter"
-              class="flex items-center h-10 gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg"
+              class="flex items-center h-10 gap-2 px-4 py-2 text-gray-500 bg-white border border-gray-300 rounded-lg"
             >
               ตำแหน่ง
               <Icon
@@ -958,9 +1007,9 @@ function handleImportError(message) {
           กรอกข้อมูลเพื่อสร้างบัญชีผู้ใช้ใหม่ในระบบ
         </p>
         <p v-else-if="isEditMode" class="mb-6 text-sm text-gray-600">
-          คุณต้องการบันทึกการแก้ไขข้อมูลผู้ใช้หรือไม่
+          ข้อมูลบัญชีผู้ใช้ (สามารถแก้ไขได้)
         </p>
-        <p v-else class="mb-6 text-sm text-gray-600">แสดงข้อมูลผู้ใช้ในระบบ (ไม่สามารถแก้ไขได้)</p>
+        <p v-else class="mb-6 text-sm text-gray-600">ข้อมูลบัญชีผู้ใช้ (สำหรับอ่านอย่างเดียว)</p>
 
         <form @submit.prevent="handleUserModalSubmit">
           <div v-if="isViewMode" class="mb-3">
@@ -1334,7 +1383,7 @@ function handleImportError(message) {
                   isAddMode ? 'bg-green-500' : 'bg-orange-500',
                 ]"
               >
-                {{ isAddMode ? 'ยืนยันเพิ่ม' : 'บันทึกแก้ไข' }}
+                {{ isAddMode ? 'ยืนยันเพิ่ม' : 'บันทึกการแก้ไข' }}
               </button>
             </template>
           </div>
