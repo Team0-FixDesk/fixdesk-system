@@ -1,3 +1,37 @@
+/**
+ * =====================================================================
+ * @file            main-layout.view.vue
+ * @layer           View (Layout Layer)
+ * @version         1.0.0
+ * @since           2025-10-22
+ * @author          พชร ไพศรีสกุล
+ * @lastModified    2026-02-18
+ * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
+ * ---------------------------------------------------------------------
+ * @description
+ *  หน้าจอ Layout หลักของระบบหลังจากผู้ใช้งานเข้าสู่ระบบสำเร็จ
+ *
+ *  ความสามารถ:
+ *   - ตรวจสอบ token จาก localStorage / sessionStorage
+ *   - Decode JWT เพื่อดึง role ของผู้ใช้งาน
+ *   - Redirect ไปหน้า Home ตาม role อัตโนมัติ
+ *   - แสดง Sidebar ตามสิทธิ์ (Admin / Stock / Technician / Manager / User)
+ *   - รองรับ Idle Timeout (2 ชั่วโมง) สำหรับกรณีไม่เลือก "จำฉันไว้"
+ *   - แสดง <RouterView /> สำหรับโหลดหน้าภายในระบบ
+ *
+ * @requires
+ *   - vue
+ *   - vue-router
+ *   - jwt-decode
+ *   - sweetalert2
+ *   - Sidebar Components (Admin / Stock / Technician / Manager / User)
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *   - ปรับปรุงข้อความแจ้งเตือนที่ใช้ให้เหมาะสม  [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ * =====================================================================
+ */
+
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
@@ -29,7 +63,7 @@ function clearAuthAndGoLogin(showAlert = false) {
     Swal.fire({
       icon: 'warning',
       title: 'หมดเวลาในการใช้งาน',
-      text: 'คุณไม่มีการใช้งานเป็นเวลานาน ระบบได้ออกจากระบบอัตโนมัติ',
+      text: 'คุณไม่ได้ใช้งานเป็นระยะเวลาหนึ่ง บัญชีได้ออกจากระบบอัตโนมัติ',
       confirmButtonText: 'ตกลง',
       allowOutsideClick: false,
       allowEscapeKey: false,
