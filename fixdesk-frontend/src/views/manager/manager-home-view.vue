@@ -27,10 +27,11 @@
  *
  * ---------------------------------------------------------------------
  * @changelog
- * - จัดทำ Dashboard ของ Manager                         [2569-01-13, เศรษฐพงศ์ หอมชื่น]
- * - เพิ่มการตั้งค่าชื่อแกน (Title) แกน X และ Y ในทุกกราฟ       [2569-02-17, เศรษฐพงศ์ หอมชื่น]
- * - ปรับปรุงการแสดงผลเส้นแกน (Axis Border)                 [2569-02-17, เศรษฐพงศ์ หอมชื่น]
- * - ปรับแก้ Padding และ Responsive เพื่อป้องกันชื่อแกนตกขอบ    [2569-02-17, เศรษฐพงศ์ หอมชื่น]
+ * - จัดทำ Dashboard ของ Manager                                                                          [2026-01-13, เศรษฐพงศ์ หอมชื่น]
+ * - เพิ่มการตั้งค่าชื่อแกน (Title) แกน X และ Y ในทุกกราฟ                                                        [2026-02-17, เศรษฐพงศ์ หอมชื่น]
+ * - ปรับปรุงการแสดงผลเส้นแกน (Axis Border)                                                                  [2026-02-17, เศรษฐพงศ์ หอมชื่น]
+ * - ปรับแก้ Padding และ Responsive เพื่อป้องกันชื่อแกนตกขอบ                                                     [2026-02-17, เศรษฐพงศ์ หอมชื่น]
+ * - ปรับแก้ กราฟสัดส่วนสถานะงานแจ้งซ่อม และอัตราความสำเร็จการปฏิบัติงานของช่างแต่ละแผนก ให้แสดงรายสัปดาห์ (จันทร์-อาทิตย์)  [2026-01-13, เศรษฐพงศ์ หอมชื่น]
  * =====================================================================
  */
 
@@ -440,7 +441,7 @@ const statusPieSeries = ref([0, 0, 0])
 function updateStatusPieChart(repairsInYear) {
   const base =
     statusMode.value === 'week'
-      ? filterLast7Days(repairsInYear)
+      ? filterCurrentWeek(repairsInYear)
       : filterRepairsByMonth(allRepairs.value, selectedYear.value, selectedMonthIndex.value)
 
   const pending = base.filter((r) => r.rf_user_status === 'pending').length
@@ -646,7 +647,7 @@ function buildTechnicianEfficiency(repairs) {
 function updateEfficiencyChart(repairsInYear) {
   const base =
     efficiencyMode.value === 'week'
-      ? filterLast7Days(repairsInYear)
+      ? filterCurrentWeek(repairsInYear)
       : filterRepairsByMonth(allRepairs.value, selectedYear.value, selectedMonthIndex.value)
 
   const rows = buildTechnicianEfficiency(base)
@@ -861,6 +862,91 @@ function refreshDashboard() {
   updateEfficiencyChart(repairsInYear)
   updateTypeChart(repairsInMonth)
   updateDepartmentChart(repairsInMonth)
+  updateCompareBarChart(repairsInYear)
+}
+
+/* -----------------------------
+   เปรียบเทียบช่างดำเนินการเอง vs จ้างช่างภายนอก (แท่งคู่)
+----------------------------- */
+const compareBarOptions = shallowRef({
+  chart: { type: 'bar', toolbar: { show: false } },
+  grid: GRID_STYLE,
+  colors: [MONTHLY_COLORS.done, MONTHLY_COLORS.outsource],
+  plotOptions: {
+    bar: {
+      horizontal: false,
+      columnWidth: '55%',
+      borderRadius: 4,
+      dataLabels: { position: 'top' } // แสดงตัวเลขบนแท่ง
+    }
+  },
+  dataLabels: {
+    enabled: false,
+    formatter: (val) => val > 0 ? val : '',
+    offsetY: -20,
+    style: { fontSize: '11px', colors: ['#4B5563'] }
+  },
+  stroke: { show: true, width: 2, colors: ['transparent'] },
+  xaxis: {
+    categories: monthLabels,
+    title: { 
+      text: 'เดือน', 
+      style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' } 
+    },
+    axisBorder: { show: true, color: '#9CA3AF' }
+  },
+  yaxis: {
+    title: { 
+      text: 'จำนวนงาน (รายการ)', 
+      offsetX: 6,
+      style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' } 
+    },
+    axisBorder: { show: true, color: '#9CA3AF' },
+    labels: { formatter: (v) => `${Math.round(v)}` }
+  },
+  legend: { show: false }, // ซ่อน Legend เริ่มต้น (เราจะสร้างเองข้างนอกให้ตรงกับกราฟอื่น)
+  tooltip: {
+    enabled: true,
+    shared: true,
+    intersect: false,
+    followCursor: true,
+    y: { title: { formatter: () => '' } },
+    custom: ({ dataPointIndex, w }) => {
+      const label = w.globals.labels?.[dataPointIndex] ?? ''
+      const done = w.config.series?.[0]?.data?.[dataPointIndex] ?? 0
+      const outsource = w.config.series?.[1]?.data?.[dataPointIndex] ?? 0
+
+      return buildTooltipHTML({
+        title: `เดือน: ${label}`,
+        rows: [
+          { label: 'ช่างดำเนินการเอง (เสร็จสิ้น)', value: `${done} รายการ`, color: MONTHLY_COLORS.done },
+          { label: 'จ้างช่างภายนอก', value: `${outsource} รายการ`, color: MONTHLY_COLORS.outsource },
+        ],
+        unitLabel: 'หน่วย: รายการ',
+      })
+    },
+  }
+})
+
+const compareBarSeries = ref([
+  { name: 'ช่างดำเนินการเอง', data: new Array(12).fill(0) },
+  { name: 'จ้างช่างภายนอก', data: new Array(12).fill(0) }
+])
+
+function updateCompareBarChart(repairsInYear) {
+  const doneData = new Array(12).fill(0)
+  const outsourceData = new Array(12).fill(0)
+
+  repairsInYear.forEach((r) => {
+    const m = new Date(r.rf_create_at).getMonth()
+    if (r.rf_user_status === 'done') doneData[m] += 1
+    else if (r.rf_user_status === 'outsource') outsourceData[m] += 1
+  })
+
+  compareBarSeries.value = [
+    { name: 'ช่างดำเนินการเอง', data: doneData },
+    { name: 'จ้างช่างภายนอก', data: outsourceData }
+  ]
 }
 
 /* -----------------------------
@@ -1278,6 +1364,31 @@ onMounted(() => {
 
             <div class="mt-2 text-xs text-gray-500">
               * ชี้เมาส์ที่แท่งเพื่อดูจำนวนรายการของหน่วยงานนั้น
+            </div>
+          </div>
+
+          <!-- กราฟเปรียบเทียบช่างภายในองค์กรกับช่างภายนอก -->
+           <div class="mt-6 bg-white rounded-lg shadow p-6 lg:col-span-2">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">
+              เปรียบเทียบศักยภาพการปิดงานของช่างภายในและช่างภายนอกตลอด{{ formatYearDisplay(selectedYear) }}
+            </h3>
+          
+            <ApexChart 
+              type="bar" 
+              height="350" 
+              :options="compareBarOptions" 
+              :series="compareBarSeries" 
+            />
+          
+            <div class="mt-4 flex flex-wrap items-center justify-center gap-6 text-sm text-gray-600">
+              <span class="inline-flex items-center gap-2">
+                <span class="inline-block w-3.5 h-3.5 rounded-sm" :style="{ backgroundColor: MONTHLY_COLORS.done }"></span>
+                ช่างดำเนินการเอง (เสร็จสิ้น)
+              </span>
+              <span class="inline-flex items-center gap-2">
+                <span class="inline-block w-3.5 h-3.5 rounded-sm" :style="{ backgroundColor: MONTHLY_COLORS.outsource }"></span>
+                จ้างช่างภายนอก
+              </span>
             </div>
           </div>
         </div>
