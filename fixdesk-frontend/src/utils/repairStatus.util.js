@@ -87,19 +87,24 @@ export function getRepairStepNumber(statusKey) {
 }
 
 /**
- * 4. ฟังก์ชันคืนค่าสีของลำดับความคืบหน้า (getProgressBarColor) 
+ * 4. ฟังก์ชันกำหนดสีของลำดับความคืบหน้า (getProgressBarColor)
+ * ---------------------------------------------------------------------
  * @description
- *  ตรวจสอบว่าขั้นตอนปัจจุบัน ถึงเป้าหมายหรือยัง โดยคืนค่า class สีของลำดับความคืบหน้า (Progress Step) ตามสถานะปัจจุบัน
+ *  คืนค่า Tailwind CSS class สำหรับแสดงสีของ Progress Step
+ *  โดยเปรียบเทียบลำดับสถานะปัจจุบันของงานซ่อมกับลำดับเป้าหมาย
+*
+ * @author พชร ไพศรีสกุล
  * 
- * @author
- *  พชร ไพศรีสกุล
- * 
+ *  หลักการทำงาน:
+ *   - ถ้าสถานะปัจจุบันยังไม่ถึงขั้นตอนที่กำหนด → แสดงสีเทา
+ *   - ถ้าถึงหรือเกินขั้นตอนที่กำหนดแล้ว → แสดงสีเขียวและตัวหนา
+ *
+ * @param {string} statusKey - key ของสถานะงานซ่อม (เช่น 'pending', 'in_progress', 'done')
+ * @param {number} stepTarget - ลำดับขั้นตอนที่ต้องการตรวจสอบ (เช่น 1-3)
+ * @returns {string} Tailwind CSS class สำหรับกำหนดสีของข้อความใน Progress Step
+ *
  * @changelog
- *  - แก้ไขเงื่อนไขการคืนค่าสี text-slate   [2026-02-17, ปฏิพัทธ์ จงนันทพันธ์กุล]
- *  
- * @param {string} statusKey - สถานะของงานซ่อม (เช่น 'pending', 'in_progress', 'done')
- * @param {number} stepTarget - ลำดับของความคืบหน้า (1-3)
- * @returns {string} Tailwind CSS class สำหรับกำหนดสีของลำดับความคืบหน้า
+ *  - ปรับปรุงเงื่อนไขการคืนค่าสี   [2026-02-17, ปฏิพัทธ์ จงนันทพันธ์กุล]
  */
 export function getProgressBarColor(statusKey, stepTarget) {
   // แปลงสถานะ (String) ให้เป็นตัวเลข (Number) ก่อน
