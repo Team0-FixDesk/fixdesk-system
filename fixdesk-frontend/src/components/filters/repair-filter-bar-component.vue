@@ -1,3 +1,42 @@
+/**
+ * =====================================================================
+ * @file            repair-filter-bar.component.vue
+ * @layer           Component (Presentation Layer)
+ * @version         1.0.0
+ * @since           2026-01-07
+ * @author          พชร ไพศรีสกุล
+ * @lastModified    2026-02-18
+ * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
+ * ---------------------------------------------------------------------
+ * @description
+ *  คอมโพเนนต์ช่องค้นหา และตัวกรองข้อมูล
+ *
+ *  ความสามารถ:
+ *   - ค้นหาข้อมูลด้วยข้อความ (Search)
+ *   - กรองตามวันที่
+ *   - กรองตามสถานะ (Multi-select)
+ *   - กรองตามระดับความเร่งด่วน (เฉพาะโหมด repair)
+ *   - รีเซ็ตตัวกรองทั้งหมด
+ *
+ *  พฤติกรรมจะปรับตาม props:
+ *   - mode ('repair' | 'stock')
+ *   - showStatus (Boolean)
+ *   - showUrgencies (Boolean)
+ *
+ * @emits
+ *   update:search
+ *   update:statuses
+ *   update:urgencies
+ *   update:date
+ *   reset
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *  - ปรับปรุงคำอธิบายให้สอดคล้องกับบทบาทของคอมโพเนนต์   [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *  - แก้ไขสีของช่องกรอกข้อมูล และตัวกรองข้อมูล           [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ * =====================================================================
+ */
+
 <script setup>
 import { ref, computed } from 'vue'
 import { Icon } from '@iconify/vue'
@@ -99,9 +138,9 @@ function toggleValue(list, value, emitName) {
           :value="search"
           @input="emit('update:search', $event.target.value)"
           type="text"
-          placeholder="ค้นหาใบแจ้งซ่อมหรืออื่นๆ"
+          placeholder="ค้นหารายการแจ้งซ่อม"
           :title="searchPlaceholder"
-          class="w-[260px] h-10 px-4 rounded-lg border border-gray-300 text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+          class="w-[260px] h-10 px-4 rounded-lg border border-gray-300 text-gray-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
         />
 
         <!-- Date -->
@@ -116,7 +155,7 @@ function toggleValue(list, value, emitName) {
         <div v-if="isRepair && showUrgencies" class="relative">
           <button
             @click.stop="toggleUrgency"
-            class="flex items-center gap-1 border border-gray-300 rounded-lg px-4 py-2 bg-white hover:bg-gray-50 text-gray-700"
+            class="flex items-center gap-1 border border-gray-300 rounded-lg px-4 py-2 bg-white hover:bg-gray-50 text-gray-500"
           >
             ความเร่งด่วน
             <Icon
@@ -154,7 +193,7 @@ function toggleValue(list, value, emitName) {
         <div v-if="showStatus" class="relative">
           <button
             @click.stop="toggleStatus"
-            class="flex items-center gap-1 border border-gray-300 rounded-lg px-4 py-2 bg-white hover:bg-gray-50 text-gray-700"
+            class="flex items-center gap-1 border border-gray-300 rounded-lg px-4 py-2 bg-white hover:bg-gray-50 text-gray-500"
           >
             สถานะ
             <Icon
