@@ -256,7 +256,7 @@ const statItems = computed(() => [
   },
   {
     value: progressTasks.value,
-    label: 'จำนวนงานซ่อมทั้งหมดที่กำลังดำเนินการ',
+    label: 'จำนวนงานซ่อมทั้งหมดที่กำลังดำเนินการในระบบ',
     colorClass: 'text-blue-500',
     filterKey: 'in_progress',
   },
