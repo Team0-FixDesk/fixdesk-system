@@ -1,6 +1,57 @@
+/**
+ * =====================================================================
+ * @file            tech.controller.js
+ * @layer           Controller Layer (Presentation Layer)
+ * @version         1.1.0
+ * @since           2026-02-10
+ * @author          พชร ไพศรีสกุล
+ * @contributors
+ *   - พชร ไพศรีสกุล
+ *
+ * @lastModified    2026-02-12
+ * @lastModifiedBy  พชร ไพศรีสกุล
+ * ---------------------------------------------------------------------
+ * @description
+ *  Controller สำหรับจัดการข้อมูลและการทำงานของช่าง (Technician Management)
+ *  ทำหน้าที่รับ request จาก client และเรียกใช้งาน techService
+ *
+ *  รองรับการทำงาน:
+ *    - ดึงข้อมูลช่าง
+ *    - จัดการประเภทงานของช่าง
+ *    - ดึงรายการงานซ่อมและประวัติ
+ *    - ปิดงานซ่อม
+ *    - เบิกสินค้าโดยช่าง
+ *    - ดึงข้อมูลใบเบิกของช่าง
+ *
+ * @usedBy
+ *   - tech.route.js
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *   - Initial implementation Technician Controller ตาม Layered Architecture
+ *     [2026-02-10, พชร ไพศรีสกุล] V 1.0.0
+ *   - แก้ไขเรื่องประเภทงานซ่อม
+ *     [2026-02-12, พชร ไพศรีสกุล] V 1.1.0
+ *
+ * =====================================================================
+ */
 module.exports = (techService) => {
   return {
-    /* --- Technician Data --- */
+    /* --- TECHNICIAN DATA CONTROLLER --- */
+    /**
+     * ดึงรายการช่างทั้งหมด
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-10
+     * @lastModifiedBy พชร ไพศรีสกุล
+     * @contributors
+     *  - พชร ไพศรีสกุล
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async getTechnicians(req, res) {
       try {
         const techs = await techService.getAllTechnicians();
@@ -12,7 +63,21 @@ module.exports = (techService) => {
       }
     },
 
-    /* --- Technician Types --- */
+    /* --- TECHNICIAN TYPE CONTROLLER --- */
+    /**
+     * ดึงรายการประเภทงานของช่าง
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-12
+     * @lastModifiedBy พชร ไพศรีสกุล
+     * @contributors
+     *  - พชร ไพศรีสกุล
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async getTypes(req, res) {
       try {
         const types = await techService.getAllTechnicianTypes();
@@ -22,6 +87,18 @@ module.exports = (techService) => {
       }
     },
 
+    /**
+     * เพิ่มประเภทงานของช่าง
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-12
+     * @lastModifiedBy พชร ไพศรีสกุล
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async createType(req, res) {
       try {
         const { tt_name } = req.body;
@@ -41,6 +118,18 @@ module.exports = (techService) => {
       }
     },
 
+    /**
+     * แก้ไขประเภทงานของช่าง
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-10
+     * @lastModifiedBy พชร ไพศรีสกุล
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async updateType(req, res) {
       try {
         const { tt_name } = req.body;
@@ -67,6 +156,18 @@ module.exports = (techService) => {
       }
     },
 
+    /**
+     * ลบประเภทงานของช่าง
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-12
+     * @lastModifiedBy พชร ไพศรีสกุล
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async deleteType(req, res) {
       try {
         await techService.deleteTechnicianType(req.params.id);
@@ -82,7 +183,19 @@ module.exports = (techService) => {
       }
     },
 
-    /* --- Job & Tasks --- */
+    /* --- TECHNICIAN JOB CONTROLLER --- */
+    /**
+     * ดึงรายการงานซ่อมของช่าง (Current Jobs)
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-10
+     * @lastModifiedBy พชร ไพศรีสกุล
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async getMyRepairs(req, res) {
       try {
         const techId = req.user.us_id;
@@ -93,6 +206,18 @@ module.exports = (techService) => {
       }
     },
 
+    /**
+     * ดึงประวัติการทำงานของช่าง
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-10
+     * @lastModifiedBy พชร ไพศรีสกุล
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async getHistory(req, res) {
       try {
         const techId = req.user.us_id;
@@ -103,6 +228,18 @@ module.exports = (techService) => {
       }
     },
 
+    /**
+     * ดึงรายการใบเบิกสินค้าของช่าง
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-10
+     * @lastModifiedBy พชร ไพศรีสกุล
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async getMyStockForms(req, res) {
       try {
         const techId = req.user.us_id;
@@ -113,6 +250,18 @@ module.exports = (techService) => {
       }
     },
 
+    /**
+     * ปิดงานซ่อมหรือส่งต่อ Outsource
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-10
+     * @lastModifiedBy พชร ไพศรีสกุล
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async closeJob(req, res) {
       try {
         const techId = req.user.us_id;
@@ -148,6 +297,18 @@ module.exports = (techService) => {
       }
     },
 
+    /**
+     * เบิกสินค้าโดยช่าง
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-10
+     * @lastModifiedBy พชร ไพศรีสกุล
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async withdrawStock(req, res) {
       try {
         const { repair_code, items } = req.body;

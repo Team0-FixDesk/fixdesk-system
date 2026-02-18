@@ -1,6 +1,52 @@
+/**
+ * =====================================================================
+ * @file            user.controller.js
+ * @layer           Controller Layer (Presentation Layer)
+ * @version         1.0.0
+ * @since           2026-02-10
+ * @author          พชร ไพศรีสกุล
+ * @contributors
+ *   - พชร ไพศรีสกุล
+ *
+ * @lastModified    2026-02-10
+ * @lastModifiedBy  พชร ไพศรีสกุล
+ * ---------------------------------------------------------------------
+ * @description
+ *  Controller สำหรับจัดการข้อมูลผู้ใช้งาน (User Management)
+ *  ทำหน้าที่รับ request จาก client และเรียกใช้งาน userService
+ *
+ *  รองรับการทำงาน:
+ *    - ดึงข้อมูลผู้ใช้งานทั้งหมด และรายบุคคล
+ *    - สร้าง แก้ไข และลบผู้ใช้งาน
+ *    - แก้ไขข้อมูลส่วนตัว
+ *    - ดึงข้อมูล Titles และ Roles
+ *    - Import ผู้ใช้งานจากไฟล์ Excel
+ *
+ * @usedBy
+ *   - user.route.js
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *   - Initial implementation User Controller ตาม Layered Architecture
+ *     [2026-02-10, พชร ไพศรีสกุล] V 1.0.0
+ *
+ * =====================================================================
+ */
 module.exports = (userService) => {
   return {
-    // เรียกดูผู้ใช้ทั้งหมด
+    // --- USER QUERY CONTROLLER ---
+    /**
+     * ดึงรายการผู้ใช้งานทั้งหมด
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-10
+     * @lastModifiedBy พชร ไพศรีสกุล
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async getUsers(req, res) {
       try {
         const users = await userService.getAllUsers();
@@ -12,7 +58,18 @@ module.exports = (userService) => {
       }
     },
 
-    // เรียกดูรายคน
+    /**
+     * ดึงข้อมูลผู้ใช้งานตาม ID
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-10
+     * @lastModifiedBy พชร ไพศรีสกุล
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async getUserById(req, res) {
       try {
         const id = Number(req.params.id);
@@ -31,7 +88,19 @@ module.exports = (userService) => {
       }
     },
 
-    // เรียกดูข้อมูลเสริม (Titles, Roles)
+    // --- USER META DATA CONTROLLER ---
+    /**
+     * ดึงรายการคำนำหน้า (Titles)
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-10
+     * @lastModifiedBy พชร ไพศรีสกุล
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async getTitles(req, res) {
       try {
         const titles = await userService.getAllTitles();
@@ -41,6 +110,18 @@ module.exports = (userService) => {
       }
     },
 
+    /**
+     * ดึงรายการบทบาทผู้ใช้งาน (Roles)
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-10
+     * @lastModifiedBy พชร ไพศรีสกุล
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async getRoles(req, res) {
       try {
         const roles = await userService.getAllRoles();
@@ -50,7 +131,19 @@ module.exports = (userService) => {
       }
     },
 
-    // สร้างผู้ใช้
+    // --- USER MANAGEMENT CONTROLLER (ADMIN) ---
+    /**
+     * สร้างผู้ใช้งานใหม่
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-10
+     * @lastModifiedBy พชร ไพศรีสกุล
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async createUser(req, res) {
       try {
         // รับค่าจาก Body
@@ -121,7 +214,18 @@ module.exports = (userService) => {
       }
     },
 
-    // แก้ไขผู้ใช้ (Admin)
+    /**
+     * แก้ไขข้อมูลผู้ใช้งาน (Admin)
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-10
+     * @lastModifiedBy พชร ไพศรีสกุล
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async updateUser(req, res) {
       try {
         const id = Number(req.params.id);
@@ -152,7 +256,48 @@ module.exports = (userService) => {
       }
     },
 
-    // แก้ไขข้อมูลส่วนตัว
+    /**
+     * ลบผู้ใช้งาน
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-10
+     * @lastModifiedBy พชร ไพศรีสกุล
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
+    async deleteUser(req, res) {
+      try {
+        await userService.deleteUser(Number(req.params.id));
+        res.json({ message: "ลบผู้ใช้สำเร็จ" });
+      } catch (error) {
+        if (error.message === "DEPENDENCY_EXISTS") {
+          return res.status(400).json({
+            message:
+              "ไม่สามารถลบได้ เนื่องจากมีใบแจ้งซ่อมหรือการมอบหมายงานค้างอยู่",
+          });
+        }
+        if (error.message === "USER_NOT_FOUND")
+          return res.status(404).json({ message: "ไม่พบผู้ใช้" });
+        res.status(500).json({ message: "ลบไม่สำเร็จ", error: error.message });
+      }
+    },
+
+    // --- USER PERSONAL PROFILE CONTROLLER ---
+    /**
+     * แก้ไขข้อมูลส่วนตัวของผู้ใช้งาน
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-10
+     * @lastModifiedBy พชร ไพศรีสกุล
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async updatePersonalProfile(req, res) {
       try {
         const id = req.params.id;
@@ -194,25 +339,18 @@ module.exports = (userService) => {
       }
     },
 
-    // ลบผู้ใช้
-    async deleteUser(req, res) {
-      try {
-        await userService.deleteUser(Number(req.params.id));
-        res.json({ message: "ลบผู้ใช้สำเร็จ" });
-      } catch (error) {
-        if (error.message === "DEPENDENCY_EXISTS") {
-          return res.status(400).json({
-            message:
-              "ไม่สามารถลบได้ เนื่องจากมีใบแจ้งซ่อมหรือการมอบหมายงานค้างอยู่",
-          });
-        }
-        if (error.message === "USER_NOT_FOUND")
-          return res.status(404).json({ message: "ไม่พบผู้ใช้" });
-        res.status(500).json({ message: "ลบไม่สำเร็จ", error: error.message });
-      }
-    },
-
-    // Import Excel
+    /**
+     * Import ข้อมูลผู้ใช้งานจากไฟล์ Excel หรือ JSON
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-10
+     * @lastModifiedBy พชร ไพศรีสกุล
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async importUsers(req, res) {
       try {
         const { users } = req.body;
