@@ -3,7 +3,7 @@
  * @file            admin-user-info-view.vue
  * @module          มอดูลการจัดการผู้ใช้ - การจัดการข้อมูลผู้ใข้งาน 
  * @layer           View (Presentation Layer)
- * @version         1.0.1
+ * @version         1.0.2
  * @since           2025-10-21
  * @author          เศรษฐพงศ์ หอมชื่น
  * @lastModified    2026-02-18
@@ -375,7 +375,8 @@ async function confirmAddUser() {
     text: 'คุณต้องการเพิ่มผู้ใช้งานใหม่หรือไม่?',
     icon: 'question',
     showCancelButton: true,
-    confirmButtonText: 'บันทึก',
+    reverseButtons: true,
+    confirmButtonText: 'ยืนยัน',
     cancelButtonText: 'ยกเลิก',
     confirmButtonColor: '#16a34a',
   })
@@ -423,7 +424,7 @@ async function confirmEditUser() {
     icon: 'question',
     showCancelButton: true,
     reverseButtons: true,
-    confirmButtonText: 'บันทึก',
+    confirmButtonText: 'ยืนยัน',
     cancelButtonText: 'ยกเลิก',
     confirmButtonColor: '#f97316',
   })
