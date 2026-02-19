@@ -102,64 +102,77 @@ function renderStatusStockInventoryBadge(type) {
 <template>
   <div class="relative overflow-x-auto">
     <div class="relative overflow-x-auto min-h-[200px] max-h-[600px]">
-    <table class="min-w-[640px] w-full text-xs sm:text-sm border-collapse">
-      <thead class="bg-gray-100 border-b border-gray-300">
-        <tr>
-          <th v-for="(column, columnIndex) in columns" :key="columnIndex" v-show="!hiddenColumns.includes(columnIndex)"
-            class="px-3 py-3 font-semibold text-gray-700 sticky top-0 z-[5] bg-gray-100"
-            :class="getAlignClass(columnIndex)">
-            {{ column }}
-          </th>
-        </tr>
-      </thead>
+      <table class="min-w-[640px] w-full text-xs sm:text-sm border-collapse table-fixed">
+        <thead class="bg-gray-100 border-b border-gray-300">
+          <tr>
+            <th v-for="(column, columnIndex) in columns" :key="columnIndex"
+              v-show="!hiddenColumns.includes(columnIndex)"
+              class="px-3 py-3 font-semibold text-gray-700 sticky top-0 z-[5] bg-gray-100"
+              :class="getAlignClass(columnIndex)">
+              {{ column }}
+            </th>
+          </tr>
+        </thead>
 
-      <tbody>
-        <tr v-for="(item, rowIndex) in paginatedRows" :key="rowIndex" :class="[
-          'bg-white border-b hover:bg-gray-100 cursor-pointer',
-          { '!bg-blue-50': item.row[props.idColumnIndex] == activeId },
-          { 'border-white hover:bg-white cursor-default': item.isDummy },
-          props.rowHeightClass
-        ]" @click="!item.isDummy && $emit('detail', getRowId(item.row))">
+        <tbody>
+          <tr v-for="(item, rowIndex) in paginatedRows" :key="rowIndex" :class="[
+            'bg-white border-b hover:bg-gray-100 cursor-pointer',
+            { '!bg-blue-50': item.row[props.idColumnIndex] == activeId },
+            { 'border-white hover:bg-white cursor-default': item.isDummy },
+            props.rowHeightClass
+          ]" @click="!item.isDummy && $emit('detail', getRowId(item.row))">
 
-          <td v-for="(cell, cellIndex) in item.row" :key="cellIndex" v-show="!hiddenColumns.includes(cellIndex)"
-            class="px-3 py-2 whitespace-nowrap align-middle" :class="getAlignClass(cellIndex)">
+            <td v-for="(cell, cellIndex) in item.row" :key="cellIndex" v-show="!hiddenColumns.includes(cellIndex)"
+              class="px-3 py-2 align-middle" :class="[
+                getAlignClass(cellIndex),
+                cellIndex === 0
+                  ? 'whitespace-nowrap overflow-hidden'
+                  : 'whitespace-nowrap'
+              ]">
 
-            <template v-if="!item.isDummy">
-              <span v-if="cellIndex === props.idColumnIndex && props.idColumnAsLink"
-                class="text-blue-600 underline cursor-pointer hover:text-blue-800"
-                @click.stop="$emit('detail', getRowId(item.row))" v-html="cell"></span>
+              <template v-if="!item.isDummy">
+                <span v-if="cellIndex === props.idColumnIndex && props.idColumnAsLink"
+                  class="text-blue-600 underline cursor-pointer hover:text-blue-800"
+                  @click.stop="$emit('detail', getRowId(item.row))" v-html="cell"></span>
 
-              <span v-else-if="cellIndex === props.urgencyColumn" v-html="renderUrgencyBadge(cell)"></span>
-              <span v-else-if="cellIndex === props.statusColumn" v-html="renderStatusBadge(cell)"></span>
-              <span v-else-if="cellIndex === props.statusStockColumn" v-html="renderStatusStockBadge(cell)"></span>
-              <span v-else-if="cellIndex === props.statusStockinventoryColumn" v-html="renderStatusStockInventoryBadge(cell)"></span>
+                <span v-else-if="cellIndex === props.urgencyColumn" v-html="renderUrgencyBadge(cell)"></span>
+                <span v-else-if="cellIndex === props.statusColumn" v-html="renderStatusBadge(cell)"></span>
+                <span v-else-if="cellIndex === props.statusStockColumn" v-html="renderStatusStockBadge(cell)"></span>
+                <span v-else-if="cellIndex === props.statusStockinventoryColumn"
+                  v-html="renderStatusStockInventoryBadge(cell)"></span>
 
-              <slot v-else-if="$slots[`cell-${cellIndex}`]" :name="`cell-${cellIndex}`" :row="item.row"
-                :cell="cell" :rowIndex="rowIndex" :columnIndex="cellIndex" :openMenuId="openMenuId"
-                @toggle-menu="(id) => (openMenuId = id)"></slot>
+                <slot v-else-if="$slots[`cell-${cellIndex}`]" :name="`cell-${cellIndex}`" :row="item.row" :cell="cell"
+                  :rowIndex="rowIndex" :columnIndex="cellIndex" :openMenuId="openMenuId"
+                  @toggle-menu="(id) => (openMenuId = id)"></slot>
 
-              <span v-else v-html="cell"></span>
-            </template>
+                <span v-else
+  v-html="cell"
+  :class="cellIndex === 0
+    ? 'block line-clamp-2 break-words'
+    : 'block truncate'">
+                </span>
 
-            <template v-else>
-              <span v-if="cellIndex === props.urgencyColumn ||
-                          cellIndex === props.statusColumn ||
-                          cellIndex === props.statusStockColumn ||
-                          cellIndex === props.statusStockinventoryColumn"
-                class="inline-flex justify-center items-center w-36 h-8 rounded-full invisible">
-                Badge </span>
+              </template>
 
-              <div v-else-if="$slots[`cell-${cellIndex}`]" class="invisible inline-flex items-center">
-                 <div class="w-8 h-8"></div>
-              </div>
+              <template v-else>
+                <span v-if="cellIndex === props.urgencyColumn ||
+                  cellIndex === props.statusColumn ||
+                  cellIndex === props.statusStockColumn ||
+                  cellIndex === props.statusStockinventoryColumn"
+                  class="inline-flex justify-center items-center w-36 h-8 rounded-full invisible">
+                  Badge </span>
 
-              <span v-else class="invisible">&nbsp;</span>
-            </template>
+                <div v-else-if="$slots[`cell-${cellIndex}`]" class="invisible inline-flex items-center">
+                  <div class="w-8 h-8"></div>
+                </div>
 
-          </td>
-        </tr>
-      </tbody>
-    </table>
+                <span v-else class="invisible">&nbsp;</span>
+              </template>
+
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
     <div class="flex justify-center sm:justify-end mt-4">
       <div class="inline-flex border rounded-md">

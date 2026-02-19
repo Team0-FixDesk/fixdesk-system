@@ -1,3 +1,62 @@
+/**
+ * =====================================================================
+ * @file            technician-stock-list-view.vue
+ * @module          จัดการและเบิกอุปกรณ์จากคลัง
+ * @layer           View (Presentation Layer)
+ * @version         1.0.0
+ * @since           2026-02-17
+ * @author          -
+ * @lastModified    2026-02-17
+ * @lastModifiedBy  ธนภัทร จันทร์งาม 
+ * ---------------------------------------------------------------------
+ * @description
+ *  หน้าจอสำหรับช่างใช้ตรวจสอบรายการอุปกรณ์ในคลัง และทำรายการเบิกอุปกรณ์
+ *  ออกแบบให้เน้นการใช้งานจริงของช่าง (Task-Oriented Design)
+ *  ไม่เน้นรูปแบบเชิงพาณิชย์เหมือนระบบช้อปปิ้งออนไลน์
+ *
+ *   ความสามารถหลักของหน้าจอ:
+ *   - แสดงรายการสินค้าในคลังทั้งหมด
+ *   - ค้นหาสินค้าด้วยชื่อหรือรหัส
+ *   - กรองข้อมูลตามหมวดหมู่และสถานะสินค้า
+ *   - เรียงลำดับตามจำนวนคงเหลือ
+ *   - เพิ่มสินค้าเข้าสู่ตะกร้าเบิก
+ *   - รวมรายการซ้ำโดยเพิ่มจำนวนอัตโนมัติ
+ *   - ตรวจสอบและยืนยันการเบิกอุปกรณ์
+ *
+ *  รองรับการทำงาน:
+ *   - ดึงข้อมูล stock และหมวดหมู่จาก API
+ *   - ตรวจสอบสิทธิ์ผู้ใช้งานผ่าน token
+ *   - แสดงสถานะสินค้า (พร้อมใช้งาน / ใกล้หมด / หมด)
+ *   - จัดการตะกร้าเบิกสินค้า (เพิ่ม / ลบ / ปรับจำนวน)
+ *   - เชื่อมโยงกับใบแจ้งซ่อมก่อนทำการเบิก
+ *
+ *  หน้าจอนี้ทำหน้าที่เป็นตัวควบคุมหลัก (Controller + View)
+ *  สำหรับกระบวนการเบิกอุปกรณ์ของช่าง
+ *
+ *  Component นี้ออกแบบเพื่อใช้งานร่วมกับ:
+ *   - technician-stock-list-view.vue
+ *
+ *  @requires
+ *    vue (Composition API)
+ *    vue-router
+ *    sweetalert2
+ *
+ *  @iconify/vue
+ *    @/components/product-card-component.vue
+ *    @/components/modal/confirm-withdraw-component.vue
+ *
+ * ---------------------------------------------------------------------
+ *   @api
+ *    GET     /show-stock           ดึงข้อมูลสินค้าในคลัง
+ *    GET     /category             ดึงหมวดหมู่สินค้า
+ *    GET     /technician/repairs   ดึงรายการใบแจ้งซ่อม
+ *    POST    /withdraw             บันทึกรายการเบิกสินค้า
+ * ---------------------------------------------------------------------
+ * @changelog
+ *  - แก้ไขขนาดช่องของสินค้า                    [2569-02-17, ธนภัทร จันทร์งาม]
+ * =====================================================================
+ */
+
 <script setup>
 defineOptions({ name: 'TechnicianStockListView' }) //
 
@@ -585,7 +644,7 @@ onBeforeUnmount(() => {
     <div v-if="isLoading" class="text-center py-20 text-gray-500">กำลังโหลดข้อมูล...</div>
 
     <div v-else>
-      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <ProductCardComponent
           v-for="item in filteredStockItemList"
           :key="item.id"
