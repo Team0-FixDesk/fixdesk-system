@@ -1,3 +1,42 @@
+/**
+ * =====================================================================
+ * @file            stock-withdraw-history-view.vue
+ * @module          -
+ * @layer           View (Presentation Layer)
+ * @version         1.0.0
+ * @since           2025-10-21
+ * @author          พชร ไพศรีสกุล
+ * @lastModified    2026-02-18
+ * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
+ * ---------------------------------------------------------------------
+ * @description
+ *  หน้าจอสำหรับแสดงประวัติการเบิกของทั้งหมดของผู้ดูแลคลัง
+ *  แสดงเฉพาะรายการเบิกที่มีให้ผลการอนุมัติแล้ว:
+ *    - approved
+ *    - rejected
+ *    - completed
+ *  รองรับการค้นหาด้วย:
+ *    - หมายเลขรายการเบิก  (sf_code)
+ *    - หน่วยงาน           (us_department)
+ *    - รายละเอียดการเบิก
+ *      - กรองตาม:
+ *        - สถานะการเบิก
+ *        - วันที่สร้างใบเบิก
+ *   - กดดูรายละเอียดใบเบิกแต่ละรายการได้
+ *
+ * @requires
+ *   - vue
+ *   - vue-router
+ *   - sweetalert2
+ *   - @/components/table-component.vue
+ *   - @/components/filters/repair-filter-bar-component.vue
+ *   - @/components/button/info-button-component.vue
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *   - ปรับปรุงข้อความที่ใช้ให้เหมาะสม   [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ * =====================================================================
+ */
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
@@ -14,7 +53,7 @@ const router = useRouter()
 const API_BASE = import.meta.env.VITE_API_BASE
 
 // ==================== Table ====================
-const columns = ['รหัสใบเบิกของ', 'หน่วยงาน', 'รายละเอียด', 'สถานะการเบิก', 'ตัวดำเนินการ']
+const columns = ['หมายเลขรายการเบิก', 'หน่วยงาน', 'รายละเอียดการเบิก', 'สถานะการเบิก', 'ตัวดำเนินการ']
 const tableRowsList = ref([])
 
 // ==================== Filters (ใช้กับ RepairFilterBar) ====================
@@ -131,7 +170,7 @@ onMounted(() => {
 
 <template>
   <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-7xl">
-    <h1 class="text-xl font-bold mb-6">ประวัติการเบิกของ</h1>
+    <h1 class="text-xl font-bold mb-6">ประวัติการเบิกของทั้งหมด</h1>
 
     <!-- Filters -->
     <RepairFilterBar

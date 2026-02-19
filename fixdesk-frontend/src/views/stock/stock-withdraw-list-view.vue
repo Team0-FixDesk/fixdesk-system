@@ -1,3 +1,36 @@
+/**
+ * =====================================================================
+ * @file            stock-withdraw-list-view.vue
+ * @module          มอดูลการจัดการของผู้ดูแลคลัง - การตรวจสอบ และอนุมัติรายการเบิกของ
+ * @layer           View (Presentation Layer)
+ * @version         1.0.0
+ * @since           2025-10-21
+ * @author          พชร ไพศรีสกุล
+ * @lastModified    2026-02-18
+ * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
+ * ---------------------------------------------------------------------
+ * @description
+ *  หน้าจอสำหรับแสดงรายการเบิกของทั้งหมดของผู้ดูแลคลัง
+ *  รองรับการค้นหาด้วย:
+ *    - หมายเลขรายการเบิก  (sf_code)
+ *    - หน่วยงาน           (us_department)
+ *    - รายละเอียดการเบิก
+ *    - กรองตามวันที่สร้างใบเบิก
+ *
+ * @requires
+ *   - vue
+ *   - vue-router
+ *   - sweetalert2
+ *   - @/components/table-component.vue
+ *   - @/components/filters/repair-filter-bar-component.vue
+ *   - @/components/button/info-button-component.vue
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *   - ปรับปรุงข้อความที่ใช้ให้เหมาะสม   [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ * =====================================================================
+ */
+
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
@@ -14,7 +47,7 @@ const router = useRouter()
 const API_BASE = import.meta.env.VITE_API_BASE
 
 // ==================== Table ====================
-const columns = ['รหัสใบเบิกของ', 'หน่วยงาน', 'รายละเอียด', 'สถานะการเบิก', 'ตัวดำเนินการ']
+const columns = ['หมายเลขรายการเบิก', 'หน่วยงาน', 'รายละเอียดการเบิก', 'สถานะการเบิก', 'ตัวดำเนินการ']
 const tableRowsList = ref([])
 
 // ==================== Filters (ใช้กับ RepairFilterBar) ====================
