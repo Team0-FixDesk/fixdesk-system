@@ -1,108 +1,102 @@
+/**
+ * =====================================================================
+ * @file            my-repair-list.view.vue
+ * @module          มอดูลแจ้งซ่อม - การติดตามสถานะ และดูรายละเอียดคำร้องแจ้งซ่อม
+ * @layer           View (Presentation Layer)
+ * @version         1.0.0
+ * @since           2026-02-04
+ * @author          พชร ไพศรีสกุล
+ * @lastModified    2026-02-18
+ * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
+ * ---------------------------------------------------------------------
+ * @description
+ *  หน้าจอสำหรับแสดงรายการแจ้งซ่อมของผู้ใช้งานปัจจุบัน
+ *  ผู้ใช้งานสามารถ:
+ *   - ดูรายการแจ้งซ่อมทั้งหมดของตนเอง
+ *   - ค้นหา และกรองข้อมูลตามสถานะ ความเร่งด่วน และวันที่
+ *   - ดูรายละเอียดงานซ่อม
+ *   - แก้ไขรายละเอียดงานซ่อม
+ *   - ลบรายการแจ้งซ่อม
+ *
+ * @requires
+ *   - vue
+ *   - vue-router
+ *   - sweetalert2
+ *   - @/composables/useMyRepairs
+ *   - @/components/table-component.vue
+ *   - @/components/table-actions-component.vue
+ *   - @/components/button/repair-button-component.vue
+ *   - @/components/filters/repair-filter-bar-component.vue
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *   - ปรับปรุงข้อความที่ใช้ให้เหมาะสม   [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ * =====================================================================
+ */
+
 <script setup>
-// ============================================
-// การกำหนดชื่อคอมโพเนนต์และการนำเข้า
-// ============================================
 defineOptions({ name: 'MyListView' })  // กำหนดชื่อของ component สำหรับการ debug
-import { ref, computed, onMounted } from 'vue'  // นำเข้าฟังก์ชันโปรแกรมจาก Vue
-import { useRouter, useRoute } from 'vue-router'  // นำเข้า router และ route สำหรับการนำทาง
-import Sweetalert from 'sweetalert2'  // นำเข้า SweetAlert2 สำหรับแจ้งเตือน
+import { ref, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import Sweetalert from 'sweetalert2'
+import { useMyRepairs } from '@/composables/useMyRepairs'
 
-// นำเข้าฟังก์ชันยูทิลิตี้
-import { extractDateFromCellContent } from '@/utils/date.util'  // ฟังก์ชันสำหรับแยกวันที่จากเซลล์
-import { createRepairDescriptionHtml } from '@/utils/repairRow.util'  // ฟังก์ชันสำหรับสร้าง HTML รายละเอียดการซ่อม
+// utils and HTML generation moved into composable; no local import needed
 
-// นำเข้าคอมโพเนนต์
 import TableComponent from '@/components/table-component.vue'  // คอมโพเนนต์ตาราง
 import TableActions from '@/components/table-actions-component.vue'  // คอมโพเนนต์ปุ่มการกระทำของแถว
 import RepairButton from '@/components/button/repair-button-component.vue'  // ปุ่มสำหรับเพิ่มการซ่อมใหม่
 import RepairFilterBar from '@/components/filters/repair-filter-bar-component.vue'  // แถบกรองสำหรับการซ่อม
 
-// นำเข้า composable สำหรับการยืนยันตัวตน
-import { useAuthToken } from '@/composables/useAuthToken'
+// auth handled inside composable
 
-// ============================================
-// การกำหนดค่า Router และ API
-// ============================================
-const router = useRouter()  // สร้างอินสแตนซ์เราเตอร์
-const route = useRoute()  // สร้างอินสแตนซ์เส้นทาง
-const API_BASE = import.meta.env.VITE_API_BASE  // URL ที่ใช้เรียก API
+const router = useRouter()
+const route = useRoute()
 
-// ============================================
 // โครงสร้างตาราง - ชื่อแต่ละคอลัมน์
-// ============================================
-const tableColumns = [
+const tableColumnList = [
   'หมายเลขแจ้งซ่อม',
   'ประเภทงาน',
-  'รายละเอียด',
+  'รายละเอียดโดยย่อ',
   'ความเร่งด่วน',
   'สถานะงาน',
   'ตัวดำเนินการ',
 ]
 
-// ============================================
 // ข้อมูลตาราง และสถานะ UI
-// ============================================
-const tableRowsList = ref([])  // รายการแถวของตาราง (ข้อมูลการซ่อม)
-const openMenuId = ref(null)  // ID ของแถวที่มีเมนูการกระทำเปิดอยู่
+const openMenuId = ref(null)
 
-// ============================================
-// ดึงข้อมูลผู้ใช้จาก composable
-// ============================================
-const { token, userId, isAuthenticated, logout } = useAuthToken()
+// use composable to centralize data and actions
+const {
+  tableRows,
+  isLoading,
+  errorMessage,
+  search,
+  selectedStatuses,
+  selectedUrgencies,
+  selectedDate,
+  loadMyRepairs,
+  deleteRepair,
+  resetFilters,
+  filteredRows,
+} = useMyRepairs()
 
-// ============================================
 // สถานะตัวกรอง (Filter)
-// ============================================
-const searchInput = ref('')  // ค่าการค้นหา
-const selectedStatuses = ref([])  // สถานะที่เลือก
-const selectedUrgencies = ref([])  // ความเร่งด่วนที่เลือก
-const selectedDate = ref('')  // วันที่ที่เลือก
+// local refs that bind to composable
+const searchInput = search
+const selectedStatuseList = selectedStatuses
+const selectedUrgencieLsit = selectedUrgencies
+const selectedDateLocal = selectedDate
 
-// ============================================
 // ฟังก์ชันโหลดข้อมูล
-// ============================================
 /**
  * โหลดรายการการซ่อมของผู้ใช้ปัจจุบัน
  * ตรวจสอบการยืนยันตัวตน จากนั้นดึงข้อมูลจาก API
  * แปลงข้อมูลให้เป็นรูปแบบตาราง
  */
-async function loadMyRepairs() {
-  if (!isAuthenticated.value) {
-    logout()
-    return
-  }
+// load data via composable
+// loadMyRepairs is provided by useMyRepairs
 
-  try {
-    const response = await fetch(`${API_BASE}/my-repairs/${userId.value}`, {
-      headers: {
-        Authorization: `Bearer ${token.value}`,
-      },
-    })
-
-    const data = await response.json()
-    if (!response.ok) {
-      throw new Error(data.message || 'LOAD_FAILED')
-    }
-
-    tableRowsList.value = data.map((repair) => {
-
-      return [
-        repair.rf_code,  // หมายเลขแจ้งซ่อม
-        repair.tt_name,  // ประเภทงาน
-        createRepairDescriptionHtml(repair),  // รายละเอียด
-        repair.rf_urgency,  // ความเร่งด่วน
-        repair.rf_user_status,  // สถานะงาน
-        '',  // คอลัมน์การกระทำ (จะเทมเพลตต่อไป)
-      ]
-    })
-  } catch (error) {
-    console.error('Load my repairs failed:', error.message)
-  }
-}
-
-// ============================================
-// คอมพิวเต็ด: การกรองข้อมูล
-// ============================================
 /**
  * กรองแถวตาราง ตามเงื่อนไข:
  * 1. ค้นหาตามชื่อ ประเภท หรือสถานที่
@@ -110,162 +104,57 @@ async function loadMyRepairs() {
  * 3. กรองตามสถานะ
  * 4. กรองตามวันที่
  */
-const filteredRows = computed(() => {
-  const search = searchInput.value.toLowerCase()
-  const dateFilter = selectedDate.value
+// filteredRows provided by composable
 
-  return tableRowsList.value.filter((row) => {
-    const dateFromRow = extractDateFromCellContent(row[2])  // แยกวันที่จากเซลล์รายละเอียด
-    const code = String(row[0]).toLowerCase()  // หมายเลขแจ้งซ่อม
-    const type = String(row[1]).toLowerCase()  // ประเภทงาน
-    const location = String(row[2]).toLowerCase()  // สถานที่
-    const urgency = row[3]  // ความเร่งด่วน
-    const status = row[4]  // สถานะงาน
+// รีเซ็ตตัวกรองทั้งหมด
+// reset is provided by composable resetFilters
 
-    // ตรวจสอบการค้นหา - ค้นหาในหมายเลข ประเภท และสถานที่
-    const matchesSearch =
-      code.includes(search) || type.includes(search) || location.includes(search)
-
-    // ตรวจสอบความเร่งด่วน - หากไม่มีตัวกรอง จะแสดงทั้งหมด
-    const matchesUrgency =
-      selectedUrgencies.value.length === 0 || selectedUrgencies.value.includes(urgency)
-
-    // ตรวจสอบสถานะ - หากไม่มีตัวกรอง จะแสดงทั้งหมด
-    const matchesStatus =
-      selectedStatuses.value.length === 0 || selectedStatuses.value.includes(status)
-
-    // ตรวจสอบวันที่ - หากไม่มีตัวกรอง จะแสดงทั้งหมด
-    const matchesDate =
-      !dateFilter || dateFromRow === new Date(dateFilter).toLocaleDateString('th-TH')
-
-    return matchesSearch && matchesUrgency && matchesStatus && matchesDate
-  })
-})
-
-// ============================================
-// ฟังก์ชันการกระทำ (Actions)
-// ============================================
-/**
- * รีเซ็ตตัวกรองทั้งหมด
- */
-function resetFilters() {
-  selectedUrgencies.value = []  // รีเซ็ตความเร่งด่วน
-  selectedStatuses.value = []  // รีเซ็ตสถานะ
-  searchInput.value = ''  // รีเซ็ตค้นหา
-  selectedDate.value = ''  // รีเซ็ตวันที่
-}
-
-// ============================================
-// ตัวจัดการการนำทาง
-// ============================================
 // นำทางไปยังหน้ารายละเอียดการซ่อม
 const openDetail = (code) => router.push(`/main/repair-detail/${code}`)
 // นำทางไปยังหน้าแก้ไขการซ่อม
 const openEdit = (code) => router.push(`/main/repair-edit/${code}`)
 
-// ============================================
-// ฟังก์ชันลบการซ่อม
-// ============================================
-/**
- * ลบรายการการซ่อม
- * แสดง Sweetalert เพื่อขอการยืนยัน
- * หากยืนยัน จะส่ง DELETE request ไปยัง API
- */
-async function deleteRepair(repairCode) {
-  if (!isAuthenticated.value) {  // ตรวจสอบการยืนยันตัวตน
-    logout()  // ออกจากระบบหากไม่ได้รับการยืนยัน
-    return
-  }
-
-  // แสดงกล่องยืนยันรูปแบบ SweetAlert
+// show confirm dialog and call composable delete
+async function handleDeleteRepair(repairCode) {
   const confirm = await Sweetalert.fire({
-    title: 'ลบรายการนี้?',  // หัวเรื่อง
-    text: `คุณต้องการลบใบแจ้งซ่อมหมายเลข ${repairCode} หรือไม่?`,  // ข้อความพร้อมหมายเลขการซ่อม
-    icon: 'warning',  // ไอคอนเตือน
-    showCancelButton: true,  // แสดงปุ่มยกเลิก
-    confirmButtonText: 'ลบเลย',  // ข้อความปุ่มยืนยัน
-    cancelButtonText: 'ยกเลิก',  // ข้อความปุ่มยกเลิก
-    confirmButtonColor: '#e53e3e',  // สีปุ่มยืนยัน (แดง)
+    title: 'ลบรายการนี้?',
+    text: `คุณต้องการลบรายการแจ้งซ่อมหมายเลข ${repairCode} หรือไม่?`,
+    icon: 'warning',
+    showCancelButton: true,
+    reverseButtons: true,
+    cancelButtonText: 'ยกเลิก',
+    confirmButtonText: 'ยืนยัน',
+    confirmButtonColor: '#e53e3e',
   })
-
-  // ตรวจสอบว่าผู้ใช้ยืนยันหรือไม่
   if (!confirm.isConfirmed) return
 
-  try {
-    // ดึง token จาก localStorage หรือ sessionStorage
-    const token = localStorage.getItem('token') || sessionStorage.getItem('token')
-    // ส่ง DELETE request ไปยัง API
-    const response = await fetch(`${API_BASE}/my-repairs/${repairCode}`, {
-      method: 'DELETE',  // ใช้ HTTP method DELETE
-      headers: {
-        'Content-Type': 'application/json',  // ระบุ content type
-        Authorization: `Bearer ${token}`  // ส่ง token สำหรับการยืนยันตัวตน
-      },
-    })
-
-    const data = await response.json()  // แปลงการตอบสนองเป็น JSON
-    if (!response.ok) throw new Error(data.message)  // ตรวจสอบข้อผิดพลาด
-
-    // อัปเดตรายการแถวโดยลบแถวที่ลบ
-    tableRowsList.value = tableRowsList.value.filter((row) => row[0] !== repairCode)
-
-    // แสดงข้อความสำเร็จ
-    Sweetalert.fire({
-      toast: true,  // แสดงเป็น toast (มุมบนขวา)
-      position: 'top-end',  // ตำแหน่ง
-      title: 'ลบสำเร็จ',  // หัวเรื่อง
-      text: `ลบใบแจ้งซ่อมหมายเลข ${repairCode} แล้ว`,  // ข้อความ
-      icon: 'success',  // ไอคอนสำเร็จ
-      timer: 2500,  // แสดงเป็นเวลา 2.5 วินาที
-      showConfirmButton: false,  // ไม่แสดงปุ่มยืนยัน
-    })
-  } catch (err) {
-    // แสดงข้อความข้อผิดพลาด
-    Sweetalert.fire({
-      toast: true,  // แสดงเป็น toast
-      position: 'top-end',  // ตำแหน่ง
-      title: 'เกิดข้อผิดพลาด',  // หัวเรื่อง
-      text: err.message,  // ข้อความข้อผิดพลาด
-      icon: 'error',  // ไอคอนข้อผิดพลาด
-      timer: 2500,  // แสดงเป็นเวลา 2.5 วินาที
-      showConfirmButton: false,  // ไม่แสดงปุ่มยืนยัน
-    })
+  const result = await deleteRepair(repairCode)
+  if (result.ok) {
+    Sweetalert.fire({ toast: true, position: 'top-end', title: 'ลบรายการแจ้งซ่อมสำเร็จ', text: `ลบ ${repairCode}`, icon: 'success', timer: 2000, showConfirmButton: false })
+  } else {
+    Sweetalert.fire({ toast: true, position: 'top-end', title: 'เกิดข้อผิดพลาด', text: result.message || 'DELETE_FAILED', icon: 'error', timer: 2500, showConfirmButton: false })
   }
 }
 
-// ============================================
 // ลักษณะ Lifecycle
-// ============================================
-/**
- * ทำงานเมื่อคอมโพเนนต์โหลด
- * โหลดข้อมูลการซ่อม
- * ตั้งค่าตัวกรองจาก query parameters (ถ้ามี)
- */
 onMounted(() => {
-  loadMyRepairs()  // โหลดข้อมูลการซ่อมของผู้ใช้
-  // ตั้งค่าตัวกรองจาก query เช่น ?status=pending
+  loadMyRepairs()
   if (route.query.status && ['pending', 'in_progress', 'done'].includes(route.query.status)) {
-    selectedStatuses.value = [route.query.status]  // ตั้งค่าสถานะตัวกรอง
+    selectedStatuseList.value = [route.query.status]
   }
 })
 </script>
 
 <template>
-  <!-- ============================================  -->
-  <!-- หลัก: คอนเทนเนอร์หลัก -->
-  <!-- ============================================  -->
   <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-7xl">
-    <!-- หัวข้อหลัก -->
-    <h1 class="text-xl font-bold text-black mb-6">รายการของฉัน</h1>
+    <h1 class="text-xl font-bold text-black mb-6">รายการแจ้งซ่อมของฉัน</h1>
 
-    <!-- ============================================  -->
     <!-- แถบตัวกรอง - ค้นหา, กรองสถานะ, ความเร่งด่วน, วันที่ -->
-    <!-- ============================================  -->
     <RepairFilterBar
       mode="repair"
       v-model:search="searchInput"
-      v-model:statuses="selectedStatuses"
-      v-model:urgencies="selectedUrgencies"
+      v-model:statuses="selectedStatuseList"
+      v-model:urgencies="selectedUrgencieLsit"
       v-model:date="selectedDate"
       @reset="resetFilters"
     >
@@ -275,12 +164,10 @@ onMounted(() => {
       </template>
     </RepairFilterBar>
 
-    <!-- ============================================  -->
     <!-- ตาราง - แสดงรายการการซ่อมของผู้ใช้ -->
-    <!-- ============================================  -->
     <div class="p-3 mx-auto max-w-8xl">
       <TableComponent
-        :columns="tableColumns"
+        :columns="tableColumnList"
         :rows="filteredRows"
         :perPage="10"
         :urgencyColumn="3"
@@ -290,9 +177,7 @@ onMounted(() => {
         :id-column-as-link="true"
         @detail="openDetail"
       >
-        <!-- ============================================  -->
         <!-- เทมเพลต: คอลัมน์การกระทำ (ปุ่มแก้ไข/ลบ) -->
-        <!-- ============================================  -->
         <!-- คอลัมน์ Action (ดัชนี 5) -->
         <template #cell-5="{ row }">
           <TableActions
@@ -304,7 +189,7 @@ onMounted(() => {
             :status="row[4]"
             @detail="openDetail(row[0])"
             @edit="openEdit(row[0])"
-            @delete="deleteRepair(row[0])"
+            @delete="handleDeleteRepair(row[0])"
           />
         </template>
       </TableComponent>

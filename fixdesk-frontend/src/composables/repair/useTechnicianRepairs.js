@@ -5,16 +5,12 @@ export function useTechnicianRepairs(tokenRef, isAuthenticatedRef, logout) {
   const repairRequests = ref([])
   const loading = ref(false)
 
-  const mapUrgency = (u) =>
-    ({ high: 'เร่งด่วนมาก', medium: 'เร่งด่วน', low: 'ไม่เร่งด่วน' })[u] || 'เร่งด่วน'
+  // แปลงค่า urgency ให้เป็นข้อความอ่านง่าย
+  const mapUrgency = (u) => ({ high: 'เร่งด่วนมาก', medium: 'เร่งด่วน', low: 'ไม่เร่งด่วน' })[u] || 'เร่งด่วน'
 
+  // แปลงสถานะเป็นข้อความอ่านง่าย
   const mapStatus = (s) =>
-    ({
-      pending: 'รอดำเนินการ',
-      in_progress: 'กำลังดำเนินการ',
-      done: 'เสร็จสิ้น',
-      cancel: 'ยกเลิก',
-    })[s] || 'รอดำเนินการ'
+    ({ pending: 'รอดำเนินการ', in_progress: 'กำลังดำเนินการ', done: 'เสร็จสิ้น', cancel: 'ยกเลิก' })[s] || 'รอดำเนินการ'
 
   const fetchRepairRequests = async () => {
     loading.value = true
@@ -27,9 +23,10 @@ export function useTechnicianRepairs(tokenRef, isAuthenticatedRef, logout) {
 
       const data = await getTechnicianRepairList(tokenRef.value)
 
+      // แปลงข้อมูลตอบกลับให้ง่ายต่อการใช้งานใน UI
       repairRequests.value = data.map((item) => ({
         ...item,
-        rawDate: item.rf_create_at,
+        createdAt: item.rf_create_at, // วันที่สร้าง 
         status: mapStatus(item.rf_user_status),
         urgency: mapUrgency(item.rf_urgency),
       }))

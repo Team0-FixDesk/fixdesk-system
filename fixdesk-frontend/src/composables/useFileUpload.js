@@ -1,14 +1,16 @@
 import { ref } from 'vue'
 import Swal from 'sweetalert2'
 
+// Composable สำหรับการจัดการการอัปโหลดไฟล์ (drag & drop + preview)
+// รับไฟล์, ตรวจความถูกต้อง, เก็บ preview และลบไฟล์
 export function useFileUpload(API_BASE_URL, options = {}) {
   const MAX_FILE_COUNT = options.maxCount ?? 5
   const MAX_FILE_SIZE = options.maxSize ?? 50 * 1024 * 1024
 
   const isDragOver = ref(false)
-  const filePreviewList = ref([])
-  const existingFileList = ref([])
-  const uploadedFileList = ref([])
+  const filePreviewList = ref([]) // รายการที่ใช้แสดง preview ทั้งจาก client และ server
+  const existingFileList = ref([]) // path ที่มีอยู่บน server
+  const uploadedFileList = ref([]) // File objects ที่ยังไม่ได้อัปโหลด
 
   /* ================= Upload Events ================= */
 

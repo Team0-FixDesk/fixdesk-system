@@ -1,7 +1,7 @@
 
-
 import { ref } from 'vue'
-
+// Composable สำหรับโหลดข้อมูลสถานที่/ประเภทงานที่ใช้ในฟอร์ม
+// คืนค่า: รายการประเภทงาน, อาคาร, ชั้น, ห้อง และฟังก์ชันดึงข้อมูล
 export function useRepairLocationData(API_BASE_URL) {
   const repairTypeList = ref([])
   const buildingList = ref([])

@@ -1,3 +1,38 @@
+/**
+ * =====================================================================
+ * @file            admin-repair-list.view.vue
+ * @module          มอดูลผู้ดูแลระบบ - การมอบหมายงานให้ช่างผู้รับผิดชอบหลัก
+ * @layer           View (Presentation Layer)
+ * @version         1.0.0
+ * @since           2025-10-21
+ * @author          พชร ไพศรีสกุล
+ * @lastModified    2026-02-18
+ * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
+ * ---------------------------------------------------------------------
+ * @description
+ *  หน้าจอสำหรับมอบหมายงานซ่อมของผู้ดูแลระบบ
+ *  แสดงรายการแจ้งซ่อมทั้งหมดในระบบ
+ *  ผู้ดูแลระบบสามารถ:
+ *   - ดูรายการแจ้งซ่อมทั้งหมด
+ *   - ค้นหา และกรองข้อมูลตามสถานะ ความเร่งด่วน และวันที่
+ *   - ดูรายละเอียดงานซ่อม
+ *   - มอบหมายงานซ่อมให้ช่างซ่อมผู้รับผิดชอบหลัก
+ *
+ * @requires
+ *   - vue
+ *   - vue-router
+ *   - @/components/table-component.vue
+ *   - @/components/table-actions-component.vue
+ *   - @/components/modal/assign-job-modal-component.vue
+ *   - @/components/filters/repair-filter-bar-component.vue
+ *   - @/composables/useTruncateText
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *   - ปรับปรุงข้อความที่ใช้ให้เหมาะสม   [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ * =====================================================================
+ */
+
 <script setup>
 /* =========================
   Imports (external)
@@ -26,7 +61,7 @@ const STORAGE_KEYS = {
   token: 'token',
 }
 
-const TABLE_COLUMNS = ['หมายเลขแจ้งซ่อม', 'รายละเอียด', 'ความเร่งด่วน', 'สถานะงาน', 'การดำเนินการ']
+const TABLE_COLUMNS = ['หมายเลขแจ้งซ่อม', 'รายละเอียดโดยย่อ', 'ความเร่งด่วน', 'สถานะงาน', 'ตัวดำเนินการ']
 
 const TH_LOCALE = 'th-TH'
 
@@ -105,6 +140,7 @@ function buildRepairDetailHtml(repair) {
 }
 
 async function fetchAdminRepairs() {
+  console.log('🔄 [Admin] fetchAdminRepairs called')
   const token = getAuthToken()
   if (!token) {
     console.error('Token not found. User may not be logged in.')
@@ -127,10 +163,12 @@ async function fetchAdminRepairs() {
   }
 
   // รองรับทั้งแบบเป็น array ตรง ๆ หรือห่อด้วย data
-  if (Array.isArray(payload)) return payload
-  if (Array.isArray(payload?.data)) return payload.data
-
-  return []
+  const result = Array.isArray(payload) ? payload : (Array.isArray(payload?.data) ? payload.data : [])
+  console.log('🔍 [Admin] fetchAdminRepairs result count:', result.length)
+  if (result.length > 0) {
+    console.log('🔍 [Admin] First repair sample:', result[0])
+  }
+  return result
 }
 
 function mapRepairToTableRow(repair) {
@@ -158,6 +196,10 @@ async function loadAdminRepairs() {
   try {
     const repairs = await fetchAdminRepairs()
     tableRowsList.value = repairs.map(mapRepairToTableRow)
+    console.log('📋 [Admin] tableRowsList updated, count:', tableRowsList.value.length)
+    if (tableRowsList.value.length > 0) {
+      console.log('📋 [Admin] First row meta:', tableRowsList.value[0].meta)
+    }
   } catch (error) {
     console.error('Failed to load admin repairs:', error?.message || error)
   }
@@ -219,7 +261,7 @@ onMounted(() => {
 
 <template>
   <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-7xl">
-    <h1 class="text-xl font-bold text-black mb-6">รายการแจ้งซ่อมทั้งหมด</h1>
+    <h1 class="text-xl font-bold text-black mb-6">รายการแจ้งซ่อมทั้งหมดในระบบ</h1>
 
     <!-- ---------------- Filters ---------------- -->
     <RepairFilterBar
@@ -242,7 +284,7 @@ onMounted(() => {
       :id-column-as-link="true"
       @detail="openDetail"
     >
-      <!-- คอลัมน์ Action (index 7) -->
+      <!-- คอลัมน์ Action (index 4) -->
       <template #cell-4="{ row, rowIndex }">
         <TableActions
           :row-id="row[0]"

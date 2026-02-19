@@ -1,6 +1,63 @@
+/**
+ * =====================================================================
+ * @file            public.service.js
+ * @layer           Service Layer (Business Logic Layer)
+ * @version         1.1.0
+ * @since           2026-02-10
+ * @author          พชร ไพศรีสกุล
+ * @contributors
+ *   - พชร ไพศรีสกุล
+ *   - นราธิป แสนทวีสุข
+ *
+ * @lastModified    2026-02-14
+ * @lastModifiedBy  นราธิป แสนทวีสุข
+ * ---------------------------------------------------------------------
+ * @description
+ *  Service สำหรับจัดการ Public Logic
+ *  ใช้สำหรับการค้นหาข้อมูลใบแจ้งซ่อม (Repair Form)
+ *  โดยไม่ต้องมีการยืนยันตัวตน (Public Access)
+ *
+ *  รองรับการทำงาน:
+ *    - ค้นหาใบแจ้งซ่อมด้วย keyword
+ *    - รองรับการค้นหาจากหลาย field เช่น
+ *        - รหัสใบแจ้งซ่อม
+ *        - ชื่อผู้แจ้ง
+ *        - นามสกุลผู้แจ้ง
+ *        - หน่วยงาน
+ *        - ชื่อ-นามสกุลแบบรวม
+ *    - รองรับ pagination (limit, offset)
+ *    - คืนค่าจำนวนทั้งหมด และข้อมูลรายการ
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *   - Initial implementation Public Service ตาม Layered Architecture
+ *     [2026-02-10, พชร ไพศรีสกุล] V 1.0.0
+ *   - เพิ่มการค้นหาที่ยืดหยุ่นขึ้น รองรับหลาย field และชื่อแบบรวม
+ *     [2026-02-14, นราธิป แสนทวีสุข] V 1.1.0
+ *
+ * =====================================================================
+ */
+
+/**
+ * Public Service Module
+ * จัดการ Business Logic สำหรับ Public API
+ *
+ * @param {Object} db - Database connection instance
+ * @returns {Object} Public Service Functions
+ */
 module.exports = (db) => {
   return {
-    // ฟังก์ชันค้นหาข้อมูลใบแจ้งซ่อม (Repair Form)
+    /**
+     * ค้นหาข้อมูลใบแจ้งซ่อม (Repair Form)
+     * รองรับการค้นหาแบบ partial match และ pagination
+     * @param {string} keyword - คำค้นหา
+     * @param {number} limit - จำนวนข้อมูลต่อหน้า
+     * @param {number} offset - จุดเริ่มต้นของข้อมูล
+     *
+     * @returns {Promise<Object>}
+     * @returns {number} returns.total - จำนวนข้อมูลทั้งหมด
+     * @returns {Array<Object>} returns.data - รายการข้อมูลใบแจ้งซ่อม
+     */
     async searchRepairForms(keyword, limit, offset) {
       // เตรียมคำค้นหา (ใส่ % หน้าหลังเพื่อหาบางส่วนของคำได้)
       const searchKeyword = `%${keyword}%`;
@@ -16,6 +73,8 @@ module.exports = (db) => {
           OR user.us_first_name_th LIKE ?
           OR user.us_last_name_th LIKE ?
           OR user.us_department LIKE ?
+          OR CONCAT(user.us_first_name_th, ' ', user.us_last_name_th) LIKE ?
+          OR CONCAT(COALESCE(user.us_first_name_th, ''), COALESCE(user.us_last_name_th, '')) LIKE ?
       `;
 
       // 2. คำสั่ง SQL สำหรับดึงข้อมูลมาแสดง (Data)
@@ -41,6 +100,8 @@ module.exports = (db) => {
           OR user.us_first_name_th LIKE ?
           OR user.us_last_name_th LIKE ?
           OR user.us_department LIKE ?
+          OR CONCAT(user.us_first_name_th, ' ', user.us_last_name_th) LIKE ?
+          OR CONCAT(COALESCE(user.us_first_name_th, ''), COALESCE(user.us_last_name_th, '')) LIKE ?
         ORDER BY repairForm.rf_create_at DESC
         LIMIT ? OFFSET ?
       `;
@@ -51,7 +112,14 @@ module.exports = (db) => {
         new Promise((resolve, reject) => {
           db.query(
             countSqlStatement,
-            [searchKeyword, searchKeyword, searchKeyword, searchKeyword],
+            [
+              searchKeyword,
+              searchKeyword,
+              searchKeyword,
+              searchKeyword,
+              searchKeyword,
+              searchKeyword,
+            ],
             (err, res) => {
               if (err) reject(err);
               else resolve(res);
@@ -63,6 +131,8 @@ module.exports = (db) => {
           db.query(
             dataSqlStatement,
             [
+              searchKeyword,
+              searchKeyword,
               searchKeyword,
               searchKeyword,
               searchKeyword,

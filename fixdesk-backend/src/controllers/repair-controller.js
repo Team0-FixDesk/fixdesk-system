@@ -1,6 +1,57 @@
+/**
+ * =====================================================================
+ * @file            repair.controller.js
+ * @layer           Controller Layer (Presentation Layer)
+ * @version         1.0.0
+ * @since           2026-02-10
+ * @author          พชร ไพศรีสกุล
+ * @contributors
+ *   - พชร ไพศรีสกุล
+ *   - นราธิป แสนทวีสุข
+ *
+ * @lastModified    2026-02-11
+ * @lastModifiedBy  นราธิป แสนทวีสุข
+ * ---------------------------------------------------------------------
+ * @description
+ *  Controller สำหรับจัดการใบแจ้งซ่อม (Repair Request Management)
+ *  ทำหน้าที่รับ request จาก client และเรียกใช้งาน repairService
+ *
+ *  รองรับการทำงาน:
+ *    - Upload และจัดการไฟล์แนบ
+ *    - สร้าง แก้ไข และลบใบแจ้งซ่อม
+ *    - ดึงข้อมูลใบแจ้งซ่อมสำหรับ Admin, User และ Technician
+ *    - มอบหมายงานให้ช่าง (Individual / Team)
+ *    - ฟีเจอร์สำหรับช่าง เช่น รับงาน และดูสถิติ
+ *
+ * @usedBy
+ *   - repair.route.js
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *   - Initial implementation Repair Controller ตาม Layered Architecture
+ *     [2026-02-10, พชร ไพศรีสกุล] V 1.0.0
+ *   - เพิ่มระบบแจ้งเตือน LINE แบบ Flex Message และแก้ไขการรับงานเป็นทีม
+ *     [2026-02-10, นราธิป แสนทวีสุข] V 1.1.0
+ *
+ * =====================================================================
+ */
 module.exports = (repairService) => {
   return {
-    // --- File Upload Helper ---
+    // --- FILE MANAGEMENT CONTROLLER ---
+    /**
+     * อัพโหลดไฟล์แนบสำหรับใบแจ้งซ่อม
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-10
+     * @lastModifiedBy พชร ไพศรีสกุล
+     * @contributors
+     *  - พชร ไพศรีสกุล
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async uploadFiles(req, res) {
       try {
         if (!req.files || req.files.length === 0)
@@ -25,6 +76,20 @@ module.exports = (repairService) => {
       }
     },
 
+    /**
+     * ลบไฟล์แนบของใบแจ้งซ่อม
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-10
+     * @lastModifiedBy พชร ไพศรีสกุล
+     * @contributors
+     *  - พชร ไพศรีสกุล
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async deleteFile(req, res) {
       const fs = require("fs");
       const path = require("path");
@@ -39,7 +104,21 @@ module.exports = (repairService) => {
       });
     },
 
-    // --- Repair Actions ---
+    // --- REPAIR REQUEST CONTROLLER ---
+    /**
+     * สร้างใบแจ้งซ่อมใหม่
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-10
+     * @lastModifiedBy พชร ไพศรีสกุล
+     * @contributors
+     *  - พชร ไพศรีสกุล
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async createRepair(req, res) {
       try {
         const { us_id, repair_type_id, room_id, problem_detail } = req.body;
@@ -83,6 +162,20 @@ module.exports = (repairService) => {
       }
     },
 
+    /**
+     * แก้ไขข้อมูลใบแจ้งซ่อม
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-10
+     * @lastModifiedBy พชร ไพศรีสกุล
+     * @contributors
+     *  - พชร ไพศรีสกุล
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async updateRepair(req, res) {
       try {
         const { code } = req.params;
@@ -129,6 +222,20 @@ module.exports = (repairService) => {
       }
     },
 
+    /**
+     * ลบใบแจ้งซ่อม
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-10
+     * @lastModifiedBy พชร ไพศรีสกุล
+     * @contributors
+     *  - พชร ไพศรีสกุล
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async deleteRepair(req, res) {
       try {
         const affected = await repairService.deleteRepair(req.params.code);
@@ -142,7 +249,21 @@ module.exports = (repairService) => {
       }
     },
 
-    // --- Query Actions ---
+    // --- QUERY CONTROLLER ---
+    /**
+     * ดึงรายการใบแจ้งซ่อมสำหรับผู้ดูแลระบบ (Admin)
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-10
+     * @lastModifiedBy พชร ไพศรีสกุล
+     * @contributors
+     *  - พชร ไพศรีสกุล
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async getAdminRepairs(req, res) {
       try {
         const results = await repairService.getAdminRepairs();
@@ -152,6 +273,20 @@ module.exports = (repairService) => {
       }
     },
 
+    /**
+     * ดึงรายการใบแจ้งซ่อมของผู้ใช้งาน
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-10
+     * @lastModifiedBy พชร ไพศรีสกุล
+     * @contributors
+     *  - พชร ไพศรีสกุล
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async getUserRepairs(req, res) {
       try {
         const results = await repairService.getUserRepairs(req.params.userId);
@@ -161,6 +296,20 @@ module.exports = (repairService) => {
       }
     },
 
+    /**
+     * ดึงรายละเอียดใบแจ้งซ่อม
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-10
+     * @lastModifiedBy พชร ไพศรีสกุล
+     * @contributors
+     *  - พชร ไพศรีสกุล
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async getRepairDetail(req, res) {
       try {
         const result = await repairService.getRepairDetail(req.params.code);
@@ -172,7 +321,22 @@ module.exports = (repairService) => {
       }
     },
 
-    // --- Assignments ---
+    // --- ASSIGNMENT CONTROLLER ---
+    /**
+     * มอบหมายงานให้ช่างแบบรายบุคคล
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-11
+     * @lastModifiedBy นราธิป แสนทวีสุข
+     * @contributors
+     *  - พชร ไพศรีสกุล
+     *  - นราธิป แสนทวีสุข
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async assignIndividual(req, res) {
       try {
         const { rf_code, technician_id, is_lead, assigned_by, ra_assigned_by } =
@@ -210,14 +374,35 @@ module.exports = (repairService) => {
       }
     },
 
+    /**
+     * มอบหมายงานให้ทีมช่าง
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-18
+     * @lastModifiedBy นราธิป แสนทวีสุข
+     * @contributors
+     *  - พชร ไพศรีสกุล
+     *  - นราธิป แสนทวีสุข
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async assignTeam(req, res) {
       try {
+        console.log("assignTeam - Request body:", req.body);
         const { rf_code, technician_ids, lead_id } = req.body;
         if (!rf_code || !Array.isArray(technician_ids))
           return res.status(400).json({ message: "ข้อมูลไม่ครบ" });
 
         const techIds = technician_ids.map(Number).filter(Number.isFinite);
         const leadIdNum = lead_id ? Number(lead_id) : techIds[0];
+        console.log("assignTeam - Parsed data:", {
+          rf_code,
+          techIds,
+          leadIdNum,
+        });
 
         if (techIds.length === 0)
           return res
@@ -235,13 +420,29 @@ module.exports = (repairService) => {
           lead_id: leadIdNum,
         });
       } catch (err) {
+        console.error("assignTeam error:", err);
         res
           .status(500)
           .json({ message: "มอบหมายทีมไม่สำเร็จ", error: err.message });
       }
     },
 
-    // --- Tech Features ---
+    // --- TECHNICIAN CONTROLLER ---
+    /**
+     * ช่างรับงานซ่อม
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-11
+     * @lastModifiedBy นราธิป แสนทวีสุข
+     * @contributors
+     *  - พชร ไพศรีสกุล
+     *  - นราธิป แสนทวีสุข
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async acceptJob(req, res) {
       try {
         const techId = req.user.us_id || req.user.id;
@@ -257,6 +458,20 @@ module.exports = (repairService) => {
       }
     },
 
+    /**
+     * ดึงรายการงานซ่อมของช่าง
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-10
+     * @lastModifiedBy พชร ไพศรีสกุล
+     * @contributors
+     *  - พชร ไพศรีสกุล
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async getTechRepairs(req, res) {
       try {
         const techId = req.user.us_id || req.user.id;
@@ -267,6 +482,20 @@ module.exports = (repairService) => {
       }
     },
 
+    /**
+     * ดึงสถิติการซ่อมของผู้ใช้งานหรือช่าง
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-10
+     * @lastModifiedBy พชร ไพศรีสกุล
+     * @contributors
+     *  - พชร ไพศรีสกุล
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async getStats(req, res) {
       try {
         const stats = await repairService.getStats(req.params.userId);

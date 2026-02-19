@@ -5,7 +5,7 @@ import { loginUser } from '@/services/auth'
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     userAuthenticationToken: null, // โทเคนสำหรับยืนยันตัวตน
-    userInformation: null,         // ข้อมูลของผู้ใช้งานที่ล็อกอินอยู่
+    userInformation: null, // ข้อมูลของผู้ใช้งานที่ล็อกอินอยู่
   }),
 
   actions: {
@@ -23,6 +23,11 @@ export const useAuthStore = defineStore('auth', {
         id: decodedTokenPayload.us_id,
         username: decodedTokenPayload.us_user_name,
         role: decodedTokenPayload.role_name,
+
+        fullName:
+          `${decodedTokenPayload.us_prefix_th || ''}${decodedTokenPayload.us_first_name_th || ''} ${decodedTokenPayload.us_last_name_th || ''}`.trim(),
+
+        department: decodedTokenPayload.us_department || '',
       }
 
       // ถ้าติ๊ก "จำฉันไว้" -> เก็บลง localStorage (ปิด browser ไม่หาย)

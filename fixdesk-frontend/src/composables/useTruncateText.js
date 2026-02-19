@@ -1,3 +1,5 @@
+// Composable สำหรับตัดข้อความให้สั้นลงสำหรับการแสดงผล
+// พยายามตัดเป็นประโยค > คำ > ตัวอักษร ตามลำดับ
 export function useTruncateText() {
   const truncateSentences = (text) => {
     if (!text) return ''
@@ -14,7 +16,7 @@ export function useTruncateText() {
         return sentences[0]
       }
     } catch {
-      // ignore
+      // ไม่รองรับ Intl.Segmenter ให้ข้ามไป
     }
 
     // พยายามตัดเป็นคำ
@@ -26,10 +28,10 @@ export function useTruncateText() {
         return words.slice(0, MAX_WORDS).join('')
       }
     } catch {
-      // ignore
+      // ข้ามไปถ้าไม่รองรับ
     }
 
-    // fallback ตัดตามตัวอักษร
+    // fallback: ตัดตามตัวอักษร
     return text.length > MAX_CHARS ? text.slice(0, MAX_CHARS) + '...' : text
   }
 

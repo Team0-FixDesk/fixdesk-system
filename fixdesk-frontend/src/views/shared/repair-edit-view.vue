@@ -150,7 +150,8 @@ async function submitRepairEdit() {
     title: 'ยืนยันการบันทึกข้อมูล?',
     icon: 'question',
     showCancelButton: true,
-    confirmButtonText: 'ยืนยัน'
+    confirmButtonText: 'ยืนยัน',
+    cancelButtonText: 'ยกเลิก',
   })
 
   if (!confirm.isConfirmed) return

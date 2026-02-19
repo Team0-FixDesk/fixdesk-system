@@ -3,19 +3,24 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.store'
 import { getRoutePathByUserRole } from '@/utils/auth.util'
 
+// Composable สำหรับจัดการกระบวนการล็อกอิน
+// เก็บ state ฟอร์ม, ตรวจความถูกต้องพื้นฐาน และเรียก API ผ่าน store
 export function useLogin() {
   const router = useRouter()
   const authStore = useAuthStore()
 
+  // ฟอร์มข้อมูลและสถานะ UI
   const username = ref('')
   const password = ref('')
   const errorMessage = ref('')
   const isLoading = ref(false)
   const isRememberMe = ref(false)
 
+  // ฟังก์ชันส่งข้อมูลเข้าสู่ระบบ
   const handleLogin = async () => {
     errorMessage.value = ''
 
+    // ตรวจสอบฟิลด์พื้นฐาน (ไม่ต้องซับซ้อน)
     if (!username.value.trim() && !password.value.trim()) {
       errorMessage.value = 'กรุณากรอกชื่อผู้ใช้และรหัสผ่าน'
       return
@@ -36,6 +41,7 @@ export function useLogin() {
     try {
       const user = await authStore.loginUserAccount(username.value, password.value, isRememberMe.value)
 
+      // นำทางไปยังหน้าเฉพาะตามบทบาท
       router.push(getRoutePathByUserRole(user.role))
     } catch (error) {
       console.error('Login failed:', error.message)

@@ -26,7 +26,6 @@ const API_BASE = import.meta.env.VITE_API_BASE
 
 const columnList = [
   'ID',
-  'หมายเลขอุปกรณ์',
   'ชื่อรายการ',
   'หมวดหมู่',
   'จำนวน',
@@ -189,13 +188,12 @@ async function fetchAllStock() {
 
       return [
         productId, // 0
-        assetCode, // 1
-        item.pd_name ?? '-', // 2
-        item.ct_name ?? '-', // 3
-        quantity, // 4
-        item.units_name ?? '-', // 5
-        stockStatus, // 6
-        'actions', // 7
+        item.pd_name ?? '-', // 1
+        item.ct_name ?? '-', // 2
+        quantity, // 3
+        item.units_name ?? '-', // 4
+        stockStatus, // 5
+        'actions', // 6
       ]
     })
 
@@ -966,16 +964,16 @@ onBeforeUnmount(() => {
         :perPage="10"
         :idColumnIndex="1"
         :hiddenColumns="[0]"
-        :statusStockinventoryColumn="6"
-        :columnAlign="['left', 'left', 'left', 'center', 'center']"
+        :statusStockinventoryColumn="5"
+        :columnAlign="['left', 'left', 'center', 'center']"
       >
-        <template #cell-7="{ row }">
+        <template #cell-6="{ row }">
           <TableActions
             :row-id="row[0]"
             :open-menu-id="openMenuId"
             role="stock"
             :row="row"
-            :status="row[6]"
+            :status="row[5]"
             @toggle-menu="openMenuId = $event"
             @detail="goToDetail(row[0])"
             @edit="openEditModal(row[0])"
