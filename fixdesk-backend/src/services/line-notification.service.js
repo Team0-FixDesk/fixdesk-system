@@ -1,3 +1,42 @@
+/**
+ * =====================================================================
+ * @file            line-notification.service.js
+ * @layer           Service (Business Logic Layer)
+ * @version         1.0.0
+ * @since           2025-01-15
+ * @author          นราธิป แสนทวีสุข
+ * @lastModified    2026-02-17
+ * @lastModifiedBy  นราธิป แสนทวีสุข
+ * ---------------------------------------------------------------------
+ * @description
+ *  Service สำหรับส่งการแจ้งเตือนไปยัง LINE Group ผ่าน LINE Bot SDK
+ *  ใช้สำหรับ:
+ *    - แจ้งเตือนการมอบหมายงานช่าง (แบบเดี่ยวและทีม)
+ *    - แจ้งเตือนเมื่อช่างรับงาน
+ *    - ส่งข้อความทดสอบระบบ
+ *    - รองรับ Flex Message พร้อม UI ที่สวยงาม
+ *    - แสดงข้อมูลความเร่งด่วน, สถานที่, ช่าง, และรายละเอียดงาน
+ *
+ * @dependencies
+ *   - @line/bot-sdk (LINE Messaging API)
+ *
+ * @environment
+ *   - LINE_CHANNEL_ACCESS_TOKEN: Access token ของ LINE Bot
+ *   - LINE_CHANNEL_SECRET: Channel secret ของ LINE Bot
+ *   - LINE_GROUP_ID: Group ID ที่ต้องการส่งข้อความ
+ *   - FRONTEND_URL: URL ของ frontend สำหรับปุ่มลิงก์
+ *
+ * @exports
+ *   - notifyJobAssignment(assignmentData): ส่งการแจ้งเตือนการมอบหมายงาน
+ *   - notifyJobAccepted(acceptData): ส่งการแจ้งเตือนการรับงาน
+ *   - testNotification(): ทดสอบการส่งข้อความ
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *  - เปลี่ยน GROUP_ID จาก hardcode เป็น environment variable (LINE_GROUP_ID) [2026-02-17, นราธิป แสนทวีสุข]
+ *  - เพิ่มการตรวจสอบและ warning เมื่อไม่มี GROUP_ID                         [2026-02-17, นราธิป แสนทวีสุข]
+ * =====================================================================
+ */
 const line = require('@line/bot-sdk');
 
 /**
@@ -11,13 +50,18 @@ const config = {
 };
 
 // Group ID ที่ต้องการส่งข้อความ
-const TARGET_GROUP_ID = 'C34fe2055e4c53e85632cc38354059ab7';
+// หมายเหตุ: ถ้าบอทเข้ากลุ่มใหม่ ให้แก้ไขค่า LINE_GROUP_ID ในไฟล์ .env
+const TARGET_GROUP_ID = process.env.LINE_GROUP_ID || '';
 
 let client = null;
 
 // สร้าง LINE client เมื่อมี credentials
 if (config.channelAccessToken && config.channelSecret) {
   client = new line.Client(config);
+  
+  if (!TARGET_GROUP_ID) {
+    console.warn('⚠️ LINE_GROUP_ID is not set in environment variables. Notifications will not be sent.');
+  }
 }
 
 /**
@@ -34,9 +78,9 @@ if (config.channelAccessToken && config.channelSecret) {
  * @param {boolean} assignmentData.is_team - เป็นการมอบหมายทีมหรือไม่
  */
 async function notifyJobAssignment(assignmentData) {
-  if (!client) {
-    console.warn('⚠️ LINE notification is not configured. Skipping notification.');
-    return { success: false, message: 'LINE not configured' };
+  if (!client || !TARGET_GROUP_ID) {
+    console.warn('⚠️ LINE notification is not configured or GROUP_ID is missing. Skipping notification.');
+    return { success: false, message: 'LINE not configured or GROUP_ID missing' };
   }
 
   try {
@@ -313,9 +357,9 @@ async function notifyJobAssignment(assignmentData) {
  * @param {string} acceptData.urgency - ความเร่งด่วน
  */
 async function notifyJobAccepted(acceptData) {
-  if (!client) {
-    console.warn('⚠️ LINE notification is not configured. Skipping notification.');
-    return { success: false, message: 'LINE not configured' };
+  if (!client || !TARGET_GROUP_ID) {
+    console.warn('⚠️ LINE notification is not configured or GROUP_ID is missing. Skipping notification.');
+    return { success: false, message: 'LINE not configured or GROUP_ID missing' };
   }
 
   try {
@@ -573,8 +617,8 @@ async function notifyJobAccepted(acceptData) {
  * ทดสอบการส่งข้อความ
  */
 async function testNotification() {
-  if (!client) {
-    return { success: false, message: 'LINE not configured' };
+  if (!client || !TARGET_GROUP_ID) {
+    return { success: false, message: 'LINE not configured or GROUP_ID missing' };
   }
 
   try {

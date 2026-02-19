@@ -1,7 +1,75 @@
+/**
+ * =====================================================================
+ * @file            stock-withdraw-approve-view.vue
+ * @module          มอดูลการจัดการของผู้ดูแลคลัง - การตรวจสอบ และอนุมัติรายการเบิกของ
+ * @layer           View (Presentation Layer)
+ * @version         1.0.0
+ * @since           2025-12-21
+ * @author          ธนภัทร จันทร์งาม
+ * @lastModified    2026-02-18
+ * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
+ * ---------------------------------------------------------------------
+ * @description
+ *  หน้าจอสำหรับอนุมัติรายการเบิกของของผู้ดูแลคลัง
+ *  แสดงรายละเอียดรายการเบิก และรายการวัสดุ/ครุภัณฑ์ที่ขอเบิก
+ *  ผู้อนุมัติสามารถ:
+ *   - ตรวจสอบข้อมูลผู้เบิก และสถานที่ใช้งาน
+ *   - ดูรายการวัสดุ/อุปกรณ์ที่ขอเบิก
+ *   - เลือกผลการพิจารณาแต่ละรายการ (อนุมัติ / ไม่อนุมัติ)
+ *
+ * @requires
+ *   - vue
+ *   - vue-router
+ *   - axios
+ *   - sweetalert2
+ *   - @iconify/vue
+ *   - @/components/button/back-button-component.vue
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *   - ปรับปรุงข้อความที่ใช้ให้เหมาะสม   [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ * =====================================================================
+ */
+
 <script setup>
 /**
- * File: stock-withdraw-approve-view.vue
- * Description: หน้าผู้อนุมัติใบเบิกของ (Stock Withdraw Approval) แสดงรายการ + อนุมัติ/ไม่อนุมัติรายชิ้น
+ * =====================================================================
+ * @file            Stock-Requisition-Approval.vue
+ * @module          อนุมัติการเบิกวัสดุ / อุปกรณ์
+ * @layer           View (Presentation Layer)
+ * @version         1.0.0
+ * @since           2025-10-17
+ * @lastModified    2026-02-17
+ * @lastModifiedBy  นราธิป แสนทวีสุข
+ * ---------------------------------------------------------------------
+ * @description
+ *  หน้าจอสำหรับผู้อนุมัติพิจารณาอนุมัติ/ไม่อนุมัติรายการเบิกวัสดุและอุปกรณ์
+ *  รองรับฟีเจอร์:
+ *    - เลือกรายการด้วย Checkbox (เลือกทั้งหมดหรือเลือกรายการเดียว)
+ *    - ตั้งค่าสถานะอนุมัติ/ไม่อนุมัติแบบ Bulk Actions
+ *    - แสดง Progress Bar ความคืบหน้าการตรวจสอบ
+ *    - ยืนยันการทำรายการทั้งหมดพร้อมกัน
+ *    - แสดงข้อมูลผู้เบิก หน่วยงาน และรหัสงานซ่อมที่เกี่ยวข้อง
+ *
+ * @requires
+ *   - vue (ref, computed, onMounted)
+ *   - vue-router
+ *   - axios
+ *   - sweetalert2
+ *   - @iconify/vue
+ *   - @/components/button/back-button-component.vue
+ *
+ * @authors
+ *   - พชร ไพศรีสกุล
+ *   - นราธิป แสนทวีสุข
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *  - เพิ่ม Checkbox และ Bulk Actions เพื่อ UX ที่ดีขึ้น    [2026-02-17, นราธิป]
+ *  - แยก Flow ระหว่างตั้งค่าและยืนยันบันทึก              [2026-02-17, นราธิป]
+ *  - เปลี่ยน Alert เป็น Toast และเพิ่ม Auto Redirect    [2026-02-17, นราธิป]
+ *  - ปรับ Checkbox ให้อยู่กลางบรรทัด                      [2026-02-17, นราธิป]
+ * =====================================================================
  */
 
 import { ref, computed, onMounted } from 'vue'
@@ -34,6 +102,100 @@ const request = ref({
 })
 
 const items = ref([])
+
+/* ================= SELECTION ================= */
+const selectedItems = ref(new Set())
+
+const toggleSelectAll = () => {
+  if (selectedItems.value.size === items.value.length) {
+    selectedItems.value.clear()
+  } else {
+    items.value.forEach((item) => selectedItems.value.add(item.id))
+  }
+}
+
+const toggleSelectItem = (itemId) => {
+  if (selectedItems.value.has(itemId)) {
+    selectedItems.value.delete(itemId)
+  } else {
+    selectedItems.value.add(itemId)
+  }
+}
+
+const selectedCount = computed(() => selectedItems.value.size)
+const isAllSelected = computed(() =>
+  items.value.length > 0 && selectedItems.value.size === items.value.length
+)
+
+const approveSelected = () => {
+  if (selectedItems.value.size === 0) {
+    Sweetalert.fire({
+      icon: 'warning',
+      title: 'กรุณาเลือกรายการก่อน',
+      toast: true,
+      position: 'top-end',
+      showConfirmButton: false,
+      timer: 2000,
+      timerProgressBar: true,
+    })
+    return
+  }
+
+  // แค่เปลี่ยนสถานะ ไม่บันทึก DB
+  items.value.forEach((item) => {
+    if (selectedItems.value.has(item.id)) {
+      item.status = 'approved'
+    }
+  })
+
+  Sweetalert.fire({
+    icon: 'success',
+    title: `ตั้งค่าอนุมัติ ${selectedItems.value.size} รายการ`,
+    toast: true,
+    position: 'top-end',
+    showConfirmButton: false,
+    timer: 2000,
+    timerProgressBar: true,
+  })
+
+  selectedItems.value.clear()
+  actionError.value = ''
+}
+
+const rejectSelected = () => {
+  if (selectedItems.value.size === 0) {
+    Sweetalert.fire({
+      icon: 'warning',
+      title: 'กรุณาเลือกรายการก่อน',
+      toast: true,
+      position: 'top-end',
+      showConfirmButton: false,
+      timer: 2000,
+      timerProgressBar: true,
+    })
+    return
+  }
+
+  // แค่เปลี่ยนสถานะ ไม่บันทึก DB
+  items.value.forEach((item) => {
+    if (selectedItems.value.has(item.id)) {
+      item.status = 'rejected'
+    }
+  })
+
+  Sweetalert.fire({
+    icon: 'success',
+    title: `ตั้งค่าไม่อนุมัติ ${selectedItems.value.size} รายการ`,
+    toast: true,
+    position: 'top-end',
+    showConfirmButton: false,
+    timer: 2000,
+    timerProgressBar: true,
+  })
+
+  selectedItems.value.clear()
+  actionError.value = ''
+}
 
 /* ================= APPROVER ================= */
 const approverName = ref('')
@@ -89,7 +251,7 @@ const loadDetail = async () => {
       department: data[0].us_department,
       date: new Date(data[0].sf_create_at).toLocaleDateString('th-TH'),
       status: data[0].sf_status,
-      repairCode: data[0].sf_code,
+      repairCode: data[0].rf_code,
       location: `${data[0].bd_name} ${data[0].fl_name} ${data[0].room_name}`,
     }
 
@@ -139,7 +301,7 @@ const confirmApprove = async () => {
   }
 
   const result = await Sweetalert.fire({
-    title: 'ยืนยันการทำรายการ?',
+    title: 'ยืนยันผลการอนุมัติ?',
     text: confirmText,
     icon: 'question',
     showCancelButton: true,
@@ -170,9 +332,12 @@ const confirmApprove = async () => {
       { headers: { Authorization: `Bearer ${token}` } },
     )
 
-    await Sweetalert.fire('สำเร็จ', 'บันทึกผลการพิจารณาและปิดงานใบเบิกเรียบร้อยแล้ว', 'success')
+    await Sweetalert.fire('บันทึกผลสำเร็จ', 'บันทึกผลการอนุมัติรายการเบิกเรียบร้อยแล้ว', 'success')
 
-    await loadDetail()
+    // Redirect to stock-withdraw-list
+    setTimeout(() => {
+      router.push('/main/stock-withdraw-list')
+    },500)
   } catch (err) {
     console.error('Error details:', err)
     console.error('Error response:', err.response?.data)
@@ -212,9 +377,9 @@ function goBack() {
             <BackButtonComponent @click="goBack" />
 
             <div>
-              <h1 class="text-xl font-bold text-slate-900">อนุมัติการเบิกของ</h1>
+              <h1 class="text-xl font-bold text-slate-900">รายละเอียดการขอเบิก</h1>
               <p class="text-sm text-slate-500">
-                ตรวจสอบรายการ และเลือกผลการอนุมัติให้ครบทุกรายการก่อนยืนยัน
+                ตรวจสอบรายการวัสดุ/อุปกรณ์ และรายละเอียดการขอเบิก
               </p>
             </div>
           </div>
@@ -230,8 +395,10 @@ function goBack() {
             class="bg-white rounded-2xl border border-slate-200 p-8 text-center"
           >
             <p class="text-slate-700 font-semibold">ไม่พบรายการเบิก</p>
-            <p class="text-sm text-slate-500 mt-1">โปรดลองรีเฟรช หรือตรวจสอบรหัสใบเบิก</p>
+            <p class="text-sm text-slate-500 mt-1">โปรดลองรีเฟรช หรือตรวจสอบหมายเลขรายการเบิก</p>
           </div>
+
+
 
           <!-- LEFT : รายการเบิก -->
           <div
@@ -241,6 +408,19 @@ function goBack() {
           >
             <!-- สำคัญ: items-stretch -->
             <div class="flex gap-4 items-stretch">
+              <!-- Checkbox (Show only when status is waiting) -->
+              <div
+                v-if="request.status === 'waiting'"
+                class="flex items-center"
+              >
+                <input
+                  type="checkbox"
+                  :checked="selectedItems.has(item.id)"
+                  @change="toggleSelectItem(item.id)"
+                  class="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                />
+              </div>
+
               <!-- รูป -->
               <div class="w-32 shrink-0 self-stretch">
                 <img
@@ -267,65 +447,18 @@ function goBack() {
                     {{ item.name }}
                   </p>
 
-                  <div class="inline-flex rounded-xl h-[30px]">
-                    <!-- ========== BEFORE CONFIRM (เลือกได้) ========== -->
-                    <template v-if="request.status === 'waiting'">
-                      <!-- APPROVE -->
-                      <label
-                        class="flex items-center gap-2 px-4 py-2 cursor-pointer transition text-sm font-semibold hover:bg-emerald-50"
-                        :class="
-                          item.status === 'approved'
-                            ? 'bg-emerald-50 text-emerald-700 ring-2 ring-emerald-200'
-                            : 'text-slate-600'
-                        "
-                      >
-                        <input
-                          type="radio"
-                          class="hidden"
-                          :name="`approve-${item.id}`"
-                          value="approved"
-                          :checked="item.status === 'approved'"
-                          @change="approveItem(item.id, 'approved')"
-                        />
-                        <span>อนุมัติ</span>
-                      </label>
-
-                      <div class="w-px bg-slate-200"></div>
-
-                      <!-- REJECT -->
-                      <label
-                        class="flex items-center gap-2 px-4 py-2 cursor-pointer transition text-sm font-semibold hover:bg-rose-50"
-                        :class="
-                          item.status === 'rejected'
-                            ? 'bg-rose-50 text-rose-700 ring-2 ring-rose-200'
-                            : 'text-slate-600'
-                        "
-                      >
-                        <input
-                          type="radio"
-                          class="hidden"
-                          :name="`approve-${item.id}`"
-                          value="rejected"
-                          :checked="item.status === 'rejected'"
-                          @change="approveItem(item.id, 'rejected')"
-                        />
-                        <span>ไม่อนุมัติ</span>
-                      </label>
-                    </template>
-
-                    <!-- ========== AFTER CONFIRM (read-only) ========== -->
-                    <template v-else>
-                      <div
-                        class="flex items-center justify-center min-h-[35px] min-w-[140px] px-6 py-2 text-sm font-semibold rounded-full select-none"
-                        :class="
-                          item.status === 'approved'
-                            ? 'bg-emerald-50 text-emerald-700'
-                            : 'bg-rose-50 text-rose-700'
-                        "
-                      >
-                        {{ item.status === 'approved' ? 'อนุมัติแล้ว' : 'ไม่อนุมัติ' }}
-                      </div>
-                    </template>
+                  <!-- Status Badge (แสดงเฉพาะเมื่อมีการอนุมัติแล้ว) -->
+                  <div v-if="item.status !== 'waiting'" class="inline-flex rounded-xl h-[30px]">
+                    <div
+                      class="flex items-center justify-center min-h-[35px] min-w-[120px] px-4 py-2 text-sm font-semibold rounded-full select-none"
+                      :class="
+                        item.status === 'approved'
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                          : 'bg-rose-50 text-rose-700 border border-rose-200'
+                      "
+                    >
+                      {{ item.status === 'approved' ? 'อนุมัติแล้ว' : 'ไม่อนุมัติ' }}
+                    </div>
                   </div>
                 </div>
 
@@ -354,8 +487,8 @@ function goBack() {
           <!-- Request Info -->
           <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
             <div class="px-4 py-3 border-b border-slate-200">
-              <p class="font-bold text-slate-900">ข้อมูลผู้เบิกของ</p>
-              <p class="text-xs text-slate-500 mt-0.5">ใช้สำหรับอ้างอิงก่อนอนุมัติ</p>
+              <p class="font-bold text-slate-900">รายละเอียดผู้ขอเบิก</p>
+              <p class="text-xs text-slate-500 mt-0.5">ข้อมูลนี้อ้างอิงถึงรายละเอียดของงานซ่อมก่อนการอนุมัติ</p>
             </div>
 
             <div class="p-4 space-y-3 text-sm">
@@ -384,7 +517,7 @@ function goBack() {
               </div>
 
               <div class="grid grid-cols-12 gap-2">
-                <p class="col-span-5 text-slate-500">รหัสงานซ่อม</p>
+                <p class="col-span-5 text-slate-500">หมายเลขแจ้งซ่อม</p>
                 <p class="col-span-7 text-slate-900 font-medium break-words">
                   {{ request.repairCode }}
                 </p>
@@ -405,13 +538,13 @@ function goBack() {
           >
             <div class="px-4 py-3 border-b border-slate-200">
               <p class="font-bold text-slate-900">สำหรับผู้อนุมัติ</p>
-              <p class="text-xs text-slate-500 mt-0.5">ตรวจสอบให้ครบก่อนกดยืนยัน</p>
+              <p class="text-xs text-slate-500 mt-0.5">ตรวจสอบรายการวัสดุ/อุปกรณ์ที่จำเป็นต่อการซ่อม และยืนยันผลการอนุมัติ</p>
             </div>
 
             <div class="p-4 space-y-4">
               <div>
                 <label class="text-sm font-medium text-slate-700 block mb-1">
-                  ชื่อผู้อนุมัติการเบิกของ
+                  ชื่อผู้อนุมัติผลการเบิก
                 </label>
                 <input
                   v-model="approverName"
@@ -420,38 +553,87 @@ function goBack() {
                 />
               </div>
 
-              <div v-if="canApprove" class="space-y-2">
-                <div class="flex items-start">
-                  <p class="text-xs text-slate-600 leading-relaxed">
-                    เลือก <span class="font-semibold text-emerald-700">อนุมัติ</span> หรือ
-                    <span class="font-semibold text-rose-700">ไม่อนุมัติ</span>
-                    ให้ครบทุกชิ้น ระบบจะเปิดปุ่มยืนยันให้อัตโนมัติ
-                  </p>
+              <!-- Action Buttons (Show when status is waiting) -->
+              <div v-if="canApprove" class="space-y-3">
+                <!-- Select All Checkbox -->
+                <label class="flex items-center gap-3 cursor-pointer group p-3 rounded-xl border-2 border-slate-200 hover:border-blue-300 transition bg-slate-50">
+                  <input
+                    type="checkbox"
+                    :checked="isAllSelected"
+                    @change="toggleSelectAll"
+                    class="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                  />
+                  <span class="text-sm font-semibold text-slate-700 group-hover:text-blue-700 transition">
+                    เลือกทั้งหมด ({{ items.length }} รายการ)
+                  </span>
+                </label>
+
+                <!-- Progress Display -->
+                <div class="rounded-xl border border-blue-200 bg-blue-50 p-3">
+                  <div class="flex items-center justify-between mb-2">
+                    <p class="text-xs text-blue-600">จำนวนรายการที่ตรวจสอบแล้ว</p>
+                    <p class="text-xs font-semibold text-blue-700">
+                      {{ reviewedCount }} / {{ items.length }}
+                    </p>
+                  </div>
+                  <div class="w-full bg-blue-200 rounded-full h-2">
+                    <div
+                      class="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                      :style="{ width: `${(reviewedCount / items.length) * 100}%` }"
+                    ></div>
+                  </div>
                 </div>
 
+                <!-- Quick Action Buttons -->
+                <div class="grid grid-cols-2 gap-2">
+                  <button
+                    @click="approveSelected"
+                    :disabled="selectedCount === 0"
+                    class="inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] transition disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <Icon icon="mdi:check" width="18" height="18" />
+                    <span>อนุมัติ</span>
+                  </button>
+
+                  <button
+                    @click="rejectSelected"
+                    :disabled="selectedCount === 0"
+                    class="inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white bg-rose-600 hover:bg-rose-700 active:scale-[0.98] transition disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <Icon icon="mdi:close" width="18" height="18" />
+                    <span>ไม่อนุมัติ</span>
+                  </button>
+                </div>
+
+                <p class="text-xs text-slate-500 text-center leading-relaxed">
+                  <Icon icon="mdi:lightbulb-on" class="inline" width="14" height="14" />
+                  เลือกรายการ → กดอนุมัติ/ไม่อนุมัติ → ยืนยันบันทึก
+                </p>
+
+                <!-- Error Message -->
                 <div v-if="actionError" class="rounded-xl border border-rose-200 bg-rose-50 p-3">
-                  <p class="text-sm text-rose-700 font-semibold">ยังทำรายการไม่ครบ</p>
+                  <p class="text-sm text-rose-700 font-semibold">⚠️ ยังทำรายการไม่ครบ</p>
                   <p class="text-xs text-rose-600 mt-1">{{ actionError }}</p>
                 </div>
+
+                <!-- Confirm Button (Only enabled when all items reviewed) -->
+                <button
+                  @click="confirmApprove"
+                  :disabled="!allReviewed || isSubmitting"
+                  class="w-full inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3.5 font-bold text-white bg-blue-600 hover:bg-blue-700 active:scale-[0.99] transition disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                >
+                  <Icon v-if="!isSubmitting" icon="mdi:content-save-check" width="20" height="20" />
+                  <span v-if="isSubmitting" class="inline-flex items-center gap-2">
+                    <span class="w-4 h-4 rounded-full border-2 border-white/60 border-t-transparent animate-spin"></span>
+                    กำลังบันทึก...
+                  </span>
+                  <span v-else>ยืนยันการทำรายการทั้งหมด</span>
+                </button>
               </div>
 
-              <button
-                v-if="canApprove"
-                class="w-full inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 font-semibold text-white bg-blue-600 hover:bg-blue-700 active:scale-[0.99] transition disabled:opacity-50 disabled:cursor-not-allowed"
-                :disabled="!allReviewed || isSubmitting"
-                @click="confirmApprove"
-              >
-                <span v-if="isSubmitting" class="inline-flex items-center gap-2">
-                  <span
-                    class="w-4 h-4 rounded-full border-2 border-white/60 border-t-transparent animate-spin"
-                  ></span>
-                  กำลังบันทึก...
-                </span>
-                <span v-else>ยืนยันผลการอนุมัติ</span>
-              </button>
-
+              <!-- Completed State -->
               <div v-else class="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-                <p class="text-sm font-semibold text-emerald-700">ใบเบิกนี้ได้รับการพิจารณาแล้ว</p>
+                <p class="text-sm font-semibold text-emerald-700">รายการเบิกนี้ได้รับการอนุมัติแล้ว</p>
                 <p class="text-xs text-emerald-700/80 mt-1">
                   หากต้องการแก้ไข กรุณาติดต่อผู้ดูแลระบบ
                 </p>
@@ -467,7 +649,7 @@ function goBack() {
           class="bg-white rounded-2xl border border-slate-200 p-4 flex items-center justify-between"
         >
           <div>
-            <p class="text-xs text-slate-500">สถานะใบเบิก</p>
+            <p class="text-xs text-slate-500">สถานะรายการเบิก</p>
             <div class="mt-1" v-html="renderStatusStockBadge(request.status)"></div>
           </div>
           <div class="text-right">

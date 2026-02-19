@@ -1,3 +1,53 @@
+/**
+ * =====================================================================
+ * @file            stock.service.js
+ * @layer           Service Layer (Business Logic Layer)
+ * @version         1.3.0
+ * @since           2026-02-10
+ * @author          นายพชร ไพศรีสกุล
+ * @contributors
+ *   - นายพชร ไพศรีสกุล
+ *   - นราธิป แสนทวีสุข
+ *
+ * @lastModified    2026-02-17
+ * @lastModifiedBy  นราธิป แสนทวีสุข
+ * ---------------------------------------------------------------------
+ * @description
+ *  Service Layer สำหรับจัดการ Business Logic ของระบบคลังวัสดุ/อุปกรณ์
+ *  และใบเบิกสินค้า (Stock Forms)
+ *
+ *  ทำหน้าที่:
+ *    - จัดการสินค้า (Products)
+ *    - จัดการหมวดหมู่สินค้า (Categories)
+ *    - จัดการหน่วยนับสินค้า (Units)
+ *    - สร้างใบเบิกสินค้า และตัด stock (Withdraw)
+ *    - อนุมัติ / ปฏิเสธ รายการสินค้า
+ *    - อนุมัติ / ปฏิเสธ รายการสินค้าแบบ batch
+ *    - อัปเดตสถานะใบเบิกสินค้า
+ *    - คืนสินค้า/อุปกรณ์ และเพิ่ม stock กลับ
+ *    - Import ข้อมูลสินค้าแบบ batch
+ *
+ *  มีการใช้ Transaction เพื่อความถูกต้องของข้อมูลใน:
+ *    - createWithdraw
+ *    - updateMultipleItemsStatus
+ *    - returnItem
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *   - Initial implementation Stock Service ตาม Layered Architecture
+ *     [2026-02-10, นายพชร ไพศรีสกุล] V 1.0.0
+ *   - แก้ไขการแสดงรายละเอียดรายการเบิกของ
+ *     [2026-02-13, นายพชร ไพศรีสกุล] V 1.0.1
+ *   - แก้ไข logic ให้สามารถ approve และ reject ใน requisition เดียวกันได้
+ *     [2026-02-14, นราธิป แสนทวีสุข] V 1.1.0
+ *   - เพิ่มระบบคืนอุปกรณ์ (returnItem) พร้อม transaction
+ *     [2026-02-17, นายพชร ไพศรีสกุล] V 1.2.0
+ *   - ปรับปรุง UX และรองรับ bulk actions สำหรับอนุมัติสินค้า
+ *     [2026-02-17, นราธิป แสนทวีสุข] V 1.3.0
+ *
+ * =====================================================================
+ */
+
 const fs = require("fs");
 const path = require("path");
 
@@ -229,7 +279,8 @@ module.exports = (db) => {
           u.us_department, CONCAT(u.us_first_name_th, ' ', u.us_last_name_th) AS requester,
           b.bd_name, f.fl_name, r.room_name,
           pd.pd_id, pd.pd_name, pd.pd_asset_code, pd.pd_detail, pd.pd_upload_image,
-          ct.ct_name AS category, sfd.sfd_qty, sfd.sfd_status
+          ct.ct_name AS category, sfd.sfd_qty, sfd.sfd_status,
+          rf.rf_code
         FROM stock_form sf
         LEFT JOIN user u ON u.us_id = sf.sf_us_id
         LEFT JOIN repair_form rf ON rf.rf_id = sf.sf_rf_id
@@ -351,8 +402,9 @@ module.exports = (db) => {
       let newStatus = "waiting";
 
       if (waiting == 0) {
-        if (approved > 0) newStatus = "approved";  // อนุมัติอย่างน้อย 1 ชิ้น
-        else newStatus = "rejected";  // ไม่อนุมัติทั้งหมด
+        if (approved > 0)
+          newStatus = "approved"; // อนุมัติอย่างน้อย 1 ชิ้น
+        else newStatus = "rejected"; // ไม่อนุมัติทั้งหมด
       }
 
       await db
@@ -373,18 +425,18 @@ module.exports = (db) => {
       try {
         await connection.beginTransaction();
 
-        console.log('=== updateMultipleItemsStatus called ===');
-        console.log('sfCode:', sfCode);
-        console.log('items:', JSON.stringify(items, null, 2));
+        console.log("=== updateMultipleItemsStatus called ===");
+        console.log("sfCode:", sfCode);
+        console.log("items:", JSON.stringify(items, null, 2));
 
         // 1. หา sf_id
         const [sf] = await connection.query(
           "SELECT sf_id FROM stock_form WHERE sf_code = ?",
-          [sfCode]
+          [sfCode],
         );
         if (!sf.length) throw new Error("FORM_NOT_FOUND");
         const sfId = sf[0].sf_id;
-        console.log('Found sfId:', sfId);
+        console.log("Found sfId:", sfId);
 
         // 2. วน update แต่ละรายการ
         for (const item of items) {
@@ -393,43 +445,43 @@ module.exports = (db) => {
           console.log(`Processing item: pd_id=${pd_id}, status=${status}`);
 
           if (!pd_id || !["approved", "rejected"].includes(status)) {
-            console.error('Invalid item data:', item);
+            console.error("Invalid item data:", item);
             throw new Error("INVALID_ITEM_DATA");
           }
 
           // ตรวจสอบสถานะปัจจุบัน
           const [current] = await connection.query(
             "SELECT sfd_qty, sfd_status FROM stock_form_detail WHERE sfd_sf_id = ? AND sfd_pd_id = ?",
-            [sfId, pd_id]
+            [sfId, pd_id],
           );
 
           if (!current.length) {
-            console.error('Item not found:', sfId, pd_id);
+            console.error("Item not found:", sfId, pd_id);
             throw new Error("ITEM_NOT_FOUND");
           }
 
-          console.log('Current item status:', current[0].sfd_status);
+          console.log("Current item status:", current[0].sfd_status);
 
           // ข้ามรายการที่ดำเนินการแล้ว (ไม่ throw error)
           if (current[0].sfd_status !== "waiting") {
-            console.log('Skipping already processed item');
+            console.log("Skipping already processed item");
             continue;
           }
 
           // อัพเดตสถานะ
           await connection.query(
             "UPDATE stock_form_detail SET sfd_status = ? WHERE sfd_sf_id = ? AND sfd_pd_id = ?",
-            [status, sfId, pd_id]
+            [status, sfId, pd_id],
           );
-          console.log('Updated item status to:', status);
+          console.log("Updated item status to:", status);
 
           // ถ้า reject ต้องคืนของ
           if (status === "rejected") {
             await connection.query(
               "UPDATE products SET pd_quantity = pd_quantity + ? WHERE pd_id = ?",
-              [current[0].sfd_qty, pd_id]
+              [current[0].sfd_qty, pd_id],
             );
-            console.log('Returned quantity:', current[0].sfd_qty);
+            console.log("Returned quantity:", current[0].sfd_qty);
           }
         }
 
@@ -440,31 +492,39 @@ module.exports = (db) => {
             SUM(sfd_status = 'approved') AS approved,
             SUM(sfd_status = 'rejected') AS rejected
           FROM stock_form_detail WHERE sfd_sf_id = ?`,
-          [sfId]
+          [sfId],
         );
 
         const { waiting, approved, rejected } = stats[0];
-        console.log('Stats - waiting:', waiting, 'approved:', approved, 'rejected:', rejected);
+        console.log(
+          "Stats - waiting:",
+          waiting,
+          "approved:",
+          approved,
+          "rejected:",
+          rejected,
+        );
 
         let newStatus = "waiting";
 
         if (waiting == 0) {
-          if (approved > 0) newStatus = "approved";  // อนุมัติอย่างน้อย 1 ชิ้น
-          else newStatus = "rejected";  // ไม่อนุมัติทั้งหมด
+          if (approved > 0)
+            newStatus = "approved"; // อนุมัติอย่างน้อย 1 ชิ้น
+          else newStatus = "rejected"; // ไม่อนุมัติทั้งหมด
         }
 
-        console.log('New form status:', newStatus);
+        console.log("New form status:", newStatus);
 
         await connection.query(
           "UPDATE stock_form SET sf_status = ? WHERE sf_id = ?",
-          [newStatus, sfId]
+          [newStatus, sfId],
         );
 
         await connection.commit();
-        console.log('Transaction committed successfully');
+        console.log("Transaction committed successfully");
         return { formStatus: newStatus };
       } catch (error) {
-        console.error('Error in updateMultipleItemsStatus:', error);
+        console.error("Error in updateMultipleItemsStatus:", error);
         await connection.rollback();
         throw error;
       } finally {
@@ -534,6 +594,61 @@ module.exports = (db) => {
         }
       }
       return { success: results.length, failed: errors.length, errors };
+    },
+    async returnItem(sfCode, pdId, userId) {
+      const connection = await db.promise().getConnection();
+
+      try {
+        await connection.beginTransaction();
+
+        // หา sf_id
+        const [sf] = await connection.query(
+          "SELECT sf_id FROM stock_form WHERE sf_code = ?",
+          [sfCode],
+        );
+
+        if (!sf.length) throw new Error("FORM_NOT_FOUND");
+
+        const sfId = sf[0].sf_id;
+
+        // หา item
+        const [item] = await connection.query(
+          `SELECT sfd_qty, sfd_status
+       FROM stock_form_detail
+       WHERE sfd_sf_id = ? AND sfd_pd_id = ?`,
+          [sfId, pdId],
+        );
+
+        if (!item.length) throw new Error("ITEM_NOT_FOUND");
+
+        if (item[0].sfd_status !== "approved")
+          throw new Error("ITEM_NOT_APPROVED");
+
+        // update status → returned
+        await connection.query(
+          `UPDATE stock_form_detail
+       SET sfd_status = 'returned'
+       WHERE sfd_sf_id = ? AND sfd_pd_id = ?`,
+          [sfId, pdId],
+        );
+
+        // คืน stock
+        await connection.query(
+          `UPDATE products
+       SET pd_quantity = pd_quantity + ?
+       WHERE pd_id = ?`,
+          [item[0].sfd_qty, pdId],
+        );
+
+        await connection.commit();
+
+        return true;
+      } catch (err) {
+        await connection.rollback();
+        throw err;
+      } finally {
+        connection.release();
+      }
     },
   };
 };
