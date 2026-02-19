@@ -1,3 +1,45 @@
+/**
+ * =====================================================================
+ * @file            manager-home-view.vue
+ * @module          มอดูลส่งออกรายงาน และแดชบอร์ดสรุปผลการแจ้งซ่อม - การดูแดชบอร์ดสรุปผล
+ * @layer           View (Presentation Layer)
+ * @version         1.0.0
+ * @since           2025-10-21
+ * @author          พขร ไพศรีสกุล
+ * @lastModified    2026-02-18
+ * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
+ * ---------------------------------------------------------------------
+ * @description
+ *  หน้าจอหลักสำหรับผู้บริหาร ใช้แสดงภาพรวมข้อมูลการดำเนินงาน
+ *    - แสดงสรุปจำนวนงานซ่อม (Summary Cards)
+ *      - งานซ่อมทั้งหมด
+ *      - รอดำเนินการ
+ *      - กำลังดำเนินการ
+ *      - เสร็จสิ้น
+ *      พร้อมแสดงอัตราการเปลี่ยนแปลงเทียบเดือนก่อนหน้า
+ *    - แสดงกราฟงานซ่อมรายเดือน (Stacked Bar Chart)
+ *    - แสดงสัดส่วนสถานะงานซ่อม (Pie Chart)
+ *      - มุมมองรายสัปดาห์ / รายเดือน
+ *    - แสดงแนวโน้มการแจ้งซ่อม (Line Chart - สัปดาห์ปัจจุบัน)
+ *    - แสดงประสิทธิภาพการทำงานของช่าง (Efficiency Chart)
+ *      - มุมมองรายสัปดาห์ / รายเดือน
+ *    - แสดงงานซ่อมแยกตามประเภท
+ *    - แสดงจำนวนแจ้งซ่อมแยกตามหน่วยงาน
+ *
+ * @requires
+ *   - vue
+ *   - vue-router
+ *   - vue3-apexcharts
+ *   - @/composables/useUserProfile
+ *   - @/composables/useManagerDashboard
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *   - ปรับปรุงข้อความที่ใช้ให้เหมาะสม   [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - แก้ไขคำอธิบายในกราฟ          [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ * =====================================================================
+ */
+
 <script setup>
 import { ref, computed, shallowRef, onMounted } from 'vue'
 import ApexChart from 'vue3-apexcharts'
@@ -316,10 +358,10 @@ const monthlyStackedOptions = shallowRef({
       return buildTooltipHTML({
         title: label,
         rows: [
-          { label: 'งานทั้งหมด', value: `${total} รายการ`, color: MONTHLY_COLORS.total },
-          { label: 'งานที่เสร็จสิ้น', value: `${done} รายการ`, color: MONTHLY_COLORS.done },
+          { label: 'งานซ่อมทั้งหมด', value: `${total} รายการ`, color: MONTHLY_COLORS.total },
+          { label: 'งานซ่อมที่เสร็จสิ้นแล้ว', value: `${done} รายการ`, color: MONTHLY_COLORS.done },
           {
-            label: 'งานที่จ้างช่างภายนอก',
+            label: 'งานซ่อมที่จ้างช่างภายนอก',
             value: `${outsource} รายการ`,
             color: MONTHLY_COLORS.outsource,
           },
@@ -335,7 +377,7 @@ const monthlyStackedOptions = shallowRef({
 const monthlyStackedSeries = ref([
   { name: 'งานที่เสร็จสิ้น', data: new Array(12).fill(0) },
   { name: 'งานที่จ้างช่างภายนอก', data: new Array(12).fill(0) },
-  { name: 'งานทั้งหมด', data: new Array(12).fill(0) },
+  { name: 'งานซ่อมทั้งหมด', data: new Array(12).fill(0) },
 ])
 
 function updateMonthlyStackedChart(repairsInYear) {
@@ -356,7 +398,7 @@ function updateMonthlyStackedChart(repairsInYear) {
   monthlyStackedSeries.value = [
     { name: 'งานที่เสร็จสิ้น', data: done },
     { name: 'งานที่จ้างช่างภายนอก', data: outsource },
-    { name: 'งานทั้งหมด', data: blueTop },
+    { name: 'งานซ่อมทั้งหมด', data: blueTop },
   ]
 }
 
@@ -382,8 +424,8 @@ const statusPieOptions = shallowRef({
       return buildTooltipHTML({
         title: label,
         rows: [
-          { label: 'จำนวน', value: `${value} รายการ`, color },
-          { label: 'สัดส่วน', value: `${Number(percent).toFixed(1)}%`, color },
+          { label: 'จำนวนงานซ่อม', value: `${value} รายการ`, color },
+          { label: 'เปอร์เซ็นต์', value: `${Number(percent).toFixed(1)}%`, color },
         ],
         unitLabel: 'หน่วย: รายการ / %',
       })
@@ -462,7 +504,7 @@ const weeklyTrendOptions = shallowRef({
 })
 
 const weeklyTrendSeries = ref([
-  { name: 'จำนวนแจ้งซ่อม', data: new Array(7).fill(0) },
+  { name: 'งานซ่อมทั้งหมด', data: new Array(7).fill(0) },
   { name: 'รอดำเนินการ', data: new Array(7).fill(0) },
   { name: 'กำลังดำเนินการ', data: new Array(7).fill(0) },
   { name: 'เสร็จสิ้น', data: new Array(7).fill(0) },
@@ -488,7 +530,7 @@ function updateWeeklyTrendChart(repairsInYear) {
   })
 
   weeklyTrendSeries.value = [
-    { name: 'จำนวนแจ้งซ่อม', data: buckets.map((b) => b.total) },
+    { name: 'งานซ่อมทั้งหมด', data: buckets.map((b) => b.total) },
     { name: 'รอดำเนินการ', data: buckets.map((b) => b.pending) },
     { name: 'กำลังดำเนินการ', data: buckets.map((b) => b.in_progress) },
     { name: 'เสร็จสิ้น', data: buckets.map((b) => b.done) },
@@ -534,10 +576,10 @@ const efficiencyChartOptions = shallowRef({
       return buildTooltipHTML({
         title: `ช่าง: ${tech}`,
         rows: [
-          { label: 'งานที่รับ', value: `${meta.total} รายการ`, color: EFFICIENCY_COLORS.rate },
-          { label: 'งานที่เสร็จ', value: `${meta.done} รายการ`, color: EFFICIENCY_COLORS.rate },
+          { label: 'งานซ่อมที่ได้รับมอบหมาย', value: `${meta.total} รายการ`, color: EFFICIENCY_COLORS.rate },
+          { label: 'งานซ่อมที่ดำเนินการเสร็จสิ้น', value: `${meta.done} รายการ`, color: EFFICIENCY_COLORS.rate },
           {
-            label: 'อัตราสำเร็จ',
+            label: 'อัตราซ่อมสำเร็จ',
             value: `${Number(rate).toFixed(1)}%`,
             color: "#f97316",
           },
@@ -548,7 +590,7 @@ const efficiencyChartOptions = shallowRef({
   },
 })
 
-const efficiencyChartSeries = ref([{ name: 'อัตราสำเร็จ', data: [] }])
+const efficiencyChartSeries = ref([{ name: 'อัตราซ่อมสำเร็จ', data: [] }])
 const efficiencyMeta = ref([])
 
 function buildTechnicianEfficiency(repairs) {
@@ -612,7 +654,7 @@ const typeOptions = shallowRef({
 
       return buildTooltipHTML({
         title: label,
-        rows: [{ label: 'จำนวนงาน', value: `${val} รายการ`, color }],
+        rows: [{ label: 'จำนวนงานซ่อม', value: `${val} รายการ`, color }],
         unitLabel: 'หน่วย: รายการ',
       })
     },
@@ -666,14 +708,14 @@ const deptOptions = shallowRef({
 
       return buildTooltipHTML({
         title: label,
-        rows: [{ label: 'จำนวนแจ้งซ่อม', value: `${val} รายการ`, color }],
+        rows: [{ label: 'จำนวนงานซ่อม', value: `${val} รายการ`, color }],
         unitLabel: 'หน่วย: รายการ',
       })
     },
   },
 })
 
-const deptSeries = ref([{ name: 'จำนวนแจ้งซ่อม', data: [0] }])
+const deptSeries = ref([{ name: 'งานซ่อมทั้งหมด', data: [0] }])
 
 function updateDepartmentChart(repairsInYear) {
   const deptCounts = {}
@@ -696,7 +738,7 @@ function updateDepartmentChart(repairsInYear) {
   const values = sorted.map(([, count]) => count)
 
   deptOptions.value.xaxis.categories = labels.length ? labels : ['ไม่มีข้อมูล']
-  deptSeries.value = [{ name: 'จำนวนแจ้งซ่อม', data: values.length ? values : [0] }]
+  deptSeries.value = [{ name: 'งานซ่อมทั้งหมด', data: values.length ? values : [0] }]
 }
 
 /* -----------------------------
@@ -789,12 +831,12 @@ onMounted(() => {
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 class="text-2xl font-bold text-gray-800">
-              หน้าหลักผู้บริหาร สวัสดีคุณ {{ displayName }}
+              หน้าจอหลักของผู้บริหาร - สวัสดีคุณ {{ displayName }}
             </h1>
             <p class="text-lg font-semibold text-gray-700">
               {{ displayDepartment }}
             </p>
-            <p class="text-gray-600 mt-2">ภาพรวมการดำเนินงานระบบแจ้งซ่อม</p>
+            <p class="text-gray-600 mt-2">ภาพรวมของการแจ้งซ่อม และสถิติงานซ่อม</p>
           </div>
 
           <div class="flex items-center gap-3">
@@ -835,9 +877,9 @@ onMounted(() => {
         <!-- Controls for Summary Cards -->
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div class="text-sm text-gray-600">
-            เดือนที่ใช้คำนวณการ์ด:
+            ข้อมูล ณ เดือน
             <span class="font-semibold text-gray-900">{{ monthLabels[selectedMonthIndex] }}</span>
-            <span class="text-gray-400 ml-2">เทียบกับเดือนก่อนหน้า</span>
+            <span class="text-gray-400 ml-2">เมื่อเทียบกับเดือนก่อนหน้า</span>
           </div>
 
           <div class="flex items-center gap-2">
@@ -886,7 +928,7 @@ onMounted(() => {
                   <span v-else>→</span>
                   <span class="ml-1">{{ Math.abs(card.growth) }}%</span>
                 </div>
-                <div class="text-xs text-gray-500 mt-1">เทียบเดือนก่อนหน้า</div>
+                <div class="text-xs text-gray-500 mt-1">เทียบกับเดือนก่อนหน้า</div>
               </div>
             </div>
           </div>
@@ -897,7 +939,7 @@ onMounted(() => {
           <!-- งานซ่อมรายเดือน (Stacked) -->
           <div class="bg-white rounded-lg shadow p-6">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">
-              งานซ่อมรายเดือน - {{ formatYearDisplay(selectedYear) }}
+              จำนวนงานซ่อมรายเดือน - ใน{{ formatYearDisplay(selectedYear) }}
             </h3>
 
             <ApexChart
@@ -914,7 +956,7 @@ onMounted(() => {
                   class="inline-block w-3.5 h-3.5 rounded-sm"
                   :style="{ backgroundColor: MONTHLY_COLORS.total }"
                 ></span>
-                งานทั้งหมด
+                งานซ่อมทั้งหมด
               </span>
               <span class="inline-flex items-center gap-2">
                 <span
@@ -933,14 +975,14 @@ onMounted(() => {
             </div>
 
             <div class="mt-2 text-xs text-gray-500">
-              * ชี้เมาส์ที่แท่งเพื่อดูรายละเอียดรายเดือน (ตัวเลขจะตรงกับงานทั้งหมด)
+              <span class="text-red-400">*</span> วางเมาส์บนแท่งกราฟเพื่อดูข้อมูลรายเดือน (แสดงจำนวนงานซ่อมในแต่ละเดือน)
             </div>
           </div>
 
           <!-- สถานะงานซ่อม (Pie) -->
           <div class="bg-white rounded-lg shadow p-6">
             <div class="flex items-center justify-between mb-4">
-              <h3 class="text-lg font-semibold text-gray-900">สถานะงานซ่อม</h3>
+              <h3 class="text-lg font-semibold text-gray-900">สัดส่วนของสถานะงานซ่อม</h3>
 
               <div class="flex p-1 bg-gray-100 rounded-xl">
                 <button
@@ -1002,7 +1044,7 @@ onMounted(() => {
             </div>
 
             <div class="mt-2 text-xs text-gray-500">
-              * ชี้เมาส์ที่กราฟเพื่อดูจำนวนและเปอร์เซ็นต์
+              <span class="text-red-400">*</span> วางเมาส์บนกราฟเพื่อดูข้อมูล (แสดงสัดส่วนของงานซ่อมเป็นเปอร์เซ็นต์)
             </div>
           </div>
         </div>
@@ -1012,7 +1054,7 @@ onMounted(() => {
           <!-- แนวโน้มการแจ้งซ่อม (สัปดาห์ปัจจุบัน) -->
           <div class="bg-white rounded-lg shadow p-6">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">
-              แนวโน้มการแจ้งซ่อม (สัปดาห์ปัจจุบัน)
+              แนวโน้มผลการซ่อม (ในสัปดาห์ปัจจุบัน)
             </h3>
 
             <ApexChart
@@ -1028,7 +1070,7 @@ onMounted(() => {
                   class="inline-block w-3.5 h-3.5 rounded-sm"
                   :style="{ backgroundColor: TREND_COLORS.total }"
                 ></span>
-                จำนวนแจ้งซ่อม
+                งานซ่อมทั้งหมด
               </span>
               <span class="inline-flex items-center gap-2">
                 <span
@@ -1053,7 +1095,9 @@ onMounted(() => {
               </span>
             </div>
 
-            <div class="mt-2 text-xs text-gray-500">* ชี้เมาส์ที่จุดเพื่อดูรายละเอียดรายวัน</div>
+            <div class="mt-2 text-xs text-gray-500">
+              <span class="text-red-400">*</span> วางเมาส์บนเส้นกราฟเพื่อดูข้อมูลรายสัปดาห์ (แสดงจำนวนงานซ่อมในแต่ละวัน)
+            </div>
           </div>
 
           <!-- ประสิทธิภาพการซ่อม -->
@@ -1107,7 +1151,7 @@ onMounted(() => {
             </div>
 
             <div class="mt-2 text-xs text-gray-500">
-              * ชี้เมาส์ที่แท่งเพื่อดู งานที่รับ / งานที่เสร็จ / อัตราสำเร็จ
+              <span class="text-red-400">*</span> วางเมาส์บนแท่งกราฟเพื่อดูข้อมูล (แสดงอัตราความสำเร็จในการซ่อม)
             </div>
           </div>
         </div>
@@ -1116,7 +1160,7 @@ onMounted(() => {
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <!-- งานซ่อมแยกตามประเภท -->
           <div class="bg-white rounded-lg shadow p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">งานซ่อมแยกตามประเภท</h3>
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">จำนวนงานซ่อมในแต่ละประเภท</h3>
 
             <ApexChart type="bar" height="380" :options="typeOptions" :series="typeSeries" />
 
@@ -1126,18 +1170,18 @@ onMounted(() => {
                   class="inline-block w-3.5 h-3.5 rounded-sm"
                   :style="{ backgroundColor: '#7c3aed' }"
                 ></span>
-                จำนวนงาน
+                งานซ่อมทั้งหมด
               </span>
             </div>
 
             <div class="mt-2 text-xs text-gray-500">
-              * ชี้เมาส์ที่แท่งเพื่อดูจำนวนรายการของประเภทนั้น
+              <span class="text-red-400">*</span> วางเมาส์บนแท่งกราฟเพื่อดูข้อมูล (แสดงจำนวนงานซ่อมในแต่ละประเภท)
             </div>
           </div>
 
           <!-- รายการแจ้งซ่อมแต่ละหน่วยงาน -->
           <div class="bg-white rounded-lg shadow p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">รายการแจ้งซ่อมแต่ละหน่วยงาน</h3>
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">จำนวนงานซ่อมในแต่ละหน่วยงาน</h3>
 
             <ApexChart type="bar" height="380" :options="deptOptions" :series="deptSeries" />
 
@@ -1147,12 +1191,12 @@ onMounted(() => {
                   class="inline-block w-3.5 h-3.5 rounded-sm"
                   :style="{ backgroundColor: '#166534' }"
                 ></span>
-                จำนวนแจ้งซ่อม
+                งานซ่อมทั้งหมด
               </span>
             </div>
 
             <div class="mt-2 text-xs text-gray-500">
-              * ชี้เมาส์ที่แท่งเพื่อดูจำนวนรายการของหน่วยงานนั้น
+              <span class="text-red-400">*</span> วางเมาส์บนแท่งกราฟเพื่อดูข้อมูล (แสดงจำนวนงานซ่อมในแต่ละหน่วยงาน)
             </div>
           </div>
         </div>

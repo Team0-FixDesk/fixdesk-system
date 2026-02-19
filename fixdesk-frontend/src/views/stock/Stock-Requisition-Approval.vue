@@ -1,3 +1,36 @@
+/**
+ * =====================================================================
+ * @file            stock-withdraw-approve-view.vue
+ * @module          มอดูลการจัดการของผู้ดูแลคลัง - การตรวจสอบ และอนุมัติรายการเบิกของ
+ * @layer           View (Presentation Layer)
+ * @version         1.0.0
+ * @since           2025-12-21
+ * @author          ธนภัทร จันทร์งาม
+ * @lastModified    2026-02-18
+ * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
+ * ---------------------------------------------------------------------
+ * @description
+ *  หน้าจอสำหรับอนุมัติรายการเบิกของของผู้ดูแลคลัง
+ *  แสดงรายละเอียดรายการเบิก และรายการวัสดุ/ครุภัณฑ์ที่ขอเบิก
+ *  ผู้อนุมัติสามารถ:
+ *   - ตรวจสอบข้อมูลผู้เบิก และสถานที่ใช้งาน
+ *   - ดูรายการวัสดุ/อุปกรณ์ที่ขอเบิก
+ *   - เลือกผลการพิจารณาแต่ละรายการ (อนุมัติ / ไม่อนุมัติ)
+ *
+ * @requires
+ *   - vue
+ *   - vue-router
+ *   - axios
+ *   - sweetalert2
+ *   - @iconify/vue
+ *   - @/components/button/back-button-component.vue
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *   - ปรับปรุงข้อความที่ใช้ให้เหมาะสม   [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ * =====================================================================
+ */
+
 <script setup>
 /**
  * =====================================================================
@@ -268,7 +301,7 @@ const confirmApprove = async () => {
   }
 
   const result = await Sweetalert.fire({
-    title: 'ยืนยันการทำรายการ?',
+    title: 'ยืนยันผลการอนุมัติ?',
     text: confirmText,
     icon: 'question',
     showCancelButton: true,
@@ -299,15 +332,7 @@ const confirmApprove = async () => {
       { headers: { Authorization: `Bearer ${token}` } },
     )
 
-    Sweetalert.fire({
-      icon: 'success',
-      title: 'บันทึกผลการพิจารณาเรียบร้อยแล้ว',
-      toast: true,
-      position: 'top-end',
-      showConfirmButton: false,
-      timer: 2000,
-      timerProgressBar: true,
-    })
+    await Sweetalert.fire('บันทึกผลสำเร็จ', 'บันทึกผลการอนุมัติรายการเบิกเรียบร้อยแล้ว', 'success')
 
     // Redirect to stock-withdraw-list
     setTimeout(() => {
@@ -352,9 +377,9 @@ function goBack() {
             <BackButtonComponent @click="goBack" />
 
             <div>
-              <h1 class="text-xl font-bold text-slate-900">อนุมัติการเบิกวัสดุ / อุปกรณ์</h1>
+              <h1 class="text-xl font-bold text-slate-900">รายละเอียดการขอเบิก</h1>
               <p class="text-sm text-slate-500">
-                ตรวจสอบรายการ และเลือกผลการอนุมัติให้ครบทุกรายการก่อนยืนยัน
+                ตรวจสอบรายการวัสดุ/อุปกรณ์ และรายละเอียดการขอเบิก
               </p>
             </div>
           </div>
@@ -370,7 +395,7 @@ function goBack() {
             class="bg-white rounded-2xl border border-slate-200 p-8 text-center"
           >
             <p class="text-slate-700 font-semibold">ไม่พบรายการเบิก</p>
-            <p class="text-sm text-slate-500 mt-1">โปรดลองรีเฟรช หรือตรวจสอบรหัสใบเบิก</p>
+            <p class="text-sm text-slate-500 mt-1">โปรดลองรีเฟรช หรือตรวจสอบหมายเลขรายการเบิก</p>
           </div>
 
 
@@ -462,8 +487,8 @@ function goBack() {
           <!-- Request Info -->
           <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
             <div class="px-4 py-3 border-b border-slate-200">
-              <p class="font-bold text-slate-900">ข้อมูลผู้เบิกของ</p>
-              <p class="text-xs text-slate-500 mt-0.5">ใช้สำหรับอ้างอิงก่อนอนุมัติ</p>
+              <p class="font-bold text-slate-900">รายละเอียดผู้ขอเบิก</p>
+              <p class="text-xs text-slate-500 mt-0.5">ข้อมูลนี้อ้างอิงถึงรายละเอียดของงานซ่อมก่อนการอนุมัติ</p>
             </div>
 
             <div class="p-4 space-y-3 text-sm">
@@ -492,7 +517,7 @@ function goBack() {
               </div>
 
               <div class="grid grid-cols-12 gap-2">
-                <p class="col-span-5 text-slate-500">รหัสงานซ่อม</p>
+                <p class="col-span-5 text-slate-500">หมายเลขแจ้งซ่อม</p>
                 <p class="col-span-7 text-slate-900 font-medium break-words">
                   {{ request.repairCode }}
                 </p>
@@ -513,13 +538,13 @@ function goBack() {
           >
             <div class="px-4 py-3 border-b border-slate-200">
               <p class="font-bold text-slate-900">สำหรับผู้อนุมัติ</p>
-              <p class="text-xs text-slate-500 mt-0.5">ตรวจสอบให้ครบก่อนกดยืนยัน</p>
+              <p class="text-xs text-slate-500 mt-0.5">ตรวจสอบรายการวัสดุ/อุปกรณ์ที่จำเป็นต่อการซ่อม และยืนยันผลการอนุมัติ</p>
             </div>
 
             <div class="p-4 space-y-4">
               <div>
                 <label class="text-sm font-medium text-slate-700 block mb-1">
-                  ชื่อผู้อนุมัติการเบิกของ
+                  ชื่อผู้อนุมัติผลการเบิก
                 </label>
                 <input
                   v-model="approverName"
@@ -608,7 +633,7 @@ function goBack() {
 
               <!-- Completed State -->
               <div v-else class="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-                <p class="text-sm font-semibold text-emerald-700">ใบเบิกนี้ได้รับการพิจารณาแล้ว</p>
+                <p class="text-sm font-semibold text-emerald-700">รายการเบิกนี้ได้รับการอนุมัติแล้ว</p>
                 <p class="text-xs text-emerald-700/80 mt-1">
                   หากต้องการแก้ไข กรุณาติดต่อผู้ดูแลระบบ
                 </p>
@@ -624,7 +649,7 @@ function goBack() {
           class="bg-white rounded-2xl border border-slate-200 p-4 flex items-center justify-between"
         >
           <div>
-            <p class="text-xs text-slate-500">สถานะใบเบิก</p>
+            <p class="text-xs text-slate-500">สถานะรายการเบิก</p>
             <div class="mt-1" v-html="renderStatusStockBadge(request.status)"></div>
           </div>
           <div class="text-right">
