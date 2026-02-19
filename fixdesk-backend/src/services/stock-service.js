@@ -1,21 +1,23 @@
 /**
  * =====================================================================
- * @file            : stock-service.js
- * @module          : Business Logic สำหรับระบบคลังวัสดุ/อุปกรณ์
- * @layer           : Service Layer (Business Logic Layer)
- * @version         : 1.0.0
- * @since           : 2026-02-17
- * @lastModified    : 2026-02-17
- * @lastModifiedBy  : นายพชร ไพศรีสกุล
+ * @file            stock.service.js
+ * @layer           Service Layer (Business Logic Layer)
+ * @version         1.3.0
+ * @since           2026-02-10
+ * @author          นายพชร ไพศรีสกุล
+ * @contributors
+ *   - นายพชร ไพศรีสกุล
+ *   - นราธิป แสนทวีสุข
+ *
+ * @lastModified    2026-02-17
+ * @lastModifiedBy  นราธิป แสนทวีสุข
  * ---------------------------------------------------------------------
  * @description
- *  Service Layer สำหรับจัดการตรรกะการทำงานหลักของระบบคลังวัสดุ/อุปกรณ์
- *  และใบเบิกสินค้า (Stock Forms) โดยทำงานร่วมกับฐานข้อมูลโดยตรง
- *  รับคำสั่งจาก Controller Layer และดำเนินการ query, transaction
- *  และ business logic ที่เกี่ยวข้องกับ stock และ inventory
+ *  Service Layer สำหรับจัดการ Business Logic ของระบบคลังวัสดุ/อุปกรณ์
+ *  และใบเบิกสินค้า (Stock Forms)
  *
- *  รองรับการทำงาน:
- *    - จัดการสินค้า (เพิ่ม, แก้ไข, ลบ, แสดงรายการ)
+ *  ทำหน้าที่:
+ *    - จัดการสินค้า (Products)
  *    - จัดการหมวดหมู่สินค้า (Categories)
  *    - จัดการหน่วยนับสินค้า (Units)
  *    - สร้างใบเบิกสินค้า และตัด stock (Withdraw)
@@ -25,35 +27,24 @@
  *    - คืนสินค้า/อุปกรณ์ และเพิ่ม stock กลับ
  *    - Import ข้อมูลสินค้าแบบ batch
  *
- *  มีการใช้ Transaction เพื่อความถูกต้องของข้อมูลในกรณี:
+ *  มีการใช้ Transaction เพื่อความถูกต้องของข้อมูลใน:
  *    - createWithdraw
  *    - updateMultipleItemsStatus
  *    - returnItem
  *
- * @requires
- *   - mysql2 (Database connection ผ่าน db instance)
- *   - fs
- *   - path
- *
- * @databaseTables
- *   - products
- *   - categories
- *   - units
- *   - stock_form
- *   - stock_form_detail
- *   - repair_form
- *
- * @dataFlow
- *   Controller → Service → Database
- *
- * @author
- *   - นายพชร ไพศรีสกุล
- *
  * ---------------------------------------------------------------------
  * @changelog
- *  - เพิ่มระบบคืนสินค้า (returnItem)
- *    และเพิ่ม transaction สำหรับคืนสินค้า
- *    [2026-02-17, นายพชร ไพศรีสกุล]
+ *   - Initial implementation Stock Service ตาม Layered Architecture
+ *     [2026-02-10, นายพชร ไพศรีสกุล] V 1.0.0
+ *   - แก้ไขการแสดงรายละเอียดรายการเบิกของ
+ *     [2026-02-13, นายพชร ไพศรีสกุล] V 1.0.1
+ *   - แก้ไข logic ให้สามารถ approve และ reject ใน requisition เดียวกันได้
+ *     [2026-02-14, นราธิป แสนทวีสุข] V 1.1.0
+ *   - เพิ่มระบบคืนอุปกรณ์ (returnItem) พร้อม transaction
+ *     [2026-02-17, นายพชร ไพศรีสกุล] V 1.2.0
+ *   - ปรับปรุง UX และรองรับ bulk actions สำหรับอนุมัติสินค้า
+ *     [2026-02-17, นราธิป แสนทวีสุข] V 1.3.0
+ *
  * =====================================================================
  */
 
