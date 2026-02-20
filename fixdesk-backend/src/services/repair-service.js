@@ -131,7 +131,7 @@ module.exports = (db) => {
     async getAdminRepairs() {
       const sql = `
         SELECT
-          rf.rf_id, rf.rf_code, rf.rf_problem, rf.rf_create_at, rf.rf_user_status,
+          rf.rf_id, rf.rf_code, rf.rf_problem, rf.rf_create_at, rf.rf_update_at, rf.rf_in_process_at, rf.rf_done_at, rf.rf_user_status, rf.rf_is_outsourced,
           b.bd_name, f.fl_name, r.room_name,
           COALESCE(rf.rf_urgency, 'medium') AS rf_urgency,
           u.us_first_name_th AS us_first_name, u.us_last_name_th AS us_last_name,
