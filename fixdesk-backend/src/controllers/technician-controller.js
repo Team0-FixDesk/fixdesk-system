@@ -1,3 +1,39 @@
+/**
+ * =====================================================================
+ * @file            : technician-controller.js
+ * @module          : จัดการ Technician และงานช่าง
+ * @layer           : Controller Layer (API Controller)
+ * @version         : 1.0.0
+ * @since           : 2026-02-17
+ * @lastModified    : 2026-02-20
+ * @lastModifiedBy  : นราธิป แสนทวีสุข
+ * ---------------------------------------------------------------------
+ * @description
+ *  Controller สำหรับจัดการ API ของระบบช่างและงานซ่อม
+ *  ทำหน้าที่รับ request จาก client และเรียกใช้ techService
+ *
+ *  รองรับการทำงาน:
+ *    - จัดการข้อมูลช่าง
+ *    - จัดการประเภทงานช่าง
+ *    - ดูงานซ่อมของช่าง
+ *    - เบิกของสำหรับงานซ่อม
+ *    - ปิดงานซ่อม
+ *
+ * @requires
+ *   - technician-service.js
+ *
+ * @author
+ *   - นราธิป แสนทวีสุข
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *  - เพิ่ม logging ใน withdrawStock เพื่อติดตาม transaction
+ *    แสดงข้อมูล techId, repair_code, itemCount เมื่อเบิกของ
+ *    [2026-02-20, นราธิป แสนทวีสุข]
+ *  - เพิ่มฟังก์ชัน closeJob สำหรับช่างปิดงานซ่อม [2026-02-17, พชร]
+ * =====================================================================
+ */
+
 module.exports = (techService) => {
   return {
     /* --- Technician Data --- */
@@ -156,12 +192,16 @@ module.exports = (techService) => {
         }
 
         const techId = req.user.us_id;
+        
+        console.log("🛍️ [Technician withdrawStock] Starting:", { techId, repair_code, itemCount: items.length });
+        
         const result = await techService.withdrawStock(
           techId,
           repair_code,
           items,
         );
 
+        console.log("✅ [Technician withdrawStock] Completed:", result);
         res.json({ message: "เบิกสินค้าเรียบร้อย", sf_code: result.sfCode });
       } catch (err) {
         if (err.message.startsWith("INSUFFICIENT_STOCK"))

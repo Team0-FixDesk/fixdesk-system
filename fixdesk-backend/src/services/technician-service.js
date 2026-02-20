@@ -1,3 +1,48 @@
+/**
+ * =====================================================================
+ * @file            : technician-service.js
+ * @module          : Business Logic สำหรับระบบช่างและงานซ่อม
+ * @layer           : Service Layer (Business Logic Layer)
+ * @version         : 1.0.0
+ * @since           : 2026-02-17
+ * @lastModified    : 2026-02-20
+ * @lastModifiedBy  : นราธิป แสนทวีสุข
+ * ---------------------------------------------------------------------
+ * @description
+ *  Service Layer สำหรับจัดการตรรกะการทำงานหลักของระบบช่าง
+ *  และงานซ่อมที่เกี่ยวข้อง โดยทำงานร่วมกับฐานข้อมูลโดยตรง
+ *
+ *  รองรับการทำงาน:
+ *    - จัดการข้อมูลช่าง
+ *    - จัดการประเภทงานช่าง
+ *    - ดูงานซ่อมของช่าง (getMyRepairs)
+ *    - เบิกของสำหรับงานซ่อม (withdrawStock)
+ *    - ปิดงานซ่อม (closeJob)
+ *
+ * @requires
+ *   - mysql2 (Database connection ผ่าน db instance)
+ *
+ * @databaseTables
+ *   - user
+ *   - technician_type
+ *   - repair_form
+ *   - stock_form
+ *   - stock_form_detail
+ *   - products
+ *
+ * @author
+ *   - นราธิป แสนทวีสุข
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *  - ปรับ withdrawStock: ไม่ตัด stock ทันที รอ Stock อนุมัติก่อน
+ *    เปลี่ยนจากตัด stock ทันที → สร้างใบเบิก (waiting) เท่านั้น
+ *    Stock จะถูกตัดเมื่อ Stock อนุมัติในฟังก์ชัน updateItemStatus
+ *    [2026-02-20, นราธิป แสนทวีสุข]
+ *  - เพิ่มฟังก์ชัน closeJob สำหรับช่างปิดงาน [2026-02-17, พชร]
+ * =====================================================================
+ */
+
 module.exports = (db) => {
   return {
     /* ================== TECHNICIAN MANAGEMENT ================== */
@@ -275,33 +320,33 @@ module.exports = (db) => {
         );
         const sfId = sfRes.insertId;
 
-        // 3. Loop ตัดสต๊อก
+        // 3. Loop สร้างรายการเบิก (ไม่ตัด stock ยัง - รอ Stock อนุมัติก่อน)
         for (const item of items) {
-          // Check Stock & Lock Row
+          // Check ว่าสินค้ามีจริง
           const [pd] = await connection.query(
-            "SELECT pd_quantity, pd_name FROM products WHERE pd_id = ? FOR UPDATE",
+            "SELECT pd_quantity, pd_name FROM products WHERE pd_id = ?",
             [item.id],
           );
           if (pd.length === 0) throw new Error(`PRODUCT_NOT_FOUND:${item.id}`);
 
+          // เช็คว่า stock พอไหม (แต่ยังไม่ตัด)
           if (pd[0].pd_quantity < item.qty) {
             throw new Error(`INSUFFICIENT_STOCK:${pd[0].pd_name}`);
           }
 
-          // Decrement
-          await connection.query(
-            "UPDATE products SET pd_quantity = pd_quantity - ? WHERE pd_id = ?",
-            [item.qty, item.id],
-          );
+          console.log(`📝 [Technician withdrawStock] Creating withdraw request: productId=${item.id}, qty=${item.qty}, current_stock=${pd[0].pd_quantity}`);
 
-          // Insert Detail
+          // Insert Detail (สถานะ waiting - รอ Stock อนุมัติ)
           await connection.query(
             "INSERT INTO stock_form_detail (sfd_sf_id, sfd_pd_id, sfd_qty, sfd_status) VALUES (?, ?, ?, 'waiting')",
             [sfId, item.id, item.qty],
           );
+          
+          console.log(`✅ [Technician withdrawStock] Withdraw request created for product ${item.id} (stock will be deducted after approval)`);
         }
 
         await connection.commit();
+        console.log(`✅ [Technician withdrawStock] Completed: sfCode=${sfCode}, sfId=${sfId}`);
         return { sfId, sfCode };
       } catch (error) {
         await connection.rollback();
