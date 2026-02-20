@@ -95,6 +95,13 @@ module.exports = (db) => {
     stockController.deleteProduct,
   );
 
+  // --- Stock Transactions ---
+  router.get(
+    "/transactions",
+    authMiddleware,
+    stockController.getAllTransactions,
+  );
+
   // --- Category ---
   router.get("/category", stockController.getCategories);
   router.post("/category", authMiddleware, stockController.addCategory);
