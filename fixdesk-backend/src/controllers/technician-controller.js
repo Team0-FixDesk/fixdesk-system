@@ -1,3 +1,32 @@
+/**
+ * =====================================================================
+ * @file            technician.controller.js
+ * @layer           Controller (Application Layer)
+ * @version         1.0.0
+ * @since           2026-02-10
+ * @author          พชร ไพศรีสกุล
+ * @lastModified    2026-02-21
+ * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
+ * ---------------------------------------------------------------------
+ * @description
+ *  Controller สำหรับจัดการข้อมูลและการทำงานของช่างเทคนิค
+ *   - จัดการข้อมูลช่างเทคนิค
+ *   - จัดการประเภทงานของช่าง
+ *   - แสดงรายการงานซ่อมของตนเอง
+ *   - แสดงประวัติงานซ่อม
+ *   - แสดงใบเบิกวัสดุ/อุปกรณ์ของตนเอง
+ *   - ปิดงานซ่อม / ส่งงาน Outsource
+ *   - ส่งคำขอเบิกวัสดุ/อุปกรณ์
+ *
+ * @requires
+ *   - techService
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *   - แก้ไขข้อความแจ้งเตือน  [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ * =====================================================================
+ */
+
 module.exports = (techService) => {
   return {
     /* --- Technician Data --- */
@@ -143,7 +172,7 @@ module.exports = (techService) => {
         if (err.message === "JOB_NOT_FOUND_OR_INVALID_STATUS")
           return res
             .status(400)
-            .json({ message: "ไม่พบงาน หรือสถานะไม่ถูกต้อง" });
+            .json({ message: "ไม่พบงานซ่อม หรือสถานะไม่ถูกต้อง" });
         res.status(500).json({ message: "ดำเนินการไม่สำเร็จ" });
       }
     },
@@ -152,7 +181,7 @@ module.exports = (techService) => {
       try {
         const { repair_code, items } = req.body;
         if (!items || !Array.isArray(items) || items.length === 0) {
-          return res.status(400).json({ message: "ไม่มีรายการสินค้า" });
+          return res.status(400).json({ message: "ไม่พบรายการวัสดุ/อุปกรณ์" });
         }
 
         const techId = req.user.us_id;
@@ -162,19 +191,19 @@ module.exports = (techService) => {
           items,
         );
 
-        res.json({ message: "เบิกสินค้าเรียบร้อย", sf_code: result.sfCode });
+        res.json({ message: "ส่งแบบฟอร์มขอเบิกเรียบร้อย", sf_code: result.sfCode });
       } catch (err) {
         if (err.message.startsWith("INSUFFICIENT_STOCK"))
           return res
             .status(400)
-            .json({ message: "สินค้าไม่พอ: " + err.message.split(":")[1] });
+            .json({ message: "จำนวนวัสดุ/อุปกรณ์ไม่เพียงพอ : " + err.message.split(":")[1] });
         if (err.message.startsWith("PRODUCT_NOT_FOUND"))
           return res
             .status(404)
-            .json({ message: "ไม่พบสินค้า ID: " + err.message.split(":")[1] });
+            .json({ message: "ไม่พบรายการวัสดุ/อุปกรณ์ที่ต้องการ : " + err.message.split(":")[1] });
         res
           .status(500)
-          .json({ message: "เบิกสินค้าไม่สำเร็จ", error: err.message });
+          .json({ message: "ส่งแบบฟอร์มขอเบิกไม่สำเร็จ", error: err.message });
       }
     },
   };

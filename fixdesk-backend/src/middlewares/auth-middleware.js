@@ -1,3 +1,33 @@
+/**
+ * =====================================================================
+ * @file            auth-middleware.js
+ * @layer           Middleware (Authentication Layer)
+ * @version         1.0.0
+ * @since           2026-02-10
+ * @author          พชร ไพศรีสกุล
+ * @lastModified    2026-02-20
+ * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
+ * ---------------------------------------------------------------------
+ * @description
+ *  Middleware สำหรับตรวจสอบความถูกต้องของ JWT Token
+ *
+ *  ความสามารถ:
+ *   - ตรวจสอบ Authorization Header ว่ามีค่าและอยู่ในรูปแบบ "Bearer <token>"
+ *   - ตรวจสอบลายเซ็นของ JWT ด้วย JWT_SECRET
+ *   - ตรวจจับกรณี Token หมดอายุ หรือถูกปลอมแปลง
+ *   - แนบข้อมูลผู้ใช้ (decoded token) ไปที่ req.user
+ *   - ส่ง HTTP 401 หาก Token ไม่ถูกต้อง
+ *
+ * @requires
+ *   - jsonwebtoken
+ *   - dotenv
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *   - แก้ไขข้อความแจ้งเตือน Token ไม่ถูกต้อง/หมดอายุ   [2026-02-20, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ * =====================================================================
+ */
+
 const jwt = require("jsonwebtoken");
 
 require("dotenv").config();
@@ -10,7 +40,7 @@ const verifyToken = (req, res, next) => {
   // ตรวจสอบว่ามีค่าส่งมาไหม และต้องขึ้นต้นด้วย "Bearer "
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return res.status(401).json({
-      message: "ไม่พบ Token หรือรูปแบบไม่ถูกต้อง (Bearer <token>)",
+      message: "เกิดข้อผิดพลาด ข้อมูลยืนยันตัวตนไม่ถูกต้อง กรุณาลงชื่อเข้าสู่ระบบใหม่อีกครั้ง",
     });
   }
 
@@ -29,7 +59,7 @@ const verifyToken = (req, res, next) => {
   } catch (error) {
     // ถ้า Token หมดอายุ หรือถูกปลอมแปลง
     return res.status(401).json({
-      message: "Token ไม่ถูกต้องหรือหมดอายุ",
+      message: "คุณไม่ได้ใช้งานเป็นระยะเวลาหนึ่ง กรุณาลงชื่อเข้าสู่ระบบใหม่อีกครั้ง",
     });
   }
 };

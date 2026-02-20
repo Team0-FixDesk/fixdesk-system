@@ -1,3 +1,42 @@
+/**
+ * =====================================================================
+ * @file            technician-repair-list.view.vue
+ * @module          มอดูลการจัดการงานของช่าง - การรับงาน และเปลี่ยนแปลงสถานะงานซ่อม
+ * @layer           View (Presentation Layer)
+ * @version         1.0.0
+ * @since           2025-10-21
+ * @author          เศรษฐพงศ์ หอมชื่น
+ * @lastModified    2026-02-21
+ * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
+ * ---------------------------------------------------------------------
+ * @description
+ *  หน้าจอรายการงานซ่อมของช่างซ่อม
+ *   - แสดงรายการงานซ่อมที่ได้รับมอบหมาย
+ *   - ค้นหางานซ่อมตามหมายเลขแจ้งซ่อม หรือรายละเอียดโดยย่อ
+ *   - กรองงานตามสถานะ (ทุกสถานะ / รอดำเนินการ / กำลังดำเนินการ / จ้างช่างภายนอก)
+ *   - เปิดดูรายละเอียดใบแจ้งซ่อม
+ *   - รับงานซ่อม (Accept Job)
+ *   - ปิดงานซ่อม พร้อมบันทึกรายละเอียดการดำเนินการ
+ *   - ส่งงานให้ช่างภายนอก
+ *   - เปิดดูรายการเบิกของที่เกี่ยวข้องกับใบแจ้งซ่อม
+ *
+ * @requires
+ *  - vue
+ *  - vue-router
+ *  - sweetalert2
+ *  - @/composables/useAuthToken
+ *  - @/composables/repair/useTechnicianRepairList
+ *  - @/components/table-component.vue
+ *  - @/components/table-actions-component.vue
+ *  - @/components/modal/accept-job-modal-component.vue
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *   - แก้ไขชื่อหน้าจอ                [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - แก้ไขข้อความหัวตาราง          [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ * =====================================================================
+ */
+
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
@@ -192,11 +231,11 @@ onMounted(() => {
 
 <template>
   <div class="max-w-7xl mx-auto p-8 bg-white rounded-xl shadow-md">
-    <h1 class="mb-6 text-xl font-bold">รายการแจ้งซ่อมสำหรับช่าง</h1>
+    <h1 class="mb-6 text-xl font-bold">รายการงานซ่อมของฉัน</h1>
 
     <!-- Search & Filter Controls -->
     <div class="flex flex-wrap gap-3 mb-6">
-      <input v-model="searchQuery" placeholder="ค้นหา: หมายเลข / ผู้แจ้ง / อาการเสีย" class="w-[260px] h-10 px-4 border border-gray-300 rounded-lg" />
+      <input v-model="searchQuery" placeholder="ค้นหารายการงานซ่อม" class="w-[260px] h-10 px-4 border border-gray-300 rounded-lg" />
 
       <input v-model="selectedDate" type="date" class="h-10 px-3 border border-gray-300 rounded-lg" />
 
@@ -209,7 +248,7 @@ onMounted(() => {
     </div>
 
     <!-- Table Component -->
-    <TableComponent :columns="['รหัสใบแจ้ง', 'รายละเอียด', 'สถานะ', 'ดำเนินการ']" :rows="filteredRows" :perPage="10" :statusColumn="2" :columnAlign="['left', 'left', 'center', 'center']" :id-column-index="0" :id-column-as-link="true" @detail="goToDetail">
+    <TableComponent :columns="['หมายเลขแจ้งซ่อม', 'รายละเอียดโดยย่อ', 'สถานะงาน', 'ตัวดำเนินการ']" :rows="filteredRows" :perPage="10" :statusColumn="2" :columnAlign="['left', 'left', 'center', 'center']" :id-column-index="0" :id-column-as-link="true" @detail="goToDetail">
       <template #cell-3="{ row }">
         <TableActionsComponent role="technician" :row-id="row[0]" :open-menu-id="openMenuId" :row="row" :status="row[2]" @toggle-menu="openMenuId = $event" @detail="goToDetail(row[0])" @accept="handleAccept(row[0])" @close-job="handleCloseJob(row[0])" @outsource="handleOutsource(row[0])" @open-stock="handleOpenStock(row[0])" />
       </template>

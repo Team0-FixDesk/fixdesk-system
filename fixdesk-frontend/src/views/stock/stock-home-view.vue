@@ -1,3 +1,45 @@
+/**
+ * =====================================================================
+ * @file            stock-home-view.vue
+ * @module          มอดูลการจัดการของผู้ดูแลคลัง - การตรวจสอบ และอนุมัติรายการเบิก
+ * @layer           View (Presentation Layer)
+ * @version         1.0.0
+ * @since           2025-10-21
+ * @author          พชร ไพศรีสกุล
+ * @lastModified    2026-02-20
+ * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
+ * ---------------------------------------------------------------------
+ * @description
+ *  หน้าจอ Dashboard สำหรับผู้ดูแลคลัง ใช้แสดงภาพรวมของระบบเบิกวัสดุและสถานะคลังสินค้า
+ *  ความสามารถหลัก:
+ *   - แสดงสถิติคำขอเบิก (รายเดือน / วันนี้ / รออนุมัติ / ไม่อนุมัติ)
+ *   - แสดงกราฟแนวโน้มย้อนหลัง 7 วัน
+ *       • โหมดคำขอเบิก (รออนุมัติ / อนุมัติแล้ว / ไม่อนุมัติ)
+ *       • โหมดคลังสินค้า (รับเข้า / เบิกออก / ใกล้หมด)
+ *   - แสดงรายการคำขอเบิกล่าสุดที่รออนุมัติ (5 รายการ)
+ *   - สามารถเข้าสู่หน้ารายละเอียดใบเบิกได้
+ *
+ * @requires
+ *   - vue
+ *   - vue-router
+ *   - vue3-apexcharts
+ *   - TableComponent
+ *   - CardHomeComponent
+ *   - repair-button-component
+ *   - info-button-component
+ *   - useUserProfile
+ *   - useAuthToken
+ *   - stock service (getAllProductList, getAllStockFormList)
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *   - แก้ไขข้อความหัวตาราง      [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - แก้ไขข้อความคำอธิบายสถานะ [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - เพิ่มคำอธิบายหน้าจอ        [2026-02-20, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - แก้ไขข้อความคำอธิบายสถานะ [2026-02-20, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ * =====================================================================
+ */
+ 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
@@ -39,7 +81,7 @@ function openDetail(code) {
 }
 
 // ==================== Table ====================
-const columns = ['รหัสใบเบิก', 'รายละเอียด', 'ตัวจัดการ']
+const columns = ['หมายเลขรายการเบิก', 'รายละเอียดการเบิก', 'ตัวดำเนินการ']
 
 // ==================== Load Dashboard ====================
 async function fetchDashboard() {
@@ -94,24 +136,24 @@ const statItems = computed(() => [
         createDate.getFullYear() === currentDate.getFullYear()
       )
     }).length,
-    label: 'คำขอในเดือนนี้',
+    label: 'จำนวนรายการเบิกในเดือนนี้',
     colorClass: 'text-blue-600',
   },
   {
     value: stockForms.value.filter(
       (f) => f.sf_status === 'approved' && isSameDay(f.sf_create_at, today),
     ).length,
-    label: 'เบิกออกวันนี้',
+    label: 'จำนวนรายการเบิกในวันนี้',
     colorClass: 'text-green-600',
   },
   {
     value: stockForms.value.filter((f) => f.sf_status === 'waiting').length,
-    label: 'รออนุมัติ',
+    label: 'จำนวนรายการเบิกที่รออนุมัติ',
     colorClass: 'text-amber-500',
   },
   {
     value: stockForms.value.filter((f) => f.sf_status === 'rejected').length,
-    label: 'ไม่อนุมัติ',
+    label: 'จำนวนรายการเบิกที่ไม่อนุมัติใน 7 วันที่ผ่านมา',
     colorClass: 'text-red-600',
   },
 ])
@@ -276,18 +318,20 @@ onMounted(() => {
     <div class="flex justify-between items-center mb-6">
       <div>
         <h1 class="text-2xl font-bold text-gray-800">
-          หน้าหลักเจ้าหน้าที่คลัง สวัสดีคุณ {{ displayName }}
+          หน้าจอหลักของผู้ดูแลคลัง - สวัสดีคุณ {{ displayName }}
         </h1>
         <p class="text-lg font-semibold text-gray-700">
           {{ displayDepartment }}
         </p>
+
+        <p class="text-sm text-gray-500">ตรวจสอบสถานะของรายการเบิก และสถิติของการเบิก</p>
       </div>
       <repairButton />
     </div>
 
     <!-- Cards -->
     <div class="mb-8">
-      <CardHomeComponent :items="statItems" :item-unit="'คำร้อง'" />
+      <CardHomeComponent :items="statItems" :item-unit="'รายการ'" />
     </div>
 
     <div class="flex gap-4">
@@ -299,15 +343,15 @@ onMounted(() => {
             <h1 class="text-xl font-bold text-gray-800">
               {{
                 chartMode === 'request'
-                  ? 'แนวโน้มคำขอเบิก (7 วันล่าสุด)'
-                  : 'แนวโน้มการคลัง (7 วันล่าสุด)'
+                  ? 'แนวโน้มรายการเบิก'
+                  : 'แนวโน้มการคลัง'
               }}
             </h1>
             <p class="text-gray-600 text-sm">
               {{
                 chartMode === 'request'
-                  ? 'แสดงจำนวนคำขอเบิกแยกตามสถานะ'
-                  : 'แสดงความเคลื่อนไหวของคลังแยกตามสถานะ'
+                  ? 'จำนวนของรายการเบิกในระยะเวลา 7 วันที่ผ่านมา'
+                  : 'ความเคลื่อนไหวของวัสดุ/อุปกรณ์ในคลัง'
               }}
             </p>
           </div>

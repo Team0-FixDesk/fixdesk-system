@@ -1,3 +1,32 @@
+/**
+ * =====================================================================
+ * @file            stock.controller.js
+ * @layer           Controller (Application Layer)
+ * @version         1.0.0
+ * @since           2026-02-10
+ * @author          พชร ไพศรีสกุล
+ * @lastModified    2026-02-21
+ * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
+ * ---------------------------------------------------------------------
+ * @description
+ *  Controller สำหรับจัดการระบบคลังวัสดุ/อุปกรณ์
+ *   - จัดการข้อมูลสินค้า (เพิ่ม / แก้ไข / ลบ / แสดงทั้งหมด)
+ *   - จัดการหมวดหมู่สินค้า
+ *   - จัดการหน่วยนับ
+ *   - จัดการใบเบิกวัสดุ/อุปกรณ์ (สร้าง / แสดงรายการ / แสดงรายละเอียด)
+ *   - อัปเดตสถานะรายการในใบเบิก (อนุมัติ / ไม่อนุมัติ)
+ *   - อัปเดตสถานะใบเบิก
+ *   - Import ข้อมูลสต๊อก
+ *
+ * @requires
+ *   - stockService
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *   - แก้ไขข้อความแจ้งเตือน  [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ * =====================================================================
+ */
+
 module.exports = (stockService) => {
   return {
     /* --- Products --- */
@@ -191,7 +220,7 @@ module.exports = (stockService) => {
       try {
         const { repair_code, items } = req.body;
         if (!items || items.length === 0)
-          return res.status(400).json({ message: "ไม่มีรายการสินค้า" });
+          return res.status(400).json({ message: "ไม่มีรายการวัสดุ/อุปกรณ์" });
 
         const userId = req.user.us_id || req.user.id;
         const sfCode = await stockService.createWithdraw(
@@ -200,15 +229,15 @@ module.exports = (stockService) => {
           items,
         );
 
-        res.json({ message: "เบิกสินค้าเรียบร้อย", sf_code: sfCode });
+        res.json({ message: "ส่งคำขอเบิกเรียบร้อย", sf_code: sfCode });
       } catch (err) {
         if (err.message === "REPAIR_NOT_FOUND")
-          return res.status(404).json({ message: "ไม่พบใบแจ้งซ่อม" });
+          return res.status(404).json({ message: "ไม่พบรายการแจ้งซ่อมที่ต้องการ" });
         if (err.message.includes("INSUFFICIENT_STOCK"))
-          return res.status(400).json({ message: "สินค้าไม่เพียงพอ" });
+          return res.status(400).json({ message: "จำนวนวัสดุ/อุปกรณ์ที่ต้องการเบิกไม่เพียงพอ" });
         res
           .status(500)
-          .json({ message: "เบิกสินค้าไม่สำเร็จ", error: err.message });
+          .json({ message: "ส่งคำขอเบิกไม่สำเร็จ", error: err.message });
       }
     },
 

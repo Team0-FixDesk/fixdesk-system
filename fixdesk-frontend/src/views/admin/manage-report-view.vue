@@ -1,3 +1,49 @@
+/**
+ * =====================================================================
+ * @file            manage-report-view.vue
+ * @module          มอดูลส่งออกรายงาน และแดชบอร์ดสรุปผลการแจ้งซ่อม 
+                      - การส่งออกใบแจ้งซ่อมเป็นไฟล์ PDF
+                      - การสร้างหนังสือบันทึกข้อความประจำเดือน
+                      - การส่งออกรายงานแจ้งซ่อมประจำเดือน ในรูปแบบ CSV
+ * @layer           View (Presentation Layer)
+ * @version         1.0.0
+ * @since           2026-02-08
+ * @author          -
+ * @lastModified    2026-02-20
+ * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
+ * ---------------------------------------------------------------------
+ * @description
+ *  หน้าจอสำหรับผู้ดูแลระบบ ใช้สำหรับสร้างและส่งออกใบแจ้งซ่อม
+ *  โดยสามารถ:
+ *   - เลือกเดือนและปีสำหรับกรองข้อมูล
+ *   - แสดงรายการใบแจ้งซ่อมที่เสร็จสิ้น
+ *   - ค้นหา และกรองข้อมูลตามวันที่
+ *   - เลือกหลายรายการเพื่อดาวน์โหลด
+ *   - แสดงตัวอย่างเอกสารก่อนดาวน์โหลด (Preview)
+ *
+ *  รองรับการส่งออกไฟล์:
+ *   - CSV สรุปรายงานประจำเดือน
+ *   - PDF รวมหลายรายการในไฟล์เดียว
+ *   - PDF แยกรายการ และบีบอัดเป็นไฟล์ ZIP
+ *
+ *  ใช้ jsPDF และ html2canvas สำหรับสร้างไฟล์ PDF
+ *
+ * @requires
+ *   - vue
+ *   - vue-router
+ *   - jspdf
+ *   - html2canvas
+ *   - jszip
+ *   - sweetalert2
+ *   - RepairFilterBarComponent
+ *   - TableComponent
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *   - แก้ไขข้อความคำอธิบาย   [2026-02-20, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ * =====================================================================
+ */
+
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
@@ -593,7 +639,7 @@ onMounted(() => {
       <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-7xl-6">
         <!-- Page title and description -->
         <h1 class="text-2xl font-bold text-gray-800">สร้างรายงาน</h1>
-        <p class="text-gray-500 mt-1">การสร้างรายงานประจำเดือนหรือบันทึกใบแจ้งซ่อม</p>
+        <p class="text-gray-500 mt-1">สร้างรายงาน และดาวน์โหลดใบแจ้งซ่อมที่ดำเนินการเสร็จสิ้น</p>
         <div class="flex flex-col lg:flex-row gap-6">
           <!-- Sidebar: Month/Year selection and actions -->
           <div class="lg:w-72 flex-shrink-0 space-y-4">
@@ -624,7 +670,7 @@ onMounted(() => {
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                ดาวน์โหลดสรุป CSV
+                ดาวน์โหลดสรุปรายงานประจำเดือน
               </button>
               <button @click="goToCreateReport"
                 class="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-all shadow-sm">
@@ -633,7 +679,7 @@ onMounted(() => {
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                ไปหน้าสร้างบันทึกข้อความ
+                สร้างหนังสือบันทึกข้อความ
               </button>
             </div>
           </div>
@@ -669,7 +715,7 @@ onMounted(() => {
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
-                    ดาวน์โหลด ({{ selectedItems.length }})
+                    ดาวน์โหลดใบแจ้งซ่อม ({{ selectedItems.length }})
                   </button>
                 </div>
               </div>

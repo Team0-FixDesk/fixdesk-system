@@ -3,10 +3,10 @@
  * @file            admin-home.view.vue
  * @module          -
  * @layer           View (Presentation Layer)
- * @version         1.0.0
+ * @version         1.0.1
  * @since           2025-10-21
  * @author          เศรษฐพงศ์ หอมชื่น
- * @lastModified    2026-02-17
+ * @lastModified    2026-02-20
  * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
  * ---------------------------------------------------------------------
  * @description
@@ -29,7 +29,9 @@
  *
  * ---------------------------------------------------------------------
  * @changelog
- *   - ปรับปรุงข้อความที่ใช้ให้เหมาะสม   [2026-02-17, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - แก้ไขข้อความคำอธิบายสถานะ     [2026-02-17, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - แก้ไขข้อความคำอธิบายสถานะ.    [2026-02-20, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - แก้ไขการใช้สัญลักษณ์ : ในตาราง  [2026-02-20, ปฏิพัทธ์ จงนันทพันธ์กุล]
  * =====================================================================
  */
 
@@ -118,21 +120,21 @@ function buildDetailHtml(r) {
 
   // NOTE: คงรูปแบบ </br> เดิมไว้เพื่อไม่กระทบ UI ของ TableComponent
   return (
-    'วันที่แจ้ง: ' +
+    'วันที่แจ้งซ่อม : ' +
     formatThaiDate(r.rf_create_at) +
     '</br>' +
-    'ชื่อผู้แจ้ง: ' +
+    'ชื่อผู้แจ้ง : ' +
     reporterName +
     '</br>' +
-    'หน่วยงาน: ' +
+    'หน่วยงาน : ' +
     (r.department_name || '-') +
     '</br>' +
-    'รายละเอียด: ' +
+    'เรื่องที่แจ้ง : ' +
     truncateSentences(r.rf_problem, 1) +
     '</br>' +
-    'สถานที่: ' +
+    'สถานที่ : ' +
     (r.bd_name ?? '-') + ' ' +
-    (r.fl_name ?? '-') + ' ' +
+    'ชั้น ' + (r.fl_name ?? '-') + ' ' +
     (r.room_name ?? '-')
   )
 }
@@ -245,24 +247,24 @@ const completedTasks = computed(
 const statItems = computed(() => [
   {
     value: allTasks.value,
-    label: 'จำนวนงานซ่อมทั้งหมดในเดือนนี้',
+    label: 'จำนวนงานซ่อมในเดือนนี้',
     colorClass: 'text-red-500',
   },
   {
     value: todayTasks.value,
-    label: 'จำนวนงานซ่อมทั้งหมดในวันนี้',
+    label: 'จำนวนงานซ่อมในวันนี้',
     colorClass: 'text-amber-500',
     filterKey: 'today',
   },
   {
     value: progressTasks.value,
-    label: 'จำนวนงานซ่อมทั้งหมดที่กำลังดำเนินการในระบบ',
+    label: 'จำนวนงานซ่อมที่กำลังดำเนินการ',
     colorClass: 'text-blue-500',
     filterKey: 'in_progress',
   },
   {
     value: completedTasks.value,
-    label: 'จำนวนงานซ่อมทั้งหมดที่เสร็จสิ้นในสัปดาห์นี้',
+    label: 'จำนวนงานซ่อมที่เสร็จสิ้นภายใน 7 วันที่ผ่านมา',
     colorClass: 'text-green-500',
     filterKey: 'completed_7days',
   },
