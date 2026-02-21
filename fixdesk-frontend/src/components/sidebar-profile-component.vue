@@ -1,3 +1,45 @@
+/**
+ * =====================================================================
+ * @file            sidebar-profile-component.vue
+ * @module          มอดูลจัดการโปรไฟล์ - การแก้ไขข้อมูลบัญชี (แก้ไขรหัสผ่าน)
+ * @layer           Component (Presentation Layer)
+ * @version         1.0.0
+ * @since           2025-12-06
+ * @author          พชร ไพศรีสกุล
+ * @lastModified    2026-02-20
+ * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
+ * ---------------------------------------------------------------------
+ * @description
+ *  Component ส่วนท้ายของ Sidebar สำหรับแสดงข้อมูลผู้ใช้ และจัดการตั้งค่าบัญชีส่วนตัว
+ *  ความสามารถ:
+ *    - แสดงชื่อผู้ใช้จาก JWT Token
+ *    - แสดง/ซ่อน Dropdown เมนูผู้ใช้
+ *    - เปิดหน้าต่างแก้ไขข้อมูลส่วนตัว
+ *    - แก้ไขเบอร์โทรศัพท์
+ *    - เปลี่ยนรหัสผ่าน
+ *    - ยืนยันตัวตนก่อนบันทึกข้อมูล (กรอกรหัสผ่านปัจจุบัน)
+ *    - Logout และลบ Token ออกจาก localStorage / sessionStorage
+ *
+ *  การทำงานสำคัญ:
+ *    - Decode JWT เพื่อดึงข้อมูลผู้ใช้
+ *    - Validate ฟอร์มข้อมูลส่วนตัวและรหัสผ่าน
+ *    - เรียก API แก้ไขข้อมูลผู้ใช้ (PUT /edit-personal/:id)
+ *    - แสดง SweetAlert แจ้งเตือนผลลัพธ์การทำรายการ
+ *    - ใช้ Composable สำหรับจัดรูปแบบเบอร์โทรศัพท์
+ *
+ * @requires
+ *   - vue
+ *   - jwt-decode
+ *   - sweetalert2
+ *   - @iconify/vue
+ *   - @/composables/usePhoneFormat
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *   - แก้ไขข้อความแจ้งเตือน  [2026-02-20, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ * =====================================================================
+ */
+
 <script setup>
 import { ref, watch, onMounted } from 'vue'
 import { jwtDecode } from 'jwt-decode'
@@ -9,9 +51,6 @@ import ChevronUpIcon from '@/assets/icons/sidebar/chevron-up-icon.svg'
 import LogoutIcon from '@/assets/icons/sidebar/logout-icon.svg'
 import PersonIcon from '@/assets/icons/sidebar/person-icon.svg'
 import SettingIcon from '@/assets/icons/sidebar/settings-icon.svg'
-
-
-
 
 defineExpose({ forceClose })
 
@@ -148,13 +187,13 @@ function validatePasswordForm() {
 
   // ตรวจ password ใหม่
   if (!editForm.value.password) {
-    errors.value.password = 'กรุณากรอกรหัสผ่านใหม่'
+    errors.value.password = 'ยังไม่ได้กรอกรหัสผ่านใหม่'
     valid = false
   }
 
   // ตรวจ confirm password
   if (!editForm.value.confirmPassword) {
-    errors.value.confirmPassword = 'กรุณากรอกยืนยันรหัสผ่าน'
+    errors.value.confirmPassword = 'ยังไม่ได้ยืนยันรหัสผ่าน'
     valid = false
   }
 
@@ -186,7 +225,7 @@ function validatePasswordForm() {
     if (messages.length > 0) {
       Swal.fire({
         icon: 'warning',
-        title: 'กรุณาตรวจสอบการกรอกรหัสผ่าน',
+        title: 'กรุณาตรวจสอบรหัสผ่านอีกครั้ง',
         html: messages.join('<br/>'),
         confirmButtonColor: '#f59e0b', //orange
       })

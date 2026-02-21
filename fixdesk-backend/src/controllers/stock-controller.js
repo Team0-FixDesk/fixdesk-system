@@ -1,16 +1,17 @@
 /**
  * =====================================================================
  * @file            stock-controller.js
- * @layer           Controller Layer (Presentation Layer)
- * @version         1.2.0
+ * @layer           Controller (Presentation Layer)
+ * @version         1.2.1
  * @since           2026-02-10
  * @author          พชร ไพศรีสกุล
  * @contributors
  *   - พชร ไพศรีสกุล
  *   - นราธิป แสนทวีสุข
+ *   - ปฏิพัทธ์ จงนันทพันธ์กุล
  *
- * @lastModified    2026-02-17
- * @lastModifiedBy  พชร ไพศรีสกุล
+ * @lastModified    2026-02-21
+ * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
  * ---------------------------------------------------------------------
  * @description
  *  Controller สำหรับจัดการระบบคลังวัสดุ/อุปกรณ์ (Stock Management)
@@ -32,11 +33,13 @@
  * ---------------------------------------------------------------------
  * @changelog
  *   - Refactor โครงสร้างตาม Coding Standard V1.7.2
- *     [2026-02-10, พชร ไพศรีสกุล] V 1.0.0
+ *     [2026-02-10, พชร ไพศรีสกุล] V1.0.0
  *   - Allow approving and rejecting items in same requisition
- *     [2026-02-14, นราธิป แสนทวีสุข] V 1.1.0
+ *     [2026-02-14, นราธิป แสนทวีสุข] V1.1.0
  *   - เพิ่มระบบการคืนอุปกรณ์ (Return Item)
- *     [2026-02-17, พชร ไพศรีสกุล] V 1.2.0
+ *     [2026-02-17, พชร ไพศรีสกุล] V1.2.0
+ *   - แก้ไขข้อความแจ้งเตือน  
+ *     [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล] V1.2.1
  *
  * =====================================================================
  */
@@ -414,7 +417,7 @@ module.exports = (stockService) => {
       try {
         const { repair_code, items } = req.body;
         if (!items || items.length === 0)
-          return res.status(400).json({ message: "ไม่มีรายการสินค้า" });
+          return res.status(400).json({ message: "ไม่มีรายการวัสดุ/อุปกรณ์" });
 
         const userId = req.user.us_id || req.user.id;
         const sfCode = await stockService.createWithdraw(
@@ -423,15 +426,15 @@ module.exports = (stockService) => {
           items,
         );
 
-        res.json({ message: "เบิกสินค้าเรียบร้อย", sf_code: sfCode });
+        res.json({ message: "ส่งคำขอเบิกเรียบร้อย", sf_code: sfCode });
       } catch (err) {
         if (err.message === "REPAIR_NOT_FOUND")
-          return res.status(404).json({ message: "ไม่พบใบแจ้งซ่อม" });
+          return res.status(404).json({ message: "ไม่พบรายการแจ้งซ่อมที่ต้องการ" });
         if (err.message.includes("INSUFFICIENT_STOCK"))
-          return res.status(400).json({ message: "สินค้าไม่เพียงพอ" });
+          return res.status(400).json({ message: "จำนวนวัสดุ/อุปกรณ์ที่ต้องการเบิกไม่เพียงพอ" });
         res
           .status(500)
-          .json({ message: "เบิกสินค้าไม่สำเร็จ", error: err.message });
+          .json({ message: "ส่งคำขอเบิกไม่สำเร็จ", error: err.message });
       }
     },
 

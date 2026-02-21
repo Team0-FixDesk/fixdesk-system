@@ -1,16 +1,17 @@
 /**
  * =====================================================================
  * @file            repair.controller.js
- * @layer           Controller Layer (Presentation Layer)
- * @version         1.0.0
+ * @layer           Controller (Repair Management Layer)
+ * @version         1.1.1
  * @since           2026-02-10
  * @author          พชร ไพศรีสกุล
  * @contributors
  *   - พชร ไพศรีสกุล
  *   - นราธิป แสนทวีสุข
+ *   - ปฏิพัทธ์ จงนันทพันธ์กุล
  *
- * @lastModified    2026-02-11
- * @lastModifiedBy  นราธิป แสนทวีสุข
+ * @lastModified    2026-02-21
+ * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
  * ---------------------------------------------------------------------
  * @description
  *  Controller สำหรับจัดการใบแจ้งซ่อม (Repair Request Management)
@@ -29,10 +30,11 @@
  * ---------------------------------------------------------------------
  * @changelog
  *   - Initial implementation Repair Controller ตาม Layered Architecture
- *     [2026-02-10, พชร ไพศรีสกุล] V 1.0.0
+ *     [2026-02-10, พชร ไพศรีสกุล] V1.0.0
  *   - เพิ่มระบบแจ้งเตือน LINE แบบ Flex Message และแก้ไขการรับงานเป็นทีม
- *     [2026-02-10, นราธิป แสนทวีสุข] V 1.1.0
- *
+ *     [2026-02-10, นราธิป แสนทวีสุข] V1.1.0
+ *   - แก้ไขข้อความแจ้งเตือน
+ *     [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล] V1.1.1
  * =====================================================================
  */
 module.exports = (repairService) => {
@@ -212,13 +214,13 @@ module.exports = (repairService) => {
         if (affected === 0)
           return res
             .status(404)
-            .json({ message: "ไม่พบใบแจ้งซ่อม หรือสถานะไม่ใช่ pending" });
+            .json({ message: "ไม่พบรายการแจ้งซ่อมที่ต้องการแก้ไข กรุณาโหลดหน้าใหม่ และลองอีกครั้ง" });
 
-        res.json({ message: "อัปเดตข้อมูลสำเร็จ", updated: affected });
+        res.json({ message: "แก้ไขข้อมูลเรียบร้อยแล้ว", updated: affected });
       } catch (err) {
         res
           .status(500)
-          .json({ message: "อัปเดตข้อมูลไม่สำเร็จ", error: err.message });
+          .json({ message: "แก้ไขข้อมูลไม่สำเร็จ", error: err.message });
       }
     },
 
@@ -242,10 +244,10 @@ module.exports = (repairService) => {
         if (affected === 0)
           return res
             .status(400)
-            .json({ message: "ลบไม่ได้ (สถานะอาจไม่ใช่ pending)" });
+            .json({ message: "ไม่พบรายการแจ้งซ่อมที่ต้องการลบ กรุณาโหลดหน้าใหม่ และลองอีกครั้ง" });
         res.json({ message: "ลบข้อมูลเรียบร้อยแล้ว" });
       } catch (err) {
-        res.status(500).json({ message: "เกิดข้อผิดพลาด", error: err.message });
+        res.status(500).json({ message: "ลบข้อมูลไม่สำเร็จ", error: err.message });
       }
     },
 
