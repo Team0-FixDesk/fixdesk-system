@@ -3,9 +3,14 @@
  * @file            technician-stock-list.view.vue
  * @module          มอดูลการจัดการงานของช่าง - การเบิกของ และดูรายละเอียดการเบิก
  * @layer           View (Presentation Layer)
- * @version         1.0.0
+ * @version         1.0.1
  * @since           2025-10-21
  * @author          เศรษฐพงศ์ หอมชื่น
+ * @contributor
+ *   - เศรษฐพงศ์ หอมชื่น
+ *   - ธนภันทร จันทร์งาม
+ *   - ปฏิพัทธ์ จงนันทพันธ์กุล
+ *                       
  * @lastModified    2026-02-21
  * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
  * ---------------------------------------------------------------------
@@ -33,7 +38,10 @@
  *
  * ---------------------------------------------------------------------
  * @changelog
- *   - แก้ไขชื่อหน้าจอ   [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - แก้ไขขนาดช่องของสินค้า
+       [2569-02-17, ธนภัทร จันทร์งาม] V1.0.0       
+ *   - แก้ไขชื่อหน้าจอ   
+       [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล] V1.0.1
  * =====================================================================
  */
 
@@ -624,7 +632,7 @@ onBeforeUnmount(() => {
     <div v-if="isLoading" class="text-center py-20 text-gray-500">กำลังโหลดข้อมูล...</div>
 
     <div v-else>
-      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <ProductCardComponent
           v-for="item in filteredStockItemList"
           :key="item.id"
