@@ -1,41 +1,42 @@
 /**
- * =====================================================================
- * @file            repair-request.view.vue
- * @module          มอดูลแจ้งซ่อม - การสร้างแบบฟอร์มแจ้งซ่อม
- * @layer           View (Presentation Layer)
- * @version         1.0.1
- * @since           2026-02-04
- * @author          พชร ไพศรีสกุล
- * @lastModified    2026-02-20
- * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
- * ---------------------------------------------------------------------
- * @description
- *  หน้าจอแบบฟอร์มสำหรับสร้างรายการแจ้งซ่อมใหม่
- *  ผู้ใช้งานสามารถ:
- *   - กรอกข้อมูลรายละเอียดปัญหา
- *   - เลือกประเภทงาน อาคาร ชั้น และห้อง
- *   - ระบุระดับความเร่งด่วน
- *   - แนบรูปภาพ หรือวิดีโอประกอบ (สูงสุด 5 ไฟล์)
- *
- * @requires
- *   - vue
- *   - vue-router
- *   - sweetalert2
- *   - @iconify/vue
- *   - @/composables/usePhoneFormat
- *   - @/composables/location/useRepairLocationData
- *   - @/composables/useFileUpload
- *   - @/composables/repair/useRepairFormValidation
- *   - @/composables/repair/useRepairService
- *   - @/utils/jwt.util
- *
- * ---------------------------------------------------------------------
- * @changelog
- *   - แก้ไขข้อความช่องกรอกข้อมูล   [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
- *   - แก้ไขข้อความแจ้งเตือน       [2026-02-19, ปฏิพัทธ์ จงนันทพันธ์กุล]
- *   - แก้ไขข้อความแจ้งเตือน       [2026-02-20, ปฏิพัทธ์ จงนันทพันธ์กุล]
- * =====================================================================
- */
+* =====================================================================
+* @file repair-request.view.vue
+* @module มอดูลแจ้งซ่อม - การสร้างแบบฟอร์มแจ้งซ่อม
+* @layer View (Presentation Layer)
+* @version 1.0.1
+* @since 2026-02-04
+* @author พชร ไพศรีสกุล
+* @lastModified 2026-02-20
+* @lastModifiedBy ธนภัทร จันทร์งาม
+* ---------------------------------------------------------------------
+* @description
+* หน้าจอแบบฟอร์มสำหรับสร้างรายการแจ้งซ่อมใหม่
+* ผู้ใช้งานสามารถ:
+* - กรอกข้อมูลรายละเอียดปัญหา
+* - เลือกประเภทงาน อาคาร ชั้น และห้อง
+* - ระบุระดับความเร่งด่วน
+* - แนบรูปภาพ หรือวิดีโอประกอบ (สูงสุด 5 ไฟล์)
+*
+* @requires
+* - vue
+* - vue-router
+* - sweetalert2
+* - @iconify/vue
+* - @/composables/usePhoneFormat
+* - @/composables/location/useRepairLocationData
+* - @/composables/useFileUpload
+* - @/composables/repair/useRepairFormValidation
+* - @/composables/repair/useRepairService
+* - @/utils/jwt.util
+*
+* ---------------------------------------------------------------------
+* @changelog
+* - แก้ไขข้อความช่องกรอกข้อมูล [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
+* - แก้ไขข้อความแจ้งเตือน [2026-02-19, ปฏิพัทธ์ จงนันทพันธ์กุล]
+* - แก้ไขข้อความแจ้งเตือน [2026-02-20, ปฏิพัทธ์ จงนันทพันธ์กุล]
+* - ปรับปรุงการแจ้งเตือนหลังสร้างใบแจ้งซ่อมสำเร็จ [2026-02-21, ธนภัทร จันทร์งาม]
+* =====================================================================
+*/
 
 <script setup>
 defineOptions({ name: 'RepairRequestView' })
@@ -183,6 +184,9 @@ async function submitRepairRequest() {
     reverseButtons: true,
     confirmButtonText: 'ยืนยัน',
     cancelButtonText: 'ยกเลิก',
+
+    confirmButtonColor: '#1E48D1', // น้ำเงิน Sidebar
+    cancelButtonColor: '#6B7280',  // เทา
   })
 
   if (!confirmResult.isConfirmed) return
@@ -205,7 +209,7 @@ async function submitRepairRequest() {
       toast: true,
       position: 'top-end',
       icon: 'success',
-      title: 'ส่งแบบฟอร์มแจ้งซ่อมเรียบร้อยแล้ว',
+      title: 'ระบบบันทึกคำขอแจ้งซ่อมเรียบร้อยแล้ว',
       timer: 2500,
       showConfirmButton: false,
       width: '380px',
@@ -257,12 +261,9 @@ async function cancelRepairRequest() {
               ลงชื่อผู้แจ้ง <span class="text-red-600">*</span>
             </label>
             <p class="text-neutral-400 text-xs mb-2">ชื่อ–นามสกุลของผู้แจ้งปัญหา</p>
-            <input
-              v-model="repairFormData.reporterName"
-              type="text"
+            <input v-model="repairFormData.reporterName" type="text"
               class="w-full text-xm bg-gray-100 border border-neutral-400 rounded-md cursor-not-allowed placeholder-[#A1A1A1] text-sm px-3 py-2"
-              readonly
-            />
+              readonly />
           </div>
 
           <div>
@@ -270,12 +271,9 @@ async function cancelRepairRequest() {
               หมายเลขโทรศัพท์ <span class="text-red-600">*</span>
             </label>
             <p class="text-neutral-400 text-xs mb-2">หมายเลขโทรศัพท์ที่สามารถติดต่อกลับได้</p>
-            <input
-              v-model="repairFormData.phoneNumber"
-              type="text"
+            <input v-model="repairFormData.phoneNumber" type="text"
               class="w-full text-xm bg-gray-100 border border-neutral-400 rounded-md cursor-not-allowed placeholder-[#A1A1A1] text-sm px-3 py-2"
-              readonly
-            />
+              readonly />
           </div>
         </div>
 
@@ -285,12 +283,9 @@ async function cancelRepairRequest() {
               หน่วยงาน <span class="text-red-600">*</span>
             </label>
             <p class="text-neutral-400 text-xs mb-2">ชื่อของหน่วยงาน หรือแผนกที่สังกัด</p>
-            <input
-              v-model="repairFormData.department"
-              type="text"
+            <input v-model="repairFormData.department" type="text"
               class="w-full text-xm bg-gray-100 border border-neutral-400 rounded-md cursor-not-allowed placeholder-[#A1A1A1] text-sm px-3 py-2"
-              readonly
-            />
+              readonly />
           </div>
 
           <div>
@@ -299,14 +294,10 @@ async function cancelRepairRequest() {
             </label>
             <p class="text-neutral-400 text-xs mb-2">ประเภทของงานซ่อม หรือประเภทของปัญหาที่ต้องการแจ้ง</p>
 
-            <select
-              v-model="repairFormData.repairType"
-              @change="validateField('repairType')"
-              :class="[
-                'w-full text-xm bg-white border rounded-md text-neutral-700 text-sm px-3 py-2',
-                errorData.repairType ? 'border-red-500' : 'border-neutral-400',
-              ]"
-            >
+            <select v-model="repairFormData.repairType" @change="validateField('repairType')" :class="[
+              'w-full text-xm bg-white border rounded-md text-neutral-700 text-sm px-3 py-2',
+              errorData.repairType ? 'border-red-500' : 'border-neutral-400',
+            ]">
               <option value="">กรุณาเลือกประเภท</option>
               <option v-for="type in repairTypeList" :key="type.id" :value="type.id">
                 {{ type.name }}
@@ -321,12 +312,9 @@ async function cancelRepairRequest() {
           <div>
             <label class="text-base font-medium text-black">หมายเลขครุภัณฑ์</label>
             <p class="text-neutral-400 text-xs mb-2">หมายเลขครุภัณฑ์ของวัสดุ/อุปกรณ์ (ถ้ามี)</p>
-            <input
-              v-model="repairFormData.assetCode"
-              type="text"
+            <input v-model="repairFormData.assetCode" type="text"
               class="w-full text-xm bg-white border-neutral-400 rounded-md placeholder-[#A1A1A1] text-sm px-3 py-2"
-              placeholder="กรุณากรอกเลขครุภัณฑ์ (ถ้ามี)"
-            />
+              placeholder="กรุณากรอกเลขครุภัณฑ์ (ถ้ามี)" />
           </div>
         </div>
 
@@ -335,16 +323,10 @@ async function cancelRepairRequest() {
             ขอความอนุเคราะห์ตรวจสอบ/ซ่อมแซม <span class="text-red-600">*</span>
           </label>
           <p class="text-neutral-400 text-xs mb-2">ปัญหา หรือเหตุที่ต้องการให้ตรวจสอบ/ซ่อมแซม</p>
-          <input
-            v-model="repairFormData.problemDetail"
-            @input="validateField('problemDetail')"
-            type="text"
-            :class="[
-              'w-full text-sm bg-white border rounded-md placeholder-[#A1A1A1] px-3 py-2',
-              errorData.problemDetail ? 'border-red-500' : 'border-neutral-400',
-            ]"
-            placeholder="กรุณากรอกปัญหา หรือเหตุที่ต้องการแจ้ง"
-          />
+          <input v-model="repairFormData.problemDetail" @input="validateField('problemDetail')" type="text" :class="[
+            'w-full text-sm bg-white border rounded-md placeholder-[#A1A1A1] px-3 py-2',
+            errorData.problemDetail ? 'border-red-500' : 'border-neutral-400',
+          ]" placeholder="กรุณากรอกปัญหา หรือเหตุที่ต้องการแจ้ง" />
           <p v-if="errorData.problemDetail" class="text-red-500 text-xs sm:text-sm mt-1">
             {{ errorData.problemDetail }}
           </p>
@@ -356,22 +338,18 @@ async function cancelRepairRequest() {
               อาคาร <span class="text-red-600">*</span>
             </label>
             <p class="text-neutral-400 text-xs mb-2">อาคารที่พบปัญหา หรือสาเหตุที่ต้องการให้ตรวจสอบ/ซ่อมแซม</p>
-            <select
-              v-model="repairFormData.building"
-              @change="
-                () => {
-                  repairFormData.floor = ''
-                  repairFormData.room = ''
+            <select v-model="repairFormData.building" @change="
+              () => {
+                repairFormData.floor = ''
+                repairFormData.room = ''
 
-                  fetchFloorList(repairFormData.building)
-                  validateField('building')
-                }
-              "
-              :class="[
+                fetchFloorList(repairFormData.building)
+                validateField('building')
+              }
+            " :class="[
                 'w-full text-xm bg-white border rounded-md text-neutral-700 text-sm px-3 py-2',
                 errorData.building ? 'border-red-500' : 'border-neutral-400',
-              ]"
-            >
+              ]">
               <option value="">กรุณาเลือกอาคาร</option>
               <option v-for="b in buildingList" :key="b.id" :value="b.id">
                 {{ b.name }}
@@ -387,21 +365,17 @@ async function cancelRepairRequest() {
               ชั้น <span class="text-red-600">*</span>
             </label>
             <p class="text-neutral-400 text-xs mb-2">ชั้นที่พบปัญหา หรือเหตุที่ต้องการให้ตรวจสอบ/ซ่อมแซม</p>
-            <select
-              v-model="repairFormData.floor"
-              @change="
-                () => {
-                  repairFormData.room = ''
+            <select v-model="repairFormData.floor" @change="
+              () => {
+                repairFormData.room = ''
 
-                  fetchRoomList(repairFormData.floor)
-                  validateField('floor')
-                }
-              "
-              :class="[
+                fetchRoomList(repairFormData.floor)
+                validateField('floor')
+              }
+            " :class="[
                 'w-full text-xm bg-white border rounded-md text-neutral-700 text-sm px-3 py-2',
                 errorData.floor ? 'border-red-500' : 'border-neutral-400',
-              ]"
-            >
+              ]">
               <option value="">กรุณาเลือกชั้น</option>
               <option v-for="f in floorList" :key="f.id" :value="f.id">
                 {{ f.name }}
@@ -417,14 +391,10 @@ async function cancelRepairRequest() {
               ห้อง <span class="text-red-600">*</span>
             </label>
             <p class="text-neutral-400 text-xs mb-2">ห้องที่พบปัญหา หรือเหตุที่ต้องการให้ตรวจสอบ/ซ่อมแซม</p>
-            <select
-              v-model="repairFormData.room"
-              @change="validateField('room')"
-              :class="[
-                'w-full text-xm bg-white border rounded-md text-neutral-700 text-sm px-3 py-2',
-                errorData.room ? 'border-red-500' : 'border-neutral-400',
-              ]"
-            >
+            <select v-model="repairFormData.room" @change="validateField('room')" :class="[
+              'w-full text-xm bg-white border rounded-md text-neutral-700 text-sm px-3 py-2',
+              errorData.room ? 'border-red-500' : 'border-neutral-400',
+            ]">
               <option value="">กรุณาเลือกห้อง</option>
               <option v-for="r in roomList" :key="r.id" :value="r.id">
                 {{ r.name }}
@@ -445,15 +415,10 @@ async function cancelRepairRequest() {
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-10 items-stretch">
           <div class="flex flex-col flex-1">
-            <textarea
-              v-model="repairFormData.issueDescription"
-              @input="validateField('issueDescription')"
-              :class="[
-                'flex-1 w-full min-h-[220px] sm:min-h-[280px] text-sm bg-white border rounded-md resize-none placeholder-[#A1A1A1] px-3 py-2',
-                errorData.issueDescription ? 'border-red-500' : 'border-neutral-400',
-              ]"
-              placeholder="กรุณาอธิบายสาเหตุ/อาการเสียที่พบ"
-            ></textarea>
+            <textarea v-model="repairFormData.issueDescription" @input="validateField('issueDescription')" :class="[
+              'flex-1 w-full min-h-[220px] sm:min-h-[280px] text-sm bg-white border rounded-md resize-none placeholder-[#A1A1A1] px-3 py-2',
+              errorData.issueDescription ? 'border-red-500' : 'border-neutral-400',
+            ]" placeholder="กรุณาอธิบายสาเหตุ/อาการเสียที่พบ"></textarea>
 
             <p v-if="errorData.issueDescription" class="text-red-500 text-sm mt-1">
               {{ errorData.issueDescription }}
@@ -461,31 +426,23 @@ async function cancelRepairRequest() {
           </div>
 
           <div class="flex flex-col flex-1">
-            <label
-              for="dropzone-file"
-              :class="[
-                'flex flex-col items-center justify-center w-full border-2 border-dashed rounded-lg cursor-pointer transition flex-1 min-h-[220px] sm:min-h-[280px] mb-4',
-                isDragOver
-                  ? 'border-blue-400 bg-blue-50 scale-105'
-                  : 'border-gray-300 bg-gray-50 hover:bg-gray-100',
-              ]"
-              @dragover="onDragOver"
-              @dragleave="onDragLeave"
-              @drop="onDrop"
-            >
+            <label for="dropzone-file" :class="[
+              'flex flex-col items-center justify-center w-full border-2 border-dashed rounded-lg cursor-pointer transition flex-1 min-h-[220px] sm:min-h-[280px] mb-4',
+              isDragOver
+                ? 'border-blue-400 bg-blue-50 scale-105'
+                : 'border-gray-300 bg-gray-50 hover:bg-gray-100',
+            ]" @dragover="onDragOver" @dragleave="onDragLeave" @drop="onDrop">
               <div class="flex flex-col items-center justify-center pt-5 pb-6 text-center">
                 <div :class="['transition-all duration-200', isDragOver ? 'scale-110' : '']">
                   <Icon icon="ri:image-upload-line" width="60" height="60" style="color: gray" />
                 </div>
-                <p
-                  :class="[
-                    'text-sm mb-1',
-                    isDragOver ? 'text-blue-600 font-semibold' : 'text-gray-500',
-                  ]"
-                >
+                <p :class="[
+                  'text-sm mb-1',
+                  isDragOver ? 'text-blue-600 font-semibold' : 'text-gray-500',
+                ]">
                   <span class="font-semibold">{{
                     isDragOver ? 'วางไฟล์ที่นี่' : 'ลากไฟล์ หรือคลิกเพื่อเลือกไฟล์'
-                  }}</span>
+                    }}</span>
                 </p>
                 <p class="text-xs text-gray-400 mt-1">
                   รองรับ : รูปภาพ และวิดีโอ (สูงสุด {{ MAX_FILE_COUNT }} ไฟล์/50 MB)
@@ -496,77 +453,45 @@ async function cancelRepairRequest() {
                   <span class="text-xs px-2 py-1 bg-green-100 text-green-700 rounded">MP4</span>
                 </div>
               </div>
-              <input
-                id="dropzone-file"
-                type="file"
-                multiple
-                accept="image/*,video/*"
-                class="hidden"
-                @change="onFileUpload"
-              />
+              <input id="dropzone-file" type="file" multiple accept="image/*,video/*" class="hidden"
+                @change="onFileUpload" />
             </label>
 
             <div v-if="filePreviewList.length > 0" class="space-y-2 mb-4">
-              <div
-                v-for="(file, index) in filePreviewList"
-                :key="index"
+              <div v-for="(file, index) in filePreviewList" :key="index"
                 class="flex items-center gap-3 p-2 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
-                @click="openPreview(index)"
-              >
+                @click="openPreview(index)">
                 <div
-                  class="flex-shrink-0 w-12 h-12 rounded-md overflow-hidden bg-gray-200 flex items-center justify-center"
-                >
-                  <img
-                    v-if="file.isImage"
-                    :src="file.url"
-                    :alt="file.name"
-                    class="w-full h-full object-cover"
-                  />
-                  <svg
-                    v-else-if="file.isVideo"
-                    class="w-6 h-6 text-gray-500"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      d="M6.3 2.84A1 1 0 004 3.75v12.5a1 1 0 001.65.76L17.3 10.76a1 1 0 000-1.52L5.65 3.08z"
-                    />
+                  class="flex-shrink-0 w-12 h-12 rounded-md overflow-hidden bg-gray-200 flex items-center justify-center">
+                  <img v-if="file.isImage" :src="file.url" :alt="file.name" class="w-full h-full object-cover" />
+                  <svg v-else-if="file.isVideo" class="w-6 h-6 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M6.3 2.84A1 1 0 004 3.75v12.5a1 1 0 001.65.76L17.3 10.76a1 1 0 000-1.52L5.65 3.08z" />
                   </svg>
                 </div>
                 <div class="flex-1 min-w-0">
                   <p class="text-sm font-medium text-gray-800 truncate">{{ file.name }}</p>
                   <p class="text-xs text-gray-500">{{ (file.size / 1024 / 1024).toFixed(1) }} MB</p>
                 </div>
-                <button
-                  @click.stop="deleteFile(index)"
-                  class="flex-shrink-0 w-8 h-8 bg-red-500 text-white rounded-full text-sm hover:bg-red-600 transition-colors"
-                >
+                <button @click.stop="deleteFile(index)"
+                  class="flex-shrink-0 w-8 h-8 bg-red-500 text-white rounded-full text-sm hover:bg-red-600 transition-colors">
                   ×
                 </button>
               </div>
             </div>
 
-            <div
-              v-if="filePreviewList.length === 0"
-              class="text-center text-gray-400 text-sm mb-4 py-2 border border-dashed border-gray-200 rounded-lg"
-            >
+            <div v-if="filePreviewList.length === 0"
+              class="text-center text-gray-400 text-sm mb-4 py-2 border border-dashed border-gray-200 rounded-lg">
               ไม่พบไฟล์แนบ (สามารถบันทึกแบบฟอร์มได้โดยไม่แนบไฟล์)
             </div>
 
             <div class="flex flex-col sm:flex-row justify-center items-center gap-4 sm:gap-6 mt-4">
-              <div
-                v-for="(level, index) in URGENCY_LEVEL_LIST"
-                :key="index"
+              <div v-for="(level, index) in URGENCY_LEVEL_LIST" :key="index"
                 class="flex items-center gap-3 cursor-pointer select-none"
-                @click="repairFormData.urgency = level.value"
-              >
-                <div
-                  class="w-6 h-6 sm:w-7 sm:h-7 rounded-full border-2 shadow-md transition-all duration-200"
-                  :class="[
-                    level.border,
-                    repairFormData.urgency === level.value ? level.bg : 'bg-white',
-                  ]"
-                ></div>
+                @click="repairFormData.urgency = level.value">
+                <div class="w-6 h-6 sm:w-7 sm:h-7 rounded-full border-2 shadow-md transition-all duration-200" :class="[
+                  level.border,
+                  repairFormData.urgency === level.value ? level.bg : 'bg-white',
+                ]"></div>
                 <span class="text-base text-black font-normal">{{ level.label }}</span>
               </div>
             </div>
@@ -574,76 +499,48 @@ async function cancelRepairRequest() {
         </div>
 
         <div class="flex justify-center sm:justify-end mt-8">
-          <button
-            type="button"
-            :disabled="isSubmitting"
+          <button type="button" :disabled="isSubmitting"
             class="bg-gray-500 text-white px-6 py-2.5 sm:py-3 rounded-lg hover:bg-gray-600 transition disabled:opacity-50 mr-4"
-            @click="cancelRepairRequest"
-          >
+            @click="cancelRepairRequest">
             ยกเลิก
           </button>
-          <button
-            type="button"
-            :disabled="isSubmitting"
+          <button type="button" :disabled="isSubmitting"
             class="bg-[#1E48D1] text-white px-6 py-2.5 sm:py-3 rounded-lg hover:bg-sky-700 transition disabled:opacity-50"
-            @click="submitRepairRequest"
-          >
+            @click="submitRepairRequest">
             ส่งแบบฟอร์มแจ้งซ่อม
           </button>
         </div>
       </form>
     </div>
 
-    <div
-      v-if="showPreviewModal"
-      class="fixed inset-0 z-50 bg-black bg-opacity-90 flex items-center justify-center"
-      @click="closePreview"
-    >
+    <div v-if="showPreviewModal" class="fixed inset-0 z-50 bg-black bg-opacity-90 flex items-center justify-center"
+      @click="closePreview">
       <div class="relative max-w-4xl max-h-full p-4" @click.stop>
-        <button
-          @click="closePreview"
-          class="absolute -top-4 -right-4 w-10 h-10 bg-black bg-opacity-50 rounded-full text-white text-2xl hover:text-gray-300 z-10"
-        >
+        <button @click="closePreview"
+          class="absolute -top-4 -right-4 w-10 h-10 bg-black bg-opacity-50 rounded-full text-white text-2xl hover:text-gray-300 z-10">
           ×
         </button>
-        <img
-          v-if="filePreviewList[currentPreviewIndex]?.isImage"
-          :src="filePreviewList[currentPreviewIndex]?.url"
-          class="max-w-full max-h-full object-contain"
-        />
-        <video
-          v-else-if="filePreviewList[currentPreviewIndex]?.isVideo"
-          :src="filePreviewList[currentPreviewIndex]?.url"
-          controls
-          autoplay
-          class="max-w-full max-h-full"
-          :key="currentPreviewIndex"
-        ></video>
+        <img v-if="filePreviewList[currentPreviewIndex]?.isImage" :src="filePreviewList[currentPreviewIndex]?.url"
+          class="max-w-full max-h-full object-contain" />
+        <video v-else-if="filePreviewList[currentPreviewIndex]?.isVideo"
+          :src="filePreviewList[currentPreviewIndex]?.url" controls autoplay class="max-w-full max-h-full"
+          :key="currentPreviewIndex"></video>
 
-        <button
-          v-if="filePreviewList.length > 1 && currentPreviewIndex > 0"
-          @click="prevPreview"
-          class="absolute -left-6 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-black bg-opacity-50 rounded-full text-white text-2xl"
-        >
+        <button v-if="filePreviewList.length > 1 && currentPreviewIndex > 0" @click="prevPreview"
+          class="absolute -left-6 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-black bg-opacity-50 rounded-full text-white text-2xl">
           ‹
         </button>
-        <button
-          v-if="filePreviewList.length > 1 && currentPreviewIndex < filePreviewList.length - 1"
+        <button v-if="filePreviewList.length > 1 && currentPreviewIndex < filePreviewList.length - 1"
           @click="nextPreview"
-          class="absolute -right-6 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-black bg-opacity-50 rounded-full text-white text-2xl"
-        >
+          class="absolute -right-6 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-black bg-opacity-50 rounded-full text-white text-2xl">
           ›
         </button>
 
-        <div
-          v-if="filePreviewList.length > 1"
-          class="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-white text-sm bg-black bg-opacity-50 px-3 py-1 rounded"
-        >
+        <div v-if="filePreviewList.length > 1"
+          class="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-white text-sm bg-black bg-opacity-50 px-3 py-1 rounded">
           {{ currentPreviewIndex + 1 }} / {{ filePreviewList.length }}
         </div>
-        <div
-          class="absolute top-4 left-4 text-white text-sm bg-black bg-opacity-50 px-3 py-1 rounded"
-        >
+        <div class="absolute top-4 left-4 text-white text-sm bg-black bg-opacity-50 px-3 py-1 rounded">
           {{ filePreviewList[currentPreviewIndex]?.name }}
         </div>
       </div>

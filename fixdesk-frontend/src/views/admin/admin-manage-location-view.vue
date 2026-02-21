@@ -1,13 +1,14 @@
-/**
+
+ /**
  * =====================================================================
  * @file            admin-manage-location-view.vue
  * @module          มอดูลการจัดการสถานที่ - การจัดการข้อมูลสถานที่
  * @layer           View (Presentation Layer)
- * @version         1.0.0
+ * @version         1.0.1
  * @since           2025-10-21
  * @author          เศรษฐพงศ์ หอมชื่น
- * @lastModified    2026-02-18
- * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
+ * @lastModified    2026-02-21
+ * @lastModifiedBy  ธนภัทร จันทร์งาม
  * ---------------------------------------------------------------------
  * @description
  *  หน้าจอสำหรับผู้ดูแลระบบ ใช้จัดการข้อมูลสถานที่ภายในระบบแจ้งซ่อม
@@ -22,6 +23,11 @@
  *    - ลบข้อมูลห้อง
  *    - นำเข้าสถานที่จากไฟล์ Excel
  *
+ *  การปรับปรุงล่าสุด:
+ *    - ปรับข้อความในหน้าจอให้สอดคล้องกับรูปแบบเดียวกับหน้าจัดการอื่น ๆ
+ *    - เพิ่ม/ปรับ Toast แจ้งเตือนให้แสดงผลทันทีหลังดำเนินการสำเร็จ
+ *    - ปรับรูปแบบการแจ้งเตือนให้ใช้โทนสีเดียวกันกับโมดูลอื่น
+ *
  * @requires
  *   - vue
  *   - vue-router
@@ -34,8 +40,11 @@
  * ---------------------------------------------------------------------
  * @changelog
  *   - ปรับปรุงข้อความที่ใช้ให้เหมาะสม                 [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - ปรับข้อความในหน้าจอ และปรับรูปแบบ Toast
+ *     ให้สอดคล้องกับโมดูลอื่นในระบบ                  [2026-02-21, ธนภัทร จันทร์งาม]
  * =====================================================================
  */
+
 
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
@@ -624,7 +633,6 @@ async function confirmDelete(username) {
            <small>อาคาร: ${item.building} ชั้น: ${item.floor}</small>`,
     icon: 'warning',
     showCancelButton: true,
-    reverseButtons: true,
     confirmButtonText: 'ยืนยัน',
     cancelButtonText: 'ยกเลิก',
     confirmButtonColor: '#EF4444',
@@ -663,11 +671,8 @@ async function confirmDelete(username) {
       },
     })
     Toast.fire({
-      title: 'สำเร็จ!',
-      text: 'ลบห้องเรียบร้อยแล้ว',
+      title: 'ลบห้องเรียบร้อยแล้ว',
       icon: 'success',
-      background: '#f0f9ff',
-      color: '#1e3a8a',
     })
 
     await refreshData()
@@ -685,8 +690,6 @@ async function confirmDelete(username) {
       title: 'เกิดข้อผิดพลาด',
       text: err.message || 'เกิดข้อผิดพลาดในการลบข้อมูล',
       icon: 'error',
-      background: '#fee2e2',
-      color: '#dc2626',
     })
   }
 }
@@ -774,10 +777,7 @@ async function saveSingleLocation() {
     })
     await Toast.fire({
       icon: 'success',
-      title: 'สำเร็จ!',
-      text: 'เพิ่มข้อมูลเรียบร้อยแล้ว',
-      background: '#f0f9ff',
-      color: '#1e3a8a',
+      title: 'เพิ่มข้อมูลเรียบร้อยแล้ว',
     })
 
     await refreshData()
@@ -892,10 +892,7 @@ async function bulkCreateLocation() {
     })
     await Toast.fire({
       icon: 'success',
-      title: 'สำเร็จ!',
-      text: 'สร้างสถานที่เรียบร้อยแล้ว',
-      background: '#f0f9ff',
-      color: '#1e3a8a',
+      title: 'สร้างสถานที่เรียบร้อยแล้ว',
     })
 
     await refreshData()
@@ -926,7 +923,7 @@ async function saveEditLocation() {
     return
   }
   const result = await Swal.fire({
-    title: 'ยืนยันการแก้ไขข้อมูล?',
+    title: 'ยืนยันการแก้ไขข้อมูล',
     text: 'คุณต้องการบันทึกการแก้ไขหรือไม่?',
     icon: 'question',
     showCancelButton: true,
@@ -981,10 +978,7 @@ async function saveEditLocation() {
     })
     await Toast.fire({
       icon: 'success',
-      title: 'สำเร็จ!',
-      text: 'แก้ไขข้อมูลห้องเรียบร้อยแล้ว',
-      background: '#f0f9ff',
-      color: '#1e3a8a',
+      title: 'แก้ไขข้อมูลห้องเรียบร้อยแล้ว',
     })
 
     await refreshData()
