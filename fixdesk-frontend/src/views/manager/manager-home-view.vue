@@ -4,7 +4,7 @@
  * @module          หน้าหลักผู้บริหาร (Manager Dashboard)
  * @layer           View (Presentation Layer)
  * @version         1.0.0
- * @since           2025-10-21
+ * @since           2026-02-20
  * @author          พชร ไพศรีสกุล
  * @contributors
  *   - พชร ไพศรีสกุล
@@ -35,7 +35,8 @@
  * - เพิ่มการตั้งค่าชื่อแกน (Title) แกน X และ Y ในทุกกราฟ                                                        [2026-02-17, เศรษฐพงศ์ หอมชื่น]
  * - ปรับปรุงการแสดงผลเส้นแกน (Axis Border)                                                                  [2026-02-17, เศรษฐพงศ์ หอมชื่น]
  * - ปรับแก้ Padding และ Responsive เพื่อป้องกันชื่อแกนตกขอบ                                                     [2026-02-17, เศรษฐพงศ์ หอมชื่น]
- * - ปรับแก้ กราฟสัดส่วนสถานะงานแจ้งซ่อม และอัตราความสำเร็จการปฏิบัติงานของช่างแต่ละแผนก ให้แสดงรายสัปดาห์ (จันทร์-อาทิตย์)  [2026-01-13, เศรษฐพงศ์ หอมชื่น]
+ * - ปรับแก้ กราฟสัดส่วนสถานะงานแจ้งซ่อม และอัตราความสำเร็จการปฏิบัติงานของช่างแต่ละแผนก ให้แสดงรายสัปดาห์ (จันทร์-อาทิตย์)  [2026-02-18, เศรษฐพงศ์ หอมชื่น]
+ * - ปรับแก้เงื่อนไขการแสดงกราฟ                                                                                 [2026-02-20, เศรษฐพงศ์ หอมชื่น]
  * =====================================================================
  */
 
@@ -270,38 +271,46 @@ const summaryCards = computed(() => [
 ])
 
 function updateSummaryCards() {
-  const currentMonth = filterRepairsByMonth(
-    allRepairs.value,
-    selectedYear.value,
-    selectedMonthIndex.value,
-  )
+  let curTotal = 0, curPending = 0, curInProgress = 0, curDone = 0
+  let prevTotal = 0, prevPending = 0, prevInProgress = 0, prevDone = 0
 
-  const prevDate = new Date(selectedYear.value, selectedMonthIndex.value, 1)
+  const curY = selectedYear.value
+  const curM = selectedMonthIndex.value
+
+  const prevDate = new Date(curY, curM, 1)
   prevDate.setMonth(prevDate.getMonth() - 1)
-  const prevMonth = filterRepairsByMonth(
-    allRepairs.value,
-    prevDate.getFullYear(),
-    prevDate.getMonth(),
-  )
+  const prevY = prevDate.getFullYear()
+  const prevM = prevDate.getMonth()
 
-  const countByStatus = (arr, status) => arr.filter((r) => r.rf_user_status === status).length
-
-  const curPending = countByStatus(currentMonth, 'pending')
-  const curInProgress = countByStatus(currentMonth, 'in_progress')
-  const curDone = countByStatus(currentMonth, 'done')
-  const curTotal = currentMonth.length
-
-  const prevPending = countByStatus(prevMonth, 'pending')
-  const prevInProgress = countByStatus(prevMonth, 'in_progress')
-  const prevDone = countByStatus(prevMonth, 'done')
-  const prevTotal = prevMonth.length
-
-  summaryStats.value = {
-    total: curTotal,
-    pending: curPending,
-    in_progress: curInProgress,
-    done: curDone,
+  const isMatch = (dateStr, y, m) => {
+    if (!dateStr) return false
+    const d = new Date(dateStr)
+    return d.getFullYear() === y && d.getMonth() === m
   }
+
+  allRepairs.value.forEach((r) => {
+    if (isMatch(r.rf_create_at, curY, curM)) curTotal++
+    if (isMatch(r.rf_create_at, prevY, prevM)) prevTotal++
+
+    if (r.rf_user_status === 'pending') {
+      if (isMatch(r.rf_create_at, curY, curM)) curPending++
+      if (isMatch(r.rf_create_at, prevY, prevM)) prevPending++
+    }
+
+    if (r.rf_user_status === 'in_progress') {
+      const inProcessDate = r.rf_in_process_at || r.rf_update_at || r.rf_create_at
+      if (isMatch(inProcessDate, curY, curM)) curInProgress++
+      if (isMatch(inProcessDate, prevY, prevM)) prevInProgress++
+    }
+
+    if (r.rf_user_status === 'done') {
+      const doneDate = r.rf_done_at || r.rf_update_at || r.rf_create_at
+      if (isMatch(doneDate, curY, curM)) curDone++
+      if (isMatch(doneDate, prevY, prevM)) prevDone++
+    }
+  })
+
+  summaryStats.value = { total: curTotal, pending: curPending, in_progress: curInProgress, done: curDone }
   summaryGrowth.value = {
     total: calcPercentChange(curTotal, prevTotal),
     pending: calcPercentChange(curPending, prevPending),
@@ -387,24 +396,39 @@ const monthlyStackedSeries = ref([
   { name: 'งานซ่อมทั้งหมด', data: new Array(12).fill(0) },
 ])
 
-function updateMonthlyStackedChart(repairsInYear) {
-  const total = new Array(12).fill(0)
-  const done = new Array(12).fill(0)
-  const outsource = new Array(12).fill(0)
+/* -----------------------------
+   งานซ่อมรายเดือน (Stacked)
+----------------------------- */
+function updateMonthlyStackedChart() {
+  const totalData = new Array(12).fill(0)
+  const doneData = new Array(12).fill(0)
+  const outsourceData = new Array(12).fill(0)
 
-  repairsInYear.forEach((r) => {
-    const m = new Date(r.rf_create_at).getMonth()
-    total[m] += 1
-    if (r.rf_user_status === 'done') done[m] += 1
-    else if (r.rf_user_status === 'outsource') outsource[m] += 1
+  allRepairs.value.forEach((r) => {
+    if (r.rf_create_at) {
+      const createDate = new Date(r.rf_create_at)
+      if (createDate.getFullYear() === selectedYear.value) {
+        totalData[createDate.getMonth()] += 1
+      }
+    }
+
+    if (r.rf_user_status === 'done') {
+      const doneDateStr = r.rf_done_at || r.rf_update_at
+      if (doneDateStr) {
+        const doneDate = new Date(doneDateStr)
+        if (doneDate.getFullYear() === selectedYear.value) {
+          const doneMonth = doneDate.getMonth()
+          if (r.rf_is_outsourced == 1) outsourceData[doneMonth] += 1
+          else doneData[doneMonth] += 1
+        }
+      }
+    }
   })
-
-  // น้ำเงินเป็น “ที่เหลือ” เพื่อให้ (เขียว + ม่วง + น้ำเงิน) = งานทั้งหมด
-  const blueTop = total.map((t, i) => Math.max(0, t - (done[i] + outsource[i])))
+  const blueTop = totalData.map((t, i) => Math.max(0, t - (doneData[i] + outsourceData[i])))
 
   monthlyStackedSeries.value = [
-    { name: 'งานที่เสร็จสิ้น', data: done },
-    { name: 'งานที่จ้างช่างภายนอก', data: outsource },
+    { name: 'งานที่เสร็จสิ้น', data: doneData },
+    { name: 'งานที่จ้างช่างภายนอก', data: outsourceData },
     { name: 'งานซ่อมทั้งหมด', data: blueTop },
   ]
 }
@@ -442,15 +466,35 @@ const statusPieOptions = shallowRef({
 
 const statusPieSeries = ref([0, 0, 0])
 
-function updateStatusPieChart(repairsInYear) {
-  const base =
-    statusMode.value === 'week'
-      ? filterCurrentWeek(repairsInYear)
-      : filterRepairsByMonth(allRepairs.value, selectedYear.value, selectedMonthIndex.value)
+function updateStatusPieChart() {
+  const isWeek = statusMode.value === 'week'
+  const targetYear = selectedYear.value
+  const targetMonth = selectedMonthIndex.value
 
-  const pending = base.filter((r) => r.rf_user_status === 'pending').length
-  const inProgress = base.filter((r) => r.rf_user_status === 'in_progress').length
-  const done = base.filter((r) => r.rf_user_status === 'done').length
+  const now = new Date()
+  const diffToMonday = (now.getDay() + 6) % 7
+  const startOfWeek = new Date(now)
+  startOfWeek.setDate(now.getDate() - diffToMonday)
+  startOfWeek.setHours(0, 0, 0, 0)
+  const endOfWeek = new Date(startOfWeek)
+  endOfWeek.setDate(startOfWeek.getDate() + 6)
+  endOfWeek.setHours(23, 59, 59, 999)
+
+  const isMatch = (dateStr) => {
+    if (!dateStr) return false
+    const d = new Date(dateStr)
+    return isWeek 
+      ? (d >= startOfWeek && d <= endOfWeek)
+      : (d.getFullYear() === targetYear && d.getMonth() === targetMonth)
+  }
+
+  let pending = 0, inProgress = 0, done = 0
+
+  allRepairs.value.forEach(r => {
+    if (r.rf_user_status === 'pending' && isMatch(r.rf_create_at)) pending++
+    else if (r.rf_user_status === 'in_progress' && isMatch(r.rf_in_process_at || r.rf_update_at || r.rf_create_at)) inProgress++
+    else if (r.rf_user_status === 'done' && isMatch(r.rf_done_at || r.rf_update_at || r.rf_create_at)) done++
+  })
 
   statusPieSeries.value = [pending, inProgress, done]
 }
@@ -530,23 +574,59 @@ const weeklyTrendSeries = ref([
   { name: 'เสร็จสิ้น', data: new Array(7).fill(0) },
 ])
 
-function updateWeeklyTrendChart(repairsInYear) {
-  const base = filterCurrentWeek(repairsInYear)
-
+function updateWeeklyTrendChart() {
   const buckets = new Array(7)
     .fill(0)
     .map(() => ({ total: 0, pending: 0, in_progress: 0, done: 0 }))
-  const idxOf = (date) => {
-    const d = date.getDay()
+
+  const now = new Date()
+  const day = now.getDay()
+  const diffToMonday = (day + 6) % 7 
+  
+  const startOfWeek = new Date(now)
+  startOfWeek.setDate(now.getDate() - diffToMonday)
+  startOfWeek.setHours(0, 0, 0, 0)
+  
+  const endOfWeek = new Date(startOfWeek)
+  endOfWeek.setDate(startOfWeek.getDate() + 6)
+  endOfWeek.setHours(23, 59, 59, 999)
+
+  const isThisWeek = (dateStr) => {
+    if (!dateStr) return false
+    const d = new Date(dateStr)
+    return d >= startOfWeek && d <= endOfWeek
+  }
+
+  const idxOf = (dateStr) => {
+    const d = new Date(dateStr).getDay()
     return d === 0 ? 6 : d - 1
   }
 
-  base.forEach((r) => {
-    const idx = idxOf(new Date(r.rf_create_at))
-    buckets[idx].total += 1
-    if (r.rf_user_status === 'pending') buckets[idx].pending += 1
-    else if (r.rf_user_status === 'in_progress') buckets[idx].in_progress += 1
-    else if (r.rf_user_status === 'done') buckets[idx].done += 1
+  allRepairs.value.forEach((r) => {
+    if (isThisWeek(r.rf_create_at)) {
+      const idx = idxOf(r.rf_create_at)
+      buckets[idx].total += 1
+      
+      if (r.rf_user_status === 'pending') {
+        buckets[idx].pending += 1
+      }
+    }
+
+    if (r.rf_user_status === 'in_progress') {
+      const inProcessDate = r.rf_inprocess_at || r.rf_update_at || r.rf_create_at
+      if (isThisWeek(inProcessDate)) {
+        const idx = idxOf(inProcessDate)
+        buckets[idx].in_progress += 1
+      }
+    }
+
+    if (r.rf_user_status === 'done') {
+      const doneDate = r.rf_done_at || r.rf_update_at || r.rf_create_at
+      if (isThisWeek(doneDate)) {
+        const idx = idxOf(doneDate)
+        buckets[idx].done += 1
+      }
+    }
   })
 
   weeklyTrendSeries.value = [
@@ -648,13 +728,36 @@ function buildTechnicianEfficiency(repairs) {
     .slice(0, 8)
 }
 
-function updateEfficiencyChart(repairsInYear) {
-  const base =
-    efficiencyMode.value === 'week'
-      ? filterCurrentWeek(repairsInYear)
-      : filterRepairsByMonth(allRepairs.value, selectedYear.value, selectedMonthIndex.value)
+function updateEfficiencyChart() {
+  const isWeek = efficiencyMode.value === 'week'
+  const targetYear = selectedYear.value
+  const targetMonth = selectedMonthIndex.value
 
-  const rows = buildTechnicianEfficiency(base)
+  const now = new Date()
+  const diffToMonday = (now.getDay() + 6) % 7
+  const startOfWeek = new Date(now)
+  startOfWeek.setDate(now.getDate() - diffToMonday)
+  startOfWeek.setHours(0, 0, 0, 0)
+  const endOfWeek = new Date(startOfWeek)
+  endOfWeek.setDate(startOfWeek.getDate() + 6)
+  endOfWeek.setHours(23, 59, 59, 999)
+
+  const isTargetPeriod = (dateStr) => {
+    if (!dateStr) return false
+    const d = new Date(dateStr)
+    if (isWeek) {
+      return d >= startOfWeek && d <= endOfWeek
+    } else {
+      return d.getFullYear() === targetYear && d.getMonth() === targetMonth
+    }
+  }
+
+  const filteredRepairs = allRepairs.value.filter((r) => {
+    const activeDate = r.rf_done_at || r.rf_in_process_at || r.rf_update_at || r.rf_create_at
+    return isTargetPeriod(activeDate)
+  })
+
+  const rows = buildTechnicianEfficiency(filteredRepairs)
 
   efficiencyMeta.value = rows.map((r) => ({ total: r.total, done: r.done }))
   efficiencyChartOptions.value.xaxis.categories = rows.map((r) => r.name)
@@ -729,25 +832,41 @@ const typeOptions = shallowRef({
 })
 
 const typeSeries = ref([{ name: 'จำนวนงาน', data: [0] }])
+const getEffectiveDate = (r) => {
+  if (r.rf_user_status === 'done') return r.rf_done_at || r.rf_update_at || r.rf_create_at;
+  if (r.rf_user_status === 'in_progress') return r.rf_in_process_at || r.rf_update_at || r.rf_create_at;
+  return r.rf_create_at;
+}
 
-function updateTypeChart(repairsInYear) {
+function updateTypeChart() {
+  const targetYear = selectedYear.value
+  const targetMonth = selectedMonthIndex.value
   const typeCounts = {}
-  allTechTypes.value.forEach((t) => {
-    typeCounts[t.tt_name] = 0
-  })
 
-  repairsInYear.forEach((r) => {
-    if (r.tt_name && Object.prototype.hasOwnProperty.call(typeCounts, r.tt_name))
-      typeCounts[r.tt_name]++
+  allRepairs.value.forEach((r) => {
+    if (!r.rf_create_at) return
+    const d = new Date(r.rf_create_at)
+    
+    if (d.getFullYear() === targetYear && d.getMonth() === targetMonth) {
+      const name = r.tt_name || 'ไม่ระบุ'
+      typeCounts[name] = (typeCounts[name] || 0) + 1
+    }
   })
 
   const sorted = Object.entries(typeCounts)
     .sort(([, a], [, b]) => b - a)
     .slice(0, 10)
+
   const labels = sorted.map(([name]) => name)
   const values = sorted.map(([, count]) => count)
 
-  typeOptions.value.xaxis.categories = labels.length ? labels : ['ไม่มีข้อมูล']
+  typeOptions.value = {
+    ...typeOptions.value,
+    xaxis: {
+      ...typeOptions.value.xaxis,
+      categories: labels.length ? labels : ['ไม่มีข้อมูล']
+    }
+  }
   typeSeries.value = [{ name: 'จำนวนงาน', data: values.length ? values : [0] }]
 }
 
@@ -800,27 +919,36 @@ const deptOptions = shallowRef({
 
 const deptSeries = ref([{ name: 'งานซ่อมทั้งหมด', data: [0] }])
 
-function updateDepartmentChart(repairsInYear) {
+function updateDepartmentChart() {
+  const targetYear = selectedYear.value
+  const targetMonth = selectedMonthIndex.value
   const deptCounts = {}
 
-  repairsInYear.forEach((r) => {
-    const name =
-      r.department_name ||
-      r.dp_name ||
-      r.rf_department_name ||
-      r.org_name ||
-      r.unit_name ||
-      'ไม่ระบุ'
-    deptCounts[name] = (deptCounts[name] || 0) + 1
+  allRepairs.value.forEach((r) => {
+    if (!r.rf_create_at) return
+    const d = new Date(r.rf_create_at)
+    
+    if (d.getFullYear() === targetYear && d.getMonth() === targetMonth) {
+      const name = r.department_name || r.dp_name || r.rf_department_name || r.org_name || r.unit_name || 'ไม่ระบุ'
+      deptCounts[name] = (deptCounts[name] || 0) + 1
+    }
   })
 
   const sorted = Object.entries(deptCounts)
     .sort(([, a], [, b]) => b - a)
     .slice(0, 10)
+
   const labels = sorted.map(([name]) => name)
   const values = sorted.map(([, count]) => count)
 
-  deptOptions.value.xaxis.categories = labels.length ? labels : ['ไม่มีข้อมูล']
+  // บังคับให้ Vue และ ApexCharts รีเฟรชกราฟใหม่ตอนเปลี่ยนเดือน
+  deptOptions.value = {
+    ...deptOptions.value,
+    xaxis: {
+      ...deptOptions.value.xaxis,
+      categories: labels.length ? labels : ['ไม่มีข้อมูล']
+    }
+  }
   deptSeries.value = [{ name: 'งานซ่อมทั้งหมด', data: values.length ? values : [0] }]
 }
 
@@ -923,7 +1051,7 @@ const compareBarOptions = shallowRef({
       return buildTooltipHTML({
         title: `เดือน: ${label}`,
         rows: [
-          { label: 'ช่างดำเนินการเอง (เสร็จสิ้น)', value: `${done} รายการ`, color: MONTHLY_COLORS.done },
+          { label: 'ช่างดำเนินการเอง', value: `${done} รายการ`, color: MONTHLY_COLORS.done },
           { label: 'จ้างช่างภายนอก', value: `${outsource} รายการ`, color: MONTHLY_COLORS.outsource },
         ],
         unitLabel: 'หน่วย: รายการ',
@@ -937,14 +1065,28 @@ const compareBarSeries = ref([
   { name: 'จ้างช่างภายนอก', data: new Array(12).fill(0) }
 ])
 
-function updateCompareBarChart(repairsInYear) {
+function updateCompareBarChart() {
   const doneData = new Array(12).fill(0)
   const outsourceData = new Array(12).fill(0)
 
-  repairsInYear.forEach((r) => {
-    const m = new Date(r.rf_create_at).getMonth()
-    if (r.rf_user_status === 'done') doneData[m] += 1
-    else if (r.rf_user_status === 'outsource') outsourceData[m] += 1
+  allRepairs.value.forEach((r) => {
+    if (r.rf_user_status === 'done') {
+      // ใช้วันที่ทำเสร็จ (rf_done_at) เป็นเกณฑ์ หากไม่มีให้ใช้วันที่อัปเดตล่าสุด
+      const doneDateStr = r.rf_done_at || r.rf_update_at; 
+      if (!doneDateStr) return;
+
+      const doneDate = new Date(doneDateStr);
+      
+      // เช็คว่างานนี้ "ทำเสร็จ" ในปีที่เลือกใช่หรือไม่
+      if (doneDate.getFullYear() === selectedYear.value) {
+        const m = doneDate.getMonth()
+        if (r.rf_is_outsourced == 1) { 
+          outsourceData[m] += 1
+        } else if (r.rf_is_outsourced == null || r.rf_is_outsourced == 0) {
+          doneData[m] += 1
+        }
+      }
+    }
   })
 
   compareBarSeries.value = [
@@ -1376,7 +1518,7 @@ onMounted(() => {
           <!-- กราฟเปรียบเทียบช่างภายในองค์กรกับช่างภายนอก -->
            <div class="mt-6 bg-white rounded-lg shadow p-6 lg:col-span-2">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">
-              เปรียบเทียบศักยภาพการปิดงานของช่างภายในและช่างภายนอกตลอด{{ formatYearDisplay(selectedYear) }}
+              จำนวนการปิดงานของช่างภายในและช่างภายนอกตลอด{{ formatYearDisplay(selectedYear) }}
             </h3>
           
             <ApexChart 
@@ -1389,12 +1531,15 @@ onMounted(() => {
             <div class="mt-4 flex flex-wrap items-center justify-center gap-6 text-sm text-gray-600">
               <span class="inline-flex items-center gap-2">
                 <span class="inline-block w-3.5 h-3.5 rounded-sm" :style="{ backgroundColor: MONTHLY_COLORS.done }"></span>
-                ช่างดำเนินการเอง (เสร็จสิ้น)
+                ช่างดำเนินการเอง
               </span>
               <span class="inline-flex items-center gap-2">
                 <span class="inline-block w-3.5 h-3.5 rounded-sm" :style="{ backgroundColor: MONTHLY_COLORS.outsource }"></span>
                 จ้างช่างภายนอก
               </span>
+            </div>
+            <div class="mt-2 text-xs text-gray-500">
+              <span class="text-red-400">*</span> วางเมาส์บนแท่งกราฟเพื่อดูข้อมูล (แสดงจำนวนงานของช่างในองค์กรและช่างภายนอก)
             </div>
           </div>
         </div>
