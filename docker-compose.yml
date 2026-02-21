@@ -1,0 +1,46 @@
+version: "3.9"
+
+services:
+
+  backend:
+    build:
+      context: ./fixdesk-backend
+      dockerfile: Dockerfile
+    container_name: fixdesk-backend
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+    volumes:
+      # mount เฉพาะโค้ด ไม่ทับ node_modules
+      - ./fixdesk-backend/src:/app/src
+      - ./fixdesk-backend/index.js:/app/index.js
+      # node_modules ให้ container จัดการเอง
+      - /app/node_modules
+      # volume สำหรับ uploads
+      - fixdesk_uploads:/app/uploads
+    command: npx nodemon index.js
+    restart: unless-stopped
+
+
+  frontend:
+    build:
+      context: ./fixdesk-frontend
+      dockerfile: Dockerfile.dev
+    container_name: fixdesk-frontend
+    ports:
+      - "8080:5173"
+    depends_on:
+      - backend
+    volumes:
+      # mount เฉพาะ source code + index.html เพื่อ hot reload
+      - ./fixdesk-frontend/src:/app/src
+      - ./fixdesk-frontend/index.html:/app/index.html
+    working_dir: /app
+    command: npm run dev -- --host 0.0.0.0 --port 5173
+    restart: unless-stopped
+
+
+volumes:
+  fixdesk_uploads:
+    driver: local

@@ -1,0 +1,28 @@
+{
+  "name": "fixdesk-backend",
+  "version": "1.0.0",
+  "description": "หน้าที่:\r ส่วนนี้คือฝั่ง “Server” ทำงานกับฐานข้อมูล และรับ–ส่งข้อมูลกับ frontend ผ่าน API\r backend/\r ├── config/          # ตั้งค่าฐานข้อมูล และ environment\r ├── controllers/     # จัดการ logic ของ API\r ├── middleware/      # ส่วนตรวจสอบ เช่น auth, error handling\r ├── models/          # โครงสร้างข้อมูล (ตาราง DB)\r ├── routes/          # เส้นทาง API เช่น /api/users /api/tickets\r ├── utils/           # ฟังก์ชันช่วยเหลือ เช่น token, logger\r ├── index.js         # จุดเริ่มต้นรัน server\r ├── package.json     # รายชื่อ dependencies + script\r └── README.md        # คำอธิบายการใช้งาน backend",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@line/bot-sdk": "^10.6.0",
+    "apexcharts": "^5.3.6",
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.4",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^2.0.2",
+    "mysql2": "^3.15.2",
+    "vue3-apexcharts": "^1.10.0",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
+  }
+}

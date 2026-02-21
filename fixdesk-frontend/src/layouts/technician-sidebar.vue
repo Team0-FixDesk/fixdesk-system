@@ -1,0 +1,67 @@
+<script setup>
+import { ref } from 'vue'
+import SidebarProfile from '@/components/sidebar-profile-component.vue'
+import LogoFIXDESK from '@/assets/icons/LogoFIXDESK-logo.png'
+import HomeIcon from '@/assets/icons/sidebar/home-icon.svg'
+import RepairIcon from '@/assets/icons/sidebar/repair-icon.svg'
+import ListIcon from '@/assets/icons/sidebar/list-icon.svg'
+import LogsListIcon from '@/assets/icons/sidebar/logs-list-icon.svg'
+import HistoryListIcon from '@/assets/icons/sidebar/history-list-icon.svg'
+import DashboardIcon from '@/assets/icons/sidebar/dashboard-icon.svg'
+import StockIcon from '@/assets/icons/sidebar/stock-icon.svg'
+
+// เปิด/ปิด Sidebar
+const isOpen = ref(false)
+
+// รายการเมนูของ Technician
+const menus = [
+  { icon: HomeIcon, label: 'หน้าหลัก', path: '/main/technician-home' },
+  { icon: RepairIcon, label: 'แจ้งซ่อม', path: '/main/repair-request' },
+  { icon: ListIcon, label: 'รายการของฉัน', path: '/main/my-list' },
+  { icon: LogsListIcon, label: 'รายการงานแจ้งซ่อม', path: '/main/technician-repair-list' },
+  { icon: HistoryListIcon, label: 'ประวัติของฉัน', path: '/main/technician-history' },
+  { icon: DashboardIcon, label: 'รายการในคลัง', path: '/main/technician-stock-list' },
+  { icon: StockIcon, label: 'รายการเบิกของฉัน', path: '/main/technician-requisition-list' },
+]
+</script>
+
+<template>
+  <!-- Sidebar -->
+  <aside
+    class="fixed top-0 left-0 h-screen bg-[#1E48D1] text-white shadow-lg z-50 transition-all duration-300 ease-in-out overflow-hidden flex flex-col justify-between"
+    :class="isOpen ? 'w-64' : 'w-20'"
+    @mouseenter="isOpen = true"
+    @mouseleave="isOpen = false"
+  >
+    <!-- โลโก้ -->
+    <div class="flex items-center justify-start h-20 border-b border-blue-700 px-4">
+      <img :src="LogoFIXDESK" alt="FixDesk Logo" class="w-10 h-10 object-contain" />
+      <span
+        class="ml-3 text-2xl font-bold tracking-wide transition-opacity duration-300"
+        :class="isOpen ? 'opacity-100 visible' : 'opacity-0 invisible'"
+      >
+        FIXDESK
+      </span>
+    </div>
+    <!-- เมนูหลัก -->
+    <nav class="flex flex-col gap-3 mt-6 px-2 flex-1">
+      <RouterLink
+        v-for="(menu, index) in menus"
+        :key="index"
+        :to="menu.path"
+        class="group flex items-center rounded-lg hover:bg-blue-800 transition-all duration-300 h-12 px-2"
+      >
+        <div class="flex items-center justify-center w-12 h-12 shrink-0">
+          <img :src="menu.icon" :alt="menu.label" class="w-6 h-6" />
+        </div>
+        <span
+          class="text-lg font-medium whitespace-nowrap transition-all duration-300"
+          :class="isOpen ? 'opacity-100 visible ml-2' : 'opacity-0 invisible ml-0'"
+        >
+          {{ menu.label }}
+        </span>
+      </RouterLink>
+    </nav>
+    <SidebarProfile :expanded="isOpen" />
+  </aside>
+</template>

@@ -24,7 +24,7 @@ fixdesk-frontend/
 │   │   └── main.css       # CSS หลัก (import Tailwind)
 │   ├── components/        # ส่วนย่อย ๆ ของ UI เช่น ปุ่ม, input, modal
 │   ├── layouts/           # โครงร่างหลัก เช่น Navbar, Sidebar, Footer
-│   ├── pages/             # หน้าหลัก เช่น Login, Dashboard, Report
+│   ├── views/             # หน้าหลัก เช่น Login, Dashboard, Report
 │   ├── router/            # เส้นทางหน้าเว็บ (index.js)
 │   ├── stores/            # จัดการ state ด้วย Pinia เช่น userStore, ticketStore
 │   ├── utils/             # ฟังก์ชันช่วย เช่น formatDate, validateForm
@@ -85,3 +85,5 @@ npm run build
 ```sh
 npm run lint
 ```
+
+
