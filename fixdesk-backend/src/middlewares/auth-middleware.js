@@ -1,30 +1,41 @@
 /**
  * =====================================================================
- * @file            auth-middleware.js
- * @layer           Middleware (Authentication Layer)
- * @version         1.0.0
+ * @file            verifyToken.middleware.js
+ * @layer           Middleware Layer (Security Middleware)
+ * @version         1.0.1
  * @since           2026-02-10
  * @author          พชร ไพศรีสกุล
+ * @contributors
+ *   - พชร ไพศรีสกุล
+ *   - ปฏิพัทธ์ จงนันทพันธ์กุล
+ *
  * @lastModified    2026-02-20
  * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
  * ---------------------------------------------------------------------
  * @description
  *  Middleware สำหรับตรวจสอบความถูกต้องของ JWT Token
+ *  ใช้เพื่อป้องกันการเข้าถึง API โดยผู้ที่ไม่ได้รับอนุญาต
  *
- *  ความสามารถ:
- *   - ตรวจสอบ Authorization Header ว่ามีค่าและอยู่ในรูปแบบ "Bearer <token>"
- *   - ตรวจสอบลายเซ็นของ JWT ด้วย JWT_SECRET
- *   - ตรวจจับกรณี Token หมดอายุ หรือถูกปลอมแปลง
- *   - แนบข้อมูลผู้ใช้ (decoded token) ไปที่ req.user
- *   - ส่ง HTTP 401 หาก Token ไม่ถูกต้อง
+ *  การทำงาน:
+ *    - ตรวจสอบ Authorization Header
+ *    - ตรวจสอบรูปแบบ Bearer Token
+ *    - Verify JWT Token ด้วย JWT_SECRET
+ *    - แนบข้อมูลผู้ใช้งานไว้ใน req.user
+ *    - อนุญาตให้ request ไปยัง middleware หรือ controller ถัดไป
  *
- * @requires
- *   - jsonwebtoken
- *   - dotenv
+ * @usedBy
+ *   - repair.route.js
+ *   - stock.route.js
+ *   - user.route.js
+ *   - tech.route.js
+ *   - และ protected routes อื่น ๆ
  *
  * ---------------------------------------------------------------------
  * @changelog
- *   - แก้ไขข้อความแจ้งเตือน Token ไม่ถูกต้อง/หมดอายุ   [2026-02-20, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - Initial implementation JWT Verification Middleware
+ *     [2026-02-10, พชร ไพศรีสกุล] V1.0.0
+ *   - แก้ไขข้อความแจ้งเตือน Token ไม่ถูกต้อง/หมดอายุ   
+ *     [2026-02-20, ปฏิพัทธ์ จงนันทพันธ์กุล] V1.0.1
  * =====================================================================
  */
 
@@ -32,7 +43,23 @@ const jwt = require("jsonwebtoken");
 
 require("dotenv").config();
 
-// Middleware: ตรวจสอบว่าผู้ใช้มี Token ที่ถูกต้องหรือไม่
+/**
+ * Middleware สำหรับตรวจสอบ JWT Token
+ *
+ * ตรวจสอบ Authorization Header และ verify Token
+ * หากถูกต้อง จะเพิ่มข้อมูลผู้ใช้ใน req.user
+ *
+ * @author พชร ไพศรีสกุล
+ * @since 2026-02-10
+ * @lastModified 2026-02-10
+ * @lastModifiedBy พชร ไพศรีสกุล
+ *
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next middleware function
+ *
+ * @returns {void}
+ */
 const verifyToken = (req, res, next) => {
   // ดึงค่า Authorization จาก Header
   const authHeader = req.headers.authorization;

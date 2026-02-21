@@ -1,6 +1,56 @@
+/**
+ * =====================================================================
+ * @file            auth.controller.js
+ * @layer           Controller Layer (Presentation Layer)
+ * @version         1.1.0
+ * @since           2026-02-10
+ * @author          พชร ไพศรีสกุล
+ * @contributors
+ *   - พชร ไพศรีสกุล
+ *
+ * @lastModified    2026-02-18
+ * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
+ * ---------------------------------------------------------------------
+ * @description
+ *  Controller สำหรับจัดการการยืนยันตัวตน (Authentication)
+ *  ทำหน้าที่รับ request จาก client และเรียกใช้งาน authService
+ *
+ *  รองรับการทำงาน:
+ *    - Login ผู้ใช้งาน
+ *    - ตรวจสอบความถูกต้องของข้อมูลที่ส่งมา
+ *    - ส่ง JWT Token กลับไปยัง client
+ *    - จัดการ error และ response status
+ *
+ * @usedBy
+ *   - auth.route.js
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *   - Refactor แยกการทำงาน logic ออกมาเป็นโครงสร้างมาตรฐาน Layered Architecture
+ *     [2026-02-10, พชร ไพศรีสกุล] V 1.0.0
+ *   - แก้ไขเรื่อง Decode Token
+ *     [2026-02-10, พชร ไพศรีสกุล] V 1.1.0
+ *
+ * =====================================================================
+ */
+
 module.exports = (authService) => {
   return {
-    // ฟังก์ชัน Login
+    /**
+     * Controller สำหรับ Login ผู้ใช้งาน
+     * รับ request จาก client และเรียก authService เพื่อสร้าง JWT Token
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-10
+     * @lastModifiedBy พชร ไพศรีสกุล
+     * @contributors
+     *  - พชร ไพศรีสกุล
+     *
+     * @param {Object} req - Express request object
+     * @param {Object} res - Express response object
+     * @returns {Promise<void>}
+     */
     async login(req, res) {
       try {
         // รับค่า userName และ password (เปลี่ยนจาก user_name เป็น userName ตาม Standard)
@@ -33,6 +83,20 @@ module.exports = (authService) => {
   };
 };
 
+/**
+ * สร้าง JWT Token จากข้อมูลผู้ใช้งาน
+ * ใช้สำหรับยืนยันตัวตนและส่งกลับไปยัง client
+ *
+ * @author พชร ไพศรีสกุล
+ * @since 2026-02-10
+ * @lastModified 2026-02-18
+ * @lastModifiedBy พชร ไพศรีสกุล
+ * @contributors
+ *  - พชร ไพศรีสกุล
+ *
+ * @param {Object} user - ข้อมูลผู้ใช้งานจาก database
+ * @returns {string} JWT Token
+ */
 function signToken(user) {
   if (!process.env.JWT_SECRET) {
     throw new Error("JWT_SECRET not configured");

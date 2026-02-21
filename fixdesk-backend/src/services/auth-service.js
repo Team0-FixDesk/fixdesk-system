@@ -1,9 +1,65 @@
+/**
+ * =====================================================================
+ * @file            auth.service.js
+ * @layer           Service Layer (Business Logic Layer)
+ * @version         1.0.0
+ * @since           2026-02-10
+ * @author          พชร ไพศรีสกุล
+ * @contributors
+ *   - พชร ไพศรีสกุล
+ *
+ * @lastModified    2026-02-10
+ * @lastModifiedBy  พชร ไพศรีสกุล
+ * ---------------------------------------------------------------------
+ * @description
+ *  Service สำหรับจัดการ Authentication Logic
+ *  ทำหน้าที่ตรวจสอบข้อมูลผู้ใช้งาน และสร้าง JWT Token
+ *
+ *  รองรับการทำงาน:
+ *    - ตรวจสอบ username และ password
+ *    - เปรียบเทียบ password ที่เข้ารหัสด้วย bcrypt
+ *    - สร้าง JWT Token สำหรับยืนยันตัวตน
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *   - Initial implementation Auth Service ตาม Layered Architecture
+ *     [2026-02-10, พชร ไพศรีสกุล] V 1.0.0
+ *
+ * =====================================================================
+ */
+
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
+/**
+ * Authentication Service Module
+ * จัดการ Business Logic ที่เกี่ยวข้องกับการเข้าสู่ระบบ
+ * 
+ * @param {Object} db - Database connection instance
+ * @returns {Object} Authentication Service Functions
+ */
 module.exports = (db) => {
   return {
-    // ฟังก์ชันสำหรับตรวจสอบการเข้าสู่ระบบ
+    /**
+     * ตรวจสอบข้อมูลผู้ใช้งาน และสร้าง JWT Token
+     * ขั้นตอน:
+     *   1. ตรวจสอบ username จากฐานข้อมูล
+     *   2. เปรียบเทียบ password ด้วย bcrypt
+     *   3. สร้าง JWT Token หากข้อมูลถูกต้อง
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-10
+     * @lastModifiedBy พชร ไพศรีสกุล
+     *
+     * @param {string} userName - ชื่อผู้ใช้งาน
+     * @param {string} password - รหัสผ่าน
+     *
+     * @throws {Error} USER_NOT_FOUND
+     * @throws {Error} INVALID_PASSWORD
+     *
+     * @returns {Promise<string>} JWT Token
+    */
     async authenticateUser(userName, password) {
       // คำสั่ง SQL (เปลี่ยนชื่อย่อ u, t, r เป็นชื่อเต็มให้อ่านง่าย)
       const sqlStatement = `

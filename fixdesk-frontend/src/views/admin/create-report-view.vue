@@ -1,3 +1,35 @@
+/**
+ * =====================================================================
+ * @file            create-report-view.vue
+ * @module          สร้างหนังสือบันทึกข้อความ
+ * @layer           View (Presentation Layer)
+ * @version         1.0.0
+ * @since           2025-01-20
+ * @author          นราธิป แสนทวีสุข
+ * @lastModified    2026-02-17
+ * @lastModifiedBy  นราธิป แสนทวีสุข
+ * ---------------------------------------------------------------------
+ * @description
+ *  หน้าจอสำหรับเจ้าหน้าที่สร้างหนังสือบันทึกข้อความราชการ
+ *  รองรับฟีเจอร์:
+ *    - กรอกข้อมูลหนังสือบันทึกข้อความตามรูปแบบทางราชการ
+ *    - แสดงตัวอย่างเอกสารแบบ real-time preview
+ *    - รองรับการจัดรูปแบบข้อความ (ย่อหน้า, บรรทัดใหม่)
+ *    - ดึงข้อมูลผู้เขียนหนังสือจาก JWT token อัตโนมัติ
+ *    - สร้าง PDF พร้อมดาวน์โหลดตามรูปแบบมาตรฐาน A4
+ *    - รองรับฟอนต์ Thai Sarabun สำหรับเอกสารราชการ
+ *
+ * @requires
+ *   - jspdf (PDF generation)
+ *   - html2canvas (HTML to Canvas conversion)
+ *   - jwt-decode (Extract user info from token)
+ *   - sweetalert2 (Form validation & notifications)
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *  - เพิ่มคำนำหน้าผผู้เขียน  [2026-02-17, นราธิป แสนทวีสุข]
+ * =====================================================================
+ */
 <script setup>
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { jsPDF } from 'jspdf'
@@ -224,7 +256,8 @@ onMounted(() => {
       const decoded = jwtDecode(token)
       const firstName = decoded.us_first_name_th || ''
       const lastName = decoded.us_last_name_th || ''
-      userFullName.value = `${firstName} ${lastName}`.trim() || decoded.us_user_name || 'ผู้ใช้ระบบ'
+      const title = decoded.us_prefix_th || ''
+      userFullName.value = `${title}${firstName} ${lastName}`.trim() || decoded.us_user_name || 'ผู้ใช้ระบบ'
       userPosition.value = decoded.us_job_title || 'พนักงานทั่วไป'
     } catch (err) {
       console.error('Decode token error:', err)

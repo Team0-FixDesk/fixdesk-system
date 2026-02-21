@@ -6,6 +6,11 @@
  * @version         1.0.1
  * @since           2025-10-21
  * @author          เศรษฐพงศ์ หอมชื่น
+ * @contributors 
+     - พชร ไพศรีสกุล
+     - นราธิป แสนทวีสุข 
+     - ปฏิพัทธ์ จงนันทพันธ์กุล
+ *     
  * @lastModified    2026-02-20
  * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
  * ---------------------------------------------------------------------
@@ -29,9 +34,12 @@
  *
  * ---------------------------------------------------------------------
  * @changelog
- *   - แก้ไขข้อความคำอธิบายสถานะ     [2026-02-17, ปฏิพัทธ์ จงนันทพันธ์กุล]
- *   - แก้ไขข้อความคำอธิบายสถานะ.    [2026-02-20, ปฏิพัทธ์ จงนันทพันธ์กุล]
- *   - แก้ไขการใช้สัญลักษณ์ : ในตาราง  [2026-02-20, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - แก้ไขข้อความคำอธิบายสถานะ
+       [2026-02-17, ปฏิพัทธ์ จงนันทพันธ์กุล] V1.0.0
+ *   - แก้ไขข้อความคำอธิบายสถานะ
+       [2026-02-20, ปฏิพัทธ์ จงนันทพันธ์กุล] V1.0.1
+ *   - แก้ไขการใช้สัญลักษณ์ : 
+       [2026-02-20, ปฏิพัทธ์ จงนันทพันธ์กุล] V1.0.1
  * =====================================================================
  */
 
@@ -65,7 +73,7 @@ const STATUS = {
 const router = useRouter()
 
 const { token, isAuthenticated, logout } = useAuthToken()
-const { displayName, displayDepartment, fetchUserProfile } = useUserProfile()
+const { userDisplayName, userDepartmentName, fetchUserProfileData } = useUserProfile()
 
 const repairRequests = ref([])
 const loading = ref(false)
@@ -285,6 +293,7 @@ function goToRepairDetail(ticketId) {
   Lifecycle
 ========================= */
 onMounted(() => {
+  fetchUserProfileData()
   fetchRepairRequests()
 })
 </script>
@@ -299,14 +308,10 @@ onMounted(() => {
         </p>
 
         <p class="text-lg font-semibold text-gray-700">
-          {{ displayDepartment }}
+          {{ userDepartmentName }}
         </p>
 
         <p class="text-sm text-gray-500">ตรวจสอบสถานะของรายการแจ้งซ่อม และมอบหมายงานซ่อม</p>
-      </div>
-
-      <div class="flex space-x-2">
-        <RepairButtonComponent />
       </div>
     </div>
 
