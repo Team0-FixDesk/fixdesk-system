@@ -6,7 +6,7 @@
  * @version         1.0.2
  * @since           2025-10-21
  * @author          เศรษฐพงศ์ หอมชื่น
- * @lastModified    2026-02-18
+ * @lastModified    2026-02-20
  * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
  * ---------------------------------------------------------------------
  * @description
@@ -40,8 +40,10 @@
  *
  * ---------------------------------------------------------------------
  * @changelog
- *   - ปรับปรุงข้อความที่ใช้ให้เหมาะสม       [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
- *   - แก้ไขตำแหน่งของปุ่มยืินยันการแก้ไข/ลบ  [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - ปรับปรุงข้อความที่ใช้ให้เหมาะสม                  [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - แก้ไขตำแหน่งของปุ่มยืินยันการแก้ไข/ลบ             [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - แก้ไขข้อความคำอธิบายรายละเอียดผู้ใช้/แก้ไขข้อมูลผู้ใช้ [2026-02-20, ปฏิพัทธ์ จงนันทพันธกุล]
+ *   - แก้ไขชื่อบทบาท "ผู้ใช้งาน"                      [2026-02-20, ปฏิพัทธ์ จงนันทพันธ์กุล]
  * =====================================================================
  */
 
@@ -105,9 +107,9 @@ const isEditMode = computed(() => userModalMode.value === 'edit')
 const isAddMode = computed(() => userModalMode.value === 'add')
 
 const modalTitle = computed(() => {
-  if (isAddMode.value) return 'เพิ่มผู้ใช้งาน'
-  if (isEditMode.value) return 'แก้ไขข้อมูลผู้ใช้'
-  return 'รายละเอียดผู้ใช้งาน'
+  if (isAddMode.value) return 'เพิ่มผู้ใช้งานใหม่'
+  if (isEditMode.value) return 'แก้ไขข้อมูลผู้ใช้ (สามารถแก้ไขได้)'
+  return 'รายละเอียดผู้ใช้งาน (ไม่สามารถแก้ไขได้)'
 })
 
 const modalIconClass = computed(() => {
@@ -250,7 +252,7 @@ function renderThaiRole(role) {
     case 'Manager':
       return 'ผู้บริหาร'
     case 'User':
-      return 'ผู้ใช้งานทั่วไป'
+      return 'ผู้ใช้งาน'
     case 'Stock':
       return 'ผู้ดูแลคลัง'
     default:
@@ -1001,16 +1003,12 @@ function handleImportError(message) {
               v-if="isAddMode || isEditMode"
             />
           </div>
-          <h2 class="text-xl font-bold text-gray-800">{{ modalTitle }}</h2>
+          <h2 class="text-xl font-bold p-1 text-gray-800">{{ modalTitle }}</h2>
         </div>
 
         <p v-if="isAddMode" class="mb-6 text-sm text-gray-600">
           กรอกข้อมูลเพื่อสร้างบัญชีผู้ใช้ใหม่ในระบบ
         </p>
-        <p v-else-if="isEditMode" class="mb-6 text-sm text-gray-600">
-          ข้อมูลบัญชีผู้ใช้ (สามารถแก้ไขได้)
-        </p>
-        <p v-else class="mb-6 text-sm text-gray-600">ข้อมูลบัญชีผู้ใช้ (ไม่สามารถแก้ไขได้)</p>
 
         <form @submit.prevent="handleUserModalSubmit">
           <div v-if="isViewMode" class="mb-3">

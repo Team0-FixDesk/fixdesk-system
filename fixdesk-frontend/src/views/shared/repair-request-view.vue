@@ -3,10 +3,10 @@
  * @file            repair-request.view.vue
  * @module          มอดูลแจ้งซ่อม - การสร้างแบบฟอร์มแจ้งซ่อม
  * @layer           View (Presentation Layer)
- * @version         1.0.0
+ * @version         1.0.1
  * @since           2026-02-04
  * @author          พชร ไพศรีสกุล
- * @lastModified    2026-02-18
+ * @lastModified    2026-02-20
  * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
  * ---------------------------------------------------------------------
  * @description
@@ -31,7 +31,9 @@
  *
  * ---------------------------------------------------------------------
  * @changelog
- *   - ปรับปรุงข้อความที่ใช้ให้เหมาะสม   [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - แก้ไขข้อความช่องกรอกข้อมูล   [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - แก้ไขข้อความแจ้งเตือน       [2026-02-19, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - แก้ไขข้อความแจ้งเตือน       [2026-02-20, ปฏิพัทธ์ จงนันทพันธ์กุล]
  * =====================================================================
  */
 
@@ -154,7 +156,7 @@ async function submitRepairRequest() {
       toast: true,
       position: 'top-end',
       icon: 'warning',
-      title: 'ข้อมูลไม่ครบถ้วน',
+      title: 'กรุณากรอกข้อมูลให้ครบถ้วน',
       timer: 2500,
       showConfirmButton: false,
     })
@@ -166,7 +168,7 @@ async function submitRepairRequest() {
       toast: true,
       position: 'top-end',
       icon: 'warning',
-      title: 'ยังไม่ได้เลือกความเร่งด่วน',
+      title: 'ยังไม่ได้เลือกระดับความเร่งด่วน',
       timer: 2500,
       showConfirmButton: false,
     })
@@ -175,9 +177,12 @@ async function submitRepairRequest() {
 
   const confirmResult = await Swal.fire({
     title: 'ยืนยันการส่งแบบฟอร์มแจ้งซ่อม?',
+    text: 'คุณต้องการส่งแบบฟอร์มแจ้งซ่อมหรือไม่?',
     icon: 'question',
     showCancelButton: true,
+    reverseButtons: true,
     confirmButtonText: 'ยืนยัน',
+    cancelButtonText: 'ยกเลิก',
   })
 
   if (!confirmResult.isConfirmed) return
@@ -200,9 +205,10 @@ async function submitRepairRequest() {
       toast: true,
       position: 'top-end',
       icon: 'success',
-      title: 'ส่งแบบฟอร์มสำเร็จ!',
+      title: 'ส่งแบบฟอร์มแจ้งซ่อมเรียบร้อยแล้ว',
       timer: 2500,
       showConfirmButton: false,
+      width: '380px',
     })
 
     router.push('/main/my-list')
@@ -215,7 +221,7 @@ async function submitRepairRequest() {
       toast: true,
       position: 'top-end',
       icon: 'error',
-      title: 'ส่งแบบฟอร์มไม่สำเร็จ',
+      title: 'ส่งแบบฟอร์มแจ้งซ่อมไม่สำเร็จ',
       timer: 2500,
       showConfirmButton: false,
     })
@@ -225,10 +231,10 @@ async function submitRepairRequest() {
 async function cancelRepairRequest() {
   const confirmResult = await Swal.fire({
     title: 'ยกเลิกการแจ้งซ่อม?',
-    text: 'ข้อมูลที่กรอกจะไม่ถูกบันทึก',
+    text: 'ข้อมูลที่กรอกลงแบบฟอร์มแจ้งซ่อมจะไม่ถูกบันทึก',
     icon: 'warning',
     showCancelButton: true,
-    confirmButtonText: 'ยกเลิกแจ้งซ่อม',
+    confirmButtonText: 'ยกเลิกการแจ้งซ่อม',
     cancelButtonText: 'กลับไปแก้ไข',
     confirmButtonColor: '#e53e3e',
   })
@@ -337,7 +343,7 @@ async function cancelRepairRequest() {
               'w-full text-sm bg-white border rounded-md placeholder-[#A1A1A1] px-3 py-2',
               errorData.problemDetail ? 'border-red-500' : 'border-neutral-400',
             ]"
-            placeholder="กรุณากรอกปัญหา หรือเหตุ"
+            placeholder="กรุณากรอกปัญหา หรือเหตุที่ต้องการแจ้ง"
           />
           <p v-if="errorData.problemDetail" class="text-red-500 text-xs sm:text-sm mt-1">
             {{ errorData.problemDetail }}
@@ -349,7 +355,7 @@ async function cancelRepairRequest() {
             <label class="text-sm sm:text-base font-medium text-black">
               อาคาร <span class="text-red-600">*</span>
             </label>
-            <p class="text-neutral-400 text-xs mb-2">อาคารที่พบปัญหา หรือเหตุที่ต้องการให้ตรวจสอบ/ซ่อมแซม</p>
+            <p class="text-neutral-400 text-xs mb-2">อาคารที่พบปัญหา หรือสาเหตุที่ต้องการให้ตรวจสอบ/ซ่อมแซม</p>
             <select
               v-model="repairFormData.building"
               @change="
@@ -482,7 +488,7 @@ async function cancelRepairRequest() {
                   }}</span>
                 </p>
                 <p class="text-xs text-gray-400 mt-1">
-                  รองรับ : รูปภาพ และวิดีโอ (สูงสุด {{ MAX_FILE_COUNT }} ไฟล์)
+                  รองรับ : รูปภาพ และวิดีโอ (สูงสุด {{ MAX_FILE_COUNT }} ไฟล์/50 MB)
                 </p>
                 <div class="flex items-center gap-2 mt-2 justify-center">
                   <span class="text-xs px-2 py-1 bg-green-100 text-green-700 rounded">JPG</span>
@@ -582,7 +588,7 @@ async function cancelRepairRequest() {
             class="bg-[#1E48D1] text-white px-6 py-2.5 sm:py-3 rounded-lg hover:bg-sky-700 transition disabled:opacity-50"
             @click="submitRepairRequest"
           >
-            บันทึกแบบฟอร์มแจ้งซ่อม
+            ส่งแบบฟอร์มแจ้งซ่อม
           </button>
         </div>
       </form>

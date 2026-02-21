@@ -1,3 +1,44 @@
+/**
+ * =====================================================================
+ * @file            technician-home.view.vue
+ * @module          -
+ * @layer           View (Presentation Layer)
+ * @version         1.0.0
+ * @since           2025-10-21
+ * @author          เศรษฐพงศ์ หอมชื่น
+ * @lastModified    2026-02-21
+ * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
+ * ---------------------------------------------------------------------
+ * @description
+ *  หน้าจอหลักสำหรับช่างซ่อม
+ *   - แสดงสถิติงานซ่อมของช่าง
+ *   - แสดงรายการงานที่ได้รับมอบหมายล่าสุด
+ *   - แสดงกราฟสัดส่วนสถานะงาน (เสร็จสิ้น / กำลังดำเนินการ / ยกเลิก / อื่นๆ)
+ *   - แสดงรายการเบิกของล่าสุดของช่าง
+ *
+ * @requires
+ *  - vue
+ *  - vue-router
+ *  - @/composables/useAuthToken
+ *  - @/composables/useUserProfile
+ *  - @/composables/repair/useTechnicianRepairs
+ *  - @/composables/repair/useTechnicianRepairTable
+ *  - @/composables/repair/useTechnicianStats
+ *  - @/composables/stock/useTechnicianStockForms
+ *  - @/composables/stock/useTechnicianStockTable
+ *  - @/components/card-home-component.vue
+ *  - @/components/table-component.vue
+ *  - @/components/button/info-button-component.vue
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *   - เพิ่มชื่อหน้าจอ                                 [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - แก้ไขข้อความคำอธิบายสถานะ                     [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - แก้ไขข้อความหัวตาราง และการใช้สัญลักษณ์ : ในตาราง [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - แก้ไขข้อความคำอธิบายสถานะ                     [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ * =====================================================================
+ */
+
 <script setup>
 defineOptions({ name: 'TechnicianHomeView' })
 import { computed, onMounted } from 'vue'
@@ -64,9 +105,12 @@ onMounted(() => {
 <template>
   <div class="p-8 mx-auto bg-white shadow-md rounded-xl max-w-8xl">
     <div class="mb-6">
+      <p class="text-2xl font-extrabold text-gray-900">
+          หน้าจอหลักของช่างซ่อม - สวัสดีคุณ {{ displayName }}
+      </p>
       <h1 class="text-2xl font-bold text-gray-800">{{ displayName }}</h1>
       <p class="mt-1 text-sm text-gray-600">
-        ตรวจสอบสถานะงานซ่อมและจัดการรายการเบิกจ่ายวัสดุอุปกรณ์
+        ตรวจสอบงานซ่อมที่ได้รับมอบหมาย และสถานะของรายการเบิก
       </p>
     </div>
 
@@ -78,7 +122,7 @@ onMounted(() => {
       <div class="p-5 bg-white border border-gray-200 shadow-sm rounded-2xl lg:col-span-2">
         <div class="flex items-center justify-between mb-4">
           <div>
-            <h2 class="text-xl font-bold text-gray-900">งานที่ได้รับมอบหมายล่าสุด</h2>
+            <h2 class="text-xl font-bold text-gray-900">งานซ่อมที่ได้รับมอบหมายล่าสุด</h2>
             <p class="text-sm text-gray-500">5 รายการล่าสุด</p>
           </div>
           <button
@@ -90,7 +134,7 @@ onMounted(() => {
         </div>
 
         <TableComponent
-          :columns="['เลขใบงาน', 'เรื่องที่แจ้ง', 'หน่วยงาน', 'สถานที่', 'ความเร่งด่วน', 'สถานะ']"
+          :columns="['หมายเลขแจ้งซ่อม', 'เรื่องที่แจ้ง', 'หน่วยงาน', 'สถานที่', 'ความเร่งด่วน', 'สถานะงาน']"
           :rows="repairTableRows"
           :rawRows="repairTableRaw"
           :perPage="5"
@@ -116,10 +160,10 @@ onMounted(() => {
         </div>
         <div class="grid w-full grid-cols-2 mt-6 text-xs gap-x-4 gap-y-2">
           <div class="flex items-center">
-            <span class="w-3 h-3 mr-2 bg-green-600 rounded"></span>เสร็จสิ้น
+            <span class="w-3 h-3 mr-2 bg-green-600 rounded"></span>ดำเนินการเสร็จสิ้น
           </div>
           <div class="flex items-center">
-            <span class="w-3 h-3 mr-2 bg-orange-500 rounded"></span>กำลังทำ
+            <span class="w-3 h-3 mr-2 bg-orange-500 rounded"></span>กำลังดำเนินการ
           </div>
           <div class="flex items-center">
             <span class="w-3 h-3 mr-2 bg-red-600 rounded"></span>ยกเลิก
@@ -138,7 +182,7 @@ onMounted(() => {
       </div>
 
       <TableComponent
-        :columns="['รหัสรายการเบิกของ', 'รายละเอียด', 'รายการของเบิก', 'สถานะงาน', 'ตัวดำเนินการ']"
+        :columns="['หมายเลขรายการเบิก', 'รายละเอียดโดยย่อ', 'รายการเบิก', 'สถานะงาน', 'ตัวดำเนินการ']"
         :rows="stockTableRows"
         :perPage="5"
         :statusStockColumn="3"
@@ -167,8 +211,8 @@ onMounted(() => {
         <!-- รายละเอียด -->
         <template #cell-1="{ row }">
           <div class="space-y-1 text-sm">
-            <div>วันที่เบิก: {{ row[1].date }}</div>
-            <div>รหัสใบแจ้งซ่อม: {{ row[1].rf_code }}</div>
+            <div>วันที่เบิก : {{ row[1].date }}</div>
+            <div>หมายเลขแจ้งซ่อม : {{ row[1].rf_code }}</div>
           </div>
         </template>
 

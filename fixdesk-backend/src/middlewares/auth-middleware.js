@@ -2,14 +2,15 @@
  * =====================================================================
  * @file            verifyToken.middleware.js
  * @layer           Middleware Layer (Security Middleware)
- * @version         1.0.0
+ * @version         1.0.1
  * @since           2026-02-10
  * @author          พชร ไพศรีสกุล
  * @contributors
  *   - พชร ไพศรีสกุล
+ *   - ปฏิพัทธ์ จงนันทพันธ์กุล
  *
- * @lastModified    2026-02-10
- * @lastModifiedBy  พชร ไพศรีสกุล
+ * @lastModified    2026-02-20
+ * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
  * ---------------------------------------------------------------------
  * @description
  *  Middleware สำหรับตรวจสอบความถูกต้องของ JWT Token
@@ -32,10 +33,12 @@
  * ---------------------------------------------------------------------
  * @changelog
  *   - Initial implementation JWT Verification Middleware
- *     [2026-02-10, พชร ไพศรีสกุล] V 1.0.0
- *
+ *     [2026-02-10, พชร ไพศรีสกุล] V1.0.0
+ *   - แก้ไขข้อความแจ้งเตือน Token ไม่ถูกต้อง/หมดอายุ   
+ *     [2026-02-20, ปฏิพัทธ์ จงนันทพันธ์กุล] V1.0.1
  * =====================================================================
  */
+
 const jwt = require("jsonwebtoken");
 
 require("dotenv").config();
@@ -64,7 +67,7 @@ const verifyToken = (req, res, next) => {
   // ตรวจสอบว่ามีค่าส่งมาไหม และต้องขึ้นต้นด้วย "Bearer "
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return res.status(401).json({
-      message: "ไม่พบ Token หรือรูปแบบไม่ถูกต้อง (Bearer <token>)",
+      message: "เกิดข้อผิดพลาด ข้อมูลยืนยันตัวตนไม่ถูกต้อง กรุณาลงชื่อเข้าสู่ระบบใหม่อีกครั้ง",
     });
   }
 
@@ -83,7 +86,7 @@ const verifyToken = (req, res, next) => {
   } catch (error) {
     // ถ้า Token หมดอายุ หรือถูกปลอมแปลง
     return res.status(401).json({
-      message: "Token ไม่ถูกต้องหรือหมดอายุ",
+      message: "คุณไม่ได้ใช้งานเป็นระยะเวลาหนึ่ง กรุณาลงชื่อเข้าสู่ระบบใหม่อีกครั้ง",
     });
   }
 };
