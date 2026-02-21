@@ -284,7 +284,8 @@ async function confirmOutsource() {
     text: 'คุณต้องการส่งงานให้ช่างภายนอกหรือไม่?',
     icon: 'question',
     showCancelButton: true,
-    confirmButtonText: 'ใช่, ส่งงาน',
+    reverseButtons: true,
+    confirmButtonText: 'ยืนยัน',
     cancelButtonText: 'ยกเลิก',
     confirmButtonColor: '#f59e0b',
   })
