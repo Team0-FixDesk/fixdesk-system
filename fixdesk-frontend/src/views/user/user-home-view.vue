@@ -1,3 +1,50 @@
+/**
+ * =====================================================================
+ * @file            technician-home.view.vue
+ * @module          มอดูลแจ้งซ่อม - การติดตามสถานะ และดูรายละเอียดคำร้องแจ้งซ่อม
+ * @layer           View (Presentation Layer)
+ * @version         1.0.1
+ * @since           2025-10-21
+ * @author          เศรษฐพงศ์ หอมชื่น
+ * @contributor
+ *   - เศรษฐพงศ์ หอมชื่น
+ *   - ปฏิพัทธ์ จงนันทพันธ์กุล
+ *
+ * @lastModified    2026-02-21
+ * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
+ * ---------------------------------------------------------------------
+ * @description
+ *  หน้าจอหลักสำหรับช่างซ่อม
+ *   - แสดงสถิติงานซ่อมของช่าง
+ *   - แสดงรายการงานที่ได้รับมอบหมายล่าสุด
+ *   - แสดงกราฟสัดส่วนสถานะงาน (เสร็จสิ้น / กำลังดำเนินการ / ยกเลิก / อื่นๆ)
+ *   - แสดงรายการเบิกของล่าสุดของช่าง
+ *
+ * @requires
+ *  - vue
+ *  - vue-router
+ *  - @/composables/useAuthToken
+ *  - @/composables/useUserProfile
+ *  - @/composables/repair/useTechnicianRepairs
+ *  - @/composables/repair/useTechnicianRepairTable
+ *  - @/composables/repair/useTechnicianStats
+ *  - @/composables/stock/useTechnicianStockForms
+ *  - @/composables/stock/useTechnicianStockTable
+ *  - @/components/card-home-component.vue
+ *  - @/components/table-component.vue
+ *  - @/components/button/info-button-component.vue
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *   - เพิ่มชื่อหน้าจอ และแก้ไขคำอธิบายหน้าจอ
+       [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล] V1.0.0
+ *   - แก้ไขข้อความคำอธิบายสถานะ
+       [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล] V1.0.0
+ *   - แก้ไขข้อความหัวตาราง และการใช้สัญลักษณ์ :  
+       [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล] V1.0.0
+ * =====================================================================
+ */
+
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
@@ -22,28 +69,28 @@ const { displayName, displayDepartment} = useUserProfile()
 const statsItemsList = ref([
   {
     value: 0,
-    label: 'แจ้งซ่อมทั้งหมด',
+    label: 'จำนวนรายการแจ้งซ่อมทั้งหมด',
     unit: 'รายการ',
     colorClass: 'text-violet-500',
     filterStatus: '',
   },
   {
     value: 0,
-    label: 'รอดำเนินการทั้งหมด',
+    label: 'จำนวนรายการแจ้งซ่อมที่รอดำเนินการ',
     unit: 'รายการ',
     colorClass: 'text-amber-500',
     filterStatus: 'pending',
   },
   {
     value: 0,
-    label: 'กำลังดำเนินการทั้งหมด',
+    label: 'จำนวนรายการแจ้งซ่อมที่กำลังดำเนินการ',
     unit: 'รายการ',
     colorClass: 'text-blue-600',
     filterStatus: 'in_progress',
   },
   {
     value: 0,
-    label: 'ดำเนินการเสร็จสิ้นทั้งหมด',
+    label: 'จำนวนรายการแจ้งซ่อมที่ดำเนินการเสร็จสิ้น',
     unit: 'รายการ',
     colorClass: 'text-green-600',
     filterStatus: 'done',
@@ -176,8 +223,13 @@ onMounted(() => {
   <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-8xl">
     <div class="flex justify-between items-center mb-6">
       <div>
-        <h1 class="text-2xl font-extrabold text-gray-900">สวัสดีคุณ{{ displayName }}</h1>
-        <p class="text-lg font-semibold text-gray-700">{{ displayDepartment }}</p>
+        <p class="text-2xl font-extrabold text-gray-900">
+          หน้าจอหลักของผู้ใช้งาน - สวัสดีคุณ {{ displayName }}
+        </p>
+        <h1 class="text-2xl font-bold text-gray-800">{{ displayDepartment }}</h1>
+        <p class="mt-1 text-sm text-gray-600">
+          ตรวจสอบความคืบหน้าของรายการแจ้งซ่อม
+        </p>
       </div>
       <RepairButton />
     </div>
@@ -192,12 +244,12 @@ onMounted(() => {
           <h2 class="text-xl font-bold mb-1">รายการที่ฉันแจ้งซ่อม</h2>
           <p class="text-xs text-gray-500">
             7 รายการแจ้งซ่อมล่าสุด (เรียงจากวันที่แจ้ง)
-            สามารถกดรายการแจ้งซ่อมในตารางเพื่อดูรายละเอียด
+            - สามารถเลือกรายการแจ้งซ่อมในตารางเพื่อดูรายละเอียดเพิ่มเติม
           </p>
         </div>
 
         <TableComponent
-          :columns="['วันที่', 'หมายเลขแจ้งซ่อม', 'ประเภทงาน', 'ความเร่งด่วน', 'สถานะงาน']"
+          :columns="['วันที่แจ้งซ่อม', 'หมายเลขแจ้งซ่อม', 'ประเภทงาน', 'ความเร่งด่วน', 'สถานะงาน']"
           :rows="tableRowsList"
           :rawRows="tableRawRowsList"
           :perPage="7"
@@ -228,14 +280,14 @@ onMounted(() => {
           </div>
           <div>
             <p class="text-sm text-gray-500 mt-1">
-              หมายเลขแจ้งซ่อม:
+              หมายเลขแจ้งซ่อม :
               <span v-if="selectedTrackingCode" class="font-semibold text-indigo-600">
                 #{{ selectedTrackingCode }}
               </span>
               <span v-else>-</span>
             </p>
             <p class="text-sm text-gray-500">
-              <span class="font-medium">ประเภท: </span>
+              <span class="font-medium">ประเภท : </span>
               <span
                 v-if="selectedRepairDetail"
                 class="text-sm font-semibold text-gray-600 break-words"
@@ -245,7 +297,7 @@ onMounted(() => {
             </p>
 
             <p class="text-sm text-gray-500">
-              <span class="font-medium">สถานที่: </span>
+              <span class="font-medium">สถานที่ : </span>
               <span
                 v-if="selectedRepairDetail"
                 class="text-sm font-semibold text-gray-600 break-words"
@@ -256,7 +308,7 @@ onMounted(() => {
               <span v-else>-</span>
             </p>
             <p class="text-sm text-gray-500 mt-1">
-              หัวข้อปัญหา:
+              เรื่องที่แจ้ง :
               <span
                 v-if="selectedRepairDetail"
                 class="text-sm font-semibold text-gray-600 break-words"
@@ -267,7 +319,7 @@ onMounted(() => {
             </p>
 
             <p class="text-sm text-gray-500 mt-1">
-              รายละเอียด/อาการ:
+              สาเหตุ/อาการ :
               <span
                 v-if="selectedRepairDetail"
                 class="text-sm font-semibold text-gray-600 break-words"
