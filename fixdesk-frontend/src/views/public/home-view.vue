@@ -46,6 +46,7 @@ const {
   searched,  // สถานะการค้นหา (จริง = ค้นหาแล้ว, เท็จ = ยังไม่ค้นหา)
   results,  // รายการผลลัพธ์การค้นหา
   currentPage,  // หน้าปัจจุบันของการแบ่งหน้า
+  totalResultCount, // จำนวนรายการค้นหาที่พบ
   totalPages,  // จำนวนหน้าทั้งหมด
   handleSearch,  // ฟังก์ชันสำหรับการค้นหา
   goPrevPage,  // ฟังก์ชันสำหรับไปหน้าก่อนหน้า
@@ -129,7 +130,7 @@ const goToLogin = () => router.push('/login')
 
       <!-- แสดงจำนวนรายการที่พบ -->
       <p v-if="results.length > 0" class="text-slate-500 mb-3 text-md">
-        พบ {{ totalItems }} รายการ
+        พบ {{ totalResultCount }} รายการ
       </p>
 
       <!-- แสดงแต่ละรายการการซ่อม -->

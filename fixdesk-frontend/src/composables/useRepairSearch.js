@@ -76,5 +76,6 @@ export function useRepairSearchProcess() {
     handleSearch: executeSearchRepair,
     goPrevPage: goToPreviousPage,
     goNextPage: goToNextPage,
+    totalResultCount,
   }
 }
