@@ -9,9 +9,9 @@
  * @contributors
  *   - พชร ไพศรีสกุล
  *   - เศรษฐพงศ์ หอมชื่น    
- *                       
- * @lastModified    2026-02-17
- * @lastModifiedBy  เศรษฐพงศ์ หอมชื่น
+ *   - พิมลพรรณ มามาก                    
+ * @lastModified    2026-02-21
+ * @lastModifiedBy  พิมลพรรณ มามาก
  * ---------------------------------------------------------------------
  * @description
  * หน้าจอแดชบอร์ดสำหรับผู้บริหาร เพื่อแสดงภาพรวมการดำเนินงานของระบบแจ้งซ่อม
@@ -31,12 +31,14 @@
  *
  * ---------------------------------------------------------------------
  * @changelog
- * - จัดทำ Dashboard ของ Manager                                                                          [2026-01-13, เศรษฐพงศ์ หอมชื่น]
- * - เพิ่มการตั้งค่าชื่อแกน (Title) แกน X และ Y ในทุกกราฟ                                                        [2026-02-17, เศรษฐพงศ์ หอมชื่น]
- * - ปรับปรุงการแสดงผลเส้นแกน (Axis Border)                                                                  [2026-02-17, เศรษฐพงศ์ หอมชื่น]
- * - ปรับแก้ Padding และ Responsive เพื่อป้องกันชื่อแกนตกขอบ                                                     [2026-02-17, เศรษฐพงศ์ หอมชื่น]
- * - ปรับแก้ กราฟสัดส่วนสถานะงานแจ้งซ่อม และอัตราความสำเร็จการปฏิบัติงานของช่างแต่ละแผนก ให้แสดงรายสัปดาห์ (จันทร์-อาทิตย์)  [2026-02-18, เศรษฐพงศ์ หอมชื่น]
- * - ปรับแก้เงื่อนไขการแสดงกราฟ                                                                                 [2026-02-20, เศรษฐพงศ์ หอมชื่น]
+ * - จัดทำ Dashboard ของ Manager                                             [2026-01-13, เศรษฐพงศ์ หอมชื่น]
+ * - เพิ่มการตั้งค่าชื่อแกน (Title) แกน X และ Y ในทุกกราฟ                           [2026-02-17, เศรษฐพงศ์ หอมชื่น]
+ * - ปรับปรุงการแสดงผลเส้นแกน (Axis Border)                                    [2026-02-17, เศรษฐพงศ์ หอมชื่น]
+ * - ปรับแก้ Padding และ Responsive เพื่อป้องกันชื่อแกนตกขอบ                        [2026-02-17, เศรษฐพงศ์ หอมชื่น]
+ * - ปรับแก้ กราฟสัดส่วนสถานะงานแจ้งซ่อม และอัตราความสำเร็จการปฏิบัติงานของช่างแต่ละแผนก [2026-02-18, เศรษฐพงศ์ หอมชื่น]
+ *   ให้แสดงรายสัปดาห์ (จันทร์-อาทิตย์)  
+ * - ปรับแก้เงื่อนไขการแสดงกราฟ                                                 [2026-02-20, เศรษฐพงศ์ หอมชื่น]
+ * - ดึงข้อมูลชื่อผู้ใช้                                                            [2026-02-21, พิมลพรรณ มามาก] V 1.0.2
  * =====================================================================
  */
 
@@ -50,7 +52,7 @@ defineOptions({ name: 'ManagerHomeView' })
 
 const API_BASE = import.meta.env.VITE_API_BASE
 
-const { displayName, displayDepartment, fetchUserProfile } = useUserProfile(API_BASE)
+const { userDisplayName, userDepartmentName, fetchUserProfileData} = useUserProfile()
 const { fetchDashboardData: fetchManagerDashboard } = useManagerDashboard()
 
 const monthLabels = [
@@ -1135,6 +1137,8 @@ async function fetchDashboardData() {
 }
 onMounted(() => {
   fetchDashboardData()
+  fetchUserProfileData()
+
 })
 </script>
 
@@ -1146,10 +1150,10 @@ onMounted(() => {
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 class="text-2xl font-bold text-gray-800">
-              หน้าจอหลักของผู้บริหาร - สวัสดีคุณ {{ displayName }}
+              หน้าจอหลักของผู้บริหาร - สวัสดีคุณ{{ userDisplayName }}
             </h1>
             <p class="text-lg font-semibold text-gray-700">
-              {{ displayDepartment }}
+              {{ userDepartmentName }}
             </p>
             <p class="text-gray-600 mt-2">ภาพรวมของการแจ้งซ่อม และสถิติงานซ่อม</p>
           </div>

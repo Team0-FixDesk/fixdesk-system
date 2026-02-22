@@ -6,8 +6,15 @@
  * @version         1.0.0
  * @since           2025-10-21
  * @author          เศรษฐพงศ์ หอมชื่น
+ * @contributors 
+     - เศรษฐพงศ์ หอมชื่น
+     - พชร ไพศรีสกุล
+     - นราธิป แสนทวีสุข 
+     - ปฏิพัทธ์ จงนันทพันธ์กุล
+     - พิมลพรรณ มามาก
+ *   
  * @lastModified    2026-02-21
- * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
+ * @lastModifiedBy  พิมลพรรณ มามาก
  * ---------------------------------------------------------------------
  * @description
  *  หน้าจอหลักสำหรับช่างซ่อม
@@ -32,10 +39,11 @@
  *
  * ---------------------------------------------------------------------
  * @changelog
- *   - เพิ่มชื่อหน้าจอ                                 [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - เพิ่มชื่อหน้าจอ                                 [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล] V 1.0.1
  *   - แก้ไขข้อความคำอธิบายสถานะ                     [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล]
  *   - แก้ไขข้อความหัวตาราง และการใช้สัญลักษณ์ : ในตาราง [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล]
  *   - แก้ไขข้อความคำอธิบายสถานะ                     [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - ดึงข้อมูลชื่อผู้ใช้                                [2026-02-21, พิมลพรรณ มามาก] V 1.0.2
  * =====================================================================
  */
 
@@ -75,7 +83,7 @@ const { stockTableRows, truncateItem, extractQuantity, openDetail } = useTechnic
   stockForms,
   router,
 )
-const { displayName, fetchUserProfile } = useUserProfile()
+const { userDisplayName, userDepartmentName, fetchUserProfileData } = useUserProfile()
 
 // --- Chart Data ---
 const donutChart = computed(() => {
@@ -98,6 +106,7 @@ const onCardClick = (item) =>
 
 onMounted(() => {
   fetchRepairRequests()
+  fetchUserProfileData()
   fetchStockForms()
 })
 </script>
@@ -106,9 +115,9 @@ onMounted(() => {
   <div class="p-8 mx-auto bg-white shadow-md rounded-xl max-w-8xl">
     <div class="mb-6">
       <p class="text-2xl font-extrabold text-gray-900">
-          หน้าจอหลักของช่างซ่อม - สวัสดีคุณ {{ displayName }}
+          หน้าจอหลักของช่างซ่อม - สวัสดีคุณ{{ userDisplayName }}
       </p>
-      <h1 class="text-2xl font-bold text-gray-800">{{ displayName }}</h1>
+      <p class="text-lg text-gray-700">{{ userDepartmentName }}</p>
       <p class="mt-1 text-sm text-gray-600">
         ตรวจสอบงานซ่อมที่ได้รับมอบหมาย และสถานะของรายการเบิก
       </p>
