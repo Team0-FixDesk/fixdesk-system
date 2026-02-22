@@ -3,9 +3,9 @@
  * @file            : repair-service.js
  * @module          : Business Logic สำหรับระบบแจ้งซ่อม
  * @layer           : Service Layer (Business Logic Layer)
- * @version         : 1.0.0
+ * @version         : 1.1.0
  * @since           : 2026-02-17
- * @lastModified    : 2026-02-17
+ * @lastModified    : 2026-02-22
  * @lastModifiedBy  นราธิป แสนทวีสุข
  * ---------------------------------------------------------------------
  * @description
@@ -68,6 +68,8 @@
  *     [2026-02-17, นายพชร ไพศรีสกุล]
  *   - แก้ไข getRepairDetail ให้ส่ง assigner fields แยก (title, first_name, last_name) [2026-02-17, นราธิป แสนทวีสุข]
  *   - เพิ่ม JOIN title_name tn_assigner สำหรับ assigner                             [2026-02-17, นราธิป แสนทวีสุข]
+ *   - เปลี่ยน rf_is_outsourced เป็น rf_repair_method พร้อม remark (in_house/outsource/other)
+ *     และเพิ่ม rf_result_status กับ rf_result_remark สำหรับสรุปผล                  [2026-02-22, นราธิป แสนทวีสุข]
  * =====================================================================
  */
 
@@ -131,7 +133,7 @@ module.exports = (db) => {
     async getAdminRepairs() {
       const sql = `
         SELECT
-          rf.rf_id, rf.rf_code, rf.rf_problem, rf.rf_create_at, rf.rf_update_at, rf.rf_in_process_at, rf.rf_done_at, rf.rf_user_status, rf.rf_is_outsourced,
+          rf.rf_id, rf.rf_code, rf.rf_problem, rf.rf_create_at, rf.rf_update_at, rf.rf_in_process_at, rf.rf_done_at, rf.rf_user_status, rf.rf_repair_method, rf.rf_repair_method_remark,
           b.bd_name, f.fl_name, r.room_name,
           COALESCE(rf.rf_urgency, 'medium') AS rf_urgency,
           u.us_first_name_th AS us_first_name, u.us_last_name_th AS us_last_name,
@@ -181,7 +183,7 @@ module.exports = (db) => {
           rf.rf_id, rf.rf_code, rf.rf_problem, rf.rf_detail, rf.rf_urgency,
           rf.rf_phone, rf.rf_create_at, rf.rf_in_process_at, rf.rf_done_at,
           rf.rf_user_status, rf.rf_prop_number, rf.rf_image, rf.rf_tech_summary,
-          rf.rf_is_outsourced,
+          rf.rf_repair_method, rf.rf_repair_method_remark, rf.rf_result_status, rf.rf_result_remark,
           t.tt_id AS repair_type_id, t.tt_name AS repair_type_name,
           b.bd_id AS building_id, b.bd_name AS building_name,
           f.fl_id AS floor_id, f.fl_name AS floor_name,
@@ -362,7 +364,7 @@ module.exports = (db) => {
       try {
         const [notifData] = await db.promise().query(
           `
-          SELECT 
+          SELECT
             rf.rf_code, rf.rf_problem, rf.rf_urgency,
             CONCAT(tn_tech.ttn_title_th, tech.us_first_name_th, ' ', tech.us_last_name_th) AS technician_name,
             CONCAT(tn_assign.ttn_title_th, assigner.us_first_name_th, ' ', assigner.us_last_name_th) AS assigned_by_name,
@@ -469,7 +471,7 @@ module.exports = (db) => {
         try {
           const [notifData] = await db.promise().query(
             `
-            SELECT 
+            SELECT
               rf.rf_code, rf.rf_problem, rf.rf_urgency,
               GROUP_CONCAT(CONCAT(tn.ttn_title_th, u.us_first_name_th, ' ', u.us_last_name_th) SEPARATOR ', ') AS technician_names,
               CONCAT(b.bd_name, ' ', f.fl_name, ' ', r.room_name) AS location,
@@ -531,7 +533,7 @@ module.exports = (db) => {
       const sql = `
         UPDATE repair_form rf
         JOIN repair_assignment ra ON rf.rf_id = ra.ra_rf_id
-        SET 
+        SET
           rf.rf_user_status = 'in_progress', rf.rf_in_process_at = NOW(), rf.rf_update_at = NOW(),
           ra.ra_is_lead = 1, ra.ra_accepted_at = NOW()
         WHERE rf.rf_code = ? AND ra.ra_us_id = ? AND rf.rf_user_status = 'pending'
@@ -543,7 +545,7 @@ module.exports = (db) => {
         try {
           const [notifData] = await db.promise().query(
             `
-            SELECT 
+            SELECT
               rf.rf_code, rf.rf_problem, rf.rf_urgency,
               CONCAT(tn.ttn_title_th, u.us_first_name_th, ' ', u.us_last_name_th) AS technician_name,
               CONCAT(b.bd_name, ' ', f.fl_name, ' ', r.room_name) AS location,
@@ -603,7 +605,7 @@ module.exports = (db) => {
 
     async getStats(userId) {
       const sql = `
-        SELECT 
+        SELECT
           COUNT(*) AS total,
           COALESCE(SUM(CASE WHEN rf_user_status = 'pending' THEN 1 ELSE 0 END), 0) AS pending,
           COALESCE(SUM(CASE WHEN rf_user_status = 'in_progress' THEN 1 ELSE 0 END), 0) AS in_progress,
