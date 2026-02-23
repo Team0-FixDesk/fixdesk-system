@@ -63,7 +63,7 @@
  *     [2025-12-28, พชร ไพศรีสกุล] V 1.7.1
  *   - feat(profile): เปลี่ยนระบบ icon ใหม่
  *     [2026-02-05, พชร ไพศรีสกุล] V 1.9.0
- *   - fix(profile): ย้าย icon ไป assets และแก้ไข icon issues
+ *   - fix(profile): ย้าย icon ไป assets และแก้ไข icon issues  
  *     [2026-02-06, พชร ไพศรีสกุล] V 1.9.2
  *   - fix(profile): แก้ไข feature import location
  *     [2026-02-09, พชร ไพศรีสกุล] V 1.9.3
