@@ -1,3 +1,23 @@
+/**
+ * =====================================================================
+ * @file            stock-manage-inventory-view.vue
+ * @module          มอดูลการจัดการคลัง - การจัดการสินค้าคงคลัง
+ * @layer           View (Presentation Layer)
+ * @version         1.0.0
+ * @since           2025-10-21
+ * @author          เศรษฐพงศ์ หอมชื่น
+ * @lastModified    2026-02-23
+ * @lastModifiedBy  นราธิป แสนทวีสุข
+ * ---------------------------------------------------------------------
+ * @description
+ *  หน้าจอสำหรับจัดการข้อมูลสินค้าคงคลัง
+ *  รองรับฟีเจอร์:
+ *    - แสดงรายการสินค้าทั้งหมด
+ *    - เพิ่ม แก้ไข ลบสินค้า
+ *    - นำเข้าข้อมูลสินค้าจากไฟล์ Excel
+ *    - ตรวจสอบความถูกต้องของไฟล์ภาพ
+ * =====================================================================
+ */
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
@@ -262,11 +282,13 @@ async function handleAddCategory() {
     }))
 
     Swal.fire({
+      toast: true,
+      position: 'top-end',
       icon: 'success',
-      title: 'สำเร็จ',
-      text: 'เพิ่มหมวดหมู่เรียบร้อยแล้ว',
-      timer: 2000,
+      title: 'เพิ่มหมวดหมู่เรียบร้อยแล้ว',
       showConfirmButton: false,
+      timer: 2000,
+      timerProgressBar: true,
     })
   } catch (error) {
     console.error('Add category error:', error)
@@ -313,11 +335,13 @@ async function handleEditCategory(category) {
     }))
 
     Swal.fire({
+      toast: true,
+      position: 'top-end',
       icon: 'success',
-      title: 'สำเร็จ',
-      text: 'แก้ไขหมวดหมู่เรียบร้อยแล้ว',
-      timer: 2000,
+      title: 'แก้ไขหมวดหมู่เรียบร้อยแล้ว',
       showConfirmButton: false,
+      timer: 2000,
+      timerProgressBar: true,
     })
   } catch (error) {
     console.error('Edit category error:', error)
@@ -354,11 +378,13 @@ async function handleDeleteCategory(category) {
     }))
 
     Swal.fire({
+      toast: true,
+      position: 'top-end',
       icon: 'success',
-      title: 'สำเร็จ',
-      text: 'ลบหมวดหมู่เรียบร้อยแล้ว',
-      timer: 2000,
+      title: 'ลบหมวดหมู่เรียบร้อยแล้ว',
       showConfirmButton: false,
+      timer: 2000,
+      timerProgressBar: true,
     })
   } catch (error) {
     console.error('Delete category error:', error)
@@ -433,7 +459,15 @@ const processFile = (files) => {
 
   const file = files[0]
   if (!file.type.startsWith('image/')) {
-    alert('กรุณาอัปโหลดเฉพาะไฟล์รูปภาพเท่านั้น')
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: 'warning',
+      title: 'กรุณาอัปโหลดเฉพาะไฟล์รูปภาพเท่านั้น',
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true,
+    })
     return
   }
 
@@ -507,8 +541,6 @@ const confirmAddItem = async () => {
       title: 'สำเร็จ!',
       text: 'บันทึกรายการสำเร็จ!',
       icon: 'success',
-      background: '#f0f9ff',
-      color: '#1e3a8a',
     })
 
     closeAddModal()
@@ -543,6 +575,7 @@ const handleDelete = async (productIdFromTable) => {
       title: 'ไม่พบรายการสินค้า',
       showConfirmButton: false,
       timer: 3000,
+      timerProgressBar: true,
     })
     return
   }
@@ -583,6 +616,7 @@ const handleDelete = async (productIdFromTable) => {
         title: 'ลบเรียบร้อย',
         showConfirmButton: false,
         timer: 2000,
+        timerProgressBar: true,
       })
 
       fetchAllStock()
@@ -595,6 +629,7 @@ const handleDelete = async (productIdFromTable) => {
         text: error.message || 'เกิดข้อผิดพลาดในการลบรายการ',
         showConfirmButton: false,
         timer: 3000,
+        timerProgressBar: true,
       })
     }
   })
@@ -673,6 +708,7 @@ const confirmEditItem = async () => {
       title: 'แก้ไขข้อมูลสำเร็จ',
       showConfirmButton: false,
       timer: 2000,
+      timerProgressBar: true,
     })
 
     closeEditModal()
@@ -705,7 +741,15 @@ const processEditFile = (files) => {
   const file = files[0]
 
   if (!file.type.startsWith('image/')) {
-    alert('กรุณาอัปโหลดเฉพาะรูปภาพ')
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: 'warning',
+      title: 'กรุณาอัปโหลดเฉพาะรูปภาพ',
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true,
+    })
     return
   }
 

@@ -6,8 +6,8 @@
  * @version         1.0.0
  * @since           2025-10-21
  * @author          เศรษฐพงศ์ หอมชื่น
- * @lastModified    2026-02-18
- * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
+ * @lastModified    2026-02-23
+ * @lastModifiedBy  นราธิป แสนทวีสุข
  * ---------------------------------------------------------------------
  * @description
  *  หน้าจอสำหรับผู้ดูแลระบบ ใช้จัดการข้อมูลสถานที่ภายในระบบแจ้งซ่อม
@@ -666,8 +666,6 @@ async function confirmDelete(username) {
       title: 'สำเร็จ!',
       text: 'ลบห้องเรียบร้อยแล้ว',
       icon: 'success',
-      background: '#f0f9ff',
-      color: '#1e3a8a',
     })
 
     await refreshData()
@@ -776,8 +774,6 @@ async function saveSingleLocation() {
       icon: 'success',
       title: 'สำเร็จ!',
       text: 'เพิ่มข้อมูลเรียบร้อยแล้ว',
-      background: '#f0f9ff',
-      color: '#1e3a8a',
     })
 
     await refreshData()
@@ -894,8 +890,6 @@ async function bulkCreateLocation() {
       icon: 'success',
       title: 'สำเร็จ!',
       text: 'สร้างสถานที่เรียบร้อยแล้ว',
-      background: '#f0f9ff',
-      color: '#1e3a8a',
     })
 
     await refreshData()
@@ -933,7 +927,7 @@ async function saveEditLocation() {
     reverseButtons: true,
     confirmButtonText: 'ยืนยัน',
     cancelButtonText: 'ยกเลิก',
-    confirmButtonColor: '#f97316',
+    confirmButtonColor: '#2563eb',
   })
 
   if (!result.isConfirmed) {
@@ -983,8 +977,6 @@ async function saveEditLocation() {
       icon: 'success',
       title: 'สำเร็จ!',
       text: 'แก้ไขข้อมูลห้องเรียบร้อยแล้ว',
-      background: '#f0f9ff',
-      color: '#1e3a8a',
     })
 
     await refreshData()
@@ -1048,8 +1040,13 @@ async function refreshData() {
 
 function handleImportSuccess() {
   Swal.fire({
+    toast: true,
+    position: 'top-end',
     icon: 'success',
     title: 'นำเข้าสถานที่เรียบร้อยแล้ว',
+    showConfirmButton: false,
+    timer: 2000,
+    timerProgressBar: true,
   })
   showImportModal.value = false
 }

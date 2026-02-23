@@ -6,8 +6,8 @@
  * @version         1.0.1
  * @since           2026-02-04
  * @author          พชร ไพศรีสกุล
- * @lastModified    2026-02-20
- * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
+ * @lastModified    2026-02-23
+ * @lastModifiedBy  นราธิป แสนทวีสุข
  * ---------------------------------------------------------------------
  * @description
  *  หน้าจอแบบฟอร์มสำหรับสร้างรายการแจ้งซ่อมใหม่
@@ -157,8 +157,9 @@ async function submitRepairRequest() {
       position: 'top-end',
       icon: 'warning',
       title: 'กรุณากรอกข้อมูลให้ครบถ้วน',
-      timer: 2500,
       showConfirmButton: false,
+      timer: 2500,
+      timerProgressBar: true,
     })
     return
   }
@@ -169,8 +170,9 @@ async function submitRepairRequest() {
       position: 'top-end',
       icon: 'warning',
       title: 'ยังไม่ได้เลือกระดับความเร่งด่วน',
-      timer: 2500,
       showConfirmButton: false,
+      timer: 2500,
+      timerProgressBar: true,
     })
     return
   }
@@ -182,8 +184,7 @@ async function submitRepairRequest() {
     showCancelButton: true,
     reverseButtons: true,
     confirmButtonText: 'ยืนยัน',
-    cancelButtonText: 'ยกเลิก',
-  })
+    cancelButtonText: 'ยกเลิก',    confirmButtonColor: '#2563eb',  })
 
   if (!confirmResult.isConfirmed) return
 
@@ -206,8 +207,9 @@ async function submitRepairRequest() {
       position: 'top-end',
       icon: 'success',
       title: 'ส่งแบบฟอร์มแจ้งซ่อมเรียบร้อยแล้ว',
-      timer: 2500,
       showConfirmButton: false,
+      timer: 2500,
+      timerProgressBar: true,
       width: '380px',
     })
 
@@ -222,8 +224,9 @@ async function submitRepairRequest() {
       position: 'top-end',
       icon: 'error',
       title: 'ส่งแบบฟอร์มแจ้งซ่อมไม่สำเร็จ',
-      timer: 2500,
       showConfirmButton: false,
+      timer: 2500,
+      timerProgressBar: true,
     })
   }
 }
