@@ -6,7 +6,7 @@
  * @version         1.0.0
  * @since           2025-01-20
  * @author          นราธิป แสนทวีสุข
- * @lastModified    2026-02-17
+ * @lastModified    2026-02-23
  * @lastModifiedBy  นราธิป แสนทวีสุข
  * ---------------------------------------------------------------------
  * @description
@@ -216,11 +216,13 @@ async function generatePDF() {
 
     if (window.Swal) {
       window.Swal.fire({
+        toast: true,
+        position: 'top-end',
         icon: 'success',
-        title: 'สำเร็จ',
-        text: 'สร้าง PDF เรียบร้อยแล้ว',
+        title: 'สร้าง PDF เรียบร้อยแล้ว',
+        showConfirmButton: false,
         timer: 2000,
-        showConfirmButton: false
+        timerProgressBar: true,
       })
     }
   } catch (error) {
