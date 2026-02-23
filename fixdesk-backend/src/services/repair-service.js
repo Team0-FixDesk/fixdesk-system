@@ -2,7 +2,7 @@
  * =====================================================================
  * @file            repair-service.js
  * @layer           Service Layer (Business Logic Layer)
- * @version         1.3.0
+ * @version         1.4.0
  * @since           2026-02-10
  * @author          พชร ไพศรีสกุล
  * @contributors
@@ -10,8 +10,8 @@
  *   - นราธิป แสนทวีสุข
  *   - เศรษฐพงศ์ หอมชื่น
  *
- * @lastModified    2026-02-22
- * @lastModifiedBy  นราธิป แสนทวีสุข
+ * @lastModified    2026-02-23
+ * @lastModifiedBy  พชร ไพศรีสกุล
  * ---------------------------------------------------------------------
  * @description
  *  Service Layer สำหรับจัดการตรรกะการทำานหลักของระบบแจ้งซ่อม
@@ -77,6 +77,8 @@
  *     [2026-02-21, เศรษฐพงศ์ หอมชื่น] V 1.2.2
  *   - feat(repair): เปลี่ยนโครงสร้างการบันทึกวิธีการซ่อมและผลการซ่อม
  *     [2026-02-22, นราธิป แสนทวีสุข] V 1.3.0
+ *   - รองรับการคืนอุปกรณ์แบบบางส่วน (Partial Return)ปรับปรุง logic การคืนและการคำนวณ stock ให้รองรับการคืนหลายครั้ง
+ *     [2026-02-23, พชร ไพศรีสกุล] V1.4.0
  *
  * =====================================================================
  */
@@ -247,11 +249,59 @@ module.exports = (db) => {
 
       // ดึง Stock Items (ของที่เบิก)
       const stockSql = `
-        SELECT pd.pd_id, pd.pd_name, sf.sf_code,  pd.pd_asset_code, pd.pd_upload_image, sfd.sfd_qty, sfd.sfd_status
-        FROM stock_form sf
-        LEFT JOIN stock_form_detail sfd ON sfd.sfd_sf_id = sf.sf_id
-        LEFT JOIN products pd ON pd.pd_id = sfd.sfd_pd_id
-        WHERE sf.sf_rf_id = ?
+        SELECT
+  pd.pd_id,
+  pd.pd_name,
+  sf.sf_code,
+  pd.pd_asset_code,
+  pd.pd_upload_image,
+
+  -- คำนวณ qty สำหรับแต่ละ type
+  CASE
+
+    -- withdraw → เหลือเท่าไร
+    WHEN sfd.sfd_type = 'withdraw'
+    THEN
+      (
+        sfd.sfd_qty
+        -
+        COALESCE((
+          SELECT SUM(r.sfd_qty)
+          FROM stock_form_detail r
+          WHERE r.sfd_sf_id = sfd.sfd_sf_id
+          AND r.sfd_pd_id = sfd.sfd_pd_id
+          AND r.sfd_type = 'return'
+        ), 0)
+      )
+
+    -- return → จำนวนที่คืน
+    WHEN sfd.sfd_type = 'return'
+    THEN sfd.sfd_qty
+
+    -- waiting, rejected
+    ELSE sfd.sfd_qty
+
+  END AS sfd_qty,
+
+  -- status logic
+  CASE
+
+    WHEN sfd.sfd_type = 'return'
+    THEN 'returned'
+
+    ELSE sfd.sfd_status
+
+  END AS sfd_status
+
+FROM stock_form sf
+
+LEFT JOIN stock_form_detail sfd
+  ON sfd.sfd_sf_id = sf.sf_id
+
+LEFT JOIN products pd
+  ON pd.pd_id = sfd.sfd_pd_id
+
+WHERE sf.sf_rf_id = ?
       `;
       const [stockRows] = await db.promise().query(stockSql, [r.rf_id]);
       result.stock_items = stockRows.map((i) => ({
