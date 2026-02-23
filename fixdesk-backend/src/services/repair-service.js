@@ -1,15 +1,20 @@
 /**
  * =====================================================================
- * @file            : repair-service.js
- * @module          : Business Logic สำหรับระบบแจ้งซ่อม
- * @layer           : Service Layer (Business Logic Layer)
- * @version         : 1.1.0
- * @since           : 2026-02-17
- * @lastModified    : 2026-02-22
+ * @file            repair-service.js
+ * @layer           Service Layer (Business Logic Layer)
+ * @version         1.3.0
+ * @since           2026-02-10
+ * @author          พชร ไพศรีสกุล
+ * @contributors
+ *   - พชร ไพศรีสกุล
+ *   - นราธิป แสนทวีสุข
+ *   - เศรษฐพงศ์ หอมชื่น
+ *
+ * @lastModified    2026-02-22
  * @lastModifiedBy  นราธิป แสนทวีสุข
  * ---------------------------------------------------------------------
  * @description
- *  Service Layer สำหรับจัดการตรรกะการทำงานหลักของระบบแจ้งซ่อม
+ *  Service Layer สำหรับจัดการตรรกะการทำานหลักของระบบแจ้งซ่อม
  *  โดยทำหน้าที่เชื่อมต่อกับฐานข้อมูล และดำเนินการ business logic
  *  ที่เกี่ยวข้องกับ lifecycle ของใบแจ้งซ่อม การมอบหมายงาน และการติดตามสถานะ
  *
@@ -58,18 +63,21 @@
  *   - เชื่อมต่อกับระบบ stock
  *   - เชื่อมต่อกับ LINE Notification Service
  *
- * @author
- *   - นายพชร ไพศรีสกุล
- *
  * ---------------------------------------------------------------------
  * @changelog
- *   - เพิ่มการดึงข้อมูล stock_items ใน getRepairDetail
- *   - เพิ่มการเชื่อมโยงกับ stock_form และ stock_form_detail
- *     [2026-02-17, นายพชร ไพศรีสกุล]
- *   - แก้ไข getRepairDetail ให้ส่ง assigner fields แยก (title, first_name, last_name) [2026-02-17, นราธิป แสนทวีสุข]
- *   - เพิ่ม JOIN title_name tn_assigner สำหรับ assigner                             [2026-02-17, นราธิป แสนทวีสุข]
- *   - เปลี่ยน rf_is_outsourced เป็น rf_repair_method พร้อม remark (in_house/outsource/other)
- *     และเพิ่ม rf_result_status กับ rf_result_remark สำหรับสรุปผล                  [2026-02-22, นราธิป แสนทวีสุข]
+ *   - Initial implementation Public Service ตาม Layered Architecture
+ *     [2026-02-10, พชร ไพศรีสกุล] V 1.0.0
+ *   - feat(line): เพิ่มระบบแจงเตอน LINE แบบ Flex Message และแกไขการรบงานเปนทม
+ *     [2026-02-11, นราธิป แสนทวีสุข] V 1.1.0
+ *   - feat(frontend backend): เพิ่มระบบการคืนอุปกรณ์
+ *     [2026-02-17, พชร ไพศรีสกุล] V 1.2.0
+ *   - fix(report): แก้ไขคำนำหน้าชื่อใน PDF และ UI ปุ่มดาวน์โหลด
+ *     [2026-02-17, นราธิป แสนทวีสุข] V 1.2.1
+ *   - fix(frontend): แก้เงื่อนไขการแสดงกราฟ
+ *     [2026-02-21, เศรษฐพงศ์ หอมชื่น] V 1.2.2
+ *   - feat(repair): เปลี่ยนโครงสร้างการบันทึกวิธีการซ่อมและผลการซ่อม
+ *     [2026-02-22, นราธิป แสนทวีสุข] V 1.3.0
+ *
  * =====================================================================
  */
 
