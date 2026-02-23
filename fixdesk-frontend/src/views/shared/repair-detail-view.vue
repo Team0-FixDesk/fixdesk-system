@@ -3,10 +3,10 @@
  * @file            : repair-detail-view.vue
  * @module          : แสดงรายละเอียดใบแจ้งซ่อม
  * @layer           : View (Presentation Layer)
- * @version         : 1.1.0
+ * @version         : 1.3.0
  * @since           : 2026-02-17
- * @lastModified    : 2026-02-22
- * @lastModifiedBy  : นราธิป แสนทวีสุข
+ * @lastModified    : 2026-02-23
+ * @lastModifiedBy  : พชร ไพศรีสกุล
  * ---------------------------------------------------------------------
  * @description
  *  View สำหรับแสดงรายละเอียดใบแจ้งซ่อม (Repair Detail)
@@ -83,6 +83,8 @@
  *   - เพิ่มฟิลด์รองรับ repair_method และ result_status
  *   - ปรับ Modal ปิดงานให้มีตัวเลือกครบถ้วน
  *     [2026-02-22, นราธิป แสนทวีสุข]
+ *   - รองรับการคืนอุปกรณ์แบบบางส่วน (Partial Return)ปรับปรุง UX/UI หน้า Return Modal และเพิ่มตัวเลือกจำนวนที่ต้องการคืน
+ *     [2026-02-23, พชร ไพศรีสกุล] V1.3.0
  * =====================================================================
  */
 
@@ -135,7 +137,12 @@ const selectedReturnItems = ref([])
 const returnableItems = computed(() => {
   if (!repair.value?.stock_items) return []
 
-  return repair.value.stock_items.filter((item) => item.status === 'approved')
+  return repair.value.stock_items
+    .filter((item) => item.status === 'approved')
+    .map((item) => ({
+      ...item,
+      returnQty: item.qty, // default = คืนทั้งหมด
+    }))
 })
 
 // สถานะข้อมูลอื่น ๆ
@@ -276,7 +283,7 @@ async function confirmCloseJob() {
         repair_method: repairMethod.value,
         repair_method_remark: repairMethodRemark.value,
         result_status: resultStatus.value,
-        result_remark: resultRemark.value
+        result_remark: resultRemark.value,
       }),
     })
 
@@ -672,9 +679,7 @@ function toggleSelectAll() {
 async function returnSelectedItems() {
   if (!requireAuth()) return
 
-  const approvedItems = selectedReturnItems.value.filter(
-    item => item.status === 'approved'
-  )
+  const approvedItems = selectedReturnItems.value.filter((item) => item.status === 'approved')
 
   if (approvedItems.length === 0) {
     Swal.fire({
@@ -685,13 +690,12 @@ async function returnSelectedItems() {
       showConfirmButton: false,
       timer: 2000,
     })
+
     return
   }
 
   try {
-
     for (const item of approvedItems) {
-
       const res = await fetch(`${API_BASE_URL}/stock-forms/return-item`, {
         method: 'PUT',
         headers: {
@@ -701,13 +705,13 @@ async function returnSelectedItems() {
         body: JSON.stringify({
           sf_code: item.sf_code,
           pd_id: item.id,
+          quantity: item.returnQty,
         }),
       })
 
       const data = await res.json()
 
       if (!res.ok) throw new Error(data.message)
-
     }
 
     selectedReturnItems.value = []
@@ -723,9 +727,7 @@ async function returnSelectedItems() {
       showConfirmButton: false,
       timer: 2000,
     })
-
   } catch (err) {
-
     Swal.fire({
       toast: true,
       position: 'top-end',
@@ -734,10 +736,14 @@ async function returnSelectedItems() {
       showConfirmButton: false,
       timer: 3000,
     })
-
   }
 }
 
+function validateReturnQty(item) {
+  if (item.returnQty < 1) item.returnQty = 1
+
+  if (item.returnQty > item.qty) item.returnQty = item.qty
+}
 
 // Lifecycle Hooks - วัฏจักรชีวิตของคอมโพเนนต์
 onMounted(() => {
@@ -1258,46 +1264,117 @@ onMounted(() => {
         <div class="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
           <!-- 1. วิธีการซ่อม (ซ่อนถ้าเป็น outsource อยู่แล้ว) -->
           <div v-if="repairMethod !== 'outsource'">
-            <label class="block text-sm font-semibold text-gray-700 mb-2">1. สำหรับเจ้าหน้าที่ ตรวจสอบ/ซ่อม</label>
+            <label class="block text-sm font-semibold text-gray-700 mb-2"
+              >1. สำหรับเจ้าหน้าที่ ตรวจสอบ/ซ่อม</label
+            >
             <div class="space-y-2">
               <label class="flex items-center gap-2 cursor-pointer">
-                <input type="radio" v-model="repairMethod" value="in_house" class="text-blue-600 focus:ring-blue-500"> สามารถแก้ไข/ซ่อมบำรุงได้
+                <input
+                  type="radio"
+                  v-model="repairMethod"
+                  value="in_house"
+                  class="text-blue-600 focus:ring-blue-500"
+                />
+                สามารถแก้ไข/ซ่อมบำรุงได้
               </label>
               <label class="flex items-center gap-2 cursor-pointer">
-                <input type="radio" v-model="repairMethod" value="other" class="text-blue-600 focus:ring-blue-500"> อื่นๆ
+                <input
+                  type="radio"
+                  v-model="repairMethod"
+                  value="other"
+                  class="text-blue-600 focus:ring-blue-500"
+                />
+                อื่นๆ
               </label>
-              <input v-if="repairMethod === 'other'" v-model="repairMethodRemark" type="text" placeholder="ระบุเหตุผลอื่นๆ..." class="mt-2 w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
+              <input
+                v-if="repairMethod === 'other'"
+                v-model="repairMethodRemark"
+                type="text"
+                placeholder="ระบุเหตุผลอื่นๆ..."
+                class="mt-2 w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+              />
             </div>
           </div>
 
           <!-- 2. รายละเอียดการทำงาน -->
           <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-2">{{ repairMethod === 'outsource' ? '1' : '2' }}. รายละเอียดการตรวจสอบ/ซ่อม</label>
-            <textarea v-model="techSummary" placeholder="กรอกรายละเอียด..." class="w-full h-24 p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500" maxlength="500"></textarea>
+            <label class="block text-sm font-semibold text-gray-700 mb-2"
+              >{{ repairMethod === 'outsource' ? '1' : '2' }}. รายละเอียดการตรวจสอบ/ซ่อม</label
+            >
+            <textarea
+              v-model="techSummary"
+              placeholder="กรอกรายละเอียด..."
+              class="w-full h-24 p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500"
+              maxlength="500"
+            ></textarea>
             <div class="text-right text-xs text-gray-400 mt-1">{{ techSummary.length }}/500</div>
           </div>
 
           <!-- 3. สรุปผล -->
           <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-2">{{ repairMethod === 'outsource' ? '2' : '3' }}. สรุปผล</label>
+            <label class="block text-sm font-semibold text-gray-700 mb-2"
+              >{{ repairMethod === 'outsource' ? '2' : '3' }}. สรุปผล</label
+            >
             <div class="flex gap-4 mb-2">
               <label class="flex items-center gap-2 cursor-pointer">
-                <input type="radio" v-model="resultStatus" value="completed" class="text-green-600 focus:ring-green-500"> เรียบร้อย
+                <input
+                  type="radio"
+                  v-model="resultStatus"
+                  value="completed"
+                  class="text-green-600 focus:ring-green-500"
+                />
+                เรียบร้อย
               </label>
               <label class="flex items-center gap-2 cursor-pointer">
-                <input type="radio" v-model="resultStatus" value="incomplete" class="text-red-600 focus:ring-red-500"> ไม่เรียบร้อย
+                <input
+                  type="radio"
+                  v-model="resultStatus"
+                  value="incomplete"
+                  class="text-red-600 focus:ring-red-500"
+                />
+                ไม่เรียบร้อย
               </label>
               <label class="flex items-center gap-2 cursor-pointer">
-                <input type="radio" v-model="resultStatus" value="other" class="text-amber-600 focus:ring-amber-500"> อื่นๆ
+                <input
+                  type="radio"
+                  v-model="resultStatus"
+                  value="other"
+                  class="text-amber-600 focus:ring-amber-500"
+                />
+                อื่นๆ
               </label>
             </div>
-            <input v-if="resultStatus === 'incomplete' || resultStatus === 'other'" v-model="resultRemark" type="text" :placeholder="resultStatus === 'incomplete' ? 'ระบุสาเหตุที่ไม่เรียบร้อย...' : 'ระบุอื่นๆ...'" class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
+            <input
+              v-if="resultStatus === 'incomplete' || resultStatus === 'other'"
+              v-model="resultRemark"
+              type="text"
+              :placeholder="
+                resultStatus === 'incomplete' ? 'ระบุสาเหตุที่ไม่เรียบร้อย...' : 'ระบุอื่นๆ...'
+              "
+              class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+            />
           </div>
         </div>
 
         <div class="p-5 border-t border-gray-100 flex gap-3">
-          <button @click="showTechSummaryModal = false" class="flex-1 py-3 px-6 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl font-medium transition-colors">ยกเลิก</button>
-          <button @click="confirmCloseJob" :disabled="!techSummary.trim()" :class="['flex-1 py-3 px-6 rounded-xl font-medium transition-colors text-white', techSummary.trim() ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-300 cursor-not-allowed']">ยืนยันการปิดงาน</button>
+          <button
+            @click="showTechSummaryModal = false"
+            class="flex-1 py-3 px-6 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl font-medium transition-colors"
+          >
+            ยกเลิก
+          </button>
+          <button
+            @click="confirmCloseJob"
+            :disabled="!techSummary.trim()"
+            :class="[
+              'flex-1 py-3 px-6 rounded-xl font-medium transition-colors text-white',
+              techSummary.trim()
+                ? 'bg-blue-600 hover:bg-blue-700'
+                : 'bg-gray-300 cursor-not-allowed',
+            ]"
+          >
+            ยืนยันการปิดงาน
+          </button>
         </div>
       </div>
     </div>
@@ -1376,8 +1453,7 @@ onMounted(() => {
       </div>
     </div>
   </div>
-  <!-- Return Modal -->
-  <!-- Return Modal -->
+ั  <!-- Return Modal -->
   <div
     v-if="showReturnModal"
     class="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
@@ -1429,7 +1505,19 @@ onMounted(() => {
 
             <div>
               <div class="font-medium">{{ item.name }}</div>
-              <div class="text-sm text-gray-500">จำนวน: {{ item.qty }}</div>
+
+              <div class="text-sm text-gray-500">จำนวนที่ยังคืนได้: {{ item.qty }}</div>
+
+              <!-- input ใหม่ -->
+              <input
+                type="number"
+                min="1"
+                :max="item.qty"
+                v-model.number="item.returnQty"
+                @input="validateReturnQty(item)"
+                class="mt-1 border rounded px-2 py-1 w-20"
+                @click.stop
+              />
             </div>
           </label>
         </div>
