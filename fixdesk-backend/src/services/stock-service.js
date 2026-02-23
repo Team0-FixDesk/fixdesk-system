@@ -3,9 +3,9 @@
  * @file            : stock-service.js
  * @module          : Business Logic สำหรับระบบคลังวัสดุ/อุปกรณ์
  * @layer           : Service Layer (Business Logic Layer)
- * @version         : 1.0.0
+ * @version         : 1.3.0
  * @since           : 2026-02-17
- * @lastModified    : 2026-02-17
+ * @lastModified    : 2026-02-23
  * @lastModifiedBy  : นายพชร ไพศรีสกุล
  * ---------------------------------------------------------------------
  * @description
@@ -54,9 +54,10 @@
  *  - เพิ่มระบบคืนสินค้า (returnItem)
  *    และเพิ่ม transaction สำหรับคืนสินค้า
  *    [2026-02-17, นายพชร ไพศรีสกุล]
+ *  - รองรับการคืนอุปกรณ์แบบบางส่วน (Partial Return)ปรับปรุง logic การคืนและการคำนวณ stock ให้รองรับการคืนหลายครั้ง
+ *    [2026-02-23, พชร ไพศรีสกุล] V1.3.0
  * =====================================================================
  */
-
 
 /**
  * =====================================================================
@@ -106,8 +107,6 @@
  *    [2026-02-17, นายธนภัทร จันทร์งาม]
  * =====================================================================
  */
-
-
 
 const fs = require("fs");
 const path = require("path");
@@ -435,7 +434,6 @@ module.exports = (db) => {
       }
     },
 
-
     // อนุมัติ/ไม่อนุมัติ รายชิ้น (Complex Logic)
     async updateItemStatus(sfCode, pdId, status) {
       // 1. หา ID
@@ -714,13 +712,7 @@ module.exports = (db) => {
             `INSERT INTO products
          (pd_asset_code, pd_name, pd_category_id, pd_quantity, pd_unit_id, pd_updated_at)
          VALUES (?, ?, ?, ?, ?, NOW())`,
-            [
-              item.pd_asset_code || null,
-              item.pd_name,
-              categoryId,
-              qty,
-              unitId,
-            ],
+            [item.pd_asset_code || null, item.pd_name, categoryId, qty, unitId],
           );
 
           results.push({
@@ -745,15 +737,15 @@ module.exports = (db) => {
       };
     },
 
-    async returnItem(sfCode, pdId, userId) {
+    async returnItem(sfCode, pdId, returnQty, userId) {
       const connection = await db.promise().getConnection();
 
       try {
         await connection.beginTransaction();
 
-        // หา sf_id
+        // 1. หา sf_id
         const [sf] = await connection.query(
-          "SELECT sf_id FROM stock_form WHERE sf_code = ?",
+          `SELECT sf_id FROM stock_form WHERE sf_code = ?`,
           [sfCode],
         );
 
@@ -761,33 +753,51 @@ module.exports = (db) => {
 
         const sfId = sf[0].sf_id;
 
-        // หา item
-        const [item] = await connection.query(
-          `SELECT sfd_qty, sfd_status
+        // 2. คำนวณจำนวน withdraw ทั้งหมด
+        const [withdrawRows] = await connection.query(
+          `SELECT COALESCE(SUM(sfd_qty),0) total
        FROM stock_form_detail
-       WHERE sfd_sf_id = ? AND sfd_pd_id = ?`,
+       WHERE sfd_sf_id = ?
+       AND sfd_pd_id = ?
+       AND sfd_type = 'withdraw'
+       AND sfd_status = 'approved'`,
           [sfId, pdId],
         );
 
-        if (!item.length) throw new Error("ITEM_NOT_FOUND");
+        const totalWithdraw = withdrawRows[0].total;
 
-        if (item[0].sfd_status !== "approved")
-          throw new Error("ITEM_NOT_APPROVED");
+        // 3. คำนวณจำนวน return แล้ว
+        const [returnRows] = await connection.query(
+          `SELECT COALESCE(SUM(sfd_qty),0) total
+       FROM stock_form_detail
+       WHERE sfd_sf_id = ?
+       AND sfd_pd_id = ?
+       AND sfd_type = 'return'`,
+          [sfId, pdId],
+        );
 
-        // update status → returned
+        const totalReturned = returnRows[0].total;
+
+        const remaining = totalWithdraw - totalReturned;
+
+        if (remaining <= 0) throw new Error("NOTHING_TO_RETURN");
+
+        if (returnQty > remaining) throw new Error("RETURN_EXCEEDS_AVAILABLE");
+
+        // 4. insert return record
         await connection.query(
-          `UPDATE stock_form_detail
-       SET sfd_status = 'returned'
-       WHERE sfd_sf_id = ? AND sfd_pd_id = ?`,
-          [sfId, pdId],
+          `INSERT INTO stock_form_detail
+      (sfd_sf_id, sfd_pd_id, sfd_qty, sfd_type, sfd_status)
+      VALUES (?, ?, ?, 'return', 'returned')`,
+          [sfId, pdId, returnQty],
         );
 
-        // คืน stock
+        // 5. update stock
         await connection.query(
           `UPDATE products
        SET pd_quantity = pd_quantity + ?
        WHERE pd_id = ?`,
-          [item[0].sfd_qty, pdId],
+          [returnQty, pdId],
         );
 
         await connection.commit();
