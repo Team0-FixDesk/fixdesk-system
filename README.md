@@ -16,8 +16,8 @@
 
 ## ⚙️ วิธีรันเบื้องต้น
 ```bash
-cd backend && npm install && npm start
-cd frontend && npm install && npm run dev
+cd fixdesk-backend && npm install && npm start
+cd fixdesk-frontend && npm install && npm run dev
 
 
 
@@ -26,15 +26,9 @@ cd frontend && npm install && npm run dev
 ## 🎯 สรุปแนวคิด
 | หมวด | หน้าที่หลัก |
 |-------|----------------|
-| `backend/` | API + Database |
-| `frontend/` | UI + Interaction |
+| `fixdesk-backend/` | API + Database |
+| `fixdesk-frontend/` | UI + Interaction |
 | `docs/` | เอกสารอ้างอิง |
 | `docker-compose.yml` | รวมทุก service ไว้รันพร้อมกัน |
 | `README.md` | แนะนำระบบโดยรวม |
 
----
-
-อยากไหมครับพี่ ให้ผมช่วย **เพิ่ม README ย่อย** ภายในแต่ละโฟลเดอร์  
-(เช่น `backend/README.md`, `frontend/README.md`, `docs/README.md`)  
-โดยใส่อธิบายละเอียดขึ้นอีกนิด เช่นแต่ละโฟลเดอร์ย่อยเก็บอะไร ใช้เมื่อไหร่ พร้อมตัวอย่างสั้น ๆ?  
-มันจะเหมาะมากถ้าพี่จะใช้เป็น **คู่มือทีม** หรือ **ส่งให้อาจารย์ประกอบรายงาน** ครับ ❤️
