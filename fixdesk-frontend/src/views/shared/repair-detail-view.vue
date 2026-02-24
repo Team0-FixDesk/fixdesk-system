@@ -1,3 +1,93 @@
+/**
+ * =====================================================================
+ * @file            : repair-detail-view.vue
+ * @module          : แสดงรายละเอียดใบแจ้งซ่อม
+ * @layer           : View (Presentation Layer)
+ * @version         : 1.3.0
+ * @since           : 2026-02-17
+ * @lastModified    : 2026-02-23
+ * @lastModifiedBy  : นราธิป แสนทวีสุข
+ * ---------------------------------------------------------------------
+ * @description
+ *  View สำหรับแสดงรายละเอียดใบแจ้งซ่อม (Repair Detail)
+ *  โดยแสดงข้อมูลที่เกี่ยวข้องกับงานซ่อม สถานที่ ผู้แจ้ง ช่างผู้รับผิดชอบ
+ *  สถานะการดำเนินงาน และรายการวัสดุ/อุปกรณ์ที่เบิกจากระบบ stock
+ *
+ *  รองรับการทำงาน:
+ *    - โหลดและแสดงรายละเอียดใบแจ้งซ่อมจาก rf_code
+ *    - แสดง timeline ของสถานะงานซ่อม
+ *    - แสดงรายการวัสดุ/อุปกรณ์ที่เบิก (stock_items)
+ *    - คืนวัสดุ/อุปกรณ์ที่มีสถานะ approved
+ *    - คืนวัสดุแบบเลือกหลายรายการ (batch return)
+ *    - รับงานซ่อม (accept job)
+ *    - เปลี่ยนสถานะงาน (done, outsource)
+ *    - มอบหมายงานให้ช่าง (assign technician)
+ *    - แสดงรูปภาพและวิดีโอที่แนบมากับใบแจ้งซ่อม
+ *    - แสดง modal สำหรับ assign, accept และ summary
+ *
+ *  เชื่อมต่อกับ API:
+ *    - GET    /repair-requests/:code
+ *    - PUT    /technician/close-job/:code
+ *    - PUT    /stock-forms/return-item
+ *    - GET    /technician-types
+ *
+ * @requires
+ *   - vue
+ *   - vue-router
+ *   - sweetalert2
+ *   - jwt-decode
+ *   - @iconify/vue
+ *
+ *   - @/composables/useAuthToken
+ *   - @/composables/usePhoneFormat
+ *
+ *   - @/utils/date.util
+ *   - @/utils/repairTimeline.util
+ *   - @/utils/badge.util
+ *
+ *   - @/components/status-timeline-component.vue
+ *   - @/components/modal/assign-job-modal-component.vue
+ *   - @/components/modal/accept-job-modal-component.vue
+ *   - @/components/button/back-button-component.vue
+ *   - @/components/button/base/base-button-component.vue
+ *
+ * @dataFlow
+ *   Route Params → View → API → Backend Controller → Service → Database
+ *
+ * @stateManagement
+ *   - repair
+ *   - returnableItems
+ *   - selectedReturnItems
+ *   - showReturnModal
+ *   - showAssignPopup
+ *   - showAcceptPopup
+ *   - showStatusPopup
+ *   - showTechSummaryModal
+ *
+ * @responsibility
+ *   - แสดงข้อมูล repair detail
+ *   - จัดการ UI interactions
+ *   - เรียก API ที่เกี่ยวข้องกับ repair และ stock
+ *   - ควบคุม modal states
+ *   - จัดการ media display
+ *
+ * @author
+ *   - นายพชร ไพศรีสกุล
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *   - เพิ่มระบบคืนอุปกรณ์แบบรายชิ้น และหลายรายการ (Return Item)
+ *   - เพิ่ม Return Modal และ logic สำหรับเลือกหลายรายการ
+ *   - เพิ่มการ refresh repair detail หลังคืนอุปกรณ์
+ *     [2026-02-17, นายพชร ไพศรีสกุล]
+ *   - เพิ่มฟิลด์รองรับ repair_method และ result_status
+ *   - ปรับ Modal ปิดงานให้มีตัวเลือกครบถ้วน
+ *     [2026-02-22, นราธิป แสนทวีสุข]
+ *   - รองรับการคืนอุปกรณ์แบบบางส่วน (Partial Return)ปรับปรุง UX/UI หน้า Return Modal และเพิ่มตัวเลือกจำนวนที่ต้องการคืน
+ *     [2026-02-23, พชร ไพศรีสกุล] V1.3.0
+ * =====================================================================
+ */
+
 <script setup>
 defineOptions({ name: 'RepairDetailView' }) // ชื่อคอมโพเนนต์สำหรับ debug
 
@@ -41,10 +131,30 @@ const showAcceptPopup = ref(false) // แสดง Modal รับงาน
 const showStatusPopup = ref(false) // แสดง Modal เปลี่ยนสถานะ
 const showTechSummaryModal = ref(false) // แสดง Modal สรุปจากช่างซ่อม
 
+const showReturnModal = ref(false)
+const selectedReturnItems = ref([])
+
+const returnableItems = computed(() => {
+  if (!repair.value?.stock_items) return []
+
+  return repair.value.stock_items
+    .filter((item) => item.status === 'approved')
+    .map((item) => ({
+      ...item,
+      returnQty: item.qty, // default = คืนทั้งหมด
+    }))
+})
+
 // สถานะข้อมูลอื่น ๆ
 const mediaFileList = ref([]) // รายการไฟล์สื่อ
 const technicianTypeList = ref([]) // รายการประเภทช่างซ่อม
 const techSummary = ref('') // สรุปจากช่างซ่อม
+
+// ตัวแปรสำหรับฟิลด์ใหม่ในการปิดงาน (DB Schema v1.1.0)
+const repairMethod = ref('in_house') // in_house, outsource, other
+const repairMethodRemark = ref('')
+const resultStatus = ref('completed') // completed, incomplete, other
+const resultRemark = ref('')
 
 /**
  * ตรวจสอบสิทธิ์การเข้าใช้งาน
@@ -60,6 +170,7 @@ function requireAuth() {
       title: 'กรุณาเข้าสู่ระบบใหม่',
       showConfirmButton: false,
       timer: 3000,
+      timerProgressBar: true,
     })
     logout()
 
@@ -121,9 +232,25 @@ function handleSelectStatus(statusType) {
 
 /**
  * เตรียมการแสดง Modal สรุปงานก่อนปิด
+ *
+ * @author นายพชร ไพศรีสกุล
+ * @since 2026-02-17
+ * @lastModified 2026-02-22
+ * @lastModifiedBy นราธิป แสนทวีสุข
+ * @contributors
+ *  - นายพชร ไพศรีสกุล
+ *  - นราธิป แสนทวีสุข
  */
 function confirmCloseJobWithSummary() {
+  // ตรวจสอบว่างานนี้เคยจ้างช่างภายนอกหรือไม่
+  const isOutsourced = repair.value?.rf_user_status === 'outsource'
+
+  // Reset ค่าทั้งหมดเป็น default
   techSummary.value = ''
+  repairMethod.value = isOutsourced ? 'outsource' : 'in_house'
+  repairMethodRemark.value = ''
+  resultStatus.value = 'completed'
+  resultRemark.value = ''
   showTechSummaryModal.value = true
 }
 
@@ -131,6 +258,14 @@ function confirmCloseJobWithSummary() {
  * ปิดงานพร้อมสรุปผลการซ่อมแซม
  * ส่ง PUT request ไปยัง API พร้อมสถานะ 'done' และสรุปงาน
  * หลังสำเร็จนำเข้าไปยังรายการงานช่างซ่อม
+ *
+ * @author นายพชร ไพศรีสกุล
+ * @since 2026-02-17
+ * @lastModified 2026-02-22
+ * @lastModifiedBy นราธิป แสนทวีสุข
+ * @contributors
+ *  - นายพชร ไพศรีสกุล
+ *  - นราธิป แสนทวีสุข
  */
 async function confirmCloseJob() {
   if (!requireAuth()) return
@@ -145,6 +280,11 @@ async function confirmCloseJob() {
       body: JSON.stringify({
         status: 'done',
         tech_summary: techSummary.value || 'ดำเนินการเสร็จสิ้น',
+        rf_tech_image_after: null,
+        repair_method: repairMethod.value,
+        repair_method_remark: repairMethodRemark.value,
+        result_status: resultStatus.value,
+        result_remark: resultRemark.value,
       }),
     })
 
@@ -157,6 +297,7 @@ async function confirmCloseJob() {
       title: 'อัปเดตสถานะเรียบร้อย',
       showConfirmButton: false,
       timer: 2000,
+      timerProgressBar: true,
     })
     showTechSummaryModal.value = false
 
@@ -175,6 +316,7 @@ async function confirmCloseJob() {
       title: 'ไม่สามารถปิดงานได้',
       showConfirmButton: false,
       timer: 3000,
+      timerProgressBar: true,
     })
   }
 }
@@ -217,6 +359,7 @@ async function confirmOutsource() {
       title: 'ส่งงานให้ช่างภายนอกเรียบร้อย',
       showConfirmButton: false,
       timer: 2000,
+      timerProgressBar: true,
     })
 
     // Redirect to technician repair list after successful outsourcing
@@ -234,6 +377,7 @@ async function confirmOutsource() {
       title: 'ไม่สามารถส่งงานได้',
       showConfirmButton: false,
       timer: 3000,
+      timerProgressBar: true,
     })
   }
 }
@@ -345,7 +489,7 @@ async function fetchRepairDetail() {
       code: data.rf_code,
       main_technician: data.main_technician,
       main_technician_id: data.main_technician_id,
-      rf_assigned_tech_id: data.rf_assigned_tech_id
+      rf_assigned_tech_id: data.rf_assigned_tech_id,
     })
     console.log(data.stock_items)
   } catch (err) {
@@ -452,16 +596,163 @@ function getStockStatusBadge(status) {
   switch (status) {
     case 'waiting':
       return `<span class="${baseClass} bg-amber-50 text-amber-600">รออนุมัติ</span>`
-
     case 'approved':
       return `<span class="${baseClass} bg-green-50 text-green-600">อนุมัติแล้ว</span>`
-
+    case 'returned':
+      return `<span class="${baseClass} bg-blue-50 text-blue-600">คืนแล้ว</span>`
     case 'rejected':
       return `<span class="${baseClass} bg-red-50 text-red-600">ไม่อนุมัติ</span>`
 
     default:
       return `<span class="${baseClass} bg-gray-50 text-gray-600">-</span>`
   }
+}
+
+async function returnItem(item) {
+  try {
+    if (!requireAuth()) return
+
+    const res = await fetch(`${API_BASE_URL}/stock-forms/return-item`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token.value}`, // ✅ ใช้อันนี้
+      },
+      body: JSON.stringify({
+        sf_code: item.sf_code,
+        pd_id: item.id,
+      }),
+    })
+
+    const data = await res.json()
+
+    if (!res.ok) throw new Error(data.message)
+
+    await fetchRepairDetail()
+
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: 'success',
+      title: 'คืนอุปกรณ์สำเร็จ',
+      showConfirmButton: false,
+      timer: 2000,
+      timerProgressBar: true,
+    })
+  } catch (err) {
+    console.error(err)
+
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: 'error',
+      title: err.message || 'คืนอุปกรณ์ไม่สำเร็จ',
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true,
+    })
+  }
+}
+
+function openReturnModal() {
+  selectedReturnItems.value = []
+  showReturnModal.value = true
+}
+
+function closeReturnModal() {
+  showReturnModal.value = false
+}
+
+function toggleReturnItem(item) {
+  const index = selectedReturnItems.value.findIndex(
+    (i) => i.sf_code === item.sf_code && i.id === item.id,
+  )
+
+  if (index >= 0) {
+    selectedReturnItems.value.splice(index, 1)
+  } else {
+    selectedReturnItems.value.push(item)
+  }
+}
+
+function toggleSelectAll() {
+  if (selectedReturnItems.value.length === returnableItems.value.length) {
+    selectedReturnItems.value = []
+  } else {
+    selectedReturnItems.value = [...returnableItems.value]
+  }
+}
+
+async function returnSelectedItems() {
+  if (!requireAuth()) return
+
+  const approvedItems = selectedReturnItems.value.filter((item) => item.status === 'approved')
+
+  if (approvedItems.length === 0) {
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: 'warning',
+      title: 'ไม่มีรายการที่สามารถคืนได้',
+      showConfirmButton: false,
+      timer: 2000,
+      timerProgressBar: true,
+    })
+
+    return
+  }
+
+  try {
+    for (const item of approvedItems) {
+      const res = await fetch(`${API_BASE_URL}/stock-forms/return-item`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token.value}`,
+        },
+        body: JSON.stringify({
+          sf_code: item.sf_code,
+          pd_id: item.id,
+          quantity: item.returnQty,
+        }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) throw new Error(data.message)
+    }
+
+    selectedReturnItems.value = []
+    showReturnModal.value = false
+
+    await fetchRepairDetail()
+
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: 'success',
+      title: 'คืนอุปกรณ์สำเร็จ',
+      showConfirmButton: false,
+      timer: 2000,
+      timerProgressBar: true,
+    })
+  } catch (err) {
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: 'error',
+      title: err.message,
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true,
+    })
+  }
+}
+
+function validateReturnQty(item) {
+  if (item.returnQty < 1) item.returnQty = 1
+
+  if (item.returnQty > item.qty) item.returnQty = item.qty
 }
 
 // Lifecycle Hooks - วัฏจักรชีวิตของคอมโพเนนต์
@@ -712,9 +1003,19 @@ onMounted(() => {
           <div class="bg-white border border-gray-200 rounded-xl p-4 sm:p-6 shadow-sm">
             <div class="flex items-center justify-between mb-4 border-b border-gray-300 pb-2 mb-4">
               <h2 class="text-lg font-semibold text-gray-800">รายการเบิก</h2>
-              <div  v-if="canAccept && repair?.rf_user_status !== 'done' && repair?.rf_user_status !== 'pending'" class="relative">
-                <BaseButtonComponent class="border-2 border-gray-400 p-2 text-gray-500 rounded-lg hover:bg-gray-100 text-sm">
-                  <Icon icon="oui:return-key" width="24" height="24"  style="color: gray" />
+              <div
+                v-if="
+                  canAccept &&
+                  repair?.rf_user_status !== 'done' &&
+                  repair?.rf_user_status !== 'pending'
+                "
+                class="relative"
+              >
+                <BaseButtonComponent
+                  @click="openReturnModal"
+                  class="border-2 border-gray-400 p-2 text-gray-500 rounded-lg hover:bg-gray-100 text-sm"
+                >
+                  <Icon icon="oui:return-key" width="24" height="24" style="color: gray" />
                   คืนอุปกรณ์
                 </BaseButtonComponent>
               </div>
@@ -964,22 +1265,108 @@ onMounted(() => {
       @click.self="showTechSummaryModal = false"
     >
       <div
-        class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200"
+        class="bg-white rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden animate-in fade-in zoom-in duration-200"
       >
-        <div class="p-6 text-center border-b border-gray-100">
+        <div class="p-5 text-center border-b border-gray-100">
           <h3 class="text-xl font-bold text-gray-800">รายละเอียดการดำเนินการ</h3>
-          <p class="text-gray-500 text-sm mt-1">กรุณากรอกรายละเอียดการตรวจสอบ/ซ่อม</p>
         </div>
-        <div class="p-6 space-y-4">
-          <textarea
-            v-model="techSummary"
-            placeholder="กรอกรายละเอียดการตรวจสอบ/ซ่อม..."
-            class="w-full h-32 p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            maxlength="500"
-          ></textarea>
-          <div class="text-right text-xs text-gray-400">{{ techSummary.length }}/500</div>
+
+        <div class="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
+          <!-- 1. วิธีการซ่อม (ซ่อนถ้าเป็น outsource อยู่แล้ว) -->
+          <div v-if="repairMethod !== 'outsource'">
+            <label class="block text-sm font-semibold text-gray-700 mb-2"
+              >1. สำหรับเจ้าหน้าที่ ตรวจสอบ/ซ่อม</label
+            >
+            <div class="space-y-2">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  v-model="repairMethod"
+                  value="in_house"
+                  class="text-blue-600 focus:ring-blue-500"
+                />
+                สามารถแก้ไข/ซ่อมบำรุงได้
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  v-model="repairMethod"
+                  value="other"
+                  class="text-blue-600 focus:ring-blue-500"
+                />
+                อื่นๆ
+              </label>
+              <input
+                v-if="repairMethod === 'other'"
+                v-model="repairMethodRemark"
+                type="text"
+                placeholder="ระบุเหตุผลอื่นๆ..."
+                class="mt-2 w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+
+          <!-- 2. รายละเอียดการทำงาน -->
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2"
+              >{{ repairMethod === 'outsource' ? '1' : '2' }}. รายละเอียดการตรวจสอบ/ซ่อม</label
+            >
+            <textarea
+              v-model="techSummary"
+              placeholder="กรอกรายละเอียด..."
+              class="w-full h-24 p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500"
+              maxlength="500"
+            ></textarea>
+            <div class="text-right text-xs text-gray-400 mt-1">{{ techSummary.length }}/500</div>
+          </div>
+
+          <!-- 3. สรุปผล -->
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2"
+              >{{ repairMethod === 'outsource' ? '2' : '3' }}. สรุปผล</label
+            >
+            <div class="flex gap-4 mb-2">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  v-model="resultStatus"
+                  value="completed"
+                  class="text-green-600 focus:ring-green-500"
+                />
+                เรียบร้อย
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  v-model="resultStatus"
+                  value="incomplete"
+                  class="text-red-600 focus:ring-red-500"
+                />
+                ไม่เรียบร้อย
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  v-model="resultStatus"
+                  value="other"
+                  class="text-amber-600 focus:ring-amber-500"
+                />
+                อื่นๆ
+              </label>
+            </div>
+            <input
+              v-if="resultStatus === 'incomplete' || resultStatus === 'other'"
+              v-model="resultRemark"
+              type="text"
+              :placeholder="
+                resultStatus === 'incomplete' ? 'ระบุสาเหตุที่ไม่เรียบร้อย...' : 'ระบุอื่นๆ...'
+              "
+              class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
         </div>
-        <div class="p-6 pt-0 flex gap-3">
+
+        <div class="p-5 border-t border-gray-100 flex gap-3">
           <button
             @click="showTechSummaryModal = false"
             class="flex-1 py-3 px-6 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl font-medium transition-colors"
@@ -990,13 +1377,13 @@ onMounted(() => {
             @click="confirmCloseJob"
             :disabled="!techSummary.trim()"
             :class="[
-              'flex-1 py-3 px-6 rounded-xl font-medium transition-colors',
+              'flex-1 py-3 px-6 rounded-xl font-medium transition-colors text-white',
               techSummary.trim()
-                ? 'bg-green-600 hover:bg-green-700 text-white'
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed',
+                ? 'bg-blue-600 hover:bg-blue-700'
+                : 'bg-gray-300 cursor-not-allowed',
             ]"
           >
-            ยืนยันปิดงาน
+            ยืนยันการปิดงาน
           </button>
         </div>
       </div>
@@ -1073,6 +1460,92 @@ onMounted(() => {
         <p class="text-sm text-gray-400 mt-1">
           ไฟล์ที่ {{ currentMediaIndex + 1 }} จาก {{ mediaFileList.length }}
         </p>
+      </div>
+    </div>
+  </div>
+ั  <!-- Return Modal -->
+  <div
+    v-if="showReturnModal"
+    class="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+  >
+    <div class="bg-white rounded-xl shadow-lg w-[500px] max-h-[80vh] overflow-auto">
+      <!-- Header -->
+      <div class="flex justify-between items-center p-4 border-b">
+        <h2 class="text-lg font-semibold">คืนอุปกรณ์</h2>
+        <button @click="closeReturnModal">✕</button>
+      </div>
+
+      <!-- Body -->
+      <div class="p-4 space-y-3">
+        <!-- Select All -->
+        <div class="flex items-center justify-between border-b pb-2">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              :checked="
+                selectedReturnItems.length === returnableItems.length && returnableItems.length > 0
+              "
+              @change="toggleSelectAll"
+            />
+            เลือกทั้งหมด
+          </label>
+
+          <span class="text-sm text-gray-500"> เลือก {{ selectedReturnItems.length }} รายการ </span>
+        </div>
+
+        <!-- Empty -->
+        <div v-if="returnableItems.length === 0" class="text-gray-500 text-sm">
+          ไม่มีรายการที่สามารถคืนได้
+        </div>
+
+        <!-- Items -->
+        <div
+          v-for="item in returnableItems"
+          :key="item.sf_code + '-' + item.id"
+          class="flex justify-between items-center border rounded-lg p-3"
+        >
+          <label class="flex items-center gap-3 cursor-pointer flex-1">
+            <input
+              type="checkbox"
+              :checked="
+                selectedReturnItems.some((i) => i.sf_code === item.sf_code && i.id === item.id)
+              "
+              @change="toggleReturnItem(item)"
+            />
+
+            <div>
+              <div class="font-medium">{{ item.name }}</div>
+
+              <div class="text-sm text-gray-500">จำนวนที่ยังคืนได้: {{ item.qty }}</div>
+
+              <!-- input ใหม่ -->
+              <input
+                type="number"
+                min="1"
+                :max="item.qty"
+                v-model.number="item.returnQty"
+                @input="validateReturnQty(item)"
+                class="mt-1 border rounded px-2 py-1 w-20"
+                @click.stop
+              />
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="p-4 border-t flex justify-end gap-2">
+        <button @click="closeReturnModal" class="px-4 py-2 border rounded-lg hover:bg-gray-100">
+          ยกเลิก
+        </button>
+
+        <button
+          @click="returnSelectedItems"
+          :disabled="selectedReturnItems.length === 0"
+          class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+        >
+          คืนที่เลือก
+        </button>
       </div>
     </div>
   </div>

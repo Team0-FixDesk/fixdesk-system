@@ -1,3 +1,46 @@
+/**
+ * =====================================================================
+ * @file            manage-report-view.vue
+ * @module          มอดูลส่งออกรายงาน และแดชบอร์ดสรุปผลการแจ้งซ่อม
+                      - การส่งออกใบแจ้งซ่อมเป็นไฟล์ PDF
+                      - การสร้างหนังสือบันทึกข้อความประจำเดือน
+                      - การส่งออกรายงานแจ้งซ่อมประจำเดือน ในรูปแบบ CSV
+ * @layer           View (Presentation Layer)
+ * @version         1.1.0
+ * @since           2025-01-15
+ * @author          นราธิป แสนทวีสุข
+ * @lastModified    2026-02-23
+ * @lastModifiedBy  นราธิป แสนทวีสุข
+ * ---------------------------------------------------------------------
+ * @description
+ *  หน้าจอสำหรับผู้ดูแลระบบใช้ในการจัดการรายงานแจ้งซ่อม
+ *  รองรับฟีเจอร์:
+ *    - ค้นหาและกรองรายการแจ้งซ่อมตามเงื่อนไขต่างๆ
+ *    - สร้าง PDF แบบฟอร์มแจ้งซ่อมทีละรายการหรือหลายรายการ
+ *    - ดาวน์โหลดเป็นไฟล์เดียวหรือ ZIP (กรณีหลายไฟล์)
+ *    - แสดงข้อมูลครบถ้วน: ผู้แจ้ง, ผู้รับแจ้ง, ช่างผู้รับผิดชอบ, รายการวัสดุที่เบิก
+ *
+ * @requires
+ *   - vue-router
+ *   - jspdf (PDF generation)
+ *   - html2canvas (HTML to Canvas conversion)
+ *   - jszip (Multiple PDF packaging)
+ *   - sweetalert2 (Notifications)
+ *   - @/components/filters/repair-filter-bar-component.vue
+ *   - @/components/table-component.vue
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *  - แก้ไขคำในปุ่มให้ชัดเจนขึ้น                                  [2026-02-17, นราธิป แสนทวีสุข]
+ *  - แก้ไข reporter และ assigner name ให้แสดงคำนำหน้าชื่อ        [2026-02-17, นราธิป แสนทวีสุข]
+ *  - แก้ไขปัญหาตัวอักษรตกบรรทัดในปุ่ม CSV (whitespace-nowrap)  [2026-02-17, นราธิป แสนทวีสุข]
+ *  - ปรับ padding และขนาดตัวอักษรปุ่มให้ไม่ชิดขอบเกินไป (text-sm, p-3) [2026-02-17, นราธิป แสนทวีสุข]
+ *  - แก้ไขข้อความคำอธิบาย                                    [2026-02-20, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *  - เปลี่ยนจาก rf_is_outsourced เป็น rf_repair_method
+ *    และเพิ่มฟิลด์ rf_result_status ใน PDF                       [2026-02-22, นราธิป แสนทวีสุข]
+ * =====================================================================
+ */
+
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
@@ -64,22 +107,37 @@ const getRepairFormHTML = (item, isPdf = false) => {
   const department = item.reporter?.department || '..............................................';
   const phone = item.reporter?.phone || '............................';
   const issue = item.rf_problem || item.rf_issue || '...................................................................................................................';
-  const assetId = item.rf_prop_number || '.............................................................................';
+  const assetId = item.rf_prop_number || '';
   const building = item.building_name || item.rf_building || '..................';
   const floor = item.floor_name || item.rf_floor || '..................';
   const room = item.room_name || item.rf_room || '..................';
   const detail = item.rf_detail || '........................................................................................................................................................................................\n........................................................................................................................................................................................';
-  const reporterName = item.reporter?.name;
+
+  // ใช้ name โดยตรง เพราะ API ไม่ส่ง title, first_name, last_name แยกมา
+  const reporterName = item.reporter?.name || '';
+
   const technician = item.main_technician || '...............................................................................................................';
   const techSummary = item.rf_tech_summary || '........................................................................................................................................................................................\n........................................................................................................................................................................................';
-  const isOutsourced = item.rf_is_outsourced || false;
-  const assignerName = item.assigner?.name || '........................................................';
+
+  // เปลี่ยนจาก rf_is_outsourced เป็น rf_repair_method (DB Schema v1.1.0)
+  const repairMethod = item.rf_repair_method || 'in_house';
+  const repairMethodRemark = item.rf_repair_method_remark || '';
+  const resultStatus = item.rf_result_status || '';
+  const resultRemark = item.rf_result_remark || '';
+
+  // รวมคำนำหน้า + ชื่อเต็มสำหรับผู้รับแจ้ง (ใช้ข้อมูลจาก backend)
+  const assignerTitle = item.assigner?.title || '';
+  const assignerFirstName = item.assigner?.first_name || '';
+  const assignerLastName = item.assigner?.last_name || '';
+  const assignerName = assignerTitle
+    ? `${assignerTitle}${assignerFirstName} ${assignerLastName}`.trim()
+    : item.assigner?.name || '........................................................';
 
   // --- กำหนด Style แยกกันระหว่าง Preview กับ PDF ---
   // ถ้าเป็น PDF: เพิ่ม padding-bottom และเส้นหนาขึ้น (แก้บั๊ก html2canvas)
   // ถ้าเป็น Preview: ใช้ค่าปกติ สวยงามบนจอ
   const valueStyle = isPdf
-    ? `border-bottom: 2px dotted #888; padding-bottom: 8px; line-height: 1.2; margin-bottom: 2px;`
+    ? `border-bottom: 2px dotted #888; padding-bottom: 5px; line-height: 1.2; margin-bottom: 2px;`
     : `border-bottom: 1px dotted #000; padding-bottom: 0px; line-height: 1.4; margin-bottom: 2px;`;
 
   // Preview: top: 3px (สวยบนจอ)
@@ -88,6 +146,11 @@ const getRepairFormHTML = (item, isPdf = false) => {
   const checkboxLineHeight = isPdf ? '5px' : '12px'; // ปรับตำแหน่งเครื่องหมายถูกในกล่องนิดหน่อย
 
   const checkboxStyle = `width: 16px; height: 16px; border: 1px solid #000; display: inline-block; margin-right: 8px; position: relative; top: ${checkboxTop}; text-align: center; line-height: ${checkboxLineHeight}; font-size: 14px; font-weight: bold;`;
+
+  // Helper function: ถ้าค่าว่างให้ใส่ &nbsp; เพื่อให้มีความสูงแต่ไม่มีเนื้อหา (ให้ผู้ใช้เขียนด้วยปากกา)
+  const getValueOrSpace = (value) => {
+    return (value && value.trim() !== '') ? value : '&nbsp;';
+  };
   return `
     <div style="width: 100%; height: 100%; padding: 40px; box-sizing: border-box; font-family: 'THSarabun', 'Sarabun', sans-serif !important; background: white; color: #000; position: relative;">
       <style>
@@ -174,8 +237,9 @@ const getRepairFormHTML = (item, isPdf = false) => {
         <div class="box">
           <div style="font-weight: bold; margin-bottom: 12px; text-decoration: underline;">สำหรับเจ้าหน้าที่ ตรวจสอบ/ซ่อม</div>
 
-          <div><span style="${checkboxStyle}">${!isOutsourced ? '✓' : ''}</span> สามารถแก้ไข/ซ่อมบำรุงได้</div>
-          <div style="margin-top: 8px;"><span style="${checkboxStyle}">${isOutsourced ? '✓' : ''}</span> ต้องจ้างบริษัทฯมาดำเนินการ................................................................................................</div>
+          <div><span style="${checkboxStyle}">${repairMethod === 'in_house' ? '✓' : ''}</span> สามารถแก้ไข/ซ่อมบำรุงได้</div>
+          <div style="margin-top: 8px;"><span style="${checkboxStyle}">${repairMethod === 'outsource' ? '✓' : ''}</span> ต้องจ้างบริษัทฯมาดำเนินการ</div>
+          <div style="margin-top: 8px;"><span style="${checkboxStyle}">${repairMethod === 'other' ? '✓' : ''}</span> อื่นๆ <span class="value" style="width: 70%;">${getValueOrSpace(repairMethod === 'other' ? repairMethodRemark : '')}</span></div>
 
           <div class="divider"></div>
 
@@ -184,8 +248,9 @@ const getRepairFormHTML = (item, isPdf = false) => {
 
           <div style="margin-top: 16px;">
             สรุปผล:
-            <span style="margin-left: 16px;"><span style="${checkboxStyle}"></span> เรียบร้อย</span>
-            <span style="margin-left: 16px;"><span style="${checkboxStyle}"></span> ไม่เรียบร้อย เพราะ .............................................................</span>
+            <span style="margin-left: 16px;"><span style="${checkboxStyle}">${resultStatus === 'completed' ? '✓' : ''}</span> เรียบร้อย</span>
+            <span style="margin-left: 16px;"><span style="${checkboxStyle}">${resultStatus === 'incomplete' ? '✓' : ''}</span> ไม่เรียบร้อย เพราะ <span class="value" style="width: 34%;">${getValueOrSpace(resultStatus === 'incomplete' ? resultRemark : '')}</span></span><br>
+            <span style="margin-left: 56px;"><span style="${checkboxStyle}">${resultStatus === 'other' ? '✓' : ''}</span> อื่นๆ <span class="value" style="width: 67%;">${getValueOrSpace(resultStatus === 'other' ? resultRemark : '')}</span></span>
           </div>
 
           <div class="divider"></div>
@@ -470,13 +535,29 @@ const generateSinglePDF = async (item) => {
 
 const downloadCSV = async () => {
   if (filteredRows.value.length === 0) {
-    alert('ไม่มีข้อมูลสำหรับเดือนที่เลือก')
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: 'info',
+      title: 'ไม่มีข้อมูลสำหรับเดือนที่เลือก',
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true,
+    })
     return
   }
   const codes = filteredRows.value.map(row => row.meta.rf_code)
   await fetchPrintDetails(codes)
   if (printDetails.value.length === 0) {
-    alert('ไม่พบข้อมูลสำหรับ export')
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: 'info',
+      title: 'ไม่พบข้อมูลสำหรับส่งออก',
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true,
+    })
     return
   }
   const headers = ['ลำดับ', 'แจ้งซ่อมเมื่อ', 'ผู้รับผิดชอบงานหลัก', 'รายการปฏิบัติงาน', 'ตรวจสอบ/ซ่อม', 'สรุปผลการซ่อม', 'ผู้แจ้งซ่อม'];
@@ -572,7 +653,15 @@ const downloadPDF = async () => {
     }
   } catch (err) {
     console.error('Error generating PDF:', err)
-    alert('เกิดข้อผิดพลาดในการสร้างไฟล์: ' + err.message)
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: 'error',
+      title: 'เกิดข้อผิดพลาดในการสร้างไฟล์: ' + err.message,
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true,
+    })
   } finally {
     isGeneratingPDF.value = false
   }
@@ -593,7 +682,7 @@ onMounted(() => {
       <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-7xl-6">
         <!-- Page title and description -->
         <h1 class="text-2xl font-bold text-gray-800">สร้างรายงาน</h1>
-        <p class="text-gray-500 mt-1">การสร้างรายงานประจำเดือนหรือบันทึกใบแจ้งซ่อม</p>
+        <p class="text-gray-500 mt-1">สร้างรายงาน และดาวน์โหลดใบแจ้งซ่อมที่ดำเนินการเสร็จสิ้น</p>
         <div class="flex flex-col lg:flex-row gap-6">
           <!-- Sidebar: Month/Year selection and actions -->
           <div class="lg:w-72 flex-shrink-0 space-y-4">
@@ -616,24 +705,24 @@ onMounted(() => {
               </div>
             </div>
             <!-- Export and navigation buttons -->
-            <div class="bg-white rounded-xl shadow-sm p-4 space-y-3">
+            <div class="bg-white rounded-xl shadow-sm p-3 space-y-3">
               <button @click="downloadCSV"
-                class="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-lg transition-all shadow-sm">
+                class="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-3 rounded-lg transition-all shadow-sm text-sm">
                 <!-- CSV icon -->
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                ดาวน์โหลดสรุป CSV
+                <span class="whitespace-nowrap">ดาวน์โหลดสรุปรายงานประจำเดือน</span>
               </button>
               <button @click="goToCreateReport"
-                class="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-all shadow-sm">
+                class="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-all shadow-sm text-sm">
                 <!-- Go to create report icon -->
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                ไปหน้าสร้างบันทึกข้อความ
+                <span class="whitespace-nowrap">สร้างหนังสือบันทึกข้อความ</span>
               </button>
             </div>
           </div>
@@ -669,7 +758,7 @@ onMounted(() => {
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
-                    ดาวน์โหลด ({{ selectedItems.length }})
+                    ดาวน์โหลดใบแจ้งซ่อม ({{ selectedItems.length }})
                   </button>
                 </div>
               </div>
@@ -719,7 +808,7 @@ onMounted(() => {
       <div v-if="showPrintModal" class="fixed inset-0 z-50 flex items-center justify-center">
         <div class="absolute inset-0 bg-black/50" @click="closePrintModal"></div>
         <div
-          class="relative bg-white rounded-xl shadow-2xl w-[95%] max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+          class="relative bg-white rounded-xl shadow-2xl w-[95%] max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
           <div class="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50">
             <h2 class="text-lg font-semibold text-gray-800">
               เตรียมดาวน์โหลดแบบฟอร์ม ({{ printSelection.length }} รายการ)
@@ -761,7 +850,7 @@ onMounted(() => {
               <div class="flex-1 overflow-auto p-4">
                 <div v-if="previewItem" class="mx-auto">
                   <div ref="previewDocRef" class="bg-white border border-gray-300 shadow-lg mx-auto overflow-hidden"
-                    style="width: 595px; min-height: 842px;" v-html="previewHtmlContent">
+                    style="width: 774px; min-height: 1095px; transform-origin: top center;" v-html="previewHtmlContent">
                   </div>
                 </div>
                 <div v-else class="flex items-center justify-center h-full text-gray-400">

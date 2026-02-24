@@ -1,3 +1,81 @@
+/**
+ * =====================================================================
+ * @file            manager-home.view.vue
+ * @module          หน้าหลักผู้บริหาร (Manager Dashboard)
+ * @layer           View (Presentation Layer)
+ * @version         1.5.4
+ * @since           2025-10-21
+ * @author          พชร ไพศรีสกุล
+ * @contributors
+ *   - พชร ไพศรีสกุล
+ *   - เศรษฐพงศ์ หอมชื่น
+ *   - พิมลพรรณ มามาก
+ *   - นราธิป แสนทวีสุข
+ *   - ปฏิพัทธ์ จงนันทพันธ์กุล
+ *   - บุณยกร จันประภาส
+ *   - พิมพ์ณัฐชยา สร้อยคำ
+ *
+ * @lastModified    2026-02-23
+ * @lastModifiedBy  พชร ไพศรีสกุล
+ * ---------------------------------------------------------------------
+ * @description
+ * หน้าจอแดชบอร์ดสำหรับผู้บริหาร เพื่อแสดงภาพรวมการดำเนินงานของระบบแจ้งซ่อม
+ * ประกอบด้วยการ์ดสรุปสถิติ และกราฟแสดงผลข้อมูลต่างๆ (ApexCharts) ได้แก่:
+ *  - ปริมาณงานแจ้งซ่อมรายเดือน (Stacked Bar Chart)
+ *  - สัดส่วนสถานะงานแจ้งซ่อมแบบรายสัปดาห์/รายเดือน (Pie Chart)
+ *  - แนวโน้มปริมาณงานแจ้งซ่อมรายวันในสัปดาห์ปัจจุบัน (Line Chart)
+ *  - อัตราความสำเร็จการปฏิบัติงานของช่างแต่ละแผนก (Horizontal Bar Chart)
+ *  - ปริมาณงานแจ้งซ่อมจำแนกตามประเภท (Horizontal Bar Chart)
+ *  - ปริมาณการแจ้งซ่อมจำแนกตามหน่วยงาน (Horizontal Bar Chart)
+ *
+ * @requires
+ *  - vue
+ *  - vue3-apexcharts
+ *  - @/composables/useUserProfile
+ *  - @/composables/useManagerDashboard
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *   - feat(frontend): add sidebar and page structure for all actors
+ *     [2025-10-21, พชร ไพศรีสกุล] V 1.0.0
+ *   - feat(dashboard): implement manager dashboard with vue-echarts data visualization
+ *     [2025-12-07, นราธิป แสนทวีสุข] V 1.1.0
+ *   - style(frontend):หน้า home
+ *     [2025-12-07, พชร ไพศรีสกุล] V 1.1.1
+ *   - hotfix(managerHome):แก้สถานะให้แสดงผลถูกต้อง
+ *     [2025-12-07, นราธิป แสนทวีสุข] V 1.1.2
+ *   - feat(dashboard): add year selector and growth indicators
+ *     [2025-12-07, นราธิป แสนทวีสุข] V 1.2.0
+ *   - fix(frontend):แก้ไขการใช้ API_BASE ทุกไฟล์ที่มีการใช้ API
+ *     [2026-01-08, พชร ไพศรีสกุล] V 1.2.1
+ *   - fix(frontend): แก้ไข Dashboard ของ Manager
+ *     [2026-01-13, เศรษฐพงศ์ หอมชื่น] V 1.2.2
+ *   - fix(front):การดึงชื่อและหน่วยงาน โดยใช้ Composables
+ *     [2026-01-14, พชร ไพศรีสกุล] V 1.2.3
+ *   - fix(frontend): แก้ไขหน้า manager home
+ *     [2026-01-14, พชร ไพศรีสกุล] V 1.2.4
+ *   - refactor manager&stock home
+ *     [2026-01-15, พิมพ์ณัฐชยา สร้อยคำ] V 1.3.0
+ *   - fix(frontend): แก้ไขปัญหาการใช้ API ผิด
+ *     [2026-02-11, พชร ไพศรีสกุล] V 1.3.1
+ *   - ref(frontend) แก้ไขให้ตรงตาม Coding Standard
+ *     [2026-02-11, บุณยกร จันประภาส] V 1.4.0
+ *   - fix(frontend): แก้การแสดงกราฟ
+ *     [2026-02-17, เศรษฐพงศ์ หอมชื่น] V 1.4.1
+ *   - feat(frontend): เพิ่มกราฟเปรียบเทียบช่างในองค์กรณ์ กับช่างภายนอก
+ *     [2026-02-18, เศรษฐพงศ์ หอมชื่น] V 1.5.0
+ *   - fix(frontend): แก้ไขการใช้คำ และเพิ่มคำอธิบาย
+ *     [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล] V 1.5.1
+ *   - fix(frontend): แก้เงื่อนไขการแสดงกราฟ
+ *     [2026-02-21, เศรษฐพงศ์ หอมชื่น] V 1.5.2
+ *   - fix(frontend): ดึงข้อมูลชื่อผู้ใช้งานมาแสดงที่หน้าจอหลักของ Role ต่างๆ
+ *     [2026-02-22, พิมลพรรณ มามาก] V 1.5.3
+ *   - fix(frontend): แก้ไขการแสดงผลกราฟในหน้า Manager Dashboard
+ *     [2026-02-23, พชร ไพศรีสกุล] V 1.5.4
+ *
+ * =====================================================================
+ */
+
 <script setup>
 import { ref, computed, shallowRef, onMounted } from 'vue'
 import ApexChart from 'vue3-apexcharts'
@@ -8,7 +86,7 @@ defineOptions({ name: 'ManagerHomeView' })
 
 const API_BASE = import.meta.env.VITE_API_BASE
 
-const { displayName, displayDepartment, fetchUserProfile } = useUserProfile(API_BASE)
+const { userDisplayName, userDepartmentName, fetchUserProfileData} = useUserProfile()
 const { fetchDashboardData: fetchManagerDashboard } = useManagerDashboard()
 
 const monthLabels = [
@@ -32,7 +110,7 @@ const GRID_STYLE = {
   strokeDashArray: 4,
   xaxis: { lines: { show: true } },
   yaxis: { lines: { show: true } },
-  padding: { left: 8, right: 8 },
+  padding: { left: 30, right: 20, bottom: 10, top: 0 },
 }
 
 const STATUS_COLORS = {
@@ -135,57 +213,11 @@ const calcPercentChange = (current, previous) => {
   return Math.round(((current - previous) / previous) * 100)
 }
 
-const getAuthHeaders = () => {
-  const token = localStorage.getItem('token') || sessionStorage.getItem('token')
-  return { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
-}
-
 const filterRepairsByMonth = (repairs, year, month) =>
   repairs.filter((r) => {
     const d = new Date(r.rf_create_at)
     return d.getFullYear() === year && d.getMonth() === month
   })
-
-const filterLast7Days = (repairs) => {
-  const today = new Date()
-  const start = new Date(today)
-  start.setDate(today.getDate() - 6)
-  start.setHours(0, 0, 0, 0)
-
-  return repairs.filter((r) => {
-    const d = new Date(r.rf_create_at)
-    return d >= start && d <= today
-  })
-}
-
-const filterCurrentWeek = (repairs) => {
-  const now = new Date()
-  const day = now.getDay()
-  const diffToMonday = (day + 6) % 7
-
-  const monday = new Date(now)
-  monday.setDate(now.getDate() - diffToMonday)
-  monday.setHours(0, 0, 0, 0)
-
-  const sunday = new Date(monday)
-  sunday.setDate(monday.getDate() + 6)
-  sunday.setHours(23, 59, 59, 999)
-
-  const getYear = (dateStr) => new Date(dateStr).getFullYear()
-  const getMonth = (dateStr) => new Date(dateStr).getMonth()
-
-  const filterByYear = (items, year) =>
-    items.filter((i) => getYear(i.rf_create_at) === year)
-
-  const countByStatus = (items, status) =>
-    items.filter((i) => i.rf_user_status === status).length
-
-
-  return repairs.filter((r) => {
-    const d = new Date(r.rf_create_at)
-    return d >= monday && d <= sunday
-  })
-}
 
 /* -----------------------------
    Summary Cards
@@ -229,38 +261,46 @@ const summaryCards = computed(() => [
 ])
 
 function updateSummaryCards() {
-  const currentMonth = filterRepairsByMonth(
-    allRepairs.value,
-    selectedYear.value,
-    selectedMonthIndex.value,
-  )
+  let curTotal = 0, curPending = 0, curInProgress = 0, curDone = 0
+  let prevTotal = 0, prevPending = 0, prevInProgress = 0, prevDone = 0
 
-  const prevDate = new Date(selectedYear.value, selectedMonthIndex.value, 1)
+  const curY = selectedYear.value
+  const curM = selectedMonthIndex.value
+
+  const prevDate = new Date(curY, curM, 1)
   prevDate.setMonth(prevDate.getMonth() - 1)
-  const prevMonth = filterRepairsByMonth(
-    allRepairs.value,
-    prevDate.getFullYear(),
-    prevDate.getMonth(),
-  )
+  const prevY = prevDate.getFullYear()
+  const prevM = prevDate.getMonth()
 
-  const countByStatus = (arr, status) => arr.filter((r) => r.rf_user_status === status).length
-
-  const curPending = countByStatus(currentMonth, 'pending')
-  const curInProgress = countByStatus(currentMonth, 'in_progress')
-  const curDone = countByStatus(currentMonth, 'done')
-  const curTotal = currentMonth.length
-
-  const prevPending = countByStatus(prevMonth, 'pending')
-  const prevInProgress = countByStatus(prevMonth, 'in_progress')
-  const prevDone = countByStatus(prevMonth, 'done')
-  const prevTotal = prevMonth.length
-
-  summaryStats.value = {
-    total: curTotal,
-    pending: curPending,
-    in_progress: curInProgress,
-    done: curDone,
+  const isMatch = (dateStr, y, m) => {
+    if (!dateStr) return false
+    const d = new Date(dateStr)
+    return d.getFullYear() === y && d.getMonth() === m
   }
+
+  allRepairs.value.forEach((r) => {
+    if (isMatch(r.rf_create_at, curY, curM)) curTotal++
+    if (isMatch(r.rf_create_at, prevY, prevM)) prevTotal++
+
+    if (r.rf_user_status === 'pending') {
+      if (isMatch(r.rf_create_at, curY, curM)) curPending++
+      if (isMatch(r.rf_create_at, prevY, prevM)) prevPending++
+    }
+
+    if (r.rf_user_status === 'in_progress') {
+      const inProcessDate = r.rf_in_process_at || r.rf_update_at || r.rf_create_at
+      if (isMatch(inProcessDate, curY, curM)) curInProgress++
+      if (isMatch(inProcessDate, prevY, prevM)) prevInProgress++
+    }
+
+    if (r.rf_user_status === 'done') {
+      const doneDate = r.rf_done_at || r.rf_update_at || r.rf_create_at
+      if (isMatch(doneDate, curY, curM)) curDone++
+      if (isMatch(doneDate, prevY, prevM)) prevDone++
+    }
+  })
+
+  summaryStats.value = { total: curTotal, pending: curPending, in_progress: curInProgress, done: curDone }
   summaryGrowth.value = {
     total: calcPercentChange(curTotal, prevTotal),
     pending: calcPercentChange(curPending, prevPending),
@@ -316,10 +356,10 @@ const monthlyStackedOptions = shallowRef({
       return buildTooltipHTML({
         title: label,
         rows: [
-          { label: 'งานทั้งหมด', value: `${total} รายการ`, color: MONTHLY_COLORS.total },
-          { label: 'งานที่เสร็จสิ้น', value: `${done} รายการ`, color: MONTHLY_COLORS.done },
+          { label: 'งานซ่อมทั้งหมด', value: `${total} รายการ`, color: MONTHLY_COLORS.total },
+          { label: 'งานซ่อมที่เสร็จสิ้นแล้ว', value: `${done} รายการ`, color: MONTHLY_COLORS.done },
           {
-            label: 'งานที่จ้างช่างภายนอก',
+            label: 'งานซ่อมที่จ้างช่างภายนอก',
             value: `${outsource} รายการ`,
             color: MONTHLY_COLORS.outsource,
           },
@@ -329,34 +369,57 @@ const monthlyStackedOptions = shallowRef({
     },
   },
 
-  yaxis: { labels: { formatter: (v) => `${Math.round(v)}` } },
+  yaxis: {
+    title: {
+      text: 'จำนวน (รายการ)',
+      offsetX: 6,
+      style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' }
+    },
+    axisBorder: { show: true, color: '#9CA3AF' },
+    labels: { formatter: (v) => `${Math.round(v)}` }
+  },
 })
 
 const monthlyStackedSeries = ref([
   { name: 'งานที่เสร็จสิ้น', data: new Array(12).fill(0) },
   { name: 'งานที่จ้างช่างภายนอก', data: new Array(12).fill(0) },
-  { name: 'งานทั้งหมด', data: new Array(12).fill(0) },
+  { name: 'งานซ่อมทั้งหมด', data: new Array(12).fill(0) },
 ])
 
-function updateMonthlyStackedChart(repairsInYear) {
-  const total = new Array(12).fill(0)
-  const done = new Array(12).fill(0)
-  const outsource = new Array(12).fill(0)
+/* -----------------------------
+   งานซ่อมรายเดือน (Stacked)
+----------------------------- */
+function updateMonthlyStackedChart() {
+  const totalData = new Array(12).fill(0)
+  const doneData = new Array(12).fill(0)
+  const outsourceData = new Array(12).fill(0)
 
-  repairsInYear.forEach((r) => {
-    const m = new Date(r.rf_create_at).getMonth()
-    total[m] += 1
-    if (r.rf_user_status === 'done') done[m] += 1
-    else if (r.rf_user_status === 'outsource') outsource[m] += 1
+  allRepairs.value.forEach((r) => {
+    if (r.rf_create_at) {
+      const createDate = new Date(r.rf_create_at)
+      if (createDate.getFullYear() === selectedYear.value) {
+        totalData[createDate.getMonth()] += 1
+      }
+    }
+
+    if (r.rf_user_status === 'done') {
+      const doneDateStr = r.rf_done_at || r.rf_update_at
+      if (doneDateStr) {
+        const doneDate = new Date(doneDateStr)
+        if (doneDate.getFullYear() === selectedYear.value) {
+          const doneMonth = doneDate.getMonth()
+          if (r.rf_is_outsourced == 1) outsourceData[doneMonth] += 1
+          else doneData[doneMonth] += 1
+        }
+      }
+    }
   })
-
-  // น้ำเงินเป็น “ที่เหลือ” เพื่อให้ (เขียว + ม่วง + น้ำเงิน) = งานทั้งหมด
-  const blueTop = total.map((t, i) => Math.max(0, t - (done[i] + outsource[i])))
+  const blueTop = totalData.map((t, i) => Math.max(0, t - (doneData[i] + outsourceData[i])))
 
   monthlyStackedSeries.value = [
-    { name: 'งานที่เสร็จสิ้น', data: done },
-    { name: 'งานที่จ้างช่างภายนอก', data: outsource },
-    { name: 'งานทั้งหมด', data: blueTop },
+    { name: 'งานที่เสร็จสิ้น', data: doneData },
+    { name: 'งานที่จ้างช่างภายนอก', data: outsourceData },
+    { name: 'งานซ่อมทั้งหมด', data: blueTop },
   ]
 }
 
@@ -382,8 +445,8 @@ const statusPieOptions = shallowRef({
       return buildTooltipHTML({
         title: label,
         rows: [
-          { label: 'จำนวน', value: `${value} รายการ`, color },
-          { label: 'สัดส่วน', value: `${Number(percent).toFixed(1)}%`, color },
+          { label: 'จำนวนงานซ่อม', value: `${value} รายการ`, color },
+          { label: 'เปอร์เซ็นต์', value: `${Number(percent).toFixed(1)}%`, color },
         ],
         unitLabel: 'หน่วย: รายการ / %',
       })
@@ -393,15 +456,35 @@ const statusPieOptions = shallowRef({
 
 const statusPieSeries = ref([0, 0, 0])
 
-function updateStatusPieChart(repairsInYear) {
-  const base =
-    statusMode.value === 'week'
-      ? filterLast7Days(repairsInYear)
-      : filterRepairsByMonth(allRepairs.value, selectedYear.value, selectedMonthIndex.value)
+function updateStatusPieChart() {
+  const isWeek = statusMode.value === 'week'
+  const targetYear = selectedYear.value
+  const targetMonth = selectedMonthIndex.value
 
-  const pending = base.filter((r) => r.rf_user_status === 'pending').length
-  const inProgress = base.filter((r) => r.rf_user_status === 'in_progress').length
-  const done = base.filter((r) => r.rf_user_status === 'done').length
+  const now = new Date()
+  const diffToMonday = (now.getDay() + 6) % 7
+  const startOfWeek = new Date(now)
+  startOfWeek.setDate(now.getDate() - diffToMonday)
+  startOfWeek.setHours(0, 0, 0, 0)
+  const endOfWeek = new Date(startOfWeek)
+  endOfWeek.setDate(startOfWeek.getDate() + 6)
+  endOfWeek.setHours(23, 59, 59, 999)
+
+  const isMatch = (dateStr) => {
+    if (!dateStr) return false
+    const d = new Date(dateStr)
+    return isWeek
+      ? (d >= startOfWeek && d <= endOfWeek)
+      : (d.getFullYear() === targetYear && d.getMonth() === targetMonth)
+  }
+
+  let pending = 0, inProgress = 0, done = 0
+
+  allRepairs.value.forEach(r => {
+    if (r.rf_user_status === 'pending' && isMatch(r.rf_create_at)) pending++
+    else if (r.rf_user_status === 'in_progress' && isMatch(r.rf_in_process_at || r.rf_update_at || r.rf_create_at)) inProgress++
+    else if (r.rf_user_status === 'done' && isMatch(r.rf_done_at || r.rf_update_at || r.rf_create_at)) done++
+  })
 
   statusPieSeries.value = [pending, inProgress, done]
 }
@@ -421,7 +504,12 @@ const weeklyTrendOptions = shallowRef({
 
   xaxis: {
     categories: ['จันทร์', 'อังคาร', 'พุธ', 'พฤหัส', 'ศุกร์', 'เสาร์', 'อาทิตย์'],
-    tooltip: { enabled: false }, // กัน x-axis tooltip
+    tooltip: { enabled: false },
+    title: {
+      text: 'วันในสัปดาห์',
+      style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' }
+    },
+    axisBorder: { show: true, color: '#9CA3AF' }
   },
 
   markers: { size: 5, hover: { size: 7 } },
@@ -458,37 +546,81 @@ const weeklyTrendOptions = shallowRef({
     },
   },
 
-  yaxis: { labels: { formatter: (v) => `${Math.round(v)}` } },
+  yaxis: {
+    title: {
+      text: 'จำนวน (รายการ)',
+      offsetX: 6,
+      style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' }
+    },
+    axisBorder: { show: true, color: '#9CA3AF' },
+    labels: { formatter: (v) => `${Math.round(v)}` }
+  },
 })
 
 const weeklyTrendSeries = ref([
-  { name: 'จำนวนแจ้งซ่อม', data: new Array(7).fill(0) },
+  { name: 'งานซ่อมทั้งหมด', data: new Array(7).fill(0) },
   { name: 'รอดำเนินการ', data: new Array(7).fill(0) },
   { name: 'กำลังดำเนินการ', data: new Array(7).fill(0) },
   { name: 'เสร็จสิ้น', data: new Array(7).fill(0) },
 ])
 
-function updateWeeklyTrendChart(repairsInYear) {
-  const base = filterCurrentWeek(repairsInYear)
-
+function updateWeeklyTrendChart() {
   const buckets = new Array(7)
     .fill(0)
     .map(() => ({ total: 0, pending: 0, in_progress: 0, done: 0 }))
-  const idxOf = (date) => {
-    const d = date.getDay()
+
+  const now = new Date()
+  const day = now.getDay()
+  const diffToMonday = (day + 6) % 7
+
+  const startOfWeek = new Date(now)
+  startOfWeek.setDate(now.getDate() - diffToMonday)
+  startOfWeek.setHours(0, 0, 0, 0)
+
+  const endOfWeek = new Date(startOfWeek)
+  endOfWeek.setDate(startOfWeek.getDate() + 6)
+  endOfWeek.setHours(23, 59, 59, 999)
+
+  const isThisWeek = (dateStr) => {
+    if (!dateStr) return false
+    const d = new Date(dateStr)
+    return d >= startOfWeek && d <= endOfWeek
+  }
+
+  const idxOf = (dateStr) => {
+    const d = new Date(dateStr).getDay()
     return d === 0 ? 6 : d - 1
   }
 
-  base.forEach((r) => {
-    const idx = idxOf(new Date(r.rf_create_at))
-    buckets[idx].total += 1
-    if (r.rf_user_status === 'pending') buckets[idx].pending += 1
-    else if (r.rf_user_status === 'in_progress') buckets[idx].in_progress += 1
-    else if (r.rf_user_status === 'done') buckets[idx].done += 1
+  allRepairs.value.forEach((r) => {
+    if (isThisWeek(r.rf_create_at)) {
+      const idx = idxOf(r.rf_create_at)
+      buckets[idx].total += 1
+
+      if (r.rf_user_status === 'pending') {
+        buckets[idx].pending += 1
+      }
+    }
+
+    if (r.rf_user_status === 'in_progress') {
+      const inProcessDate = r.rf_inprocess_at || r.rf_update_at || r.rf_create_at
+      if (isThisWeek(inProcessDate)) {
+        const idx = idxOf(inProcessDate)
+        buckets[idx].in_progress += 1
+      }
+    }
+
+    if (r.rf_user_status === 'done') {
+      const doneDate = r.rf_done_at || r.rf_update_at || r.rf_create_at
+      if (isThisWeek(doneDate)) {
+        const idx = idxOf(doneDate)
+        buckets[idx].done += 1
+      }
+    }
   })
 
   weeklyTrendSeries.value = [
-    { name: 'จำนวนแจ้งซ่อม', data: buckets.map((b) => b.total) },
+    { name: 'งานซ่อมทั้งหมด', data: buckets.map((b) => b.total) },
     { name: 'รอดำเนินการ', data: buckets.map((b) => b.pending) },
     { name: 'กำลังดำเนินการ', data: buckets.map((b) => b.in_progress) },
     { name: 'เสร็จสิ้น', data: buckets.map((b) => b.done) },
@@ -519,6 +651,19 @@ const efficiencyChartOptions = shallowRef({
     min: 0,
     max: 100,
     labels: { formatter: (v) => `${Math.round(v)}%` },
+    title: {
+      text: 'อัตราสำเร็จ (%)',
+      style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' }
+    },
+    axisBorder: { show: true, color: '#9CA3AF' }
+  },
+  yaxis: {
+    title: {
+      text: 'รายชื่อช่าง',
+      offsetX: 6,
+      style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' }
+    },
+    axisBorder: { show: true, color: '#9CA3AF' }
   },
   tooltip: {
     enabled: true,
@@ -534,10 +679,10 @@ const efficiencyChartOptions = shallowRef({
       return buildTooltipHTML({
         title: `ช่าง: ${tech}`,
         rows: [
-          { label: 'งานที่รับ', value: `${meta.total} รายการ`, color: EFFICIENCY_COLORS.rate },
-          { label: 'งานที่เสร็จ', value: `${meta.done} รายการ`, color: EFFICIENCY_COLORS.rate },
+          { label: 'งานซ่อมที่ได้รับมอบหมาย', value: `${meta.total} รายการ`, color: EFFICIENCY_COLORS.rate },
+          { label: 'งานซ่อมที่ดำเนินการเสร็จสิ้น', value: `${meta.done} รายการ`, color: EFFICIENCY_COLORS.rate },
           {
-            label: 'อัตราสำเร็จ',
+            label: 'อัตราซ่อมสำเร็จ',
             value: `${Number(rate).toFixed(1)}%`,
             color: "#f97316",
           },
@@ -548,7 +693,7 @@ const efficiencyChartOptions = shallowRef({
   },
 })
 
-const efficiencyChartSeries = ref([{ name: 'อัตราสำเร็จ', data: [] }])
+const efficiencyChartSeries = ref([{ name: 'อัตราซ่อมสำเร็จ', data: [] }])
 const efficiencyMeta = ref([])
 
 function buildTechnicianEfficiency(repairs) {
@@ -573,13 +718,36 @@ function buildTechnicianEfficiency(repairs) {
     .slice(0, 8)
 }
 
-function updateEfficiencyChart(repairsInYear) {
-  const base =
-    efficiencyMode.value === 'week'
-      ? filterLast7Days(repairsInYear)
-      : filterRepairsByMonth(allRepairs.value, selectedYear.value, selectedMonthIndex.value)
+function updateEfficiencyChart() {
+  const isWeek = efficiencyMode.value === 'week'
+  const targetYear = selectedYear.value
+  const targetMonth = selectedMonthIndex.value
 
-  const rows = buildTechnicianEfficiency(base)
+  const now = new Date()
+  const diffToMonday = (now.getDay() + 6) % 7
+  const startOfWeek = new Date(now)
+  startOfWeek.setDate(now.getDate() - diffToMonday)
+  startOfWeek.setHours(0, 0, 0, 0)
+  const endOfWeek = new Date(startOfWeek)
+  endOfWeek.setDate(startOfWeek.getDate() + 6)
+  endOfWeek.setHours(23, 59, 59, 999)
+
+  const isTargetPeriod = (dateStr) => {
+    if (!dateStr) return false
+    const d = new Date(dateStr)
+    if (isWeek) {
+      return d >= startOfWeek && d <= endOfWeek
+    } else {
+      return d.getFullYear() === targetYear && d.getMonth() === targetMonth
+    }
+  }
+
+  const filteredRepairs = allRepairs.value.filter((r) => {
+    const activeDate = r.rf_done_at || r.rf_in_process_at || r.rf_update_at || r.rf_create_at
+    return isTargetPeriod(activeDate)
+  })
+
+  const rows = buildTechnicianEfficiency(filteredRepairs)
 
   efficiencyMeta.value = rows.map((r) => ({ total: r.total, done: r.done }))
   efficiencyChartOptions.value.xaxis.categories = rows.map((r) => r.name)
@@ -597,8 +765,23 @@ const typeOptions = shallowRef({
   colors: ['#7c3aed'],
   plotOptions: { bar: { horizontal: true, borderRadius: 6 } },
   dataLabels: { enabled: false },
-  xaxis: { categories: ['ไม่มีข้อมูล'] },
-
+  xaxis: {
+    categories: ['ไม่มีข้อมูล'],
+    title: {
+      text: 'จำนวนงาน (รายการ)',
+      style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' }
+    },
+    axisBorder: { show: true, color: '#9CA3AF' },
+    labels: { formatter: (v) => `${Math.round(v)}` }
+  },
+  yaxis: {
+    title: {
+      text: 'ประเภทงานซ่อม',
+      offsetX: 6,
+      style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' }
+    },
+    axisBorder: { show: true, color: '#9CA3AF' }
+  },
   tooltip: {
     enabled: true,
     shared: false,
@@ -617,28 +800,58 @@ const typeOptions = shallowRef({
       })
     },
   },
+
+  tooltip: {
+    enabled: true,
+    shared: false,
+    intersect: true,
+    followCursor: true,
+    y: { title: { formatter: () => '' } },
+    custom: ({ series, seriesIndex, dataPointIndex, w }) => {
+      const label = w.globals.labels?.[dataPointIndex] ?? ''
+      const val = series?.[seriesIndex]?.[dataPointIndex] ?? 0
+      const color = w.globals.colors?.[seriesIndex] ?? TYPE_COLORS.total
+
+      return buildTooltipHTML({
+        title: label,
+        rows: [{ label: 'จำนวนงานซ่อม', value: `${val} รายการ`, color }],
+        unitLabel: 'หน่วย: รายการ',
+      })
+    },
+  },
 })
 
 const typeSeries = ref([{ name: 'จำนวนงาน', data: [0] }])
 
-function updateTypeChart(repairsInYear) {
+function updateTypeChart() {
+  const targetYear = selectedYear.value
+  const targetMonth = selectedMonthIndex.value
   const typeCounts = {}
-  allTechTypes.value.forEach((t) => {
-    typeCounts[t.tt_name] = 0
-  })
 
-  repairsInYear.forEach((r) => {
-    if (r.tt_name && Object.prototype.hasOwnProperty.call(typeCounts, r.tt_name))
-      typeCounts[r.tt_name]++
+  allRepairs.value.forEach((r) => {
+    if (!r.rf_create_at) return
+    const d = new Date(r.rf_create_at)
+
+    if (d.getFullYear() === targetYear && d.getMonth() === targetMonth) {
+      const name = r.tt_name || 'ไม่ระบุ'
+      typeCounts[name] = (typeCounts[name] || 0) + 1
+    }
   })
 
   const sorted = Object.entries(typeCounts)
     .sort(([, a], [, b]) => b - a)
     .slice(0, 10)
+
   const labels = sorted.map(([name]) => name)
   const values = sorted.map(([, count]) => count)
 
-  typeOptions.value.xaxis.categories = labels.length ? labels : ['ไม่มีข้อมูล']
+  typeOptions.value = {
+    ...typeOptions.value,
+    xaxis: {
+      ...typeOptions.value.xaxis,
+      categories: labels.length ? labels : ['ไม่มีข้อมูล']
+    }
+  }
   typeSeries.value = [{ name: 'จำนวนงาน', data: values.length ? values : [0] }]
 }
 
@@ -651,7 +864,23 @@ const deptOptions = shallowRef({
   colors: ['#166534'],
   plotOptions: { bar: { horizontal: true, borderRadius: 6 } },
   dataLabels: { enabled: false },
-  xaxis: { categories: ['ไม่มีข้อมูล'] },
+  xaxis: {
+    categories: ['ไม่มีข้อมูล'],
+    title: {
+      text: 'จำนวนแจ้งซ่อม (รายการ)',
+      style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' }
+    },
+    axisBorder: { show: true, color: '#9CA3AF' },
+    labels: { formatter: (v) => `${Math.round(v)}` }
+  },
+  yaxis: {
+    title: {
+      text: 'หน่วยงาน',
+      offsetX: 6,
+      style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' }
+    },
+    axisBorder: { show: true, color: '#9CA3AF' }
+  },
 
   tooltip: {
     enabled: true,
@@ -666,37 +895,46 @@ const deptOptions = shallowRef({
 
       return buildTooltipHTML({
         title: label,
-        rows: [{ label: 'จำนวนแจ้งซ่อม', value: `${val} รายการ`, color }],
+        rows: [{ label: 'จำนวนงานซ่อม', value: `${val} รายการ`, color }],
         unitLabel: 'หน่วย: รายการ',
       })
     },
   },
 })
 
-const deptSeries = ref([{ name: 'จำนวนแจ้งซ่อม', data: [0] }])
+const deptSeries = ref([{ name: 'งานซ่อมทั้งหมด', data: [0] }])
 
-function updateDepartmentChart(repairsInYear) {
+function updateDepartmentChart() {
+  const targetYear = selectedYear.value
+  const targetMonth = selectedMonthIndex.value
   const deptCounts = {}
 
-  repairsInYear.forEach((r) => {
-    const name =
-      r.department_name ||
-      r.dp_name ||
-      r.rf_department_name ||
-      r.org_name ||
-      r.unit_name ||
-      'ไม่ระบุ'
-    deptCounts[name] = (deptCounts[name] || 0) + 1
+  allRepairs.value.forEach((r) => {
+    if (!r.rf_create_at) return
+    const d = new Date(r.rf_create_at)
+
+    if (d.getFullYear() === targetYear && d.getMonth() === targetMonth) {
+      const name = r.department_name || r.dp_name || r.rf_department_name || r.org_name || r.unit_name || 'ไม่ระบุ'
+      deptCounts[name] = (deptCounts[name] || 0) + 1
+    }
   })
 
   const sorted = Object.entries(deptCounts)
     .sort(([, a], [, b]) => b - a)
     .slice(0, 10)
+
   const labels = sorted.map(([name]) => name)
   const values = sorted.map(([, count]) => count)
 
-  deptOptions.value.xaxis.categories = labels.length ? labels : ['ไม่มีข้อมูล']
-  deptSeries.value = [{ name: 'จำนวนแจ้งซ่อม', data: values.length ? values : [0] }]
+  // บังคับให้ Vue และ ApexCharts รีเฟรชกราฟใหม่ตอนเปลี่ยนเดือน
+  deptOptions.value = {
+    ...deptOptions.value,
+    xaxis: {
+      ...deptOptions.value.xaxis,
+      categories: labels.length ? labels : ['ไม่มีข้อมูล']
+    }
+  }
+  deptSeries.value = [{ name: 'งานซ่อมทั้งหมด', data: values.length ? values : [0] }]
 }
 
 /* -----------------------------
@@ -728,14 +966,118 @@ function refreshDashboard() {
   const repairsInYear = allRepairs.value.filter(
     (r) => new Date(r.rf_create_at).getFullYear() === selectedYear.value,
   )
+  const repairsInMonth = filterRepairsByMonth(
+    allRepairs.value,
+    selectedYear.value,
+    selectedMonthIndex.value
+  )
 
   updateSummaryCards()
   updateMonthlyStackedChart(repairsInYear)
   updateStatusPieChart(repairsInYear)
   updateWeeklyTrendChart(repairsInYear)
   updateEfficiencyChart(repairsInYear)
-  updateTypeChart(repairsInYear)
-  updateDepartmentChart(repairsInYear)
+  updateTypeChart(repairsInMonth)
+  updateDepartmentChart(repairsInMonth)
+  updateCompareBarChart(repairsInYear)
+}
+
+/* -----------------------------
+   เปรียบเทียบช่างดำเนินการเอง vs จ้างช่างภายนอก (แท่งคู่)
+----------------------------- */
+const compareBarOptions = shallowRef({
+  chart: { type: 'bar', toolbar: { show: false } },
+  grid: GRID_STYLE,
+  colors: [MONTHLY_COLORS.done, MONTHLY_COLORS.outsource],
+  plotOptions: {
+    bar: {
+      horizontal: false,
+      columnWidth: '55%',
+      borderRadius: 4,
+      dataLabels: { position: 'top' } // แสดงตัวเลขบนแท่ง
+    }
+  },
+  dataLabels: {
+    enabled: false,
+    formatter: (val) => val > 0 ? val : '',
+    offsetY: -20,
+    style: { fontSize: '11px', colors: ['#4B5563'] }
+  },
+  stroke: { show: true, width: 2, colors: ['transparent'] },
+  xaxis: {
+    categories: monthLabels,
+    title: {
+      text: 'เดือน',
+      style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' }
+    },
+    axisBorder: { show: true, color: '#9CA3AF' }
+  },
+  yaxis: {
+    title: {
+      text: 'จำนวนงาน (รายการ)',
+      offsetX: 6,
+      style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' }
+    },
+    axisBorder: { show: true, color: '#9CA3AF' },
+    labels: { formatter: (v) => `${Math.round(v)}` }
+  },
+  legend: { show: false }, // ซ่อน Legend เริ่มต้น (เราจะสร้างเองข้างนอกให้ตรงกับกราฟอื่น)
+  tooltip: {
+    enabled: true,
+    shared: true,
+    intersect: false,
+    followCursor: true,
+    y: { title: { formatter: () => '' } },
+    custom: ({ dataPointIndex, w }) => {
+      const label = w.globals.labels?.[dataPointIndex] ?? ''
+      const done = w.config.series?.[0]?.data?.[dataPointIndex] ?? 0
+      const outsource = w.config.series?.[1]?.data?.[dataPointIndex] ?? 0
+
+      return buildTooltipHTML({
+        title: `เดือน: ${label}`,
+        rows: [
+          { label: 'ช่างดำเนินการเอง', value: `${done} รายการ`, color: MONTHLY_COLORS.done },
+          { label: 'จ้างช่างภายนอก', value: `${outsource} รายการ`, color: MONTHLY_COLORS.outsource },
+        ],
+        unitLabel: 'หน่วย: รายการ',
+      })
+    },
+  }
+})
+
+const compareBarSeries = ref([
+  { name: 'ช่างดำเนินการเอง', data: new Array(12).fill(0) },
+  { name: 'จ้างช่างภายนอก', data: new Array(12).fill(0) }
+])
+
+function updateCompareBarChart() {
+  const doneData = new Array(12).fill(0)
+  const outsourceData = new Array(12).fill(0)
+
+  allRepairs.value.forEach((r) => {
+    if (r.rf_user_status === 'done') {
+      // ใช้วันที่ทำเสร็จ (rf_done_at) เป็นเกณฑ์ หากไม่มีให้ใช้วันที่อัปเดตล่าสุด
+      const doneDateStr = r.rf_done_at || r.rf_update_at;
+      if (!doneDateStr) return;
+
+      const doneDate = new Date(doneDateStr);
+
+      // เช็คว่างานนี้ "ทำเสร็จ" ในปีที่เลือกใช่หรือไม่
+      if (doneDate.getFullYear() === selectedYear.value) {
+        const m = doneDate.getMonth()
+        if (r.rf_repair_method == 'outsource') {
+          outsourceData[m] += 1
+        } else if (r.rf_repair_method == 'in_house') {
+          doneData[m] += 1
+        }
+      }
+    }
+  })
+
+  compareBarSeries.value = [
+    { name: 'ช่างดำเนินการเอง', data: doneData },
+    { name: 'จ้างช่างภายนอก', data: outsourceData }
+  ]
 }
 
 /* -----------------------------
@@ -778,6 +1120,8 @@ async function fetchDashboardData() {
 }
 onMounted(() => {
   fetchDashboardData()
+  fetchUserProfileData()
+
 })
 </script>
 
@@ -789,12 +1133,12 @@ onMounted(() => {
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 class="text-2xl font-bold text-gray-800">
-              หน้าหลักผู้บริหาร สวัสดีคุณ {{ displayName }}
+              หน้าจอหลักของผู้บริหาร - สวัสดีคุณ{{ userDisplayName }}
             </h1>
             <p class="text-lg font-semibold text-gray-700">
-              {{ displayDepartment }}
+              {{ userDepartmentName }}
             </p>
-            <p class="text-gray-600 mt-2">ภาพรวมการดำเนินงานระบบแจ้งซ่อม</p>
+            <p class="text-gray-600 mt-2">ภาพรวมของการแจ้งซ่อม และสถิติงานซ่อม</p>
           </div>
 
           <div class="flex items-center gap-3">
@@ -835,9 +1179,9 @@ onMounted(() => {
         <!-- Controls for Summary Cards -->
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div class="text-sm text-gray-600">
-            เดือนที่ใช้คำนวณการ์ด:
+            ข้อมูล ณ เดือน
             <span class="font-semibold text-gray-900">{{ monthLabels[selectedMonthIndex] }}</span>
-            <span class="text-gray-400 ml-2">เทียบกับเดือนก่อนหน้า</span>
+            <span class="text-gray-400 ml-2">เมื่อเทียบกับเดือนก่อนหน้า</span>
           </div>
 
           <div class="flex items-center gap-2">
@@ -886,7 +1230,7 @@ onMounted(() => {
                   <span v-else>→</span>
                   <span class="ml-1">{{ Math.abs(card.growth) }}%</span>
                 </div>
-                <div class="text-xs text-gray-500 mt-1">เทียบเดือนก่อนหน้า</div>
+                <div class="text-xs text-gray-500 mt-1">เทียบกับเดือนก่อนหน้า</div>
               </div>
             </div>
           </div>
@@ -897,7 +1241,7 @@ onMounted(() => {
           <!-- งานซ่อมรายเดือน (Stacked) -->
           <div class="bg-white rounded-lg shadow p-6">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">
-              งานซ่อมรายเดือน - {{ formatYearDisplay(selectedYear) }}
+              ปริมาณงานแจ้งซ่อมรายเดือน - {{ formatYearDisplay(selectedYear) }}
             </h3>
 
             <ApexChart
@@ -914,7 +1258,7 @@ onMounted(() => {
                   class="inline-block w-3.5 h-3.5 rounded-sm"
                   :style="{ backgroundColor: MONTHLY_COLORS.total }"
                 ></span>
-                งานทั้งหมด
+                งานซ่อมทั้งหมด
               </span>
               <span class="inline-flex items-center gap-2">
                 <span
@@ -933,14 +1277,14 @@ onMounted(() => {
             </div>
 
             <div class="mt-2 text-xs text-gray-500">
-              * ชี้เมาส์ที่แท่งเพื่อดูรายละเอียดรายเดือน (ตัวเลขจะตรงกับงานทั้งหมด)
+              <span class="text-red-400">*</span> วางเมาส์บนแท่งกราฟเพื่อดูข้อมูลรายเดือน (แสดงจำนวนงานซ่อมในแต่ละเดือน)
             </div>
           </div>
 
           <!-- สถานะงานซ่อม (Pie) -->
           <div class="bg-white rounded-lg shadow p-6">
             <div class="flex items-center justify-between mb-4">
-              <h3 class="text-lg font-semibold text-gray-900">สถานะงานซ่อม</h3>
+              <h3 class="text-lg font-semibold text-gray-900">สัดส่วนสถานะงานแจ้งซ่อม</h3>
 
               <div class="flex p-1 bg-gray-100 rounded-xl">
                 <button
@@ -1002,17 +1346,17 @@ onMounted(() => {
             </div>
 
             <div class="mt-2 text-xs text-gray-500">
-              * ชี้เมาส์ที่กราฟเพื่อดูจำนวนและเปอร์เซ็นต์
+              <span class="text-red-400">*</span> วางเมาส์บนกราฟเพื่อดูข้อมูล (แสดงสัดส่วนของงานซ่อมเป็นเปอร์เซ็นต์)
             </div>
           </div>
         </div>
 
         <!-- Row 2 -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <!-- แนวโน้มการแจ้งซ่อม (สัปดาห์ปัจจุบัน) -->
+          <!-- แนวโน้มปริมาณงานแจ้งซ่อมรายวัน (สัปดาห์ปัจจุบัน) -->
           <div class="bg-white rounded-lg shadow p-6">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">
-              แนวโน้มการแจ้งซ่อม (สัปดาห์ปัจจุบัน)
+              แนวโน้มปริมาณงานแจ้งซ่อมรายวัน (สัปดาห์ปัจจุบัน)
             </h3>
 
             <ApexChart
@@ -1028,7 +1372,7 @@ onMounted(() => {
                   class="inline-block w-3.5 h-3.5 rounded-sm"
                   :style="{ backgroundColor: TREND_COLORS.total }"
                 ></span>
-                จำนวนแจ้งซ่อม
+                งานซ่อมทั้งหมด
               </span>
               <span class="inline-flex items-center gap-2">
                 <span
@@ -1053,13 +1397,15 @@ onMounted(() => {
               </span>
             </div>
 
-            <div class="mt-2 text-xs text-gray-500">* ชี้เมาส์ที่จุดเพื่อดูรายละเอียดรายวัน</div>
+            <div class="mt-2 text-xs text-gray-500">
+              <span class="text-red-400">*</span> วางเมาส์บนเส้นกราฟเพื่อดูข้อมูลรายสัปดาห์ (แสดงจำนวนงานซ่อมในแต่ละวัน)
+            </div>
           </div>
 
           <!-- ประสิทธิภาพการซ่อม -->
           <div class="bg-white rounded-lg shadow p-6">
             <div class="flex items-center justify-between mb-4">
-              <h3 class="text-lg font-semibold text-gray-900">ประสิทธิภาพการซ่อม</h3>
+              <h3 class="text-lg font-semibold text-gray-900">อัตราความสำเร็จการปฏิบัติงานของช่างแต่ละแผนก</h3>
 
               <div class="flex p-1 bg-gray-100 rounded-xl">
                 <button
@@ -1107,16 +1453,16 @@ onMounted(() => {
             </div>
 
             <div class="mt-2 text-xs text-gray-500">
-              * ชี้เมาส์ที่แท่งเพื่อดู งานที่รับ / งานที่เสร็จ / อัตราสำเร็จ
+              <span class="text-red-400">*</span> วางเมาส์บนแท่งกราฟเพื่อดูข้อมูล (แสดงอัตราความสำเร็จในการซ่อม)
             </div>
           </div>
         </div>
 
         <!-- Bottom Row -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <!-- งานซ่อมแยกตามประเภท -->
+          <!-- ปริมาณงานแจ้งซ่อมจำแนกตามประเภท -->
           <div class="bg-white rounded-lg shadow p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">งานซ่อมแยกตามประเภท</h3>
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">ปริมาณงานแจ้งซ่อมจำแนกตามประเภท</h3>
 
             <ApexChart type="bar" height="380" :options="typeOptions" :series="typeSeries" />
 
@@ -1126,18 +1472,18 @@ onMounted(() => {
                   class="inline-block w-3.5 h-3.5 rounded-sm"
                   :style="{ backgroundColor: '#7c3aed' }"
                 ></span>
-                จำนวนงาน
+                งานซ่อมทั้งหมด
               </span>
             </div>
 
             <div class="mt-2 text-xs text-gray-500">
-              * ชี้เมาส์ที่แท่งเพื่อดูจำนวนรายการของประเภทนั้น
+              <span class="text-red-400">*</span> วางเมาส์บนแท่งกราฟเพื่อดูข้อมูล (แสดงจำนวนงานซ่อมในแต่ละประเภท)
             </div>
           </div>
 
-          <!-- รายการแจ้งซ่อมแต่ละหน่วยงาน -->
+          <!-- ปริมาณการแจ้งซ่อมจำแนกตามหน่วยงาน -->
           <div class="bg-white rounded-lg shadow p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">รายการแจ้งซ่อมแต่ละหน่วยงาน</h3>
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">ปริมาณการแจ้งซ่อมจำแนกตามหน่วยงาน</h3>
 
             <ApexChart type="bar" height="380" :options="deptOptions" :series="deptSeries" />
 
@@ -1147,12 +1493,40 @@ onMounted(() => {
                   class="inline-block w-3.5 h-3.5 rounded-sm"
                   :style="{ backgroundColor: '#166534' }"
                 ></span>
-                จำนวนแจ้งซ่อม
+                งานซ่อมทั้งหมด
               </span>
             </div>
 
             <div class="mt-2 text-xs text-gray-500">
-              * ชี้เมาส์ที่แท่งเพื่อดูจำนวนรายการของหน่วยงานนั้น
+              <span class="text-red-400">*</span> วางเมาส์บนแท่งกราฟเพื่อดูข้อมูล (แสดงจำนวนงานซ่อมในแต่ละหน่วยงาน)
+            </div>
+          </div>
+
+          <!-- กราฟเปรียบเทียบช่างภายในองค์กรกับช่างภายนอก -->
+           <div class="mt-6 bg-white rounded-lg shadow p-6 lg:col-span-2">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">
+              จำนวนการปิดงานของช่างภายในและช่างภายนอกตลอด{{ formatYearDisplay(selectedYear) }}
+            </h3>
+
+            <ApexChart
+              type="bar"
+              height="350"
+              :options="compareBarOptions"
+              :series="compareBarSeries"
+            />
+
+            <div class="mt-4 flex flex-wrap items-center justify-center gap-6 text-sm text-gray-600">
+              <span class="inline-flex items-center gap-2">
+                <span class="inline-block w-3.5 h-3.5 rounded-sm" :style="{ backgroundColor: MONTHLY_COLORS.done }"></span>
+                ช่างดำเนินการเอง
+              </span>
+              <span class="inline-flex items-center gap-2">
+                <span class="inline-block w-3.5 h-3.5 rounded-sm" :style="{ backgroundColor: MONTHLY_COLORS.outsource }"></span>
+                จ้างช่างภายนอก
+              </span>
+            </div>
+            <div class="mt-2 text-xs text-gray-500">
+              <span class="text-red-400">*</span> วางเมาส์บนแท่งกราฟเพื่อดูข้อมูล (แสดงจำนวนงานของช่างในองค์กรและช่างภายนอก)
             </div>
           </div>
         </div>
