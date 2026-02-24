@@ -1,0 +1,184 @@
+/**
+ * =====================================================================
+ * @file            location.route.js
+ * @layer           Route Layer (Routing Layer)
+ * @version         1.0.0
+ * @since           2026-02-10
+ * @author          พชร ไพศรีสกุล
+ * @contributors
+ *   - พชร ไพศรีสกุล
+ *
+ * @lastModified    2026-02-10
+ * @lastModifiedBy  พชร ไพศรีสกุล
+ * ---------------------------------------------------------------------
+ * @description
+ *  Route สำหรับจัดการข้อมูลสถานที่ (Location Management)
+ *  ทำหน้าที่กำหนด endpoint และเชื่อมต่อ Location Controller กับ Service
+ *
+ *  รองรับการทำงาน:
+ *    - จัดการอาคาร (Buildings)
+ *    - จัดการชั้น (Floors)
+ *    - จัดการห้อง (Rooms)
+ *    - Import ข้อมูล Location
+ *
+ *  ใช้ authMiddleware สำหรับ endpoint ที่ต้องมีการยืนยันตัวตน
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *   - Initial implementation Location Route ตาม Layered Architecture
+ *     [2026-02-18, พชร ไพศรีสกุล] V 1.0.0
+ *
+ * =====================================================================
+ */
+
+const express = require("express");
+const authMiddleware = require("../middlewares/auth-middleware"); // เรียกใช้ Middleware ที่แยกไฟล์ไปแล้ว
+
+/**
+ * กำหนดเส้นทาง (Routes) สำหรับ Location Module
+ * เชื่อมต่อ Location Service และ Controller
+ * และกำหนด endpoint สำหรับจัดการ Buildings, Floors และ Rooms
+ *
+ * @param {Object} db - Database connection instance
+ * @returns {import("express").Router}
+ */
+module.exports = (db) => {
+  const router = express.Router();
+  const locationService = require("../services/location-service")(db);
+  const locationController = require("../controllers/location-controller")(
+    locationService,
+  );
+
+  // --- BUILDING ROUTES ---
+  /**
+   * GET /buildings
+   * ดึงรายการอาคารทั้งหมด
+   * @route GET /buildings
+   */
+  router.get("/buildings", locationController.getBuildings);
+
+  /**
+   * POST /buildings
+   * สร้างอาคารใหม่
+   * @route POST /buildings
+   * @middleware authMiddleware
+   */
+  router.post("/buildings", authMiddleware, locationController.createBuilding);
+
+  /**
+   * PUT /buildings/:id
+   * แก้ไขข้อมูลอาคาร
+   * @route PUT /buildings/:id
+   * @middleware authMiddleware
+   */
+  router.put(
+    "/buildings/:id",
+    authMiddleware,
+    locationController.updateBuilding,
+  );
+
+  /**
+   * DELETE /buildings/:id
+   * ลบอาคาร
+   * @route DELETE /buildings/:id
+   * @middleware authMiddleware
+   */
+  router.delete(
+    "/buildings/:id",
+    authMiddleware,
+    locationController.deleteBuilding,
+  );
+
+  // --- FLOOR ROUTES ---
+  /**
+   * GET /floors
+   * ดึงรายการชั้นทั้งหมด
+   * @route GET /floors
+   */
+  router.get("/floors", locationController.getFloors);
+
+  /**
+   * GET /floors/:buildingId
+   * ดึงรายการชั้นตามอาคาร
+   * @route GET /floors/:buildingId
+   */
+  router.get("/floors/:buildingId", locationController.getFloors);
+
+  /**
+   * POST /floors
+   * สร้างชั้นใหม่
+   * @route POST /floors
+   * @middleware authMiddleware
+   */
+  router.post("/floors", authMiddleware, locationController.createFloor);
+
+  /**
+   * PUT /floors/:id
+   * แก้ไขข้อมูลชั้น
+   * @route PUT /floors/:id
+   * @middleware authMiddleware
+   */
+  router.put("/floors/:id", authMiddleware, locationController.updateFloor);
+
+  /**
+   * DELETE /floors/:id
+   * ลบชั้น
+   * @route DELETE /floors/:id
+   * @middleware authMiddleware
+   */
+  router.delete("/floors/:id", authMiddleware, locationController.deleteFloor);
+
+  // --- ROOM ROUTES ---
+  /**
+   * GET /rooms
+   * ดึงรายการห้องทั้งหมด
+   * @route GET /rooms
+   */
+  router.get("/rooms", locationController.getRooms);
+
+  /**
+   * GET /rooms/:floorId
+   * ดึงรายการห้องตามชั้น
+   * @route GET /rooms/:floorId
+   */
+  router.get("/rooms/:floorId", locationController.getRooms);
+
+  /**
+   * POST /rooms
+   * สร้างห้องใหม่
+   * @route POST /rooms
+   * @middleware authMiddleware
+   */
+  router.post("/rooms", authMiddleware, locationController.createRoom);
+
+  /**
+   * PUT /rooms/:id
+   * แก้ไขข้อมูลห้อง
+   * @route PUT /rooms/:id
+   * @middleware authMiddleware
+   */
+  router.put("/rooms/:id", authMiddleware, locationController.updateRoom);
+
+  /**
+   * DELETE /rooms/:id
+   * ลบห้อง
+   * @route DELETE /rooms/:id
+   * @middleware authMiddleware
+   */
+  router.delete("/rooms/:id", authMiddleware, locationController.deleteRoom);
+
+  // --- IMPORT ROUTES ---
+  /**
+   * POST /locations/import
+   * Import ข้อมูลสถานที่แบบ Bulk
+   * @route POST /locations/import
+   * @middleware authMiddleware
+   */
+  router.post(
+    "/locations/import",
+    authMiddleware,
+    locationController.importLocations,
+  );
+
+  return router;
+};
