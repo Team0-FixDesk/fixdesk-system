@@ -1,3 +1,41 @@
+/**
+ * =====================================================================
+ * @file            upload-excel-user-component.vue
+ * @layer           Component Layer (UI Component)
+ * @version         1.0.0
+ * @since           2026-02-05
+ * @author          พชร ไพศรีสกุล
+ * @contributors
+ *   - พชร ไพศรีสกุล
+ *
+ * @lastModified    2026-02-25
+ * @lastModifiedBy  พชร ไพศรีสกุล
+ * ---------------------------------------------------------------------
+ * @description
+ *  Component สำหรับอัปโหลดไฟล์ Excel (.xlsx) เพื่อ import ข้อมูลผู้ใช้งาน
+ *  ทำหน้าที่อ่านไฟล์, แปลงข้อมูลจาก Sheet เป็น Array,
+ *  ตรวจสอบความถูกต้องของข้อมูล (Validation),
+ *  และส่งข้อมูลที่ parse แล้วไปยังขั้นตอน Preview
+ *
+ *  รองรับการทำงาน:
+ *    - Drag & Drop ไฟล์ Excel
+ *    - เลือกไฟล์ผ่าน File Input
+ *    - อ่านข้อมูลจาก Sheet แรกของไฟล์
+ *    - ทำความสะอาดข้อมูลเบอร์โทร (Remove dash / space)
+ *    - ตรวจสอบความถูกต้องของข้อมูลก่อนส่งต่อ
+ *    - ส่งข้อมูลผ่าน emit('next')
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *  [2026-02-05] V1.0.0 - พชร ไพศรีสกุล
+ *  - ปรับปรุงและแก้ไขการ import user
+ *  - เพิ่ม validation และ clean phone number ก่อนส่งข้อมูล
+ *  [2026-02-25, พชร ไพศรีสกุล] V 1.2.0
+ *  - แก้ไขการสร้างบัญชีผู้ใช้จากการ import จากไฟล์ ให้รองรับการสร้าง default รหัสผ่าน
+ *
+ * =====================================================================
+ */
+
 <template>
   <div>
     <div
@@ -75,35 +113,32 @@ function processFile(file) {
 
       // Logic ตรวจสอบความถูกต้อง
       const isValidPhone = (p) => /^\d{9,10}$/.test(p)
-      const validTitles = ['นาย', 'นาง', 'นางสาว', 'Mr.', 'Mrs.', 'Ms.']
 
       const users = dataRows
         .map((row, index) => {
           // Map ข้อมูลตามลำดับ Index (0-11)
           const username = getVal(row[0])
-          const password = getVal(row[1])
-          const title = getVal(row[2])
-          const position = getVal(row[3])
-          const firstNameTh = getVal(row[4])
-          const lastNameTh = getVal(row[5])
-          const firstNameEn = getVal(row[6])
-          const lastNameEn = getVal(row[7])
+          const title = getVal(row[1])
+          const position = getVal(row[2])
+          const firstNameTh = getVal(row[3])
+          const lastNameTh = getVal(row[4])
+          const firstNameEn = getVal(row[5])
+          const lastNameEn = getVal(row[6])
 
           // --- แก้ไขจุดนี้ (Clean Phone) ---
           // รับค่ามา -> ลบขีด (-) ออก -> ลบช่องว่างออก
-          let phone = getVal(row[8]).replace(/-/g, '').replace(/\s/g, '')
+          let phone = getVal(row[7]).replace(/-/g, '').replace(/\s/g, '')
           // -----------------------------
 
-          const department = getVal(row[9])
-          const role = getVal(row[10])
-          const techType = getVal(row[11])
+          const department = getVal(row[8])
+          const role = getVal(row[9])
+          const techType = getVal(row[10])
 
           const isTechnician = role === 'Technician'
 
           // ตรวจสอบว่า Valid หรือไม่
           const isValid = !!(
             username &&
-            password &&
             title &&
             // validTitles.includes(title) && // **แนะนำ**: เปิดบรรทัดนี้ถ้าอยากบังคับคำนำหน้า
             firstNameTh &&
@@ -119,7 +154,6 @@ function processFile(file) {
           return {
             id: index + 1,
             username: username,
-            password: password,
             title_name: title,
             position: position,
             first_name_th: firstNameTh,
