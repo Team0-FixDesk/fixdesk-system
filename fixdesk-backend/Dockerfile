@@ -15,4 +15,4 @@ RUN mkdir -p /app/uploads/repair && \
 
 EXPOSE 8059
 
-CMD ["node", "index.js"]
+CMD ["node", "server.js"]
