@@ -2,13 +2,13 @@
  * =====================================================================
  * @file            user.route.js
  * @layer           Route Layer (Routing Layer)
- * @version         1.0.0
+ * @version         1.1.0
  * @since           2026-02-10
  * @author          พชร ไพศรีสกุล
  * @contributors
  *   - พชร ไพศรีสกุล
  *
- * @lastModified    2026-02-10
+ * @lastModified    2026-02-25
  * @lastModifiedBy  พชร ไพศรีสกุล
  * ---------------------------------------------------------------------
  * @description
@@ -23,9 +23,11 @@
  *
  * ---------------------------------------------------------------------
  * @changelog
- *   - Initial implementation User Route ตาม Layered Architecture
- *     [2026-02-10, พชร ไพศรีสกุล] V 1.0.0
- *
+ *  [2026-02-10, พชร ไพศรีสกุล] V 1.0.0
+ *  - Initial implementation User Route ตาม Layered Architecture
+ *  [2026-02-25, พชร ไพศรีสกุล] V 1.1.0
+ *  - แก้ไขการสร้างบัญชีผู้ใช้ และ import จากไฟล์ ให้รองรับการสร้าง default รหัสผ่าน
+ *  
  * =====================================================================
  */
 
@@ -35,7 +37,7 @@ const authMiddleware = require("../middlewares/auth-middleware");
 /**
  * กำหนดเส้นทาง (Routes) สำหรับ User Module
  * เชื่อมต่อ Service และ Controller เข้าด้วยกัน
- * 
+ *
  * @param {Object} db - Database connection instance
  * @returns {import("express").Router}
  */
@@ -92,6 +94,18 @@ module.exports = (db) => {
    * @middleware authMiddleware
    */
   router.put("/users/:id", authMiddleware, userController.updateUser);
+
+  /**
+   * POST /users/:id/reset-password
+   * รีเซ็ตรหัสผ่านผู้ใช้งาน
+   * @route POST /users/:id/reset-password
+   * @middleware authMiddleware
+   */
+  router.post(
+    "/users/:id/reset-password",
+    authMiddleware,
+    userController.resetPassword,
+  );
 
   /**
    * DELETE /users/:id
