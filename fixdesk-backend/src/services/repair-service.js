@@ -2,7 +2,7 @@
  * =====================================================================
  * @file            repair-service.js
  * @layer           Service Layer (Business Logic Layer)
- * @version         1.4.0
+ * @version         1.5.0
  * @since           2026-02-10
  * @author          พชร ไพศรีสกุล
  * @contributors
@@ -10,8 +10,8 @@
  *   - นราธิป แสนทวีสุข
  *   - เศรษฐพงศ์ หอมชื่น
  *
- * @lastModified    2026-02-23
- * @lastModifiedBy  พชร ไพศรีสกุล
+ * @lastModified    2026-02-25
+ * @lastModifiedBy  นราธิป แสนทวีสุข
  * ---------------------------------------------------------------------
  * @description
  *  Service Layer สำหรับจัดการตรรกะการทำานหลักของระบบแจ้งซ่อม
@@ -28,7 +28,7 @@
  *    - รับงานซ่อม (acceptJob)
  *    - เปลี่ยนสถานะงานซ่อม (pending, in_progress, done)
  *    - ดึงข้อมูลวัสดุ/อุปกรณ์ที่เบิกจากระบบ stock
- *    - ส่ง LINE Notification เมื่อมีการมอบหมายงาน หรือรับงาน
+ *    - ส่ง LINE Notification เมื่อมีงานแจ้งซ่อมใหม่, การมอบหมายงาน, และการรับงาน
  *
  *  ใช้ Transaction ในกรณี:
  *    - assignTeam (ป้องกัน assignment ไม่สมบูรณ์)
@@ -79,6 +79,8 @@
  *     [2026-02-22, นราธิป แสนทวีสุข] V 1.3.0
  *   - รองรับการคืนอุปกรณ์แบบบางส่วน (Partial Return)ปรับปรุง logic การคืนและการคำนวณ stock ให้รองรับการคืนหลายครั้ง
  *     [2026-02-23, พชร ไพศรีสกุล] V1.4.0
+ *   - feat(line): เพิ่มการแจ้งเตือน LINE เมื่อมีงานแจ้งซ่อมใหม่เข้ามา
+ *     [2026-02-25, นราธิป แสนทวีสุข] V 1.5.0
  *
  * =====================================================================
  */
@@ -136,6 +138,45 @@ module.exports = (db) => {
       ];
 
       const [result] = await db.promise().query(sql, params);
+
+      // 4. ส่งการแจ้งเตือนไปยัง LINE Group
+      try {
+        const notifSql = `
+          SELECT
+            rf.rf_code,
+            CONCAT(u.us_first_name_th, ' ', u.us_last_name_th) AS user_name,
+            rf.rf_problem,
+            CONCAT(b.bd_name, ' ', f.fl_name, ' ', r.room_name) AS location,
+            tt.tt_name AS repair_type,
+            rf.rf_urgency,
+            rf.rf_phone
+          FROM repair_form rf
+          LEFT JOIN user u ON rf.rf_us_id = u.us_id
+          LEFT JOIN technician_type tt ON rf.rf_tt_id = tt.tt_id
+          LEFT JOIN room r ON rf.rf_room_id = r.room_id
+          LEFT JOIN floor f ON r.room_fl_id = f.fl_id
+          LEFT JOIN building b ON f.fl_bd_id = b.bd_id
+          WHERE rf.rf_id = ?
+        `;
+
+        const [notifData] = await db.promise().query(notifSql, [result.insertId]);
+
+        if (notifData.length > 0) {
+          await lineNotification.notifyNewRepair({
+            rf_code: notifData[0].rf_code,
+            user_name: notifData[0].user_name,
+            repair_title: notifData[0].rf_problem,
+            location: notifData[0].location,
+            repair_type: notifData[0].repair_type,
+            urgency: notifData[0].rf_urgency || 'medium',
+            phone: notifData[0].rf_phone
+          });
+        }
+      } catch (lineError) {
+        console.error('LINE notification failed:', lineError.message);
+        // ไม่ throw error เพื่อไม่ให้กระทบการสร้างใบแจ้งซ่อม
+      }
+
       return { insertId: result.insertId, rfCode };
     },
 
