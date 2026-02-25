@@ -2,13 +2,13 @@
  * =====================================================================
  * @file            user.controller.js
  * @layer           Controller Layer (Presentation Layer)
- * @version         1.0.0
+ * @version         1.1.0
  * @since           2026-02-10
  * @author          พชร ไพศรีสกุล
  * @contributors
  *   - พชร ไพศรีสกุล
  *
- * @lastModified    2026-02-10
+ * @lastModified    2026-02-25
  * @lastModifiedBy  พชร ไพศรีสกุล
  * ---------------------------------------------------------------------
  * @description
@@ -27,8 +27,10 @@
  *
  * ---------------------------------------------------------------------
  * @changelog
- *   - Initial implementation User Controller ตาม Layered Architecture
- *     [2026-02-10, พชร ไพศรีสกุล] V 1.0.0
+ *  [2026-02-10, พชร ไพศรีสกุล] V 1.0.0
+ *  - Initial implementation User Controller ตาม Layered Architecture
+ *  [2026-02-25, พชร ไพศรีสกุล] V 1.1.0
+ *  - แก้ไขการสร้างบัญชีผู้ใช้ และ import จากไฟล์ ให้รองรับการสร้าง default รหัสผ่าน
  *
  * =====================================================================
  */
@@ -149,7 +151,6 @@ module.exports = (userService) => {
         // รับค่าจาก Body
         const {
           us_user_name,
-          us_user_pass,
           us_ttn_id,
           us_first_name_th,
           us_last_name_th,
@@ -165,7 +166,6 @@ module.exports = (userService) => {
         // Validation: ตรวจสอบความถูกต้องของข้อมูล
         if (
           !us_user_name ||
-          !us_user_pass ||
           !us_first_name_th ||
           !us_last_name_th ||
           !us_role_id ||
@@ -190,7 +190,6 @@ module.exports = (userService) => {
         // จัดเตรียม Data object ส่งให้ Service (เปลี่ยนเป็น camelCase)
         const userData = {
           userName: us_user_name,
-          password: us_user_pass,
           titleId: us_ttn_id,
           firstNameTh: us_first_name_th,
           lastNameTh: us_last_name_th,
@@ -211,6 +210,57 @@ module.exports = (userService) => {
         res
           .status(500)
           .json({ message: "เพิ่มผู้ใช้ไม่สำเร็จ", error: error.message });
+      }
+    },
+
+    /**
+     * รีเซ็ตรหัสผ่านของผู้ใช้งาน
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-10
+     * @lastModifiedBy พชร ไพศรีสกุล
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
+    async resetPassword(req, res) {
+      try {
+        // รับ userId จาก URL
+        const userId = req.params.id;
+
+        // validation
+        if (!userId) {
+          return res.status(400).json({
+            message: "ไม่พบ userId",
+          });
+        }
+
+        // เรียก service
+        await userService.resetPassword(userId);
+
+        // ส่ง response กลับ
+        res.status(200).json({
+          message: "รีเซ็ตรหัสผ่านสำเร็จ",
+        });
+      } catch (error) {
+        if (error.message === "USER_NOT_FOUND") {
+          return res.status(404).json({
+            message: "ไม่พบผู้ใช้งาน",
+          });
+        }
+
+        if (error.message === "INVALID_DATA_FOR_PASSWORD_GENERATION") {
+          return res.status(400).json({
+            message: "ข้อมูลผู้ใช้ไม่เพียงพอสำหรับสร้างรหัสผ่าน",
+          });
+        }
+
+        res.status(500).json({
+          message: "รีเซ็ตรหัสผ่านไม่สำเร็จ",
+          error: error.message,
+        });
       }
     },
 
