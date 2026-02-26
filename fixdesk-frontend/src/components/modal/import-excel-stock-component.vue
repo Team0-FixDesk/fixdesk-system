@@ -11,7 +11,15 @@ const items = ref([])
 
 // ฟังก์ชันรับข้อมูลจาก Step 1 (Upload) data: ต้องเป็น Array ของ Object ที่ map key มาแล้ว (username, password, etc.)
 function goPreview(data) {
-  items.value = data
+  const mapped = data.map(item => {
+    // ถ้ามีหมายเลขครุภัณฑ์ (assetNumber) และไม่ใช่ค่าว่าง ให้ตั้ง quantity เป็น 1
+    const assetCode = item.assetNumber || item.pd_asset_code || ''
+    if (assetCode && String(assetCode).trim() !== '') {
+      return { ...item, pd_quantity: 1 }
+    }
+    return item
+  })
+  items.value = mapped
   step.value = 2
 }
 
