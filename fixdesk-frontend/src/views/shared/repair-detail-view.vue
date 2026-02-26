@@ -751,9 +751,12 @@ function validateReturnQty(item) {
 onMounted(() => {
   try {
     const decoded = token?.value ? jwtDecode(token.value) : null
+
     canAssign.value = decoded?.role_name === 'Admin'
+    canAccept.value = decoded?.role_name === 'Technician'
   } catch {
     canAssign.value = false
+    canAccept.value = false
   }
 
   fetchRepairDetail()
