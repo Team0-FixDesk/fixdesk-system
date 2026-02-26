@@ -329,7 +329,7 @@ async function notifyJobAssignment(assignmentData) {
               action: {
                 type: 'uri',
                 label: 'ดูรายละเอียดบนเว็บไซต์',
-                uri: process.env.FRONTEND_URL || 'http://dekdee2.informatics.buu.ac.th:8057/#/home'
+                uri: `http://dekdee2.informatics.buu.ac.th:8057/#/repair-deail/${rf_code}` // ลิงก์ไปยังหน้ารายละเอียดงาน
               },
               style: 'primary',
               color: '#0367D1'
@@ -596,7 +596,7 @@ async function notifyJobAccepted(acceptData) {
               action: {
                 type: 'uri',
                 label: 'ดูรายละเอียดบนเว็บไซต์',
-                uri: process.env.FRONTEND_URL || 'http://dekdee2.informatics.buu.ac.th:8057/#/home'
+                uri: `http://dekdee2.informatics.buu.ac.th:8057/#/repair-deail/${rf_code}`
               },
               style: 'primary',
               color: '#10B981'
@@ -893,7 +893,7 @@ async function notifyNewRepair(newRepairData) {
               action: {
                 type: 'uri',
                 label: 'มอบหมายช่างเลย',
-                uri: process.env.FRONTEND_URL || 'http://dekdee2.informatics.buu.ac.th:8057/#/home'
+                uri: `http://dekdee2.informatics.buu.ac.th:8057/#/repair-deail/${rf_code}`
               },
               style: 'primary',
               color: '#F97316'
