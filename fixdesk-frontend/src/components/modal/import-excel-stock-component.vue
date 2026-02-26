@@ -37,7 +37,7 @@ function handleSuccess(result) {
       <!-- Header -->
       <div class="flex items-center justify-between pb-4 mb-4 border-b">
         <div>
-          <h2 class="text-xl font-semibold text-gray-800">นำเข้าข้อมูผลคลัง</h2>
+          <h2 class="text-xl font-semibold text-gray-800">นำเข้าข้อมูลคลัง</h2>
           <p class="text-sm text-gray-500">
             ขั้นตอนที่ {{ step }} จาก 2 : {{ step === 1 ? 'อัปโหลดไฟล์' : 'ตรวจสอบข้อมูล' }}
           </p>
