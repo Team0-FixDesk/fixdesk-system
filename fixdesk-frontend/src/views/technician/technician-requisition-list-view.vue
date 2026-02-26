@@ -1,3 +1,37 @@
+/**
+ * =====================================================================
+ * @file            technician-requisition-list.view.vue
+ * @module          มอดูลการจัดการงานของช่าง - การเบิกของ และดูรายละเอียดการเบิก
+ * @layer           View (Presentation Layer)
+ * @version         1.0.0
+ * @since           2025-12-23
+ * @author          ปฏิพัทธ์ จงนันทพันธ์กุล
+ * @lastModified    2026-02-21
+ * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
+ * ---------------------------------------------------------------------
+ * @description
+ *  หน้าจอรายการเบิกวัสดุ/อุปกรณ์ของช่างเทคนิค
+ *   - เรียก API เพื่อโหลดใบเบิกของตนเอง (/stock-forms/:userId)
+ *   - ค้นหาข้อมูลตามหมายเลขรายการเบิก หรือสถานที่
+ *   - กรองข้อมูลตามสถานะ (รออนุมัติ / อนุมัติแล้ว / ไม่อนุมัติ)
+ *   - กรองข้อมูลตามวันที่เบิก
+ *   - เปิดดูรายละเอียดใบแจ้งซ่อมที่เกี่ยวข้อง
+ *   - แสดงผลข้อมูลในรูปแบบตารางผ่าน TableComponent
+ *
+ * @requires
+ *  - vue
+ *  - vue-router
+ *  - @/components/table-component.vue
+ *  - @/components/button/info-button-component.vue
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *   - สร้างไฟล์ครั้งแรก       [2025-12-23, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - แก้ไขข้อความหัวตาราง   [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - แก้ไขการใช้สัญลักษณ์ :   [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ * =====================================================================
+ */
+
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
@@ -13,9 +47,9 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE
 
 // ===================== Table Structure =====================
 const TABLE_COLUMNS = [
-  'รหัสรายการเบิกของ',
-  'รายละเอียด',
-  'รายการของเบิก',
+  'หมายเลขรายการเบิก',
+  'รายละเอียดโดยย่อ',
+  'รายการเบิก',
   'สถานะงาน',
   'ตัวดำเนินการ',
 ]
@@ -171,7 +205,7 @@ onBeforeUnmount(() => {
           <input
             v-model="searchKeyword"
             type="text"
-            placeholder="ค้นหาจากรหัสรายการเบิก/สถานที่"
+            placeholder="ค้นหารายการเบิก"
             class="w-[260px] h-10 px-4 rounded-lg border border-gray-300"
           />
 
@@ -250,9 +284,9 @@ onBeforeUnmount(() => {
 
       <template #cell-1="{ row }">
         <div class="text-sm space-y-1">
-          <div>วันที่เบิก: {{ row[1].date }}</div>
-          <div>รหัสใบแจ้งซ่อม: {{ row[1].repairFormCode }}</div>
-          <div>สถานที่: {{ row[1].location }}</div>
+          <div>วันที่เบิก : {{ row[1].date }}</div>
+          <div>หมายเลขแจ้งซ่อม : {{ row[1].repairFormCode }}</div>
+          <div>สถานที่ : {{ row[1].location }}</div>
         </div>
       </template>
 

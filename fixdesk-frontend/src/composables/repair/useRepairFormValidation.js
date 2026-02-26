@@ -1,3 +1,37 @@
+/**
+ * =====================================================================
+ * @file            useRepairFormValidation.js
+ * @layer           Composable (Form Validation Layer)
+ * @version         1.0.0
+ * @since           2026-02-09
+ * @author          พชร ไพศรีสกุล
+ * @lastModified    2026-02-20
+ * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
+ * ---------------------------------------------------------------------
+ * @description
+ *  Composable สำหรับตรวจสอบความถูกต้องของฟอร์มสร้าง/แก้ไขใบแจ้งซ่อม
+ *   - ตรวจสอบข้อมูลทั้งฟอร์มก่อนส่งบันทึก (validateFormData)
+ *   - ตรวจสอบเฉพาะฟิลด์เมื่อมีการเปลี่ยนแปลง (validateField)
+ *   - จัดการข้อความ Error ของแต่ละฟิลด์ผ่าน errorData
+ *   - รีเซ็ตข้อความ Error ทั้งหมด (resetErrors)
+ *
+ *  ฟิลด์ที่ตรวจสอบ:
+ *   - repairType
+ *   - building
+ *   - floor
+ *   - room
+ *   - problemDetail
+ *   - issueDescription
+ *
+ * @requires
+ *   - vue (ref)
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *   - แก้ไขข้อความแจ้งเตือน  [2026-02-20, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ * =====================================================================
+ */
+
 import { ref } from 'vue'
 // Composable สำหรับตรวจสอบความถูกต้องของฟอร์มสร้าง/แก้ไขใบแจ้งซ่อม
 // คืนค่า: errorData, validateFormData, validateField, resetErrors
@@ -40,7 +74,7 @@ export function useRepairFormValidation(repairFormData) {
     }
 
     if (!repairFormData.value.problemDetail?.trim()) {
-      errorData.value.problemDetail = 'กรุณากรอกหัวข้อปัญหา'
+      errorData.value.problemDetail = 'กรุณากรอกปัญหา หรือเหตุที่ต้องการแจ้ง'
       isValid = false
     }
 

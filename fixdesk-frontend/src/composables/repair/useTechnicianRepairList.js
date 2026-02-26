@@ -1,3 +1,33 @@
+/**
+ * =====================================================================
+ * @file            useTechnicianRepairList.js
+ * @layer           Composable (Business Logic Layer)
+ * @version         1.0.0
+ * @since           2026-02-09
+ * @author          พชร ไพศรีสกุล
+ * @lastModified    2026-02-21
+ * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
+ * ---------------------------------------------------------------------
+ * @description
+ *  Composable สำหรับโหลดและจัดการรายการงานซ่อมของช่างเทคนิค
+ *   - เรียก API เพื่อดึงรายการงานซ่อมของช่าง (/technician/repairs)
+ *   - ตรวจสอบสถานะการเข้าสู่ระบบก่อนเรียก API
+ *   - กรองสถานะงานที่อนุญาต (pending / in_progress / outsource)
+ *   - จัดรูปแบบข้อมูลให้อยู่ในรูปแบบที่ TableComponent ใช้งานได้
+ *   - จัดการกรณี Token หมดอายุ (401) และเรียก logout
+ *   - แสดง SweetAlert เมื่อเกิดข้อผิดพลาด
+ *   - ส่งออก repairList และ fetchRepairList สำหรับใช้งานใน View
+ *
+ * @requires
+ *   - vue (ref)
+ *   - sweetalert2
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *   - แก้ไขการใช้สัญลักษณ์ : ในตาราง  [2026-02-20, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ * =====================================================================
+ */
+
 // Composable: โหลดและจัดรูปแบบรายการงานสำหรับ Technician
 // คืน `repairList` และ `fetchRepairList()` เพื่อให้หน้าจอแสดงตารางได้เลย
 import { ref } from 'vue'
@@ -13,11 +43,11 @@ export function useTechnicianRepairList(API_BASE, token, isAuthenticated, logout
 
     return [
       r.rf_code,
-      `วันที่แจ้ง: ${new Date(r.rf_create_at).toLocaleDateString('th-TH')} </br>
-       ชื่อผู้แจ้ง: ${fullName}</br>
-       หน่วยงาน: ${r.department_name}</br>
-       เรื่องที่แจ้ง: ${r.rf_problem}</br>
-       สถานที่: ${place}`,
+      `วันที่แจ้งซ่อม : ${new Date(r.rf_create_at).toLocaleDateString('th-TH')} </br>
+       ชื่อผู้แจ้ง : ${fullName}</br>
+       หน่วยงาน : ${r.department_name}</br>
+       เรื่องที่แจ้ง : ${r.rf_problem}</br>
+       สถานที่ : ${place}`,
       r.rf_user_status,
       '',
     ]

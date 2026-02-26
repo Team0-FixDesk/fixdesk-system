@@ -6,7 +6,7 @@
  * @version         1.0.0
  * @since           2026-02-04
  * @author          พชร ไพศรีสกุล
- * @lastModified    2026-02-18
+ * @lastModified    2026-02-20
  * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
  * ---------------------------------------------------------------------
  * @description
@@ -30,7 +30,8 @@
  *
  * ---------------------------------------------------------------------
  * @changelog
- *   - ปรับปรุงข้อความที่ใช้ให้เหมาะสม   [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - แก้ไขข้อความหัวตาราง  [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *.  - แก้ไขข้อความแจ้งเตือน  [2026-02-20, ปฏิพัทธ์ จงนันทพันธ์กุล]
  * =====================================================================
  */
 
@@ -130,7 +131,7 @@ async function handleDeleteRepair(repairCode) {
 
   const result = await deleteRepair(repairCode)
   if (result.ok) {
-    Sweetalert.fire({ toast: true, position: 'top-end', title: 'ลบรายการแจ้งซ่อมสำเร็จ', text: `ลบ ${repairCode}`, icon: 'success', timer: 2000, showConfirmButton: false })
+    Sweetalert.fire({ toast: true, position: 'top-end', title: `ลบรายการแจ้งซ่อม ${repairCode} เรียบร้อยแล้ว`, icon: 'success', timer: 2500, showConfirmButton: false })
   } else {
     Sweetalert.fire({ toast: true, position: 'top-end', title: 'เกิดข้อผิดพลาด', text: result.message || 'DELETE_FAILED', icon: 'error', timer: 2500, showConfirmButton: false })
   }

@@ -6,8 +6,8 @@
  * @version         1.0.0
  * @since           2025-10-21
  * @author          เศรษฐพงศ์ หอมชื่น
- * @lastModified    2026-02-18
- * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
+ * @lastModified    2026-02-23
+ * @lastModifiedBy  นราธิป แสนทวีสุข
  * ---------------------------------------------------------------------
  * @description
  *  หน้าจอสำหรับผู้ดูแลระบบ ใช้จัดการข้อมูลสถานที่ภายในระบบแจ้งซ่อม
@@ -666,8 +666,6 @@ async function confirmDelete(username) {
       title: 'สำเร็จ!',
       text: 'ลบห้องเรียบร้อยแล้ว',
       icon: 'success',
-      background: '#f0f9ff',
-      color: '#1e3a8a',
     })
 
     await refreshData()
@@ -776,8 +774,6 @@ async function saveSingleLocation() {
       icon: 'success',
       title: 'สำเร็จ!',
       text: 'เพิ่มข้อมูลเรียบร้อยแล้ว',
-      background: '#f0f9ff',
-      color: '#1e3a8a',
     })
 
     await refreshData()
@@ -894,8 +890,6 @@ async function bulkCreateLocation() {
       icon: 'success',
       title: 'สำเร็จ!',
       text: 'สร้างสถานที่เรียบร้อยแล้ว',
-      background: '#f0f9ff',
-      color: '#1e3a8a',
     })
 
     await refreshData()
@@ -933,7 +927,7 @@ async function saveEditLocation() {
     reverseButtons: true,
     confirmButtonText: 'ยืนยัน',
     cancelButtonText: 'ยกเลิก',
-    confirmButtonColor: '#f97316',
+    confirmButtonColor: '#2563eb',
   })
 
   if (!result.isConfirmed) {
@@ -983,8 +977,6 @@ async function saveEditLocation() {
       icon: 'success',
       title: 'สำเร็จ!',
       text: 'แก้ไขข้อมูลห้องเรียบร้อยแล้ว',
-      background: '#f0f9ff',
-      color: '#1e3a8a',
     })
 
     await refreshData()
@@ -1048,8 +1040,13 @@ async function refreshData() {
 
 function handleImportSuccess() {
   Swal.fire({
+    toast: true,
+    position: 'top-end',
     icon: 'success',
     title: 'นำเข้าสถานที่เรียบร้อยแล้ว',
+    showConfirmButton: false,
+    timer: 2000,
+    timerProgressBar: true,
   })
   showImportModal.value = false
 }
@@ -1185,11 +1182,6 @@ onBeforeUnmount(() => {
             <label class="block text-sm font-medium text-gray-700 mb-1.5"> ชั้น </label>
             <input :value="viewData.floor_name || '-'" type="text" disabled class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed" />
           </div>
-
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1.5"> รหัส </label>
-            <input :value="viewData.building_id || viewData.floor_id || viewData.room_id || '-'" type="text" disabled class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed" />
-          </div>
         </div>
 
         <!-- ปุ่มปิด -->
@@ -1214,18 +1206,18 @@ onBeforeUnmount(() => {
 
         <!-- โหมดการเพิ่ม -->
         <div class="space-y-4 mb-6">
-          <label class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400" :class="addForm.bulk_mode ? 'border-blue-600 bg-blue-50' : 'border-gray-200'">
-            <input type="radio" v-model="addForm.bulk_mode" :value="true" class="w-5 h-5 text-blue-600 mt-1" />
+          <label class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400">
+            <!-- <input type="radio" v-model="addForm.bulk_mode" :value="true" class="w-5 h-5 text-blue-600 mt-1" /> -->
             <div class="ml-3">
               <div class="flex items-center gap-2">
                 <span class="font-semibold text-gray-800">สร้างหลายระดับพร้อมกัน</span>
-                <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">เร็วกว่า</span>
+                <!-- <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">เร็วกว่า</span> -->
               </div>
               <p class="text-xs text-gray-500 mt-1">สร้างอาคาร + ชั้น + ห้อง ในครั้งเดียว</p>
             </div>
           </label>
 
-          <label class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400" :class="!addForm.bulk_mode ? 'border-blue-600 bg-blue-50' : 'border-gray-200'">
+          <!-- <label class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400" :class="!addForm.bulk_mode ? 'border-blue-600 bg-blue-50' : 'border-gray-200'">
             <input type="radio" v-model="addForm.bulk_mode" :value="false" class="w-5 h-5 text-blue-600 mt-1" />
             <div class="ml-3">
               <div class="flex items-center gap-2">
@@ -1233,12 +1225,11 @@ onBeforeUnmount(() => {
               </div>
               <p class="text-xs text-gray-500 mt-1">เลือกเพิ่ม อาคาร, ชั้น หรือ ห้อง ทีละอย่าง</p>
             </div>
-          </label>
+          </label> -->
         </div>
-
-        <!-- Single Mode -->
+        <!-- ปิดไว้ก่อน รอ PO คอมเมนต์
         <div v-if="!addForm.bulk_mode" class="space-y-4">
-          <!-- เลือกประเภท -->
+
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2"> ประเภท <span class="text-red-500">*</span> </label>
             <select v-model="addForm.type" class="w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-blue-400 focus:outline-none">
@@ -1248,7 +1239,7 @@ onBeforeUnmount(() => {
             </select>
           </div>
 
-          <!-- เลือกอาคาร (สำหรับชั้นและห้อง) -->
+
           <div v-if="addForm.type === 'floor' || addForm.type === 'room'">
             <label class="block text-sm font-medium text-gray-700 mb-2"> อาคาร <span class="text-red-500">*</span> </label>
             <select v-model="addForm.building_id" @change="handleModalBuildingChange" class="w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-blue-400 focus:outline-none">
@@ -1259,7 +1250,7 @@ onBeforeUnmount(() => {
             </select>
           </div>
 
-          <!-- เลือกชั้น (สำหรับห้อง) -->
+
           <div v-if="addForm.type === 'room'">
             <label class="block text-sm font-medium text-gray-700 mb-2"> ชั้น <span class="text-red-500">*</span> </label>
             <select v-if="addForm.type === 'room'" v-model="addForm.floor_id" :disabled="!addForm.building_id" class="w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-blue-400 focus:outline-none disabled:bg-gray-100">
@@ -1270,7 +1261,7 @@ onBeforeUnmount(() => {
             </select>
           </div>
 
-          <!-- ชื่อ -->
+
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">
               ชื่อ{{ addForm.type === 'building' ? 'อาคาร' : addForm.type === 'floor' ? 'ชั้น' : 'ห้อง' }}
@@ -1282,9 +1273,10 @@ onBeforeUnmount(() => {
             </p>
           </div>
         </div>
+        -->
 
         <!-- Bulk Mode -->
-        <div v-if="addForm.bulk_mode" class="space-y-4">
+        <div class="space-y-4">
           <!-- อาคาร -->
           <div class="border-2 border-gray-200 rounded-lg p-4 space-y-3">
             <h3 class="font-semibold text-gray-800">อาคาร</h3>

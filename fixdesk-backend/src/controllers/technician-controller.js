@@ -2,14 +2,15 @@
  * =====================================================================
  * @file            tech.controller.js
  * @layer           Controller Layer (Presentation Layer)
- * @version         1.1.0
+ * @version         1.1.1
  * @since           2026-02-10
  * @author          พชร ไพศรีสกุล
  * @contributors
  *   - พชร ไพศรีสกุล
+ *   - ปฏิพัทธ์ จงนันทพันธ์กุล
  *
- * @lastModified    2026-02-12
- * @lastModifiedBy  พชร ไพศรีสกุล
+ * @lastModified    2026-02-21
+ * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
  * ---------------------------------------------------------------------
  * @description
  *  Controller สำหรับจัดการข้อมูลและการทำงานของช่าง (Technician Management)
@@ -29,12 +30,14 @@
  * ---------------------------------------------------------------------
  * @changelog
  *   - Initial implementation Technician Controller ตาม Layered Architecture
- *     [2026-02-10, พชร ไพศรีสกุล] V 1.0.0
+ *     [2026-02-10, พชร ไพศรีสกุล] V1.0.0
  *   - แก้ไขเรื่องประเภทงานซ่อม
- *     [2026-02-12, พชร ไพศรีสกุล] V 1.1.0
- *
+ *     [2026-02-12, พชร ไพศรีสกุล] V1.1.0
+ *   - แก้ไขข้อความแจ้งเตือน  
+ *     [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล] V1.1.1
  * =====================================================================
  */
+
 module.exports = (techService) => {
   return {
     /* --- TECHNICIAN DATA CONTROLLER --- */
@@ -251,14 +254,17 @@ module.exports = (techService) => {
     },
 
     /**
-     * ปิดงานซ่อมหรือส่งต่อ Outsource
+     * ปิดงานซ่อมหรือส่งต่อ Outsource / อื่นๆ
      *
      * @author พชร ไพศรีสกุล
      * @since 2026-02-10
-     * @lastModified 2026-02-10
-     * @lastModifiedBy พชร ไพศรีสกุล
+     * @lastModified 2026-02-22
+     * @lastModifiedBy นราธิป แสนทวีสุข
+     * @contributors
+     *  - พชร ไพศรีสกุล
+     *  - นราธิป แสนทวีสุข
      *
-     * @param {Object} req
+     * @param {Object} req - { status, tech_summary, tech_image_after, repair_method, repair_method_remark, result_status, result_remark }
      * @param {Object} res
      * @returns {Promise<void>}
      */
@@ -266,7 +272,15 @@ module.exports = (techService) => {
       try {
         const techId = req.user.us_id;
         const { rf_code } = req.params;
-        const { status, tech_summary, tech_image_after } = req.body;
+        const { 
+          status, 
+          tech_summary, 
+          tech_image_after,
+          repair_method,
+          repair_method_remark,
+          result_status,
+          result_remark
+        } = req.body;
 
         // Default status = done
         const targetStatus = status || "done";
@@ -277,11 +291,20 @@ module.exports = (techService) => {
           targetStatus,
           tech_summary,
           tech_image_after,
+          repair_method,
+          repair_method_remark,
+          result_status,
+          result_remark
         );
 
+        const statusMessages = {
+          done: "ปิดงานสำเร็จ",
+          outsource: "ส่ง Outsource สำเร็จ",
+          other: "บันทึกข้อมูลสำเร็จ"
+        };
+
         res.json({
-          message:
-            targetStatus === "done" ? "ปิดงานสำเร็จ" : "ส่ง Outsource สำเร็จ",
+          message: statusMessages[targetStatus] || "บันทึกข้อมูลสำเร็จ",
         });
       } catch (err) {
         if (err.message === "PENDING_STOCK_APPROVAL")
@@ -292,7 +315,7 @@ module.exports = (techService) => {
         if (err.message === "JOB_NOT_FOUND_OR_INVALID_STATUS")
           return res
             .status(400)
-            .json({ message: "ไม่พบงาน หรือสถานะไม่ถูกต้อง" });
+            .json({ message: "ไม่พบงานซ่อม หรือสถานะไม่ถูกต้อง" });
         res.status(500).json({ message: "ดำเนินการไม่สำเร็จ" });
       }
     },
@@ -313,7 +336,7 @@ module.exports = (techService) => {
       try {
         const { repair_code, items } = req.body;
         if (!items || !Array.isArray(items) || items.length === 0) {
-          return res.status(400).json({ message: "ไม่มีรายการสินค้า" });
+          return res.status(400).json({ message: "ไม่พบรายการวัสดุ/อุปกรณ์" });
         }
 
         const techId = req.user.us_id;
@@ -323,19 +346,19 @@ module.exports = (techService) => {
           items,
         );
 
-        res.json({ message: "เบิกสินค้าเรียบร้อย", sf_code: result.sfCode });
+        res.json({ message: "ส่งแบบฟอร์มขอเบิกเรียบร้อย", sf_code: result.sfCode });
       } catch (err) {
         if (err.message.startsWith("INSUFFICIENT_STOCK"))
           return res
             .status(400)
-            .json({ message: "สินค้าไม่พอ: " + err.message.split(":")[1] });
+            .json({ message: "จำนวนวัสดุ/อุปกรณ์ไม่เพียงพอ : " + err.message.split(":")[1] });
         if (err.message.startsWith("PRODUCT_NOT_FOUND"))
           return res
             .status(404)
-            .json({ message: "ไม่พบสินค้า ID: " + err.message.split(":")[1] });
+            .json({ message: "ไม่พบรายการวัสดุ/อุปกรณ์ที่ต้องการ : " + err.message.split(":")[1] });
         res
           .status(500)
-          .json({ message: "เบิกสินค้าไม่สำเร็จ", error: err.message });
+          .json({ message: "ส่งแบบฟอร์มขอเบิกไม่สำเร็จ", error: err.message });
       }
     },
   };

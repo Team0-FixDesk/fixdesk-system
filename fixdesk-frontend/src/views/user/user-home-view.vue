@@ -1,3 +1,10 @@
+ * ---------------------------------------------------------------------
+ * @changelog
+ *   - ดึงข้อมูลชื่อผู้ใช้ : 
+ *     [2026-02-21, พิมลพรรณ มามาก] V
+ * =====================================================================
+ */
+
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
@@ -16,7 +23,7 @@ import { useAuthToken } from '@/composables/useAuthToken'
 import { useUserProfile } from '@/composables/useUserProfile'
 
 const { token, userId, isAuthenticated, logout } = useAuthToken()
-const { displayName, displayDepartment} = useUserProfile()
+const { userDisplayName, userDepartmentName, fetchUserProfileData} = useUserProfile()
 
 // ตัวแปรสำหรับ Card สถิติ
 const statsItemsList = ref([
@@ -165,10 +172,11 @@ const onRowClick = (idOrItem) => {
     loadTimelineForCode(code) // โหลดข้อมูลทันที
   }
 }
-
+/* Reload */
 onMounted(() => {
   fetchRepairStats()
   fetchRecentRepairs()
+  fetchUserProfileData()
 })
 </script>
 
@@ -176,8 +184,8 @@ onMounted(() => {
   <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-8xl">
     <div class="flex justify-between items-center mb-6">
       <div>
-        <h1 class="text-2xl font-extrabold text-gray-900">สวัสดีคุณ{{ displayName }}</h1>
-        <p class="text-lg font-semibold text-gray-700">{{ displayDepartment }}</p>
+        <h1 class="text-2xl font-extrabold text-gray-900">สวัสดีคุณ{{ userDisplayName }}</h1>
+        <p class="text-lg font-semibold text-gray-700">{{ userDepartmentName }}</p>
       </div>
       <RepairButton />
     </div>
