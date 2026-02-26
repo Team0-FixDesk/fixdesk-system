@@ -1,4 +1,56 @@
+/**
+ * =====================================================================
+ * @file            user.route.js
+ * @layer           Route Layer (Routing Layer)
+ * @version         1.1.0
+ * @since           2026-02-10
+ * @author          พชร ไพศรีสกุล
+ * @contributors
+ *   - พชร ไพศรีสกุล
+ *
+ * @lastModified    2026-02-25
+ * @lastModifiedBy  พชร ไพศรีสกุล
+ * ---------------------------------------------------------------------
+ * @description
+ *  Route สำหรับจัดการระบบผู้ใช้งาน (User Management)
+ *  ทำหน้าที่กำหนด endpoint และเชื่อมต่อ Controller กับ Service Layer
+ *
+ *  รองรับการทำงาน:
+ *    - ดึงข้อมูล Titles และ Roles
+ *    - จัดการผู้ใช้งาน (Create, Read, Update, Delete)
+ *    - จัดการข้อมูลส่วนตัว (Personal Profile)
+ *    - Reset รหัสผ่านผู้ใช้งาน
+ *    - Import ผู้ใช้งานจากไฟล์ Excel
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *  [2026-02-10, พชร ไพศรีสกุล] V 1.0.0
+ *  - Initial implementation User Route ตาม Layered Architecture
+ *  [2026-02-25, พชร ไพศรีสกุล] V 1.1.0
+ *  - เพิ่มการ generate default password จาก FirstNameEn + Last4Phone + LastInitial
+ *  - รองรับการ reset password โดยใช้รูปแบบ default password
+ *  - ปรับปรุงการ import ผู้ใช้งานให้รองรับ default password
+ *     
+ *
+ * =====================================================================
+ */
+
 const bcrypt = require("bcrypt");
+
+function generateDefaultPassword(userData) {
+  const firstName = (userData.firstNameEn || "").trim();
+  const lastName = (userData.lastNameEn || "").trim();
+  const phone = (userData.phone || "").trim();
+
+  if (!firstName || !lastName || phone.length < 4) {
+    throw new Error("INVALID_DATA_FOR_PASSWORD_GENERATION");
+  }
+
+  const last4Phone = phone.slice(-4);
+  const lastInitial = lastName[0].toUpperCase();
+
+  return `${firstName}@${last4Phone}${lastInitial}`;
+}
 
 module.exports = (db) => {
   return {
@@ -85,8 +137,9 @@ module.exports = (db) => {
 
     // สร้างผู้ใช้ใหม่
     async createUser(userData) {
+      const defaultPassword = generateDefaultPassword(userData);
       // เข้ารหัสรหัสผ่านก่อนลงฐานข้อมูล
-      const hashedPassword = await bcrypt.hash(userData.password, 10);
+      const hashedPassword = await bcrypt.hash(defaultPassword, 10);
 
       const sql = `
         INSERT INTO user (
@@ -122,6 +175,54 @@ module.exports = (db) => {
       }
     },
 
+    async resetPassword(userId) {
+      // ดึงข้อมูล user จาก database
+      const sqlSelect = `
+    SELECT 
+      us_id,
+      us_first_name_en,
+      us_last_name_en,
+      us_phone
+    FROM user
+    WHERE us_id = ?
+    LIMIT 1
+  `;
+
+      const [rows] = await db.promise().query(sqlSelect, [userId]);
+
+      if (!rows.length) {
+        throw new Error("USER_NOT_FOUND");
+      }
+
+      const user = rows[0];
+
+      // generate password ใหม่
+      const defaultPassword = generateDefaultPassword({
+        firstNameEn: user.us_first_name_en,
+        lastNameEn: user.us_last_name_en,
+        phone: user.us_phone,
+      });
+
+      // hash password
+      const hashedPassword = await bcrypt.hash(defaultPassword, 10);
+
+      // update password ใน database
+      const sqlUpdate = `
+    UPDATE user
+    SET us_user_pass = ?
+    WHERE us_id = ?
+  `;
+
+      const [result] = await db
+        .promise()
+        .query(sqlUpdate, [hashedPassword, userId]);
+
+      if (result.affectedRows === 0) {
+        throw new Error("USER_NOT_FOUND");
+      }
+
+      return true;
+    },
     // แก้ไขข้อมูลผู้ใช้ (สำหรับ Admin)
     async updateUser(id, userData) {
       // ตรวจสอบ Username ซ้ำ (ยกเว้นตัวเอง)
@@ -253,16 +354,23 @@ module.exports = (db) => {
           // 1. ตรวจสอบข้อมูลเบื้องต้น
           if (
             !user.username ||
-            !user.password ||
             !user.first_name_th ||
+            !user.first_name_en ||
+            !user.last_name_en ||
+            !user.phone ||
             !user.role_name
           ) {
             throw new Error("ข้อมูลไม่ครบถ้วน");
           }
 
           // 2. เตรียมข้อมูล (Hash Pass, Map Position)
-          const hashedPassword = await bcrypt.hash(user.password, 10);
+          const defaultPassword = generateDefaultPassword({
+            firstNameEn: user.first_name_en,
+            lastNameEn: user.last_name_en,
+            phone: user.phone,
+          });
 
+          const hashedPassword = await bcrypt.hash(defaultPassword, 10);
           // 3. หา Role ID
           const [roles] = await db
             .promise()
