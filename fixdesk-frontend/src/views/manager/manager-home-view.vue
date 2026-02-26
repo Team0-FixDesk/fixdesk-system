@@ -209,7 +209,8 @@ function buildTooltipHTML({ title = '', rows = [], unitLabel = 'หน่วย:
    Helpers (English names)
 ----------------------------- */
 const calcPercentChange = (current, previous) => {
-  if (previous === 0) return current > 0 ? 100 : 0
+  if (previous === 0) return 0;
+  
   return Math.round(((current - previous) / previous) * 100)
 }
 
@@ -961,22 +962,22 @@ onMounted(() => {
               </div>
 
               <div class="text-right">
-                <div
-                  v-if="card.growth !== undefined"
+                <div v-if="card.growth === 0" class="text-sm font-medium flex items-center justify-end text-gray-500">
+                  <span>→</span>
+                  <span class="ml-1">0%</span>
+                </div>
+                
+                <div v-else
                   :class="[
                     'text-sm font-medium flex items-center justify-end',
-                    card.growth > 0
-                      ? 'text-green-600'
-                      : card.growth < 0
-                        ? 'text-red-600'
-                        : 'text-gray-500',
+                    card.growth > 0 ? 'text-green-600' : 'text-red-600'
                   ]"
                 >
                   <span v-if="card.growth > 0">↗</span>
-                  <span v-else-if="card.growth < 0">↘</span>
-                  <span v-else>→</span>
+                  <span v-else>↘</span>
                   <span class="ml-1">{{ Math.abs(card.growth) }}%</span>
                 </div>
+
                 <div class="text-xs text-gray-500 mt-1">เทียบกับเดือนก่อนหน้า</div>
               </div>
             </div>
