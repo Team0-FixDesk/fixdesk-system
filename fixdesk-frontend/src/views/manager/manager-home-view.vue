@@ -125,7 +125,7 @@ const STATUS_COLORS = {
 const MONTHLY_COLORS = {
   total: '#1D4ED8', // งานทั้งหมด (น้ำเงิน)
   done: '#10B981', // เสร็จสิ้น (เขียว)
-  outsource: '#A78BFA', // จ้างช่างภายนอก (ม่วงอ่อน)
+  outsource: '#A78BFA',
 }
 
 const TREND_COLORS = {
@@ -212,15 +212,21 @@ function buildTooltipHTML({ title = '', rows = [], unitLabel = 'หน่วย:
    Helpers (English names)
 ----------------------------- */
 const calcPercentChange = (current, previous) => {
-  if (previous === 0) return current > 0 ? 100 : 0
+  if (previous === 0) return 0;
+  
   return Math.round(((current - previous) / previous) * 100)
 }
 
-const filterRepairsByMonth = (repairs, year, month) =>
-  repairs.filter((r) => {
-    const d = new Date(r.rf_create_at)
-    return d.getFullYear() === year && d.getMonth() === month
-  })
+const getAnchorDate = (r) => {
+  if (r.rf_user_status === 'done' || r.rf_done_at) {
+    return r.rf_done_at || r.rf_update_at || r.rf_create_at
+  }
+  if (r.rf_user_status === 'in_progress') {
+    // เช็คทั้ง inprocess และ in_process เผื่อชื่อคอลัมน์ใน DB ไม่นิ่ง
+    return r.rf_in_process_at || r.rf_inprocess_at || r.rf_update_at || r.rf_create_at 
+  }
+  return r.rf_create_at || r.rf_update_at
+}
 
 /* -----------------------------
    Summary Cards
@@ -229,37 +235,36 @@ const summaryStats = ref({ total: 0, pending: 0, in_progress: 0, done: 0 })
 const summaryGrowth = ref({ total: 0, pending: 0, in_progress: 0, done: 0 })
 
 const summaryCards = computed(() => [
-  {
-    value: summaryStats.value.total,
-    label: 'งานซ่อมทั้งหมด',
-    unit: 'รายการ',
-    colorClass: 'text-blue-600',
-    filterStatus: 'all',
-    growth: summaryGrowth.value.total,
+  { 
+    value: summaryStats.value.total, 
+    label: 'งานซ่อมทั้งหมด', 
+    unit: 'รายการ', 
+    colorClass: 'text-blue-600', 
+    filterStatus: 'all', 
+    growth: summaryGrowth.value.total 
   },
-  {
-    value: summaryStats.value.pending,
-    label: 'รอดำเนินการทั้งหมด',
-    unit: 'รายการ',
-    colorClass: 'text-orange-500',
-    filterStatus: 'pending',
-    growth: summaryGrowth.value.pending,
+  { 
+    value: summaryStats.value.pending, 
+    label: 'รอดำเนินการทั้งหมด', 
+    unit: 'รายการ', 
+    colorClass: 'text-orange-500', 
+    filterStatus: 'pending', 
+    growth: summaryGrowth.value.pending 
   },
-  {
-    value: summaryStats.value.in_progress,
-    label: 'กำลังดำเนินการทั้งหมด',
-    unit: 'รายการ',
-    colorClass: 'text-sky-600',
-    filterStatus: 'in_progress',
-    growth: summaryGrowth.value.in_progress,
+  { value: summaryStats.value.in_progress, 
+    label: 'กำลังดำเนินการทั้งหมด', 
+    unit: 'รายการ', 
+    colorClass: 'text-sky-600', 
+    filterStatus: 'in_progress', 
+    growth: summaryGrowth.value.in_progress 
   },
-  {
-    value: summaryStats.value.done,
-    label: 'เสร็จสิ้นทั้งหมด',
-    unit: 'รายการ',
-    colorClass: 'text-green-600',
-    filterStatus: 'done',
-    growth: summaryGrowth.value.done,
+  { 
+    value: summaryStats.value.done, 
+    label: 'เสร็จสิ้นทั้งหมด', 
+    unit: 'รายการ', 
+    colorClass: 'text-green-600', 
+    filterStatus: 'done', 
+    growth: summaryGrowth.value.done 
   },
 ])
 
@@ -282,24 +287,22 @@ function updateSummaryCards() {
   }
 
   allRepairs.value.forEach((r) => {
-    if (isMatch(r.rf_create_at, curY, curM)) curTotal++
-    if (isMatch(r.rf_create_at, prevY, prevM)) prevTotal++
+    const anchorDate = getAnchorDate(r)
+    if (!anchorDate) return
 
-    if (r.rf_user_status === 'pending') {
-      if (isMatch(r.rf_create_at, curY, curM)) curPending++
-      if (isMatch(r.rf_create_at, prevY, prevM)) prevPending++
+    // นับเดือนปัจจุบัน
+    if (isMatch(anchorDate, curY, curM)) {
+      curTotal++
+      if (r.rf_user_status === 'pending') curPending++
+      else if (r.rf_user_status === 'in_progress') curInProgress++
+      else curDone++
     }
-
-    if (r.rf_user_status === 'in_progress') {
-      const inProcessDate = r.rf_in_process_at || r.rf_update_at || r.rf_create_at
-      if (isMatch(inProcessDate, curY, curM)) curInProgress++
-      if (isMatch(inProcessDate, prevY, prevM)) prevInProgress++
-    }
-
-    if (r.rf_user_status === 'done') {
-      const doneDate = r.rf_done_at || r.rf_update_at || r.rf_create_at
-      if (isMatch(doneDate, curY, curM)) curDone++
-      if (isMatch(doneDate, prevY, prevM)) prevDone++
+    // นับเดือนก่อนหน้า (เพื่อเทียบ %)
+    if (isMatch(anchorDate, prevY, prevM)) {
+      prevTotal++
+      if (r.rf_user_status === 'pending') prevPending++
+      else if (r.rf_user_status === 'in_progress') prevInProgress++
+      else prevDone++
     }
   })
 
@@ -319,110 +322,70 @@ const monthlyStackedOptions = shallowRef({
   chart: { type: 'bar', stacked: true, toolbar: { show: false } },
   grid: GRID_STYLE,
   plotOptions: { bar: { columnWidth: '55%', borderRadius: 6 } },
-
-  // สีตามลำดับ series (เขียว, ม่วง, น้ำเงินบนสุด)
-  colors: [MONTHLY_COLORS.done, MONTHLY_COLORS.outsource, MONTHLY_COLORS.total],
-
+  colors: [MONTHLY_COLORS.done, MONTHLY_COLORS.total],
   xaxis: { categories: monthLabels },
   legend: { show: false },
-
   dataLabels: {
     enabled: false,
-    enabledOnSeries: [2],
+    enabledOnSeries: [1],
     formatter: (_val, opts) => {
       const i = opts.dataPointIndex
       const s = opts.w.config.series || []
       const done = s[0]?.data?.[i] ?? 0
-      const outsource = s[1]?.data?.[i] ?? 0
-      const otherOrTotalLayer = s[2]?.data?.[i] ?? 0
-      const total = done + outsource + otherOrTotalLayer
+      const remaining = s[1]?.data?.[i] ?? 0
+      const total = done + remaining
       return total > 0 ? `รวม ${total}` : ''
     },
     style: { fontSize: '11px', fontWeight: 700, colors: ['#111827'] },
     offsetY: -6,
     background: { enabled: true, borderRadius: 6, padding: 4, opacity: 0.85 },
   },
-
   tooltip: {
-    enabled: true,
-    shared: true,
-    intersect: false,
-    followCursor: true,
-    y: { title: { formatter: () => '' } }, // ให้ทุกกราฟ “ไม่มีหัวเลขซ้ำๆ”
+    enabled: true, shared: true, intersect: false, followCursor: true,
+    y: { title: { formatter: () => '' } },
     custom: ({ dataPointIndex, w }) => {
       const label = w.globals.labels?.[dataPointIndex] ?? ''
       const done = w.config.series?.[0]?.data?.[dataPointIndex] ?? 0
-      const outsource = w.config.series?.[1]?.data?.[dataPointIndex] ?? 0
-      const blueTop = w.config.series?.[2]?.data?.[dataPointIndex] ?? 0
-      const total = done + outsource + blueTop
-
+      const remaining = w.config.series?.[1]?.data?.[dataPointIndex] ?? 0
+      const total = done + remaining
       return buildTooltipHTML({
-        title: label,
+        title: `เดือน: ${label}`,
         rows: [
           { label: 'งานซ่อมทั้งหมด', value: `${total} รายการ`, color: MONTHLY_COLORS.total },
           { label: 'งานซ่อมที่เสร็จสิ้นแล้ว', value: `${done} รายการ`, color: MONTHLY_COLORS.done },
-          {
-            label: 'งานซ่อมที่จ้างช่างภายนอก',
-            value: `${outsource} รายการ`,
-            color: MONTHLY_COLORS.outsource,
-          },
         ],
-        unitLabel: 'หน่วย: รายการ',
       })
     },
   },
-
-  yaxis: {
-    title: {
-      text: 'จำนวน (รายการ)',
-      offsetX: 6,
-      style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' }
-    },
-    axisBorder: { show: true, color: '#9CA3AF' },
-    labels: { formatter: (v) => `${Math.round(v)}` }
-  },
+  yaxis: { title: { text: 'จำนวน (รายการ)', offsetX: 6, style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' } }, axisBorder: { show: true, color: '#9CA3AF' }, labels: { formatter: (v) => `${Math.round(v)}` } },
 })
 
 const monthlyStackedSeries = ref([
   { name: 'งานที่เสร็จสิ้น', data: new Array(12).fill(0) },
-  { name: 'งานที่จ้างช่างภายนอก', data: new Array(12).fill(0) },
-  { name: 'งานซ่อมทั้งหมด', data: new Array(12).fill(0) },
+  { name: 'งานซ่อมที่เหลือ', data: new Array(12).fill(0) },
 ])
 
-/* -----------------------------
-   งานซ่อมรายเดือน (Stacked)
------------------------------ */
 function updateMonthlyStackedChart() {
-  const totalData = new Array(12).fill(0)
-  const doneData = new Array(12).fill(0)
-  const outsourceData = new Array(12).fill(0)
+  const total = new Array(12).fill(0)
+  const done = new Array(12).fill(0)
+  const targetYear = selectedYear.value
 
   allRepairs.value.forEach((r) => {
-    if (r.rf_create_at) {
-      const createDate = new Date(r.rf_create_at)
-      if (createDate.getFullYear() === selectedYear.value) {
-        totalData[createDate.getMonth()] += 1
-      }
-    }
-
-    if (r.rf_user_status === 'done') {
-      const doneDateStr = r.rf_done_at || r.rf_update_at
-      if (doneDateStr) {
-        const doneDate = new Date(doneDateStr)
-        if (doneDate.getFullYear() === selectedYear.value) {
-          const doneMonth = doneDate.getMonth()
-          if (r.rf_is_outsourced == 1) outsourceData[doneMonth] += 1
-          else doneData[doneMonth] += 1
-        }
-      }
+    const anchorDate = getAnchorDate(r)
+    if (!anchorDate) return
+    
+    const d = new Date(anchorDate)
+    if (d.getFullYear() === targetYear) {
+      const m = d.getMonth()
+      total[m] += 1
+      if (r.rf_user_status === 'done' || r.rf_done_at) done[m] += 1
     }
   })
-  const blueTop = totalData.map((t, i) => Math.max(0, t - (doneData[i] + outsourceData[i])))
 
+  const remaining = total.map((t, i) => Math.max(0, t - done[i]))
   monthlyStackedSeries.value = [
-    { name: 'งานที่เสร็จสิ้น', data: doneData },
-    { name: 'งานที่จ้างช่างภายนอก', data: outsourceData },
-    { name: 'งานซ่อมทั้งหมด', data: blueTop },
+    { name: 'งานที่เสร็จสิ้น', data: done },
+    { name: 'งานซ่อมที่เหลือ', data: remaining },
   ]
 }
 
@@ -436,22 +399,18 @@ const statusPieOptions = shallowRef({
   legend: { show: false },
   dataLabels: { enabled: true },
   tooltip: {
-    enabled: true,
-    followCursor: true,
-    y: { title: { formatter: () => '' } },
+    enabled: true, followCursor: true, y: { title: { formatter: () => '' } },
     custom: ({ series, seriesIndex, w }) => {
       const label = w.globals.labels?.[seriesIndex] ?? ''
       const value = series?.[seriesIndex] ?? 0
       const percent = w.globals.seriesPercent?.[seriesIndex] ?? 0
       const color = w.globals.colors?.[seriesIndex] ?? '#111827'
-
       return buildTooltipHTML({
         title: label,
         rows: [
           { label: 'จำนวนงานซ่อม', value: `${value} รายการ`, color },
           { label: 'เปอร์เซ็นต์', value: `${Number(percent).toFixed(1)}%`, color },
-        ],
-        unitLabel: 'หน่วย: รายการ / %',
+        ], unitLabel: 'หน่วย: รายการ / %'
       })
     },
   },
@@ -463,8 +422,13 @@ function updateStatusPieChart() {
   const isWeek = statusMode.value === 'week'
   const targetYear = selectedYear.value
   const targetMonth = selectedMonthIndex.value
-
   const now = new Date()
+
+  if (isWeek && (targetYear !== now.getFullYear() || targetMonth !== now.getMonth())) {
+    statusPieSeries.value = [0, 0, 0]
+    return
+  }
+
   const diffToMonday = (now.getDay() + 6) % 7
   const startOfWeek = new Date(now)
   startOfWeek.setDate(now.getDate() - diffToMonday)
@@ -476,17 +440,20 @@ function updateStatusPieChart() {
   const isMatch = (dateStr) => {
     if (!dateStr) return false
     const d = new Date(dateStr)
-    return isWeek
-      ? (d >= startOfWeek && d <= endOfWeek)
+    return isWeek 
+      ? (d >= startOfWeek && d <= endOfWeek) 
       : (d.getFullYear() === targetYear && d.getMonth() === targetMonth)
   }
 
   let pending = 0, inProgress = 0, done = 0
 
   allRepairs.value.forEach(r => {
-    if (r.rf_user_status === 'pending' && isMatch(r.rf_create_at)) pending++
-    else if (r.rf_user_status === 'in_progress' && isMatch(r.rf_in_process_at || r.rf_update_at || r.rf_create_at)) inProgress++
-    else if (r.rf_user_status === 'done' && isMatch(r.rf_done_at || r.rf_update_at || r.rf_create_at)) done++
+    const anchorDate = getAnchorDate(r)
+    if (isMatch(anchorDate)) {
+      if (r.rf_user_status === 'pending') pending++
+      else if (r.rf_user_status === 'in_progress') inProgress++
+      else done++
+    }
   })
 
   statusPieSeries.value = [pending, inProgress, done]
@@ -496,68 +463,29 @@ function updateStatusPieChart() {
    แนวโน้มการแจ้งซ่อม (สัปดาห์ปัจจุบัน)
 ----------------------------- */
 const weeklyTrendOptions = shallowRef({
-  chart: {
-    toolbar: { show: false },
-    zoom: { enabled: false },
-  },
+  chart: { toolbar: { show: false }, zoom: { enabled: false } },
   grid: GRID_STYLE,
   colors: [TREND_COLORS.total, TREND_COLORS.pending, TREND_COLORS.in_progress, TREND_COLORS.done],
   stroke: { curve: 'smooth', width: 3 },
   dataLabels: { enabled: false },
-
-  xaxis: {
-    categories: ['จันทร์', 'อังคาร', 'พุธ', 'พฤหัส', 'ศุกร์', 'เสาร์', 'อาทิตย์'],
-    tooltip: { enabled: false },
-    title: {
-      text: 'วันในสัปดาห์',
-      style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' }
-    },
-    axisBorder: { show: true, color: '#9CA3AF' }
-  },
-
+  xaxis: { categories: ['จันทร์', 'อังคาร', 'พุธ', 'พฤหัส', 'ศุกร์', 'เสาร์', 'อาทิตย์'], tooltip: { enabled: false }, title: { text: 'วันในสัปดาห์', style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' } }, axisBorder: { show: true, color: '#9CA3AF' } },
   markers: { size: 5, hover: { size: 7 } },
-
   tooltip: {
-    enabled: true,
-    shared: true,
-    intersect: false,
-    followCursor: true,
-    x: { show: false },
-    y: { title: { formatter: () => '' } },
-
+    enabled: true, shared: true, intersect: false, followCursor: true, x: { show: false }, y: { title: { formatter: () => '' } },
     custom: ({ series, dataPointIndex, w }) => {
-      // แก้ไขตรงนี้: ดึงชื่อวันจาก categories แทน globals.labels
       const dayLabel = w.config.xaxis.categories[dataPointIndex] || ''
-
       const names = w.globals.seriesNames ?? []
       const hidden = new Set(w.globals.collapsedSeriesIndices ?? [])
-
-      const rows = names
-        .map((name, i) => {
-          if (hidden.has(i)) return null
-          const value = series[i][dataPointIndex] ?? 0
-          const color = w.globals.colors[i] ?? '#111827'
-          return { label: name, value: `${value} รายการ`, color }
-        })
-        .filter(Boolean)
-
-      return buildTooltipHTML({
-        title: dayLabel,
-        rows,
-        unitLabel: 'หน่วย: รายการ',
-      })
+      const rows = names.map((name, i) => {
+        if (hidden.has(i)) return null
+        const value = series[i][dataPointIndex] ?? 0
+        const color = w.globals.colors[i] ?? '#111827'
+        return { label: name, value: `${value} รายการ`, color }
+      }).filter(Boolean)
+      return buildTooltipHTML({ title: dayLabel, rows })
     },
   },
-
-  yaxis: {
-    title: {
-      text: 'จำนวน (รายการ)',
-      offsetX: 6,
-      style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' }
-    },
-    axisBorder: { show: true, color: '#9CA3AF' },
-    labels: { formatter: (v) => `${Math.round(v)}` }
-  },
+  yaxis: { title: { text: 'จำนวน (รายการ)', offsetX: 6, style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' } }, axisBorder: { show: true, color: '#9CA3AF' }, labels: { formatter: (v) => `${Math.round(v)}` } },
 })
 
 const weeklyTrendSeries = ref([
@@ -568,18 +496,26 @@ const weeklyTrendSeries = ref([
 ])
 
 function updateWeeklyTrendChart() {
-  const buckets = new Array(7)
-    .fill(0)
-    .map(() => ({ total: 0, pending: 0, in_progress: 0, done: 0 }))
-
+  const targetYear = selectedYear.value
+  const targetMonth = selectedMonthIndex.value
   const now = new Date()
-  const day = now.getDay()
-  const diffToMonday = (day + 6) % 7
 
+  if (targetYear !== now.getFullYear() || targetMonth !== now.getMonth()) {
+    weeklyTrendSeries.value = [
+      { name: 'งานซ่อมทั้งหมด', data: new Array(7).fill(0) },
+      { name: 'รอดำเนินการ', data: new Array(7).fill(0) },
+      { name: 'กำลังดำเนินการ', data: new Array(7).fill(0) },
+      { name: 'เสร็จสิ้น', data: new Array(7).fill(0) },
+    ]
+    return
+  }
+
+  const buckets = new Array(7).fill(0).map(() => ({ total: 0, pending: 0, in_progress: 0, done: 0 }))
+  
+  const diffToMonday = (now.getDay() + 6) % 7
   const startOfWeek = new Date(now)
   startOfWeek.setDate(now.getDate() - diffToMonday)
   startOfWeek.setHours(0, 0, 0, 0)
-
   const endOfWeek = new Date(startOfWeek)
   endOfWeek.setDate(startOfWeek.getDate() + 6)
   endOfWeek.setHours(23, 59, 59, 999)
@@ -596,29 +532,14 @@ function updateWeeklyTrendChart() {
   }
 
   allRepairs.value.forEach((r) => {
-    if (isThisWeek(r.rf_create_at)) {
-      const idx = idxOf(r.rf_create_at)
+    const anchorDate = getAnchorDate(r)
+    if (isThisWeek(anchorDate)) {
+      const idx = idxOf(anchorDate)
       buckets[idx].total += 1
-
-      if (r.rf_user_status === 'pending') {
-        buckets[idx].pending += 1
-      }
-    }
-
-    if (r.rf_user_status === 'in_progress') {
-      const inProcessDate = r.rf_inprocess_at || r.rf_update_at || r.rf_create_at
-      if (isThisWeek(inProcessDate)) {
-        const idx = idxOf(inProcessDate)
-        buckets[idx].in_progress += 1
-      }
-    }
-
-    if (r.rf_user_status === 'done') {
-      const doneDate = r.rf_done_at || r.rf_update_at || r.rf_create_at
-      if (isThisWeek(doneDate)) {
-        const idx = idxOf(doneDate)
-        buckets[idx].done += 1
-      }
+      
+      if (r.rf_user_status === 'pending') buckets[idx].pending += 1
+      else if (r.rf_user_status === 'in_progress') buckets[idx].in_progress += 1
+      else buckets[idx].done += 1
     }
   })
 
@@ -637,60 +558,23 @@ const efficiencyChartOptions = shallowRef({
   chart: { toolbar: { show: false } },
   grid: GRID_STYLE,
   colors: ['#f97316'],
-  plotOptions: {
-    bar: {
-      horizontal: true,
-      borderRadius: 6,
-      barHeight: '55%',
-    },
-  },
-  dataLabels: {
-    enabled: true,
-    formatter: (v) => `${Number(v).toFixed(1)}%`,
-    style: { fontSize: '11px' },
-  },
-  xaxis: {
-    categories: [],
-    min: 0,
-    max: 100,
-    labels: { formatter: (v) => `${Math.round(v)}%` },
-    title: {
-      text: 'อัตราสำเร็จ (%)',
-      style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' }
-    },
-    axisBorder: { show: true, color: '#9CA3AF' }
-  },
-  yaxis: {
-    title: {
-      text: 'รายชื่อช่าง',
-      offsetX: 6,
-      style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' }
-    },
-    axisBorder: { show: true, color: '#9CA3AF' }
-  },
+  plotOptions: { bar: { horizontal: true, borderRadius: 6, barHeight: '55%' } },
+  dataLabels: { enabled: true, formatter: (v) => `${Number(v).toFixed(1)}%`, style: { fontSize: '11px' } },
+  xaxis: { categories: [], min: 0, max: 100, labels: { formatter: (v) => `${Math.round(v)}%` }, title: { text: 'อัตราสำเร็จ (%)', style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' } }, axisBorder: { show: true, color: '#9CA3AF' } },
+  yaxis: { title: { text: 'รายชื่อช่าง', offsetX: 6, style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' } }, axisBorder: { show: true, color: '#9CA3AF' } },
   tooltip: {
-    enabled: true,
-    shared: false,
-    intersect: true,
-    followCursor: true,
-    y: { title: { formatter: () => '' } },
+    enabled: true, shared: false, intersect: true, followCursor: true, y: { title: { formatter: () => '' } },
     custom: ({ series, seriesIndex, dataPointIndex, w }) => {
       const tech = w.globals.labels?.[dataPointIndex] || 'ไม่ระบุ'
       const rate = series?.[seriesIndex]?.[dataPointIndex] ?? 0
       const meta = efficiencyMeta.value?.[dataPointIndex] || { total: 0, done: 0 }
-
       return buildTooltipHTML({
         title: `ช่าง: ${tech}`,
         rows: [
           { label: 'งานซ่อมที่ได้รับมอบหมาย', value: `${meta.total} รายการ`, color: EFFICIENCY_COLORS.rate },
           { label: 'งานซ่อมที่ดำเนินการเสร็จสิ้น', value: `${meta.done} รายการ`, color: EFFICIENCY_COLORS.rate },
-          {
-            label: 'อัตราซ่อมสำเร็จ',
-            value: `${Number(rate).toFixed(1)}%`,
-            color: "#f97316",
-          },
-        ],
-        unitLabel: 'หน่วย: รายการ / %',
+          { label: 'อัตราซ่อมสำเร็จ', value: `${Number(rate).toFixed(1)}%`, color: "#f97316" },
+        ], unitLabel: 'หน่วย: รายการ / %'
       })
     },
   },
@@ -701,32 +585,33 @@ const efficiencyMeta = ref([])
 
 function buildTechnicianEfficiency(repairs) {
   const map = {}
-
   repairs.forEach((r) => {
-    const techName =
-      r.technician_name || r.tech_name || r.rf_technician_name || r.tt_name || 'ไม่ระบุ'
+    const techName = r.technician_name || r.tech_name || r.rf_technician_name || r.tt_name || 'ไม่ระบุ'
     if (!map[techName]) map[techName] = { total: 0, done: 0 }
     map[techName].total += 1
-    if (r.rf_user_status === 'done') map[techName].done += 1
+    if (r.rf_user_status === 'done' || r.rf_done_at) map[techName].done += 1
   })
-
-  return Object.entries(map)
-    .map(([name, v]) => ({
-      name,
-      total: v.total,
-      done: v.done,
-      rate: v.total > 0 ? (v.done / v.total) * 100 : 0,
-    }))
-    .sort((a, b) => b.total - a.total)
-    .slice(0, 8)
+  return Object.entries(map).map(([name, v]) => ({
+      name, total: v.total, done: v.done, rate: v.total > 0 ? (v.done / v.total) * 100 : 0
+    })).sort((a, b) => b.total - a.total).slice(0, 8)
 }
 
 function updateEfficiencyChart() {
   const isWeek = efficiencyMode.value === 'week'
   const targetYear = selectedYear.value
   const targetMonth = selectedMonthIndex.value
-
   const now = new Date()
+
+  if (isWeek && (targetYear !== now.getFullYear() || targetMonth !== now.getMonth())) {
+    efficiencyMeta.value = []
+    efficiencyChartOptions.value = { 
+      ...efficiencyChartOptions.value, 
+      xaxis: { ...efficiencyChartOptions.value.xaxis, categories: ['ไม่มีข้อมูล'] } 
+    }
+    efficiencyChartSeries.value = [{ name: 'อัตราสำเร็จ', data: [0] }]
+    return
+  }
+
   const diffToMonday = (now.getDay() + 6) % 7
   const startOfWeek = new Date(now)
   startOfWeek.setDate(now.getDate() - diffToMonday)
@@ -738,25 +623,23 @@ function updateEfficiencyChart() {
   const isTargetPeriod = (dateStr) => {
     if (!dateStr) return false
     const d = new Date(dateStr)
-    if (isWeek) {
-      return d >= startOfWeek && d <= endOfWeek
-    } else {
-      return d.getFullYear() === targetYear && d.getMonth() === targetMonth
-    }
+    if (isWeek) return d >= startOfWeek && d <= endOfWeek
+    return d.getFullYear() === targetYear && d.getMonth() === targetMonth
   }
 
-  const filteredRepairs = allRepairs.value.filter((r) => {
-    const activeDate = r.rf_done_at || r.rf_in_process_at || r.rf_update_at || r.rf_create_at
-    return isTargetPeriod(activeDate)
-  })
-
+  const filteredRepairs = allRepairs.value.filter((r) => isTargetPeriod(getAnchorDate(r)))
   const rows = buildTechnicianEfficiency(filteredRepairs)
 
+  // ถ้าไม่มีข้อมูลเลยในเดือน/สัปดาห์นั้น ให้ตั้งค่าเป็น "ไม่มีข้อมูล" ป้องกันบั๊กกราฟเบี้ยว
+  const categories = rows.length ? rows.map((r) => r.name) : ['ไม่มีข้อมูล']
+  const data = rows.length ? rows.map((r) => Number(r.rate.toFixed(1))) : [0]
+
   efficiencyMeta.value = rows.map((r) => ({ total: r.total, done: r.done }))
-  efficiencyChartOptions.value.xaxis.categories = rows.map((r) => r.name)
-  efficiencyChartSeries.value = [
-    { name: 'อัตราสำเร็จ', data: rows.map((r) => Number(r.rate.toFixed(1))) },
-  ]
+  efficiencyChartOptions.value = { 
+    ...efficiencyChartOptions.value, 
+    xaxis: { ...efficiencyChartOptions.value.xaxis, categories } 
+  }
+  efficiencyChartSeries.value = [{ name: 'อัตราสำเร็จ', data }]
 }
 
 /* -----------------------------
@@ -764,62 +647,17 @@ function updateEfficiencyChart() {
 ----------------------------- */
 const typeOptions = shallowRef({
   chart: { toolbar: { show: false }, zoom: { enabled: false } },
-  grid: GRID_STYLE,
-  colors: ['#7c3aed'],
-  plotOptions: { bar: { horizontal: true, borderRadius: 6 } },
-  dataLabels: { enabled: false },
-  xaxis: {
-    categories: ['ไม่มีข้อมูล'],
-    title: {
-      text: 'จำนวนงาน (รายการ)',
-      style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' }
-    },
-    axisBorder: { show: true, color: '#9CA3AF' },
-    labels: { formatter: (v) => `${Math.round(v)}` }
-  },
-  yaxis: {
-    title: {
-      text: 'ประเภทงานซ่อม',
-      offsetX: 6,
-      style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' }
-    },
-    axisBorder: { show: true, color: '#9CA3AF' }
-  },
+  grid: GRID_STYLE, colors: ['#7c3aed'],
+  plotOptions: { bar: { horizontal: true, borderRadius: 6 } }, dataLabels: { enabled: false },
+  xaxis: { categories: ['ไม่มีข้อมูล'], title: { text: 'จำนวนงาน (รายการ)', style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' } }, axisBorder: { show: true, color: '#9CA3AF' }, labels: { formatter: (v) => `${Math.round(v)}` } },
+  yaxis: { title: { text: 'ประเภทงานซ่อม', offsetX: 6, style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' } }, axisBorder: { show: true, color: '#9CA3AF' } },
   tooltip: {
-    enabled: true,
-    shared: false,
-    intersect: true,
-    followCursor: true,
-    y: { title: { formatter: () => '' } },
+    enabled: true, shared: false, intersect: true, followCursor: true, y: { title: { formatter: () => '' } },
     custom: ({ series, seriesIndex, dataPointIndex, w }) => {
       const label = w.globals.labels?.[dataPointIndex] ?? ''
       const val = series?.[seriesIndex]?.[dataPointIndex] ?? 0
       const color = w.globals.colors?.[seriesIndex] ?? TYPE_COLORS.total
-
-      return buildTooltipHTML({
-        title: label,
-        rows: [{ label: 'จำนวนงาน', value: `${val} รายการ`, color }],
-        unitLabel: 'หน่วย: รายการ',
-      })
-    },
-  },
-
-  tooltip: {
-    enabled: true,
-    shared: false,
-    intersect: true,
-    followCursor: true,
-    y: { title: { formatter: () => '' } },
-    custom: ({ series, seriesIndex, dataPointIndex, w }) => {
-      const label = w.globals.labels?.[dataPointIndex] ?? ''
-      const val = series?.[seriesIndex]?.[dataPointIndex] ?? 0
-      const color = w.globals.colors?.[seriesIndex] ?? TYPE_COLORS.total
-
-      return buildTooltipHTML({
-        title: label,
-        rows: [{ label: 'จำนวนงานซ่อม', value: `${val} รายการ`, color }],
-        unitLabel: 'หน่วย: รายการ',
-      })
+      return buildTooltipHTML({ title: label, rows: [{ label: 'จำนวนงาน', value: `${val} รายการ`, color }] })
     },
   },
 })
@@ -832,8 +670,9 @@ function updateTypeChart() {
   const typeCounts = {}
 
   allRepairs.value.forEach((r) => {
-    if (!r.rf_create_at) return
-    const d = new Date(r.rf_create_at)
+    const anchorDate = getAnchorDate(r)
+    if (!anchorDate) return
+    const d = new Date(anchorDate)
 
     if (d.getFullYear() === targetYear && d.getMonth() === targetMonth) {
       const name = r.tt_name || 'ไม่ระบุ'
@@ -841,20 +680,11 @@ function updateTypeChart() {
     }
   })
 
-  const sorted = Object.entries(typeCounts)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 10)
-
+  const sorted = Object.entries(typeCounts).sort(([, a], [, b]) => b - a).slice(0, 10)
   const labels = sorted.map(([name]) => name)
   const values = sorted.map(([, count]) => count)
 
-  typeOptions.value = {
-    ...typeOptions.value,
-    xaxis: {
-      ...typeOptions.value.xaxis,
-      categories: labels.length ? labels : ['ไม่มีข้อมูล']
-    }
-  }
+  typeOptions.value = { ...typeOptions.value, xaxis: { ...typeOptions.value.xaxis, categories: labels.length ? labels : ['ไม่มีข้อมูล'] } }
   typeSeries.value = [{ name: 'จำนวนงาน', data: values.length ? values : [0] }]
 }
 
@@ -863,44 +693,17 @@ function updateTypeChart() {
 ----------------------------- */
 const deptOptions = shallowRef({
   chart: { toolbar: { show: false }, zoom: { enabled: false } },
-  grid: GRID_STYLE,
-  colors: ['#166534'],
-  plotOptions: { bar: { horizontal: true, borderRadius: 6 } },
-  dataLabels: { enabled: false },
-  xaxis: {
-    categories: ['ไม่มีข้อมูล'],
-    title: {
-      text: 'จำนวนแจ้งซ่อม (รายการ)',
-      style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' }
-    },
-    axisBorder: { show: true, color: '#9CA3AF' },
-    labels: { formatter: (v) => `${Math.round(v)}` }
-  },
-  yaxis: {
-    title: {
-      text: 'หน่วยงาน',
-      offsetX: 6,
-      style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' }
-    },
-    axisBorder: { show: true, color: '#9CA3AF' }
-  },
-
+  grid: GRID_STYLE, colors: ['#166534'],
+  plotOptions: { bar: { horizontal: true, borderRadius: 6 } }, dataLabels: { enabled: false },
+  xaxis: { categories: ['ไม่มีข้อมูล'], title: { text: 'จำนวนแจ้งซ่อม (รายการ)', style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' } }, axisBorder: { show: true, color: '#9CA3AF' }, labels: { formatter: (v) => `${Math.round(v)}` } },
+  yaxis: { title: { text: 'หน่วยงาน', offsetX: 6, style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' } }, axisBorder: { show: true, color: '#9CA3AF' } },
   tooltip: {
-    enabled: true,
-    shared: false,
-    intersect: true,
-    followCursor: true,
-    y: { title: { formatter: () => '' } },
+    enabled: true, shared: false, intersect: true, followCursor: true, y: { title: { formatter: () => '' } },
     custom: ({ series, seriesIndex, dataPointIndex, w }) => {
       const label = w.globals.labels?.[dataPointIndex] ?? ''
       const val = series?.[seriesIndex]?.[dataPointIndex] ?? 0
       const color = w.globals.colors?.[seriesIndex] ?? DEPT_COLORS.total
-
-      return buildTooltipHTML({
-        title: label,
-        rows: [{ label: 'จำนวนงานซ่อม', value: `${val} รายการ`, color }],
-        unitLabel: 'หน่วย: รายการ',
-      })
+      return buildTooltipHTML({ title: label, rows: [{ label: 'จำนวนงานซ่อม', value: `${val} รายการ`, color }] })
     },
   },
 })
@@ -913,8 +716,9 @@ function updateDepartmentChart() {
   const deptCounts = {}
 
   allRepairs.value.forEach((r) => {
-    if (!r.rf_create_at) return
-    const d = new Date(r.rf_create_at)
+    const anchorDate = getAnchorDate(r)
+    if (!anchorDate) return
+    const d = new Date(anchorDate)
 
     if (d.getFullYear() === targetYear && d.getMonth() === targetMonth) {
       const name = r.department_name || r.dp_name || r.rf_department_name || r.org_name || r.unit_name || 'ไม่ระบุ'
@@ -922,21 +726,11 @@ function updateDepartmentChart() {
     }
   })
 
-  const sorted = Object.entries(deptCounts)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 10)
-
+  const sorted = Object.entries(deptCounts).sort(([, a], [, b]) => b - a).slice(0, 10)
   const labels = sorted.map(([name]) => name)
   const values = sorted.map(([, count]) => count)
 
-  // บังคับให้ Vue และ ApexCharts รีเฟรชกราฟใหม่ตอนเปลี่ยนเดือน
-  deptOptions.value = {
-    ...deptOptions.value,
-    xaxis: {
-      ...deptOptions.value.xaxis,
-      categories: labels.length ? labels : ['ไม่มีข้อมูล']
-    }
-  }
+  deptOptions.value = { ...deptOptions.value, xaxis: { ...deptOptions.value.xaxis, categories: labels.length ? labels : ['ไม่มีข้อมูล'] } }
   deptSeries.value = [{ name: 'งานซ่อมทั้งหมด', data: values.length ? values : [0] }]
 }
 
@@ -946,19 +740,13 @@ function updateDepartmentChart() {
 function setStatusMode(mode) {
   if (statusMode.value === mode) return
   statusMode.value = mode
-  const repairsInYear = allRepairs.value.filter(
-    (r) => new Date(r.rf_create_at).getFullYear() === selectedYear.value,
-  )
-  updateStatusPieChart(repairsInYear)
+  updateStatusPieChart()
 }
 
 function setEfficiencyMode(mode) {
   if (efficiencyMode.value === mode) return
   efficiencyMode.value = mode
-  const repairsInYear = allRepairs.value.filter(
-    (r) => new Date(r.rf_create_at).getFullYear() === selectedYear.value,
-  )
-  updateEfficiencyChart(repairsInYear)
+  updateEfficiencyChart()
 }
 
 /* -----------------------------
@@ -966,23 +754,14 @@ function setEfficiencyMode(mode) {
 ----------------------------- */
 function refreshDashboard() {
   if (!allRepairs.value.length) return
-  const repairsInYear = allRepairs.value.filter(
-    (r) => new Date(r.rf_create_at).getFullYear() === selectedYear.value,
-  )
-  const repairsInMonth = filterRepairsByMonth(
-    allRepairs.value,
-    selectedYear.value,
-    selectedMonthIndex.value
-  )
-
   updateSummaryCards()
-  updateMonthlyStackedChart(repairsInYear)
-  updateStatusPieChart(repairsInYear)
-  updateWeeklyTrendChart(repairsInYear)
-  updateEfficiencyChart(repairsInYear)
-  updateTypeChart(repairsInMonth)
-  updateDepartmentChart(repairsInMonth)
-  updateCompareBarChart(repairsInYear)
+  updateMonthlyStackedChart()
+  updateStatusPieChart()
+  updateWeeklyTrendChart()
+  updateEfficiencyChart()
+  updateTypeChart()
+  updateDepartmentChart()
+  updateCompareBarChart()
 }
 
 /* -----------------------------
@@ -992,57 +771,24 @@ const compareBarOptions = shallowRef({
   chart: { type: 'bar', toolbar: { show: false } },
   grid: GRID_STYLE,
   colors: [MONTHLY_COLORS.done, MONTHLY_COLORS.outsource],
-  plotOptions: {
-    bar: {
-      horizontal: false,
-      columnWidth: '55%',
-      borderRadius: 4,
-      dataLabels: { position: 'top' } // แสดงตัวเลขบนแท่ง
-    }
-  },
-  dataLabels: {
-    enabled: false,
-    formatter: (val) => val > 0 ? val : '',
-    offsetY: -20,
-    style: { fontSize: '11px', colors: ['#4B5563'] }
-  },
+  plotOptions: { bar: { horizontal: false, columnWidth: '55%', borderRadius: 4, dataLabels: { position: 'top' } } },
+  dataLabels: { enabled: false, formatter: (val) => val > 0 ? val : '', offsetY: -20, style: { fontSize: '11px', colors: ['#4B5563'] } },
   stroke: { show: true, width: 2, colors: ['transparent'] },
-  xaxis: {
-    categories: monthLabels,
-    title: {
-      text: 'เดือน',
-      style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' }
-    },
-    axisBorder: { show: true, color: '#9CA3AF' }
-  },
-  yaxis: {
-    title: {
-      text: 'จำนวนงาน (รายการ)',
-      offsetX: 6,
-      style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' }
-    },
-    axisBorder: { show: true, color: '#9CA3AF' },
-    labels: { formatter: (v) => `${Math.round(v)}` }
-  },
-  legend: { show: false }, // ซ่อน Legend เริ่มต้น (เราจะสร้างเองข้างนอกให้ตรงกับกราฟอื่น)
+  xaxis: { categories: monthLabels, title: { text: 'เดือน', style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' } }, axisBorder: { show: true, color: '#9CA3AF' } },
+  yaxis: { title: { text: 'จำนวนงาน (รายการ)', offsetX: 6, style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' } }, axisBorder: { show: true, color: '#9CA3AF' }, labels: { formatter: (v) => `${Math.round(v)}` } },
+  legend: { show: false },
   tooltip: {
-    enabled: true,
-    shared: true,
-    intersect: false,
-    followCursor: true,
-    y: { title: { formatter: () => '' } },
+    enabled: true, shared: true, intersect: false, followCursor: true, y: { title: { formatter: () => '' } },
     custom: ({ dataPointIndex, w }) => {
       const label = w.globals.labels?.[dataPointIndex] ?? ''
       const done = w.config.series?.[0]?.data?.[dataPointIndex] ?? 0
       const outsource = w.config.series?.[1]?.data?.[dataPointIndex] ?? 0
-
       return buildTooltipHTML({
         title: `เดือน: ${label}`,
         rows: [
           { label: 'ช่างดำเนินการเอง', value: `${done} รายการ`, color: MONTHLY_COLORS.done },
           { label: 'จ้างช่างภายนอก', value: `${outsource} รายการ`, color: MONTHLY_COLORS.outsource },
         ],
-        unitLabel: 'หน่วย: รายการ',
       })
     },
   }
@@ -1056,23 +802,18 @@ const compareBarSeries = ref([
 function updateCompareBarChart() {
   const doneData = new Array(12).fill(0)
   const outsourceData = new Array(12).fill(0)
+  const targetYear = selectedYear.value
 
   allRepairs.value.forEach((r) => {
-    if (r.rf_user_status === 'done') {
-      // ใช้วันที่ทำเสร็จ (rf_done_at) เป็นเกณฑ์ หากไม่มีให้ใช้วันที่อัปเดตล่าสุด
-      const doneDateStr = r.rf_done_at || r.rf_update_at;
-      if (!doneDateStr) return;
+    if (r.rf_user_status === 'done' || r.rf_done_at) { 
+      const anchorDate = r.rf_done_at || r.rf_update_at || r.rf_create_at
+      if (!anchorDate) return
 
-      const doneDate = new Date(doneDateStr);
-
-      // เช็คว่างานนี้ "ทำเสร็จ" ในปีที่เลือกใช่หรือไม่
-      if (doneDate.getFullYear() === selectedYear.value) {
-        const m = doneDate.getMonth()
-        if (r.rf_repair_method == 'outsource') {
-          outsourceData[m] += 1
-        } else if (r.rf_repair_method == 'in_house') {
-          doneData[m] += 1
-        }
+      const d = new Date(anchorDate)
+      if (d.getFullYear() === targetYear) {
+        const m = d.getMonth()
+        if (r.rf_is_outsourced == 1 || r.rf_repair_method === 'outsource') outsourceData[m] += 1
+        else doneData[m] += 1
       }
     }
   })
@@ -1096,31 +837,43 @@ async function fetchDashboardData() {
     error.value = null
 
     const { repairs, techTypes } = await fetchManagerDashboard(API_BASE)
+<<<<<<< fix/stock/phupa
     allRepairs.value = repairs
     allTechTypes.value = techTypes
+=======
+    allRepairs.value = repairs || []
+    allTechTypes.value = techTypes || []
+>>>>>>> review-code
 
     const years = new Set()
-    repairs.forEach((r) => years.add(new Date(r.rf_create_at).getFullYear()))
+    
+    allRepairs.value.forEach((r) => {
+      if (r.rf_create_at) years.add(new Date(r.rf_create_at).getFullYear())
+      if (r.rf_done_at) years.add(new Date(r.rf_done_at).getFullYear())
+      if (r.rf_in_process_at) years.add(new Date(r.rf_in_process_at).getFullYear())
+    })
+    
     availableYears.value = Array.from(years).sort((a, b) => b - a)
 
-    if (availableYears.value.length > 0) selectedYear.value = availableYears.value[0]
+    // ป้องกันหน้าจอแดง: ถ้าไม่มีปีในฐานข้อมูลเลย ให้ใช้ปีปัจจุบัน
+    if (availableYears.value.length === 0) {
+      availableYears.value = [new Date().getFullYear()]
+    }
 
-    const repairsInYear = allRepairs.value.filter(
-      (r) => new Date(r.rf_create_at).getFullYear() === selectedYear.value,
-    )
-    let latestMonth = -1
-    repairsInYear.forEach((r) => {
-      latestMonth = Math.max(latestMonth, new Date(r.rf_create_at).getMonth())
-    })
-    selectedMonthIndex.value = latestMonth >= 0 ? latestMonth : new Date().getMonth()
+    // ตั้งค่าปีเริ่มต้น (ถ้ายังไม่มีการเลือก หรือปีที่เลือกไม่อยู่ในระบบแล้ว)
+    if (!selectedYear.value || !availableYears.value.includes(selectedYear.value)) {
+      selectedYear.value = availableYears.value[0]
+    }
 
     refreshDashboard()
   } catch (err) {
+    console.error("Dashboard Fetch Error:", err)
     error.value = 'ไม่สามารถโหลดข้อมูลได้ กรุณาลองใหม่อีกครั้ง'
   } finally {
     isLoading.value = false
   }
 }
+
 onMounted(() => {
   fetchDashboardData()
   fetchUserProfileData()
@@ -1212,6 +965,7 @@ onMounted(() => {
               </div>
 
               <div class="text-right">
+<<<<<<< fix/stock/phupa
                 <div v-if="card.growth !== undefined" :class="[
                   'text-sm font-medium flex items-center justify-end',
                   card.growth > 0
@@ -1220,11 +974,24 @@ onMounted(() => {
                       ? 'text-red-600'
                       : 'text-gray-500',
                 ]">
+=======
+                <div v-if="card.growth === 0" class="text-sm font-medium flex items-center justify-end text-gray-500">
+                  <span>→</span>
+                  <span class="ml-1">0%</span>
+                </div>
+                
+                <div v-else
+                  :class="[
+                    'text-sm font-medium flex items-center justify-end',
+                    card.growth > 0 ? 'text-green-600' : 'text-red-600'
+                  ]"
+                >
+>>>>>>> review-code
                   <span v-if="card.growth > 0">↗</span>
-                  <span v-else-if="card.growth < 0">↘</span>
-                  <span v-else>→</span>
+                  <span v-else>↘</span>
                   <span class="ml-1">{{ Math.abs(card.growth) }}%</span>
                 </div>
+
                 <div class="text-xs text-gray-500 mt-1">เทียบกับเดือนก่อนหน้า</div>
               </div>
             </div>
@@ -1253,11 +1020,14 @@ onMounted(() => {
                   :style="{ backgroundColor: MONTHLY_COLORS.done }"></span>
                 งานที่เสร็จสิ้น
               </span>
+<<<<<<< fix/stock/phupa
               <span class="inline-flex items-center gap-2">
                 <span class="inline-block w-3.5 h-3.5 rounded-sm"
                   :style="{ backgroundColor: MONTHLY_COLORS.outsource }"></span>
                 งานที่จ้างช่างภายนอก
               </span>
+=======
+>>>>>>> review-code
             </div>
 
             <div class="mt-2 text-xs text-gray-500">
