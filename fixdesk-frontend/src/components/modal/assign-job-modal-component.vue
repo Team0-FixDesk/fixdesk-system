@@ -1,22 +1,3 @@
-/**
- * =====================================================================
- * @file            assign-job-modal-component.vue
- * @module          มอดูลจัดการงานซ่อม - มอบหมายงานให้ช่าง
- * @layer           Component (Presentation Layer)
- * @version         1.0.0
- * @since           2025-10-21
- * @author          เศรษฐพงศ์ หอมชื่น
- * @lastModified    2026-02-23
- * @lastModifiedBy  นราธิป แสนทวีสุข
- * ---------------------------------------------------------------------
- * @description
- *  Component สำหรับเลือกช่างและมอบหมายงานซ่อม
- *  รองรับฟีเจอร์:
- *    - แสดงรายการช่างว่าง
- *    - เลือกช่างเพื่อมอบหมายงาน
- *    - แสดงประเภทช่างและความพร้อม
- * =====================================================================
- */
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import Swal from 'sweetalert2'
@@ -196,6 +177,8 @@ async function confirmAssign() {
     Toast.fire({
       title: 'มอบหมายงานเรียบร้อยแล้ว',
       icon: 'success',
+      background: '#f0f9ff',
+      color: '#1e3a8a',
     })
     console.log('✅ [Assign Modal] Success - emitting completed & close')
     emit('completed')

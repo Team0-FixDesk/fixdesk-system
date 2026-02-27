@@ -33,6 +33,9 @@
  *     [2026-02-10, พชร ไพศรีสกุล] V1.0.0
  *   - แก้ไขเรื่องประเภทงานซ่อม
  *     [2026-02-12, พชร ไพศรีสกุล] V1.1.0
+ *   - เพิ่ม logging ใน withdrawStock เพื่อติดตาม transaction
+ *    แสดงข้อมูล techId, repair_code, itemCount เมื่อเบิกของ
+ *    [2026-02-20, นราธิป แสนทวีสุข]
  *   - แก้ไขข้อความแจ้งเตือน  
  *     [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล] V1.1.1
  * =====================================================================
@@ -340,6 +343,9 @@ module.exports = (techService) => {
         }
 
         const techId = req.user.us_id;
+        
+        console.log("🛍️ [Technician withdrawStock] Starting:", { techId, repair_code, itemCount: items.length });
+        
         const result = await techService.withdrawStock(
           techId,
           repair_code,

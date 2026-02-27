@@ -837,13 +837,9 @@ async function fetchDashboardData() {
     error.value = null
 
     const { repairs, techTypes } = await fetchManagerDashboard(API_BASE)
-<<<<<<< fix/stock/phupa
+
     allRepairs.value = repairs
     allTechTypes.value = techTypes
-=======
-    allRepairs.value = repairs || []
-    allTechTypes.value = techTypes || []
->>>>>>> review-code
 
     const years = new Set()
     
@@ -965,7 +961,7 @@ onMounted(() => {
               </div>
 
               <div class="text-right">
-<<<<<<< fix/stock/phupa
+
                 <div v-if="card.growth !== undefined" :class="[
                   'text-sm font-medium flex items-center justify-end',
                   card.growth > 0
@@ -974,19 +970,6 @@ onMounted(() => {
                       ? 'text-red-600'
                       : 'text-gray-500',
                 ]">
-=======
-                <div v-if="card.growth === 0" class="text-sm font-medium flex items-center justify-end text-gray-500">
-                  <span>→</span>
-                  <span class="ml-1">0%</span>
-                </div>
-                
-                <div v-else
-                  :class="[
-                    'text-sm font-medium flex items-center justify-end',
-                    card.growth > 0 ? 'text-green-600' : 'text-red-600'
-                  ]"
-                >
->>>>>>> review-code
                   <span v-if="card.growth > 0">↗</span>
                   <span v-else>↘</span>
                   <span class="ml-1">{{ Math.abs(card.growth) }}%</span>
@@ -1020,14 +1003,12 @@ onMounted(() => {
                   :style="{ backgroundColor: MONTHLY_COLORS.done }"></span>
                 งานที่เสร็จสิ้น
               </span>
-<<<<<<< fix/stock/phupa
               <span class="inline-flex items-center gap-2">
                 <span class="inline-block w-3.5 h-3.5 rounded-sm"
                   :style="{ backgroundColor: MONTHLY_COLORS.outsource }"></span>
                 งานที่จ้างช่างภายนอก
               </span>
-=======
->>>>>>> review-code
+
             </div>
 
             <div class="mt-2 text-xs text-gray-500">

@@ -14,6 +14,7 @@ const props = defineProps({
   statusColumn: { type: Number, default: null },
   statusStockColumn: { type: Number, default: null },
   statusStockinventoryColumn: { type: Number, default: null },
+  transactionTypeColumn: { type: Number, default: null },
 
   columnAlign: { type: Array, default: () => [] },
   hiddenColumns: { type: Array, default: () => [] },
@@ -97,6 +98,13 @@ function renderStatusStockInventoryBadge(type) {
     default: return type
   }
 }
+function renderTransactionTypeBadge(type) {
+  switch (type) {
+    case 'IN': return `<span class="inline-flex justify-center items-center w-24 h-8 rounded-full bg-green-100 text-green-600 font-semibold">รับเข้า</span>`
+    case 'OUT': return `<span class="inline-flex justify-center items-center w-24 h-8 rounded-full bg-red-100 text-red-600 font-semibold">เบิกออก</span>`
+    default: return type
+  }
+}
 </script>
 
 <template>
@@ -135,11 +143,11 @@ function renderStatusStockInventoryBadge(type) {
                   class="text-blue-600 underline cursor-pointer hover:text-blue-800"
                   @click.stop="$emit('detail', getRowId(item.row))" v-html="cell"></span>
 
-                <span v-else-if="cellIndex === props.urgencyColumn" v-html="renderUrgencyBadge(cell)"></span>
-                <span v-else-if="cellIndex === props.statusColumn" v-html="renderStatusBadge(cell)"></span>
-                <span v-else-if="cellIndex === props.statusStockColumn" v-html="renderStatusStockBadge(cell)"></span>
-                <span v-else-if="cellIndex === props.statusStockinventoryColumn"
-                  v-html="renderStatusStockInventoryBadge(cell)"></span>
+              <span v-else-if="cellIndex === props.urgencyColumn" v-html="renderUrgencyBadge(cell)"></span>
+              <span v-else-if="cellIndex === props.statusColumn" v-html="renderStatusBadge(cell)"></span>
+              <span v-else-if="cellIndex === props.statusStockColumn" v-html="renderStatusStockBadge(cell)"></span>
+              <span v-else-if="cellIndex === props.statusStockinventoryColumn" v-html="renderStatusStockInventoryBadge(cell)"></span>
+              <span v-else-if="cellIndex === props.transactionTypeColumn" v-html="renderTransactionTypeBadge(cell)"></span>
 
                 <slot v-else-if="$slots[`cell-${cellIndex}`]" :name="`cell-${cellIndex}`" :row="item.row" :cell="cell"
                   :rowIndex="rowIndex" :columnIndex="cellIndex" :openMenuId="openMenuId"
@@ -151,23 +159,23 @@ function renderStatusStockInventoryBadge(type) {
     ? 'block line-clamp-2 break-words'
     : 'block truncate'">
                 </span>
-
               </template>
 
-              <template v-else>
-                <span v-if="cellIndex === props.urgencyColumn ||
-                  cellIndex === props.statusColumn ||
-                  cellIndex === props.statusStockColumn ||
-                  cellIndex === props.statusStockinventoryColumn"
-                  class="inline-flex justify-center items-center w-36 h-8 rounded-full invisible">
-                  Badge </span>
+            <template v-else>
+              <span v-if="cellIndex === props.urgencyColumn ||
+                          cellIndex === props.statusColumn ||
+                          cellIndex === props.statusStockColumn ||
+                          cellIndex === props.statusStockinventoryColumn ||
+                          cellIndex === props.transactionTypeColumn"
+                class="inline-flex justify-center items-center w-36 h-8 rounded-full invisible">
+                Badge </span>
 
-                <div v-else-if="$slots[`cell-${cellIndex}`]" class="invisible inline-flex items-center">
-                  <div class="w-8 h-8"></div>
-                </div>
+              <div v-else-if="$slots[`cell-${cellIndex}`]" class="invisible inline-flex items-center">
+                <div class="w-8 h-8"></div>
+              </div>
 
-                <span v-else class="invisible">&nbsp;</span>
-              </template>
+              <span v-else class="invisible">&nbsp;</span>
+            </template>
 
             </td>
           </tr>

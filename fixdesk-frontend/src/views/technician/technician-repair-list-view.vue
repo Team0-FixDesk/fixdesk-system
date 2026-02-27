@@ -6,7 +6,7 @@
  * @version         1.0.0
  * @since           2025-10-21
  * @author          เศรษฐพงศ์ หอมชื่น
- * @lastModified    2026-02-23
+ * @lastModified    2026-02-22
  * @lastModifiedBy  นราธิป แสนทวีสุข
  * ---------------------------------------------------------------------
  * @description
@@ -190,7 +190,6 @@ async function handleOutsource(code) {
       title: 'ส่งงานให้ช่างภายนอกเรียบร้อย',
       showConfirmButton: false,
       timer: 2000,
-      timerProgressBar: true,
     })
     fetchRepairList()
   } catch (err) {
@@ -201,7 +200,6 @@ async function handleOutsource(code) {
       title: 'ไม่สามารถส่งงานได้',
       showConfirmButton: false,
       timer: 3000,
-      timerProgressBar: true,
     })
   }
 }
@@ -249,7 +247,6 @@ async function confirmCloseJob() {
       title: 'ปิดงานเรียบร้อยแล้ว',
       showConfirmButton: false,
       timer: 2000,
-      timerProgressBar: true,
     })
     showTechSummaryModal.value = false
     fetchRepairList()
@@ -262,7 +259,6 @@ async function confirmCloseJob() {
       text: err.message,
       showConfirmButton: false,
       timer: 3000,
-      timerProgressBar: true,
     })
   }
 }

@@ -6,8 +6,8 @@
  * @version         1.0.2
  * @since           2025-10-21
  * @author          เศรษฐพงศ์ หอมชื่น
- * @lastModified    2026-02-23
- * @lastModifiedBy  นราธิป แสนทวีสุข
+ * @lastModified    2026-02-20
+ * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
  * ---------------------------------------------------------------------
  * @description
  *  หน้าจอสำหรับใช้จัดการข้อมูลผู้ใช้งานในระบบของผู้ดูแลระบบ
@@ -409,6 +409,8 @@ async function confirmAddUser() {
     toast.fire({
       icon: 'success',
       title: 'เพิ่มผู้ใช้เรียบร้อยแล้ว',
+      background: '#f0f9ff',
+      color: '#1e3a8a',
     })
     showUserModal.value = false
     await fetchUsers()
@@ -433,7 +435,7 @@ async function confirmEditUser() {
     reverseButtons: true,
     confirmButtonText: 'ยืนยัน',
     cancelButtonText: 'ยกเลิก',
-    confirmButtonColor: '#2563eb',
+    confirmButtonColor: '#f97316',
   })
   if (!result.isConfirmed) return
   try {
@@ -461,6 +463,8 @@ async function confirmEditUser() {
     toast.fire({
       icon: 'success',
       title: 'แก้ไขข้อมูลผู้ใช้เรียบร้อยแล้ว',
+      background: '#f0f9ff',
+      color: '#1e3a8a',
     })
     showUserModal.value = false
     await fetchUsers()
@@ -521,6 +525,8 @@ async function confirmDelete(username) {
     toast.fire({
       icon: 'success',
       title: 'ลบผู้ใช้เรียบร้อยแล้ว',
+      background: '#f0f9ff',
+      color: '#1e3a8a',
     })
     await fetchUsers()
   } catch (err) {
@@ -705,7 +711,6 @@ async function handleAddTechType() {
     showCancelButton: true,
     confirmButtonText: 'บันทึก',
     cancelButtonText: 'ยกเลิก',
-    confirmButtonColor: '#2563eb',
     inputValidator: (value) => {
       if (!value || !value.trim()) return 'กรุณากรอกชื่อตำแหน่งช่าง'
       return null
@@ -725,6 +730,8 @@ async function handleAddTechType() {
     toast.fire({
       icon: 'success',
       title: 'เพิ่มตำแหน่งช่างเรียบร้อยแล้ว',
+      background: '#f0f9ff',
+      color: '#1e3a8a',
     })
     await fetchMasterData()
     await fetchUsers()
@@ -748,7 +755,6 @@ async function handleEditTechType(item) {
     showCancelButton: true,
     confirmButtonText: 'บันทึก',
     cancelButtonText: 'ยกเลิก',
-    confirmButtonColor: '#2563eb',
     inputValidator: (value) => {
       if (!value || !value.trim()) return 'กรุณากรอกชื่อตำแหน่งช่าง'
       return null
@@ -768,6 +774,8 @@ async function handleEditTechType(item) {
     toast.fire({
       icon: 'success',
       title: 'แก้ไขตำแหน่งช่างเรียบร้อยแล้ว',
+      background: '#f0f9ff',
+      color: '#1e3a8a',
     })
     await fetchMasterData()
     await fetchUsers()
@@ -805,6 +813,8 @@ async function handleDeleteTechType(item) {
     toast.fire({
       icon: 'success',
       title: 'ลบตำแหน่งช่างเรียบร้อยแล้ว',
+      background: '#f0f9ff',
+      color: '#1e3a8a',
     })
     await fetchMasterData()
     await fetchUsers()
@@ -823,6 +833,8 @@ function handleImportSuccess() {
   toast.fire({
     icon: 'success',
     title: 'นำเข้าผู้ใช้งานเรียบร้อยแล้ว',
+    background: '#f0f9ff',
+    color: '#1e3a8a',
   })
   showImportModal.value = false
 }

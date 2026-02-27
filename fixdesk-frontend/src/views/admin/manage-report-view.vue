@@ -9,7 +9,7 @@
  * @version         1.1.0
  * @since           2025-01-15
  * @author          นราธิป แสนทวีสุข
- * @lastModified    2026-02-23
+ * @lastModified    2026-02-22
  * @lastModifiedBy  นราธิป แสนทวีสุข
  * ---------------------------------------------------------------------
  * @description
@@ -535,29 +535,13 @@ const generateSinglePDF = async (item) => {
 
 const downloadCSV = async () => {
   if (filteredRows.value.length === 0) {
-    Swal.fire({
-      toast: true,
-      position: 'top-end',
-      icon: 'info',
-      title: 'ไม่มีข้อมูลสำหรับเดือนที่เลือก',
-      showConfirmButton: false,
-      timer: 3000,
-      timerProgressBar: true,
-    })
+    alert('ไม่มีข้อมูลสำหรับเดือนที่เลือก')
     return
   }
   const codes = filteredRows.value.map(row => row.meta.rf_code)
   await fetchPrintDetails(codes)
   if (printDetails.value.length === 0) {
-    Swal.fire({
-      toast: true,
-      position: 'top-end',
-      icon: 'info',
-      title: 'ไม่พบข้อมูลสำหรับส่งออก',
-      showConfirmButton: false,
-      timer: 3000,
-      timerProgressBar: true,
-    })
+    alert('ไม่พบข้อมูลสำหรับ export')
     return
   }
   const headers = ['ลำดับ', 'แจ้งซ่อมเมื่อ', 'ผู้รับผิดชอบงานหลัก', 'รายการปฏิบัติงาน', 'ตรวจสอบ/ซ่อม', 'สรุปผลการซ่อม', 'ผู้แจ้งซ่อม'];
@@ -653,15 +637,7 @@ const downloadPDF = async () => {
     }
   } catch (err) {
     console.error('Error generating PDF:', err)
-    Swal.fire({
-      toast: true,
-      position: 'top-end',
-      icon: 'error',
-      title: 'เกิดข้อผิดพลาดในการสร้างไฟล์: ' + err.message,
-      showConfirmButton: false,
-      timer: 3000,
-      timerProgressBar: true,
-    })
+    alert('เกิดข้อผิดพลาดในการสร้างไฟล์: ' + err.message)
   } finally {
     isGeneratingPDF.value = false
   }

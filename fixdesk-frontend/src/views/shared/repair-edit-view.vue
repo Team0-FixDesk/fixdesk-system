@@ -6,8 +6,8 @@
  * @version         1.0.0
  * @since           2026-02-04
  * @author          พชร ไพศรีสกุล
- * @lastModified    2026-02-23
- * @lastModifiedBy  นราธิป แสนทวีสุข
+ * @lastModified    2026-02-20
+ * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
  * ---------------------------------------------------------------------
  * @description
  *  หน้าจอสำหรับแก้ไขข้อมูลรายการแจ้งซ่อมที่มีอยู่แล้ว
@@ -179,11 +179,9 @@ async function submitRepairEdit() {
     Swal.fire({
       toast: true,
       position: 'top-end',
-      icon: 'warning',
-      title: 'ข้อมูลไม่ครบถ้วน',
-      showConfirmButton: false,
       timer: 2500,
-      timerProgressBar: true,
+      icon: 'warning',
+      title: 'ข้อมูลไม่ครบถ้วน'
     })
     return
   }
@@ -196,7 +194,6 @@ async function submitRepairEdit() {
     reverseButtons: true,
     confirmButtonText: 'ยืนยัน',
     cancelButtonText: 'ยกเลิก',
-    confirmButtonColor: '#2563eb',
   })
 
   if (!confirm.isConfirmed) return
@@ -219,11 +216,9 @@ async function submitRepairEdit() {
     Swal.fire({
       toast: true,
       position: 'top-end',
-      icon: 'success',
-      title: 'บันทึกการแก้ไขสำเร็จ',
-      showConfirmButton: false,
       timer: 2500,
-      timerProgressBar: true,
+      icon: 'success',
+      title: 'บันทึกการแก้ไขสำเร็จ'
     })
 
     router.push('/main/my-list')
@@ -233,11 +228,9 @@ async function submitRepairEdit() {
     Swal.fire({
       toast: true,
       position: 'top-end',
-      icon: 'error',
-      title: err.message,
-      showConfirmButton: false,
       timer: 3000,
-      timerProgressBar: true,
+      icon: 'error',
+      title: err.message
     })
 
   } finally {

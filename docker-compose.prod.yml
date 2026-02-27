@@ -13,6 +13,8 @@ services:
     container_name: fixdesk-backend-prod
     ports:
       - "8059:8059"
+    env_file:
+      - ./fixdesk-backend/.env
     environment:
       NODE_ENV: production
       PORT: 8059

@@ -11,8 +11,8 @@
  *   - ธนภันทร จันทร์งาม
  *   - ปฏิพัทธ์ จงนันทพันธ์กุล
  *                       
- * @lastModified    2026-02-23
- * @lastModifiedBy  นราธิป แสนทวีสุข
+ * @lastModified    2026-02-21
+ * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
  * ---------------------------------------------------------------------
  * @description
  *  หน้าจอรายการคลังสินค้าสำหรับช่างซ่อม
@@ -383,15 +383,7 @@ const confirmWithdraw = async (formData) => {
       throw new Error(responseBody.message)
     }
 
-    Swal.fire({
-      toast: true,
-      position: 'top-end',
-      icon: 'success',
-      title: 'เบิกสินค้าเรียบร้อย',
-      showConfirmButton: false,
-      timer: 2000,
-      timerProgressBar: true,
-    })
+    Swal.fire('ส่งแบบฟอร์มขอเบิกสำเร็จ', 'เบิกสินค้าเรียบร้อย', 'success')
 
     cartItemList.value = []
     isCartOpen.value = false

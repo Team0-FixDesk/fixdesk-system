@@ -6,8 +6,8 @@
  * @version         1.0.0
  * @since           2025-12-21
  * @author          ธนภัทร จันทร์งาม
- * @lastModified    2026-02-23
- * @lastModifiedBy  นราธิป แสนทวีสุข
+ * @lastModified    2026-02-18
+ * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
  * ---------------------------------------------------------------------
  * @description
  *  หน้าจอสำหรับอนุมัติรายการเบิกของของผู้ดูแลคลัง
@@ -307,7 +307,6 @@ const confirmApprove = async () => {
     showCancelButton: true,
     confirmButtonText: 'ยืนยัน',
     cancelButtonText: 'ยกเลิก',
-    confirmButtonColor: '#2563eb',
     reverseButtons: true,
   })
 
@@ -333,15 +332,7 @@ const confirmApprove = async () => {
       { headers: { Authorization: `Bearer ${token}` } },
     )
 
-    await Sweetalert.fire({
-      toast: true,
-      position: 'top-end',
-      icon: 'success',
-      title: 'บันทึกผลการอนุมัติรายการเบิกเรียบร้อยแล้ว',
-      showConfirmButton: false,
-      timer: 1000,
-      timerProgressBar: true,
-    })
+    await Sweetalert.fire('บันทึกผลสำเร็จ', 'บันทึกผลการอนุมัติรายการเบิกเรียบร้อยแล้ว', 'success')
 
     // Redirect to stock-withdraw-list
     setTimeout(() => {

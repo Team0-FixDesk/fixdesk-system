@@ -6,7 +6,7 @@
  * @version         : 1.3.0
  * @since           : 2026-02-17
  * @lastModified    : 2026-02-23
- * @lastModifiedBy  : นราธิป แสนทวีสุข
+ * @lastModifiedBy  : พชร ไพศรีสกุล
  * ---------------------------------------------------------------------
  * @description
  *  View สำหรับแสดงรายละเอียดใบแจ้งซ่อม (Repair Detail)
@@ -170,7 +170,6 @@ function requireAuth() {
       title: 'กรุณาเข้าสู่ระบบใหม่',
       showConfirmButton: false,
       timer: 3000,
-      timerProgressBar: true,
     })
     logout()
 
@@ -297,7 +296,6 @@ async function confirmCloseJob() {
       title: 'อัปเดตสถานะเรียบร้อย',
       showConfirmButton: false,
       timer: 2000,
-      timerProgressBar: true,
     })
     showTechSummaryModal.value = false
 
@@ -316,7 +314,6 @@ async function confirmCloseJob() {
       title: 'ไม่สามารถปิดงานได้',
       showConfirmButton: false,
       timer: 3000,
-      timerProgressBar: true,
     })
   }
 }
@@ -359,7 +356,6 @@ async function confirmOutsource() {
       title: 'ส่งงานให้ช่างภายนอกเรียบร้อย',
       showConfirmButton: false,
       timer: 2000,
-      timerProgressBar: true,
     })
 
     // Redirect to technician repair list after successful outsourcing
@@ -377,7 +373,6 @@ async function confirmOutsource() {
       title: 'ไม่สามารถส่งงานได้',
       showConfirmButton: false,
       timer: 3000,
-      timerProgressBar: true,
     })
   }
 }
@@ -637,7 +632,6 @@ async function returnItem(item) {
       title: 'คืนอุปกรณ์สำเร็จ',
       showConfirmButton: false,
       timer: 2000,
-      timerProgressBar: true,
     })
   } catch (err) {
     console.error(err)
@@ -649,7 +643,6 @@ async function returnItem(item) {
       title: err.message || 'คืนอุปกรณ์ไม่สำเร็จ',
       showConfirmButton: false,
       timer: 3000,
-      timerProgressBar: true,
     })
   }
 }
@@ -696,7 +689,6 @@ async function returnSelectedItems() {
       title: 'ไม่มีรายการที่สามารถคืนได้',
       showConfirmButton: false,
       timer: 2000,
-      timerProgressBar: true,
     })
 
     return
@@ -734,7 +726,6 @@ async function returnSelectedItems() {
       title: 'คืนอุปกรณ์สำเร็จ',
       showConfirmButton: false,
       timer: 2000,
-      timerProgressBar: true,
     })
   } catch (err) {
     Swal.fire({
@@ -744,7 +735,6 @@ async function returnSelectedItems() {
       title: err.message,
       showConfirmButton: false,
       timer: 3000,
-      timerProgressBar: true,
     })
   }
 }
