@@ -1148,8 +1148,8 @@ onMounted(() => {
       </div>
     </div>
 
-    <assignJobModalComponent v-if="showAssignPopup" :repairCode="repair?.rf_code" :isOpen="showAssignPopup"
-      @close="showAssignPopup = false" @completed="handleAssignSuccess" />
+    <assignJobModalComponent v-if="showAssignPopup" :repairId="repair?.rf_code" @close="showAssignPopup = false"
+      @completed="handleAssignSuccess" />
 
     <AcceptJobModalComponent v-if="showAcceptPopup" :repairCode="repair?.rf_code" :isOpen="showAcceptPopup"
       :currentUserId="currentUserId" @close="showAcceptPopup = false" @success="handleAcceptSuccess" />
@@ -1186,7 +1186,7 @@ onMounted(() => {
           <!-- 2. รายละเอียดการทำงาน -->
           <div>
             <label class="block text-sm font-semibold text-gray-700 mb-2">{{ repairMethod === 'outsource' ? '1' : '2'
-              }}.
+            }}.
               รายละเอียดการตรวจสอบ/ซ่อม</label>
             <textarea v-model="techSummary" placeholder="กรอกรายละเอียด..."
               class="w-full h-24 p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500"
@@ -1197,7 +1197,7 @@ onMounted(() => {
           <!-- 3. สรุปผล -->
           <div>
             <label class="block text-sm font-semibold text-gray-700 mb-2">{{ repairMethod === 'outsource' ? '2' : '3'
-              }}.
+            }}.
               สรุปผล</label>
             <div class="flex gap-4 mb-2">
               <label class="flex items-center gap-2 cursor-pointer">
@@ -1313,20 +1313,15 @@ onMounted(() => {
               " @change="toggleReturnItem(item)" />
 
             <div class="text-center">
-              <span class="font-medium">{{ item.name }}</span> <span class="text-sm text-gray-500">- จำนวนที่ยังคืนได้: {{ item.qty }}</span>
+              <span class="font-medium">{{ item.name }}</span> <span class="text-sm text-gray-500">- จำนวนที่ยังคืนได้:
+                {{
+                item.qty }}</span>
             </div>
           </label>
 
           <!-- input ใหม่ -->
-          <input
-            type="number"
-            min="1"
-            :max="item.qty"
-            v-model.number="item.returnQty"
-            @input="validateReturnQty(item)"
-            class="border rounded px-2 py-1 w-20"
-            @click.stop
-          />
+          <input type="number" min="1" :max="item.qty" v-model.number="item.returnQty" @input="validateReturnQty(item)"
+            class="border rounded px-2 py-1 w-20" @click.stop />
         </div>
       </div>
 
@@ -1336,11 +1331,8 @@ onMounted(() => {
           ยกเลิก
         </button>
 
-        <button
-          @click="returnSelectedItems"
-          :disabled="selectedReturnItems.length === 0"
-          class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
-        >
+        <button @click="returnSelectedItems" :disabled="selectedReturnItems.length === 0"
+          class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed">
           คืนที่เลือก
         </button>
       </div>
