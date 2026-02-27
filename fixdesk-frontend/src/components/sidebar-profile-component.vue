@@ -198,25 +198,21 @@ function resetPasswordForm() {
 function validateProfileForm() {
   let valid = true
   errors.value.us_phone = ''
+  errors.value.tempOldPassword = ''
+
+  // ตรวจสอบรหัสผ่านปัจจุบัน
+  if (!tempOldPassword.value) {
+    errors.value.tempOldPassword = 'กรุณากรอกรหัสผ่านปัจจุบัน'
+    valid = false
+    return valid
+  }
 
   if (!editForm.value.us_phone) {
     errors.value.us_phone = 'กรุณากรอกเบอร์โทรศัพท์'
     valid = false
-    Swal.fire({
-      title: 'กรุณากรอกข้อมูลให้ครบ',
-      text: errors.value.us_phone,
-      icon: 'warning',
-      confirmButtonColor: '#f59e0b',
-    })
   } else if (!/^\d{9,10}$/.test(toRaw(editForm.value.us_phone))) {
     errors.value.us_phone = 'เบอร์โทรศัพท์ต้องมี 9 หรือ 10 หลัก'
     valid = false
-    Swal.fire({
-      title: 'กรุณากรอกข้อมูลให้ถูกต้อง',
-      text: errors.value.us_phone,
-      icon: 'warning',
-      confirmButtonColor: '#f59e0b', // สีส้ม Warning
-    })
   }
 
   return valid
@@ -296,6 +292,7 @@ async function loadUserData() {
 
 async function executeSave(type = '') {
   const userId = tokenData.value?.us_id
+  const token = localStorage.getItem('token') || sessionStorage.getItem('token')
 
   // เตรียม Payload
   const payload = {
@@ -311,12 +308,17 @@ async function executeSave(type = '') {
     password: type === 'password' ? editForm.value.password.trim() : null,
   }
 
+  console.log('Payload being sent:', payload)
+  console.log('firstNameTH:', firstNameTH.value)
+  console.log('lastNameTH:', lastNameTH.value)
+  console.log('editForm.us_phone:', editForm.value.us_phone)
+
   try {
     const res = await fetch(`${API_BASE}/edit-personal/${userId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${localStorage.getItem('token')}`,
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(payload),
     })
@@ -324,18 +326,17 @@ async function executeSave(type = '') {
     const data = await res.json()
 
     if (!res.ok) {
+      console.log('Response data:', data)
+      // Temporarily show error to debug
+      Swal.fire({
+        title: 'ผิดพลาด',
+        text: data.message || 'เกิดข้อผิดพลาด',
+        icon: 'error',
+        confirmButtonColor: '#1E48D1',
+      })
       // Check if it's a wrong current password error
       if (data.message && (data.message.includes('รหัสผ่านเดิมไม่ถูกต้อง') || data.message.includes('รหัสผ่านปัจจุบันไม่ถูกต้อง'))) {
         errors.value.tempOldPassword = 'รหัสผ่านปัจจุบันไม่ถูกต้อง'
-      } else {
-        // Other errors show popup
-        Swal.fire({
-          title: 'ผิดพลาด',
-          text: data.message || 'เกิดข้อผิดพลาด',
-          icon: 'error',
-          confirmButtonColor: '#1E48D1',
-        })
-        closeAllPopup()
       }
       return
     }
@@ -356,7 +357,6 @@ async function executeSave(type = '') {
     closeAllPopup() // ปิดทุก Popup
   } catch (err) {
     console.error(err)
-    Swal.fire('ผิดพลาด', 'เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์', 'error')
   }
 }
 
@@ -386,6 +386,7 @@ const getFullNameEN = () => {
 
 function openProfilePopup() {
   resetProfileForm()
+  // Always load fresh data from server
   loadUserData()
   showPopupProfile.value = true
 }
@@ -393,7 +394,6 @@ function openProfilePopup() {
 function openPasswordPopup() {
   resetPasswordForm()
   username.value = tokenData.value?.us_user_name || ''
-  loadUserData()
   showPopupPassword.value = true
 }
 
