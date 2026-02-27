@@ -1,3 +1,37 @@
+/**
+ * =====================================================================
+ * @file            stock-withdraw-list-view.vue
+ * @module          มอดูลการจัดการของผู้ดูแลคลัง - การตรวจสอบ และอนุมัติรายการเบิกของ
+ * @layer           View (Presentation Layer)
+ * @version         1.0.0
+ * @since           2025-10-21
+ * @author          พชร ไพศรีสกุล
+ * @lastModified    2026-02-20
+ * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
+ * ---------------------------------------------------------------------
+ * @description
+ *  หน้าจอสำหรับแสดงรายการเบิกของทั้งหมดของผู้ดูแลคลัง
+ *  รองรับการค้นหาด้วย:
+ *    - หมายเลขรายการเบิก  (sf_code)
+ *    - หน่วยงาน           (us_department)
+ *    - รายละเอียดการเบิก
+ *    - กรองตามวันที่สร้างใบเบิก
+ *
+ * @requires
+ *   - vue
+ *   - vue-router
+ *   - sweetalert2
+ *   - @/components/table-component.vue
+ *   - @/components/filters/repair-filter-bar-component.vue
+ *   - @/components/button/info-button-component.vue
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *   - แก้ไขข้อความหัวตาราง          [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - แก้ไขข้อความในตารางแสดงข้อมูล  [2026-02-20, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ * =====================================================================
+ */
+
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
@@ -14,7 +48,7 @@ const router = useRouter()
 const API_BASE = import.meta.env.VITE_API_BASE
 
 // ==================== Table ====================
-const columns = ['รหัสใบเบิกของ', 'หน่วยงาน', 'รายละเอียด', 'สถานะการเบิก', 'ตัวดำเนินการ']
+const columns = ['หมายเลขรายการเบิก', 'หน่วยงาน', 'รายละเอียดการเบิก', 'สถานะการเบิก', 'ตัวดำเนินการ']
 const tableRowsList = ref([])
 
 // ==================== Filters (ใช้กับ RepairFilterBar) ====================
@@ -62,13 +96,13 @@ async function loadStockForms() {
         row: [
           item.sf_code, // 0
           item.us_department || '-', // 1
-          'วันที่: ' +
+          'วันที่เบิก : ' +
             new Date(item.sf_create_at).toLocaleDateString('th-TH') +
             '<br>' +
-            'ผู้ขอเบิก: ' +
+            'ผู้ขอเบิก : ' +
             item.requester +
             '<br>' +
-            'สถานที่: ' +
+            'สถานที่ : ' +
             item.bd_name +
             ' ' +
             item.fl_name +
@@ -84,8 +118,8 @@ async function loadStockForms() {
   } catch (err) {
     if (err.message === 'TOKEN_EXPIRED') {
       Sweetalert.fire({
-        title: 'Session หมดอายุ',
-        text: 'กรุณาเข้าสู่ระบบใหม่',
+        title: 'หมดเวลาในการใช้งาน',
+        text: 'คุณไม่ได้ใช้งานเป็นระยะเวลาหนึ่ง กรุณาลงชื่อเข้าสู่ระบบใหม่อีกครั้ง',
         icon: 'warning',
       })
       router.push('/login')

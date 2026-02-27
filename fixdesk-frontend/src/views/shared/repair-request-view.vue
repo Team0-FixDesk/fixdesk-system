@@ -1,3 +1,42 @@
+/**
+ * =====================================================================
+ * @file            repair-request.view.vue
+ * @module          มอดูลแจ้งซ่อม - การสร้างแบบฟอร์มแจ้งซ่อม
+ * @layer           View (Presentation Layer)
+ * @version         1.0.1
+ * @since           2026-02-04
+ * @author          พชร ไพศรีสกุล
+ * @lastModified    2026-02-20
+ * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
+ * ---------------------------------------------------------------------
+ * @description
+ *  หน้าจอแบบฟอร์มสำหรับสร้างรายการแจ้งซ่อมใหม่
+ *  ผู้ใช้งานสามารถ:
+ *   - กรอกข้อมูลรายละเอียดปัญหา
+ *   - เลือกประเภทงาน อาคาร ชั้น และห้อง
+ *   - ระบุระดับความเร่งด่วน
+ *   - แนบรูปภาพ หรือวิดีโอประกอบ (สูงสุด 5 ไฟล์)
+ *
+ * @requires
+ *   - vue
+ *   - vue-router
+ *   - sweetalert2
+ *   - @iconify/vue
+ *   - @/composables/usePhoneFormat
+ *   - @/composables/location/useRepairLocationData
+ *   - @/composables/useFileUpload
+ *   - @/composables/repair/useRepairFormValidation
+ *   - @/composables/repair/useRepairService
+ *   - @/utils/jwt.util
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *   - แก้ไขข้อความช่องกรอกข้อมูล   [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - แก้ไขข้อความแจ้งเตือน       [2026-02-19, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - แก้ไขข้อความแจ้งเตือน       [2026-02-20, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ * =====================================================================
+ */
+
 <script setup>
 defineOptions({ name: 'RepairRequestView' })
 import { ref, onMounted } from 'vue'
@@ -117,7 +156,7 @@ async function submitRepairRequest() {
       toast: true,
       position: 'top-end',
       icon: 'warning',
-      title: 'ข้อมูลไม่ครบถ้วน',
+      title: 'กรุณากรอกข้อมูลให้ครบถ้วน',
       timer: 2500,
       showConfirmButton: false,
     })
@@ -129,7 +168,7 @@ async function submitRepairRequest() {
       toast: true,
       position: 'top-end',
       icon: 'warning',
-      title: 'ยังไม่ได้เลือกความเร่งด่วน',
+      title: 'ยังไม่ได้เลือกระดับความเร่งด่วน',
       timer: 2500,
       showConfirmButton: false,
     })
@@ -138,9 +177,12 @@ async function submitRepairRequest() {
 
   const confirmResult = await Swal.fire({
     title: 'ยืนยันการส่งแบบฟอร์มแจ้งซ่อม?',
+    text: 'คุณต้องการส่งแบบฟอร์มแจ้งซ่อมหรือไม่?',
     icon: 'question',
     showCancelButton: true,
+    reverseButtons: true,
     confirmButtonText: 'ยืนยัน',
+    cancelButtonText: 'ยกเลิก',
   })
 
   if (!confirmResult.isConfirmed) return
@@ -163,9 +205,10 @@ async function submitRepairRequest() {
       toast: true,
       position: 'top-end',
       icon: 'success',
-      title: 'ส่งแบบฟอร์มสำเร็จ!',
+      title: 'ส่งแบบฟอร์มแจ้งซ่อมเรียบร้อยแล้ว',
       timer: 2500,
       showConfirmButton: false,
+      width: '380px',
     })
 
     router.push('/main/my-list')
@@ -178,7 +221,7 @@ async function submitRepairRequest() {
       toast: true,
       position: 'top-end',
       icon: 'error',
-      title: 'ส่งแบบฟอร์มไม่สำเร็จ',
+      title: 'ส่งแบบฟอร์มแจ้งซ่อมไม่สำเร็จ',
       timer: 2500,
       showConfirmButton: false,
     })
@@ -188,10 +231,10 @@ async function submitRepairRequest() {
 async function cancelRepairRequest() {
   const confirmResult = await Swal.fire({
     title: 'ยกเลิกการแจ้งซ่อม?',
-    text: 'ข้อมูลที่กรอกจะไม่ถูกบันทึก',
+    text: 'ข้อมูลที่กรอกลงแบบฟอร์มแจ้งซ่อมจะไม่ถูกบันทึก',
     icon: 'warning',
     showCancelButton: true,
-    confirmButtonText: 'ยกเลิกแจ้งซ่อม',
+    confirmButtonText: 'ยกเลิกการแจ้งซ่อม',
     cancelButtonText: 'กลับไปแก้ไข',
     confirmButtonColor: '#e53e3e',
   })
@@ -213,7 +256,7 @@ async function cancelRepairRequest() {
             <label class="text-sm sm:text-base font-medium text-black">
               ลงชื่อผู้แจ้ง <span class="text-red-600">*</span>
             </label>
-            <p class="text-neutral-400 text-xs mb-2">ชื่อ–นามสกุลของผู้ที่ทำการแจ้งปัญหา</p>
+            <p class="text-neutral-400 text-xs mb-2">ชื่อ–นามสกุลของผู้แจ้งปัญหา</p>
             <input
               v-model="repairFormData.reporterName"
               type="text"
@@ -224,9 +267,9 @@ async function cancelRepairRequest() {
 
           <div>
             <label class="text-sm sm:text-base font-medium text-black">
-              เบอร์โทรศัพท์ <span class="text-red-600">*</span>
+              หมายเลขโทรศัพท์ <span class="text-red-600">*</span>
             </label>
-            <p class="text-neutral-400 text-xs mb-2">เบอร์โทรศัพท์ที่สามารถติดต่อกลับได้</p>
+            <p class="text-neutral-400 text-xs mb-2">หมายเลขโทรศัพท์ที่สามารถติดต่อกลับได้</p>
             <input
               v-model="repairFormData.phoneNumber"
               type="text"
@@ -241,7 +284,7 @@ async function cancelRepairRequest() {
             <label class="text-sm sm:text-base font-medium text-black">
               หน่วยงาน <span class="text-red-600">*</span>
             </label>
-            <p class="text-neutral-400 text-xs mb-2">ชื่อหน่วยงานหรือแผนกที่สังกัด</p>
+            <p class="text-neutral-400 text-xs mb-2">ชื่อของหน่วยงาน หรือแผนกที่สังกัด</p>
             <input
               v-model="repairFormData.department"
               type="text"
@@ -254,7 +297,7 @@ async function cancelRepairRequest() {
             <label class="text-sm sm:text-base font-medium text-black">
               ประเภท <span class="text-red-600">*</span>
             </label>
-            <p class="text-neutral-400 text-xs mb-2">โปรดเลือกประเภทงานหรือสิ่งของที่ต้องการซ่อม</p>
+            <p class="text-neutral-400 text-xs mb-2">ประเภทของงานซ่อม หรือประเภทของปัญหาที่ต้องการแจ้ง</p>
 
             <select
               v-model="repairFormData.repairType"
@@ -277,7 +320,7 @@ async function cancelRepairRequest() {
 
           <div>
             <label class="text-base font-medium text-black">หมายเลขครุภัณฑ์</label>
-            <p class="text-neutral-400 text-xs mb-2">หมายเลขครุภัณฑ์ของอุปกรณ์ (ถ้ามี)</p>
+            <p class="text-neutral-400 text-xs mb-2">หมายเลขครุภัณฑ์ของวัสดุ/อุปกรณ์ (ถ้ามี)</p>
             <input
               v-model="repairFormData.assetCode"
               type="text"
@@ -291,7 +334,7 @@ async function cancelRepairRequest() {
           <label class="text-sm sm:text-base font-medium text-black">
             ขอความอนุเคราะห์ตรวจสอบ/ซ่อมแซม <span class="text-red-600">*</span>
           </label>
-          <p class="text-neutral-400 text-xs mb-2">กรอกปัญหาที่ต้องการให้ตรวจสอบหรือซ่อมแซม</p>
+          <p class="text-neutral-400 text-xs mb-2">ปัญหา หรือเหตุที่ต้องการให้ตรวจสอบ/ซ่อมแซม</p>
           <input
             v-model="repairFormData.problemDetail"
             @input="validateField('problemDetail')"
@@ -300,7 +343,7 @@ async function cancelRepairRequest() {
               'w-full text-sm bg-white border rounded-md placeholder-[#A1A1A1] px-3 py-2',
               errorData.problemDetail ? 'border-red-500' : 'border-neutral-400',
             ]"
-            placeholder="กรุณากรอกรายละเอียดปัญหา"
+            placeholder="กรุณากรอกปัญหา หรือเหตุที่ต้องการแจ้ง"
           />
           <p v-if="errorData.problemDetail" class="text-red-500 text-xs sm:text-sm mt-1">
             {{ errorData.problemDetail }}
@@ -312,7 +355,7 @@ async function cancelRepairRequest() {
             <label class="text-sm sm:text-base font-medium text-black">
               อาคาร <span class="text-red-600">*</span>
             </label>
-            <p class="text-neutral-400 text-xs mb-2">โปรดระบุชื่ออาคารที่พบปัญหา</p>
+            <p class="text-neutral-400 text-xs mb-2">อาคารที่พบปัญหา หรือสาเหตุที่ต้องการให้ตรวจสอบ/ซ่อมแซม</p>
             <select
               v-model="repairFormData.building"
               @change="
@@ -343,7 +386,7 @@ async function cancelRepairRequest() {
             <label class="text-sm sm:text-base font-medium text-black">
               ชั้น <span class="text-red-600">*</span>
             </label>
-            <p class="text-neutral-400 text-xs mb-2">โปรดเลือกชั้นที่พบปัญหา</p>
+            <p class="text-neutral-400 text-xs mb-2">ชั้นที่พบปัญหา หรือเหตุที่ต้องการให้ตรวจสอบ/ซ่อมแซม</p>
             <select
               v-model="repairFormData.floor"
               @change="
@@ -373,7 +416,7 @@ async function cancelRepairRequest() {
             <label class="text-sm sm:text-base font-medium text-black">
               ห้อง <span class="text-red-600">*</span>
             </label>
-            <p class="text-neutral-400 text-xs mb-2">โปรดเลือกห้องหรือพื้นที่ที่พบปัญหา</p>
+            <p class="text-neutral-400 text-xs mb-2">ห้องที่พบปัญหา หรือเหตุที่ต้องการให้ตรวจสอบ/ซ่อมแซม</p>
             <select
               v-model="repairFormData.room"
               @change="validateField('room')"
@@ -395,9 +438,9 @@ async function cancelRepairRequest() {
 
         <div class="mb-1">
           <label class="text-sm sm:text-base font-medium text-black">
-            สาเหตุ / อาการเสีย <span class="text-red-600">*</span>
+            สาเหตุ/อาการเสีย <span class="text-red-600">*</span>
           </label>
-          <p class="text-neutral-400 text-xs mb-2">อธิบายอาการเสียหรือสาเหตุที่พบอย่างชัดเจน</p>
+          <p class="text-neutral-400 text-xs mb-2">คำอธิบายสาเหตุ/อาการเสียของปัญหา หรือเหตุที่พบอย่างชัดเจน</p>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-10 items-stretch">
@@ -409,7 +452,7 @@ async function cancelRepairRequest() {
                 'flex-1 w-full min-h-[220px] sm:min-h-[280px] text-sm bg-white border rounded-md resize-none placeholder-[#A1A1A1] px-3 py-2',
                 errorData.issueDescription ? 'border-red-500' : 'border-neutral-400',
               ]"
-              placeholder="กรุณากรอกสาเหตุ / อาการที่เสีย"
+              placeholder="กรุณาอธิบายสาเหตุ/อาการเสียที่พบ"
             ></textarea>
 
             <p v-if="errorData.issueDescription" class="text-red-500 text-sm mt-1">
@@ -441,11 +484,11 @@ async function cancelRepairRequest() {
                   ]"
                 >
                   <span class="font-semibold">{{
-                    isDragOver ? 'วางไฟล์ที่นี่' : 'ลากไฟล์ หรือ คลิกเพื่อเลือกไฟล์'
+                    isDragOver ? 'วางไฟล์ที่นี่' : 'ลากไฟล์ หรือคลิกเพื่อเลือกไฟล์'
                   }}</span>
                 </p>
                 <p class="text-xs text-gray-400 mt-1">
-                  รองรับ: รูปภาพ, วิดีโอ (สูงสุด {{ MAX_FILE_COUNT }} ไฟล์, 50MB/ไฟล์)
+                  รองรับ : รูปภาพ และวิดีโอ (สูงสุด {{ MAX_FILE_COUNT }} ไฟล์/50 MB)
                 </p>
                 <div class="flex items-center gap-2 mt-2 justify-center">
                   <span class="text-xs px-2 py-1 bg-green-100 text-green-700 rounded">JPG</span>
@@ -507,7 +550,7 @@ async function cancelRepairRequest() {
               v-if="filePreviewList.length === 0"
               class="text-center text-gray-400 text-sm mb-4 py-2 border border-dashed border-gray-200 rounded-lg"
             >
-              ไม่มีไฟล์แนบ (สามารถส่งฟอร์มได้โดยไม่แนบไฟล์)
+              ไม่พบไฟล์แนบ (สามารถบันทึกแบบฟอร์มได้โดยไม่แนบไฟล์)
             </div>
 
             <div class="flex flex-col sm:flex-row justify-center items-center gap-4 sm:gap-6 mt-4">
@@ -545,7 +588,7 @@ async function cancelRepairRequest() {
             class="bg-[#1E48D1] text-white px-6 py-2.5 sm:py-3 rounded-lg hover:bg-sky-700 transition disabled:opacity-50"
             @click="submitRepairRequest"
           >
-            บันทึกฟอร์มแจ้งซ่อม
+            ส่งแบบฟอร์มแจ้งซ่อม
           </button>
         </div>
       </form>

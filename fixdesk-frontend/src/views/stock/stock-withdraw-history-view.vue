@@ -1,3 +1,43 @@
+/**
+ * =====================================================================
+ * @file            stock-withdraw-history-view.vue
+ * @module          -
+ * @layer           View (Presentation Layer)
+ * @version         1.0.0
+ * @since           2025-10-21
+ * @author          พชร ไพศรีสกุล
+ * @lastModified    2026-02-20
+ * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
+ * ---------------------------------------------------------------------
+ * @description
+ *  หน้าจอสำหรับแสดงประวัติการเบิกของทั้งหมดของผู้ดูแลคลัง
+ *  แสดงเฉพาะรายการเบิกที่มีให้ผลการอนุมัติแล้ว:
+ *    - approved
+ *    - rejected
+ *    - completed
+ *  รองรับการค้นหาด้วย:
+ *    - หมายเลขรายการเบิก  (sf_code)
+ *    - หน่วยงาน           (us_department)
+ *    - รายละเอียดการเบิก
+ *      - กรองตาม:
+ *        - สถานะการเบิก
+ *        - วันที่สร้างใบเบิก
+ *   - กดดูรายละเอียดใบเบิกแต่ละรายการได้
+ *
+ * @requires
+ *   - vue
+ *   - vue-router
+ *   - sweetalert2
+ *   - @/components/table-component.vue
+ *   - @/components/filters/repair-filter-bar-component.vue
+ *   - @/components/button/info-button-component.vue
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *   - แก้ไขข้อความหัวตาราง          [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - แก้ไขข้อความในตารางแสดงข้อมูล  [2026-02-20, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ * =====================================================================
+ */
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
@@ -14,7 +54,7 @@ const router = useRouter()
 const API_BASE = import.meta.env.VITE_API_BASE
 
 // ==================== Table ====================
-const columns = ['รหัสใบเบิกของ', 'หน่วยงาน', 'รายละเอียด', 'สถานะการเบิก', 'ตัวดำเนินการ']
+const columns = ['หมายเลขรายการเบิก', 'หน่วยงาน', 'รายละเอียดการเบิก', 'สถานะการเบิก', 'ตัวดำเนินการ']
 const tableRowsList = ref([])
 
 // ==================== Filters (ใช้กับ RepairFilterBar) ====================
@@ -62,16 +102,16 @@ async function loadStockForms() {
         row: [
           item.sf_code, // 0
           item.us_department || '-', // 1
-          'วันที่: ' +
+          'วันที่เบิก : ' +
             new Date(item.sf_create_at).toLocaleDateString('th-TH') +
             '<br>' +
-            'ผู้ขอเบิก: ' +
+            'ผู้ขอเบิก : ' +
             item.requester +
             '<br>' +
-            'สถานที่: ' +
+            'สถานที่ : ' +
             item.bd_name +
             ' ' +
-            item.fl_name +
+            'ชั้น ' + item.fl_name +
             ' ' +
             item.room_name, // 2
           item.sf_status, // 3
@@ -84,8 +124,8 @@ async function loadStockForms() {
   } catch (err) {
     if (err.message === 'TOKEN_EXPIRED') {
       Sweetalert.fire({
-        title: 'Session หมดอายุ',
-        text: 'กรุณาเข้าสู่ระบบใหม่',
+        title: 'หมดเวลาในการใช้งาน',
+        text: 'คุณไม่ได้ใช้งานเป็นระยะเวลาหนึ่ง กรุณาลงชื่อเข้าสู่ระบบใหม่อีกครั้ง',
         icon: 'warning',
       })
       router.push('/login')
@@ -131,7 +171,7 @@ onMounted(() => {
 
 <template>
   <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-7xl">
-    <h1 class="text-xl font-bold mb-6">ประวัติการเบิกของ</h1>
+    <h1 class="text-xl font-bold mb-6">ประวัติการเบิกของทั้งหมด</h1>
 
     <!-- Filters -->
     <RepairFilterBar

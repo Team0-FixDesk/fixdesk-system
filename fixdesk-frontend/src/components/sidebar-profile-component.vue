@@ -1,3 +1,80 @@
+/**
+ * =====================================================================
+ * @file            sidebar-profile-component.vue
+ * @module          มอดูลจัดการโปรไฟล์ - การแก้ไขข้อมูลบัญชี (แก้ไขรหัสผ่าน)
+ * @layer           Component (Presentation Layer)
+ * @version         1.10.0
+ * @since           2025-10-23
+ * @author          เศรษฐพงศ์ หอมชื่น
+ * @contributors
+ *   - เศรษฐพงศ์ หอมชื่น
+ *   - พชร ไพศรีสกุล
+ *   - ปฏิพัทธ์ จงนันทพันธ์กุล
+ *
+ * @lastModified    2026-02-22
+ * @lastModifiedBy  พชร ไพศรีสกุล
+ * ---------------------------------------------------------------------
+ * @description
+ *  Component ส่วนท้ายของ Sidebar สำหรับแสดงข้อมูลผู้ใช้ และจัดการตั้งค่าบัญชีส่วนตัว
+ *  ความสามารถ:
+ *    - แสดงชื่อผู้ใช้จาก JWT Token
+ *    - แสดง/ซ่อน Dropdown เมนูผู้ใช้
+ *    - เปิดหน้าต่างแก้ไขข้อมูลส่วนตัว
+ *    - แก้ไขเบอร์โทรศัพท์
+ *    - เปลี่ยนรหัสผ่าน
+ *    - ยืนยันตัวตนก่อนบันทึกข้อมูล (กรอกรหัสผ่านปัจจุบัน)
+ *    - Logout และลบ Token ออกจาก localStorage / sessionStorage
+ *
+ *  การทำงานสำคัญ:
+ *    - Decode JWT เพื่อดึงข้อมูลผู้ใช้
+ *    - Validate ฟอร์มข้อมูลส่วนตัวและรหัสผ่าน
+ *    - เรียก API แก้ไขข้อมูลผู้ใช้ (PUT /edit-personal/:id)
+ *    - แสดง SweetAlert แจ้งเตือนผลลัพธ์การทำรายการ
+ *    - ใช้ Composable สำหรับจัดรูปแบบเบอร์โทรศัพท์
+ *
+ * @requires
+ *   - vue
+ *   - jwt-decode
+ *   - sweetalert2
+ *   - @iconify/vue
+ *   - @/composables/usePhoneFormat
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *   - refactor(auth-backend): update database structure and adjust login & profile components
+ *     [2025-10-23, พชร ไพศรีสกุล] V 1.0.0
+ *   - feat(profile): เพิ่ม popup สำหรับแก้ไขข้อมูลผู้ใช้
+ *     [2025-11-29, เศรษฐพงศ์ หอมชื่น] V 1.1.0
+ *   - feat(profile): เพิ่มการดึงข้อมูลผู้ใช้จากระบบ
+ *     [2025-11-29, เศรษฐพงศ์ หอมชื่น] V 1.2.0
+ *   - feat(profile): เพิ่ม validation และระบบแจ้งเตือน
+ *     [2025-11-30, เศรษฐพงศ์ หอมชื่น] V 1.3.0
+ *   - feat(profile): เพิ่มระบบ SweetAlert
+ *     [2025-11-30, เศรษฐพงศ์ หอมชื่น] V 1.4.0
+ *   - fix(profile): ปรับ responsive layout
+ *     [2025-11-30, เศรษฐพงศ์ หอมชื่น] V 1.4.1
+ *   - feat(profile): เพิ่มฟังก์ชันแก้ไขรหัสผ่าน
+ *     [2025-11-30, เศรษฐพงศ์ หอมชื่น] V 1.5.0
+ *   - feat(profile): รองรับการแก้ไขข้อมูลส่วนตัว
+ *     [2025-12-01, เศรษฐพงศ์ หอมชื่น] V 1.6.0
+ *   - refactor(profile): ปรับปรุงโครงสร้าง frontend ให้สอดคล้องกับ Coding Standard
+ *     [2026-01-15, พชร ไพศรีสกุล] V 1.8.0
+ *   - fix(profile): แก้ไข bug และปรับปรุงการแสดงผลเบอร์โทรศัพท์
+ *     [2025-12-28, พชร ไพศรีสกุล] V 1.7.1
+ *   - feat(profile): เปลี่ยนระบบ icon ใหม่
+ *     [2026-02-05, พชร ไพศรีสกุล] V 1.9.0
+ *   - fix(profile): ย้าย icon ไป assets และแก้ไข icon issues  
+ *     [2026-02-06, พชร ไพศรีสกุล] V 1.9.2
+ *   - fix(profile): แก้ไข feature import location
+ *     [2026-02-09, พชร ไพศรีสกุล] V 1.9.3
+ *   - style(profile): ปรับปรุงข้อความและ UI แจ้งเตือน
+ *     [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล] V 1.9.4
+ *   - Refactor Sidebar ปรับปรุง UX
+ *     [2026-02-22, พชร ไพศรีสกุล] V 1.10.0
+ *
+ * =====================================================================
+ */
+
 <script setup>
 import { ref, watch, onMounted } from 'vue'
 import { jwtDecode } from 'jwt-decode'
@@ -9,9 +86,6 @@ import ChevronUpIcon from '@/assets/icons/sidebar/chevron-up-icon.svg'
 import LogoutIcon from '@/assets/icons/sidebar/logout-icon.svg'
 import PersonIcon from '@/assets/icons/sidebar/person-icon.svg'
 import SettingIcon from '@/assets/icons/sidebar/settings-icon.svg'
-
-
-
 
 defineExpose({ forceClose })
 
@@ -75,7 +149,7 @@ onMounted(() => {
       lastNameEN.value = decoded.us_last_name_en || ''
       username.value = decoded.us_user_name || ''
     } catch (err) {
-      console.error('❌ Decode token error:', err)
+      console.error('Decode token error:', err)
     }
   }
 })
@@ -148,13 +222,13 @@ function validatePasswordForm() {
 
   // ตรวจ password ใหม่
   if (!editForm.value.password) {
-    errors.value.password = 'กรุณากรอกรหัสผ่านใหม่'
+    errors.value.password = 'ยังไม่ได้กรอกรหัสผ่านใหม่'
     valid = false
   }
 
   // ตรวจ confirm password
   if (!editForm.value.confirmPassword) {
-    errors.value.confirmPassword = 'กรุณากรอกยืนยันรหัสผ่าน'
+    errors.value.confirmPassword = 'ยังไม่ได้ยืนยันรหัสผ่าน'
     valid = false
   }
 
@@ -186,7 +260,7 @@ function validatePasswordForm() {
     if (messages.length > 0) {
       Swal.fire({
         icon: 'warning',
-        title: 'กรุณาตรวจสอบการกรอกรหัสผ่าน',
+        title: 'กรุณาตรวจสอบรหัสผ่านอีกครั้ง',
         html: messages.join('<br/>'),
         confirmButtonColor: '#f59e0b', //orange
       })
@@ -382,7 +456,7 @@ watch(
 
     <!-- ชื่อ: แสดงเฉพาะตอนขยาย -->
     <div v-show="props.expanded" class="flex flex-col text-white leading-tight">
-      <span class="text-lg font-semibold">{{ userFullname }}</span>
+      <span class="text-base font-semibold">{{ userFullname }}</span>
     </div>
 
     <!-- ลูกศร: แสดงเฉพาะตอนขยาย -->

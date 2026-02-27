@@ -3,9 +3,9 @@
  * @file            : stock-service.js
  * @module          : Business Logic สำหรับระบบคลังวัสดุ/อุปกรณ์
  * @layer           : Service Layer (Business Logic Layer)
- * @version         : 1.0.0
+ * @version         : 1.3.0
  * @since           : 2026-02-17
- * @lastModified    : 2026-02-17
+ * @lastModified    : 2026-02-23
  * @lastModifiedBy  : นายพชร ไพศรีสกุล
  * ---------------------------------------------------------------------
  * @description
@@ -62,6 +62,57 @@
  *  - เพิ่มระบบคืนสินค้า (returnItem)
  *    และเพิ่ม transaction สำหรับคืนสินค้า
  *    [2026-02-17, นายพชร ไพศรีสกุล]
+ *  - รองรับการคืนอุปกรณ์แบบบางส่วน (Partial Return)ปรับปรุง logic การคืนและการคำนวณ stock ให้รองรับการคืนหลายครั้ง
+ *    [2026-02-23, พชร ไพศรีสกุล] V1.3.0
+ * =====================================================================
+ */
+
+/**
+ * =====================================================================
+ * @file            : stock-service.js
+ * @module          : Business Logic สำหรับระบบคลังวัสดุ/อุปกรณ์
+ * @layer           : Service Layer (Business Logic Layer)
+ * @version         : 1.1.0
+ * @since           : 2026-02-17
+ * @lastModified    : 2026-02-17
+ * @lastModifiedBy  : นายธนภัทร จันทร์งาม
+ * ---------------------------------------------------------------------
+ * @description
+ *  Service Layer สำหรับจัดการตรรกะการทำงานหลักของระบบคลังวัสดุ/อุปกรณ์
+ *  และใบเบิกสินค้า (Stock Forms)
+ *
+ *  แก้ไขเพิ่มเติม:
+ *    - ปรับปรุงการสร้างใบเบิกสินค้า (createWithdraw)
+ *    - รองรับกรณีมีการเพิ่มรายการสินค้าที่ซ้ำกัน
+ *    - รวมจำนวนสินค้าที่มีรหัสเดียวกันก่อนบันทึก
+ *    - ป้องกันการบันทึกข้อมูลซ้ำใน stock_form_detail
+ *    - ป้องกันการตัด stock ซ้ำหลายครั้ง
+ *
+ * @requires
+ *   - mysql2 (Database connection ผ่าน db instance)
+ *   - fs
+ *   - path
+ *
+ * @databaseTables
+ *   - products
+ *   - categories
+ *   - units
+ *   - stock_form
+ *   - stock_form_detail
+ *   - repair_form
+ *
+ * @dataFlow
+ *   Controller → Service → Database
+ *
+ * @author
+ *   - นายพชร ไพศรีสกุล
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *  - ปรับปรุงฟังก์ชัน createWithdraw
+ *    ให้รวมรายการสินค้าที่ซ้ำกันก่อนทำ Transaction
+ *    เพื่อความถูกต้องของข้อมูล stock
+ *    [2026-02-17, นายธนภัทร จันทร์งาม]
  * =====================================================================
  */
 
@@ -398,7 +449,26 @@ module.exports = (db) => {
     // สร้างใบเบิก (Transaction)
     async createWithdraw(userId, repairCode, items) {
       const connection = await db.promise().getConnection();
+
       try {
+        // ===============================
+        // ✅ STEP 1: รวม item ที่ซ้ำกัน
+        // ===============================
+        const mergedItemsMap = {};
+
+        for (const item of items) {
+          if (!mergedItemsMap[item.id]) {
+            mergedItemsMap[item.id] = {
+              id: item.id,
+              qty: Number(item.qty),
+            };
+          } else {
+            mergedItemsMap[item.id].qty += Number(item.qty);
+          }
+        }
+
+        const mergedItems = Object.values(mergedItemsMap);
+
         await connection.beginTransaction();
 
         // 1. หา Repair ID
@@ -438,7 +508,9 @@ module.exports = (db) => {
 
           // Insert Detail (สถานะ waiting - รอ Stock อนุมัติ)
           await connection.query(
-            "INSERT INTO stock_form_detail (sfd_sf_id, sfd_pd_id, sfd_qty, sfd_status) VALUES (?, ?, ?, 'waiting')",
+            `INSERT INTO stock_form_detail
+         (sfd_sf_id, sfd_pd_id, sfd_qty, sfd_status)
+         VALUES (?, ?, ?, 'waiting')`,
             [sfId, item.id, item.qty],
           );
           
@@ -694,23 +766,64 @@ module.exports = (db) => {
 
       for (const [i, item] of items.entries()) {
         try {
-          // Validation
+          // ===============================
+          // STEP 1: Validation
+          // ===============================
           const qty = Number(item.pd_quantity);
           if (!item.pd_name || isNaN(qty) || qty <= 0 || !item.pd_unit_name) {
             throw new Error("ข้อมูลไม่ครบถ้วน หรือจำนวนไม่ถูกต้อง");
           }
 
-          // Check Duplicates
-          const [dup] = await db
-            .promise()
-            .query(
-              "SELECT pd_id FROM products WHERE pd_name = ? OR (pd_asset_code IS NOT NULL AND pd_asset_code = ?) LIMIT 1",
-              [item.pd_name, item.pd_asset_code || null],
-            );
-          if (dup.length > 0)
-            throw new Error("ชื่อสินค้า หรือ รหัสครุภัณฑ์ซ้ำ");
+          // ===============================
+          // STEP 2: ตรวจสอบสินค้าซ้ำ
+          // ===============================
+          // ใช้ชื่อสินค้าเป็นหลัก
+          let dupQuery = `
+            SELECT pd_id FROM products
+            WHERE TRIM(LOWER(pd_name)) = TRIM(LOWER(?))
+            LIMIT 1
+          `;
+          let dupParams = [item.pd_name];
 
-          // Get Unit / Category IDs
+          // ค่อยเช็ค asset_code ถ้ามีจริง
+          if (item.pd_asset_code && item.pd_asset_code.trim() !== "") {
+            dupQuery = `
+              SELECT pd_id FROM products
+              WHERE TRIM(LOWER(pd_name)) = TRIM(LOWER(?))
+              OR pd_asset_code = ?
+              LIMIT 1
+            `;
+            dupParams.push(item.pd_asset_code);
+          }
+
+          const [dup] = await db.promise().query(dupQuery, dupParams);
+
+          // ===============================
+          // STEP 3: ถ้าซ้ำ → เพิ่มจำนวน (UPDATE)
+          // ===============================
+          if (dup.length > 0) {
+            const [res] = await db.promise().query(
+              `UPDATE products
+               SET pd_quantity = pd_quantity + ?,
+              pd_updated_at = NOW()
+              WHERE pd_id = ?`,
+              [qty, dup[0].pd_id],
+            );
+
+            console.log("UPDATED:", item.pd_name, "rows:", res.affectedRows);
+
+            results.push({
+              index: i,
+              name: item.pd_name,
+              action: "updated_quantity",
+            });
+
+            continue; // สำคัญมาก
+          }
+
+          // ===============================
+          // STEP 4: ถ้าไม่ซ้ำ → INSERT
+          // ===============================
           const unitId = await this.getOrCreateUnitId(item.pd_unit_name);
 
           let categoryId = null;
@@ -746,20 +859,31 @@ module.exports = (db) => {
 
           results.push({ index: i, name: item.pd_name });
         } catch (err) {
-          errors.push({ index: i, name: item.pd_name, message: err.message });
+          errors.push({
+            index: i,
+            name: item.pd_name,
+            message: err.message,
+          });
         }
       }
-      return { success: results.length, failed: errors.length, errors };
+
+      return {
+        success: results.length,
+        failed: errors.length,
+        results,
+        errors,
+      };
     },
-    async returnItem(sfCode, pdId, userId) {
+
+    async returnItem(sfCode, pdId, returnQty, userId) {
       const connection = await db.promise().getConnection();
 
       try {
         await connection.beginTransaction();
 
-        // หา sf_id
+        // 1. หา sf_id
         const [sf] = await connection.query(
-          "SELECT sf_id FROM stock_form WHERE sf_code = ?",
+          `SELECT sf_id FROM stock_form WHERE sf_code = ?`,
           [sfCode],
         );
 
@@ -767,33 +891,51 @@ module.exports = (db) => {
 
         const sfId = sf[0].sf_id;
 
-        // หา item
-        const [item] = await connection.query(
-          `SELECT sfd_qty, sfd_status
+        // 2. คำนวณจำนวน withdraw ทั้งหมด
+        const [withdrawRows] = await connection.query(
+          `SELECT COALESCE(SUM(sfd_qty),0) total
        FROM stock_form_detail
-       WHERE sfd_sf_id = ? AND sfd_pd_id = ?`,
+       WHERE sfd_sf_id = ?
+       AND sfd_pd_id = ?
+       AND sfd_type = 'withdraw'
+       AND sfd_status = 'approved'`,
           [sfId, pdId],
         );
 
-        if (!item.length) throw new Error("ITEM_NOT_FOUND");
+        const totalWithdraw = withdrawRows[0].total;
 
-        if (item[0].sfd_status !== "approved")
-          throw new Error("ITEM_NOT_APPROVED");
+        // 3. คำนวณจำนวน return แล้ว
+        const [returnRows] = await connection.query(
+          `SELECT COALESCE(SUM(sfd_qty),0) total
+       FROM stock_form_detail
+       WHERE sfd_sf_id = ?
+       AND sfd_pd_id = ?
+       AND sfd_type = 'return'`,
+          [sfId, pdId],
+        );
 
-        // update status → returned
+        const totalReturned = returnRows[0].total;
+
+        const remaining = totalWithdraw - totalReturned;
+
+        if (remaining <= 0) throw new Error("NOTHING_TO_RETURN");
+
+        if (returnQty > remaining) throw new Error("RETURN_EXCEEDS_AVAILABLE");
+
+        // 4. insert return record
         await connection.query(
-          `UPDATE stock_form_detail
-       SET sfd_status = 'returned'
-       WHERE sfd_sf_id = ? AND sfd_pd_id = ?`,
-          [sfId, pdId],
+          `INSERT INTO stock_form_detail
+      (sfd_sf_id, sfd_pd_id, sfd_qty, sfd_type, sfd_status)
+      VALUES (?, ?, ?, 'return', 'returned')`,
+          [sfId, pdId, returnQty],
         );
 
-        // คืน stock
+        // 5. update stock
         await connection.query(
           `UPDATE products
        SET pd_quantity = pd_quantity + ?
        WHERE pd_id = ?`,
-          [item[0].sfd_qty, pdId],
+          [returnQty, pdId],
         );
 
         // บันทึก transaction IN (คืนของ) - ระบุชื่อ column ชัดเจน + userId

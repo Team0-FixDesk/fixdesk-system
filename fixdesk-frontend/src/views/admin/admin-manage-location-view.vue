@@ -1,3 +1,42 @@
+/**
+ * =====================================================================
+ * @file            admin-manage-location-view.vue
+ * @module          มอดูลการจัดการสถานที่ - การจัดการข้อมูลสถานที่
+ * @layer           View (Presentation Layer)
+ * @version         1.0.0
+ * @since           2025-10-21
+ * @author          เศรษฐพงศ์ หอมชื่น
+ * @lastModified    2026-02-18
+ * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
+ * ---------------------------------------------------------------------
+ * @description
+ *  หน้าจอสำหรับผู้ดูแลระบบ ใช้จัดการข้อมูลสถานที่ภายในระบบแจ้งซ่อม
+ *  ผู้ดูแลระบบสามารถจัดการ:
+ *    - อาคาร (Building)
+ *    - ชั้น (Floor)
+ *    - ห้อง (Room)
+ *    - แสดงรายการห้องทั้งหมดในระบบ (จัดเรียงตาม อาคาร → ชั้น → ห้อง)
+ *    - ค้นหา และกรองข้อมูลตามอาคาร / ชั้น
+ *    - เพิ่มสถานที่
+ *    - แก้ไขข้อมูลห้อง
+ *    - ลบข้อมูลห้อง
+ *    - นำเข้าสถานที่จากไฟล์ Excel
+ *
+ * @requires
+ *   - vue
+ *   - vue-router
+ *   - sweetalert2
+ *   - @iconify/vue
+ *   - TableComponent
+ *   - TableActionsComponent
+ *   - ImportLocationModal
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *   - ปรับปรุงข้อความที่ใช้ให้เหมาะสม                 [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ * =====================================================================
+ */
+
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
@@ -418,7 +457,7 @@ const tableRowsList = computed(() => {
 const openMenuId = ref(null)
 
 // เปลี่ยน columns ให้มี 5 คอลัมน์ แต่จะซ่อนคอลัมน์แรก
-const columns = ['', 'อาคาร', 'ชั้น', 'ห้อง', 'การจัดการ']
+const columns = ['', 'อาคาร', 'ชั้น', 'ห้อง', 'ตัวดำเนินการ']
 
 // Computed: กรองชั้นตามอาคารที่เลือก หรือแสดงชั้นที่ไม่ซ้ำ
 const filteredFloors = computed(() => {
@@ -580,16 +619,16 @@ async function confirmDelete(username) {
   if (!item) return
 
   const result = await Swal.fire({
-    title: 'ยืนยันการลบ',
-    html: `คุณต้องการลบห้อง <strong>"${item.name}"</strong> หรือไม่?<br>
-           <small>อาคาร: ${item.building}, ชั้น: ${item.floor}</small>`,
+    title: 'ยืนยันการลบข้อมูล?',
+    html: `คุณต้องการลบ <strong>"${item.name}"</strong> หรือไม่?<br>
+           <small>อาคาร: ${item.building} ชั้น: ${item.floor}</small>`,
     icon: 'warning',
     showCancelButton: true,
-    confirmButtonText: 'ลบเลย',
+    reverseButtons: true,
+    confirmButtonText: 'ยืนยัน',
     cancelButtonText: 'ยกเลิก',
     confirmButtonColor: '#EF4444',
     cancelButtonColor: '#6B7280',
-    reverseButtons: true,
   })
 
   if (!result.isConfirmed) return
@@ -888,10 +927,11 @@ async function saveEditLocation() {
   }
   const result = await Swal.fire({
     title: 'ยืนยันการแก้ไขข้อมูล?',
-    text: 'คุณต้องการบันทึกการแก้ไขนี้หรือไม่?',
+    text: 'คุณต้องการบันทึกการแก้ไขหรือไม่?',
     icon: 'question',
     showCancelButton: true,
-    confirmButtonText: 'บันทึก',
+    reverseButtons: true,
+    confirmButtonText: 'ยืนยัน',
     cancelButtonText: 'ยกเลิก',
     confirmButtonColor: '#f97316',
   })
@@ -1035,23 +1075,23 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-7xl">
-    <h1 class="text-lg sm:text-xl font-bold text-black mb-6">จัดการสถานที่ในระบบ</h1>
+    <h1 class="text-lg sm:text-xl font-bold text-black mb-6">จัดการข้อมูลสถานที่ในระบบ</h1>
 
     <!-- ฟิลเตอร์ -->
     <div class="mb-6">
       <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-4">
         <div class="flex flex-wrap items-center gap-3">
           <!-- ค้นหา -->
-          <input v-model="searchQuery" type="text" placeholder="ค้นหาอาคาร / ชั้น / ห้อง" class="w-full sm:w-[260px] h-10 px-4 rounded-lg border border-gray-300 bg-white focus:ring-2 focus:ring-blue-500 text-gray-700" />
+          <input v-model="searchQuery" type="text" placeholder="ค้นหารายการสถานที่" class="w-full sm:w-[260px] h-10 px-4 rounded-lg border border-gray-300 bg-white focus:ring-2 focus:ring-blue-500 text-gray-500" />
 
           <!-- ฟิลเตอร์อาคาร -->
           <div class="relative">
-            <button @click.stop="toggleBuildingFilter" class="h-10 flex items-center gap-2 border border-gray-300 rounded-lg px-4 py-2 bg-white text-gray-700">
+            <button @click.stop="toggleBuildingFilter" class="h-10 flex items-center gap-2 border border-gray-300 rounded-lg px-4 py-2 bg-white text-gray-500">
               {{ selectedBuilding ? buildings.find((b) => b.building_id == selectedBuilding)?.building_name || 'อาคาร' : 'อาคาร' }}
               <Icon icon="meteor-icons:chevron-down" style="color: gray" class="w-4 h-4 opacity-70 transition-transform duration-200" :class="{ 'rotate-180': showBuildingFilter }" />
             </button>
 
-            <div v-if="showBuildingFilter" class="absolute mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg p-3 text-sm text-gray-700 z-10 max-h-60 overflow-y-auto">
+            <div v-if="showBuildingFilter" class="absolute mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg p-3 text-sm text-gray-500 z-10 max-h-60 overflow-y-auto">
               <label class="flex items-center py-1 hover:bg-gray-50 rounded px-2">
                 <input type="radio" :value="''" v-model="selectedBuilding" @change="handleBuildingChange" class="w-4 h-4 text-blue-600 border-gray-300" />
                 <span class="ml-2">ทุกอาคาร</span>
@@ -1065,7 +1105,7 @@ onBeforeUnmount(() => {
 
           <!-- ฟิลเตอร์ชั้น -->
           <div class="relative">
-            <button @click.stop="toggleFloorFilter" class="h-10 flex items-center gap-2 border border-gray-300 rounded-lg px-4 py-2 bg-white text-gray-700">
+            <button @click.stop="toggleFloorFilter" class="h-10 flex items-center gap-2 border border-gray-300 rounded-lg px-4 py-2 bg-white text-gray-500">
               {{ selectedFloor ? floors.find((f) => f.floor_id == selectedFloor)?.floor_name || 'ชั้น' : 'ชั้น' }}
               <Icon icon="meteor-icons:chevron-down" style="color: gray" class="w-4 h-4 opacity-70 transition-transform duration-200" :class="{ 'rotate-180': showFloorFilter }" />
             </button>
@@ -1123,7 +1163,7 @@ onBeforeUnmount(() => {
           <h2 class="text-xl font-bold text-gray-800">รายละเอียดสถานที่</h2>
         </div>
 
-        <p class="text-gray-600 text-sm mb-6">ข้อมูล{{ viewData.type === 'building' ? 'อาคาร' : viewData.type === 'floor' ? 'ชั้น' : 'ห้อง' }}</p>
+        <p class="text-gray-600 text-sm mb-6">ข้อมูลสถานที่ (ไม่สามารถแก้ไขได้) {{ viewData.type === 'building' ? 'อาคาร' : viewData.type === 'floor' ? 'ชั้น' : 'ห้อง' }}</p>
 
         <div class="space-y-4">
           <div>
@@ -1144,11 +1184,6 @@ onBeforeUnmount(() => {
           <div v-if="viewData.type === 'room'">
             <label class="block text-sm font-medium text-gray-700 mb-1.5"> ชั้น </label>
             <input :value="viewData.floor_name || '-'" type="text" disabled class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed" />
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1.5"> รหัส </label>
-            <input :value="viewData.building_id || viewData.floor_id || viewData.room_id || '-'" type="text" disabled class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed" />
           </div>
         </div>
 
@@ -1174,18 +1209,18 @@ onBeforeUnmount(() => {
 
         <!-- โหมดการเพิ่ม -->
         <div class="space-y-4 mb-6">
-          <label class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400" :class="addForm.bulk_mode ? 'border-blue-600 bg-blue-50' : 'border-gray-200'">
-            <input type="radio" v-model="addForm.bulk_mode" :value="true" class="w-5 h-5 text-blue-600 mt-1" />
+          <label class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400">
+            <!-- <input type="radio" v-model="addForm.bulk_mode" :value="true" class="w-5 h-5 text-blue-600 mt-1" /> -->
             <div class="ml-3">
               <div class="flex items-center gap-2">
                 <span class="font-semibold text-gray-800">สร้างหลายระดับพร้อมกัน</span>
-                <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">เร็วกว่า</span>
+                <!-- <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">เร็วกว่า</span> -->
               </div>
               <p class="text-xs text-gray-500 mt-1">สร้างอาคาร + ชั้น + ห้อง ในครั้งเดียว</p>
             </div>
           </label>
 
-          <label class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400" :class="!addForm.bulk_mode ? 'border-blue-600 bg-blue-50' : 'border-gray-200'">
+          <!-- <label class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400" :class="!addForm.bulk_mode ? 'border-blue-600 bg-blue-50' : 'border-gray-200'">
             <input type="radio" v-model="addForm.bulk_mode" :value="false" class="w-5 h-5 text-blue-600 mt-1" />
             <div class="ml-3">
               <div class="flex items-center gap-2">
@@ -1193,12 +1228,11 @@ onBeforeUnmount(() => {
               </div>
               <p class="text-xs text-gray-500 mt-1">เลือกเพิ่ม อาคาร, ชั้น หรือ ห้อง ทีละอย่าง</p>
             </div>
-          </label>
+          </label> -->
         </div>
-
-        <!-- Single Mode -->
+        <!-- ปิดไว้ก่อน รอ PO คอมเมนต์
         <div v-if="!addForm.bulk_mode" class="space-y-4">
-          <!-- เลือกประเภท -->
+
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2"> ประเภท <span class="text-red-500">*</span> </label>
             <select v-model="addForm.type" class="w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-blue-400 focus:outline-none">
@@ -1208,7 +1242,7 @@ onBeforeUnmount(() => {
             </select>
           </div>
 
-          <!-- เลือกอาคาร (สำหรับชั้นและห้อง) -->
+
           <div v-if="addForm.type === 'floor' || addForm.type === 'room'">
             <label class="block text-sm font-medium text-gray-700 mb-2"> อาคาร <span class="text-red-500">*</span> </label>
             <select v-model="addForm.building_id" @change="handleModalBuildingChange" class="w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-blue-400 focus:outline-none">
@@ -1219,7 +1253,7 @@ onBeforeUnmount(() => {
             </select>
           </div>
 
-          <!-- เลือกชั้น (สำหรับห้อง) -->
+
           <div v-if="addForm.type === 'room'">
             <label class="block text-sm font-medium text-gray-700 mb-2"> ชั้น <span class="text-red-500">*</span> </label>
             <select v-if="addForm.type === 'room'" v-model="addForm.floor_id" :disabled="!addForm.building_id" class="w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-blue-400 focus:outline-none disabled:bg-gray-100">
@@ -1230,7 +1264,7 @@ onBeforeUnmount(() => {
             </select>
           </div>
 
-          <!-- ชื่อ -->
+
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">
               ชื่อ{{ addForm.type === 'building' ? 'อาคาร' : addForm.type === 'floor' ? 'ชั้น' : 'ห้อง' }}
@@ -1242,9 +1276,10 @@ onBeforeUnmount(() => {
             </p>
           </div>
         </div>
+        -->
 
         <!-- Bulk Mode -->
-        <div v-if="addForm.bulk_mode" class="space-y-4">
+        <div class="space-y-4">
           <!-- อาคาร -->
           <div class="border-2 border-gray-200 rounded-lg p-4 space-y-3">
             <h3 class="font-semibold text-gray-800">อาคาร</h3>
@@ -1340,10 +1375,10 @@ onBeforeUnmount(() => {
           <div class="bg-orange-400 p-3 rounded-full">
             <Icon icon="fluent:edit-24-regular" width="24" height="24" style="color: #ffffff" />
           </div>
-          <h2 class="text-xl font-bold text-gray-800">แก้ไข{{ editForm.type === 'building' ? 'อาคาร' : editForm.type === 'floor' ? 'ชั้น' : 'ห้อง' }}</h2>
+          <h2 class="text-xl font-bold text-gray-800">แก้ไขข้อมูล{{ editForm.type === 'building' ? 'อาคาร' : editForm.type === 'floor' ? 'ชั้น' : 'ห้อง' }}</h2>
         </div>
 
-        <p class="text-gray-600 text-sm mb-6">คุณต้องการบันทึกการแก้ไขข้อมูลหรือไม่</p>
+        <p class="text-gray-600 text-sm mb-6">ข้อมูลสถานที่ (สามารถแก้ไขได้)</p>
 
         <div class="space-y-4">
           <!-- แสดงประเภท (disabled) -->

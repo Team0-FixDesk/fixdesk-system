@@ -1,32 +1,34 @@
 /**
  * =====================================================================
- * @file            : stock-controller.js
- * @module          : จัดการ Stock และ Stock Forms
- * @layer           : Controller Layer (API Controller)
- * @version         : 1.0.0
- * @since           : 2026-02-17
- * @lastModified    : 2026-02-17
- * @lastModifiedBy  : นายพชร ไพศรีสกุล
+ * @file            stock-controller.js
+ * @layer           Controller (Presentation Layer)
+ * @version         1.3.0
+ * @since           2026-02-10
+ * @author          พชร ไพศรีสกุล
+ * @contributors
+ *   - พชร ไพศรีสกุล
+ *   - นราธิป แสนทวีสุข
+ *   - ปฏิพัทธ์ จงนันทพันธ์กุล
+ *
+ * @lastModified    2026-02-23
+ * @lastModifiedBy  พชร ไพศรีสกุล
  * ---------------------------------------------------------------------
  * @description
- *  Controller สำหรับจัดการ API ของระบบคลังวัสดุ/อุปกรณ์
- *  ทำหน้าที่รับ request จาก client และเรียกใช้ stockService
- *  เพื่อดำเนินการ business logic และส่ง response กลับ
+ *  Controller สำหรับจัดการระบบคลังวัสดุ/อุปกรณ์ (Stock Management)
+ *  ทำหน้าที่รับ request จาก client และเรียกใช้งาน stockService
  *
  *  รองรับการทำงาน:
- *    - จัดการสินค้า (เพิ่ม, แก้ไข, ลบ, แสดงรายการ)
- *    - จัดการหมวดหมู่
- *    - จัดการใบเบิกสินค้า
- *    - เบิกสินค้า
- *    - อนุมัติ/ปฏิเสธสินค้า
- *    - คืนสินค้า
+ *    - จัดการสินค้า (Products)
+ *    - จัดการหมวดหมู่ (Categories)
+ *    - จัดการหน่วยนับ (Units)
+ *    - จัดการใบเบิกสินค้า (Stock Forms)
+ *    - เบิกสินค้า (Withdraw)
+ *    - อนุมัติ/ปฏิเสธรายการ
+ *    - Import ข้อมูลสินค้า
+ *    - คืนสินค้า (Return Item)
  *
- * @requires
- *   - stock-service.js
- *   - express
- *
- * @author
- *   - นายพชร ไพศรีสกุล
+ * @usedBy
+ *   - stock.route.js
  *
  * ---------------------------------------------------------------------
  * @changelog
@@ -40,12 +42,38 @@
  *    - withdraw: เพิ่ม logging เพื่อ debug
  *    [2026-02-20, นราธิป แสนทวีสุข]
  *  - เพิ่มระบบคืนสินค้า (returnItem)   [2026-02-17, นายพชร ไพศรีสกุล]
+ *   - Refactor โครงสร้างตาม Coding Standard V1.7.2
+ *     [2026-02-10, พชร ไพศรีสกุล] V1.0.0
+ *   - Allow approving and rejecting items in same requisition
+ *     [2026-02-14, นราธิป แสนทวีสุข] V1.1.0
+ *   - เพิ่มระบบการคืนอุปกรณ์ (Return Item)
+ *     [2026-02-17, พชร ไพศรีสกุล] V1.2.0
+ *   - แก้ไขข้อความแจ้งเตือน  
+ *     [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล] V1.2.1
+ *   - รองรับการคืนอุปกรณ์แบบบางส่วน (Partial Return)ปรับปรุง logic การคืนและการคำนวณ stock ให้รองรับการคืนหลายครั้ง
+ *     [2026-02-23, พชร ไพศรีสกุล] V1.3.0
+ *
  * =====================================================================
  */
 
 module.exports = (stockService) => {
   return {
-    /* --- Products --- */
+    /* --- PRODUCT CONTROLLER --- */
+    /**
+     * ดึงรายการสินค้าทั้งหมด
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-17
+     * @lastModifiedBy พชร ไพศรีสกุล
+     * @contributors
+     *  - พชร ไพศรีสกุล
+     *  - นราธิป แสนทวีสุข
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async getAllProducts(req, res) {
       try {
         const products = await stockService.getAllProducts();
@@ -72,6 +100,20 @@ module.exports = (stockService) => {
       }
     },
 
+    /**
+     * เพิ่มสินค้าใหม่
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-17
+     * @lastModifiedBy พชร ไพศรีสกุล
+     * @contributors
+     *  - พชร ไพศรีสกุล
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async addProduct(req, res) {
       try {
         const {
@@ -118,6 +160,20 @@ module.exports = (stockService) => {
       }
     },
 
+    /**
+     * แก้ไขข้อมูลสินค้า
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-17
+     * @lastModifiedBy พชร ไพศรีสกุล
+     * @contributors
+     *  - พชร ไพศรีสกุล
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async updateProduct(req, res) {
       try {
         const { id } = req.params;
@@ -152,6 +208,18 @@ module.exports = (stockService) => {
       }
     },
 
+    /**
+     * ลบสินค้า
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-17
+     * @lastModifiedBy พชร ไพศรีสกุล
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async deleteProduct(req, res) {
       try {
         const userId = req.user?.us_id || null; // ✅ ดึง userId
@@ -166,7 +234,22 @@ module.exports = (stockService) => {
       }
     },
 
-    /* --- Category --- */
+    /* --- CATEGORY CONTROLLER --- */
+    /**
+     * ดึงรายการหมวดหมู่ทั้งหมด
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-14
+     * @lastModifiedBy นราธิป แสนทวีสุข
+     * @contributors
+     *  - พชร ไพศรีสกุล
+     *  - นราธิป แสนทวีสุข
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async getCategories(req, res) {
       try {
         const result = await stockService.getAllCategories();
@@ -176,6 +259,21 @@ module.exports = (stockService) => {
       }
     },
 
+    /**
+     * เพิ่มหมวดหมู่สินค้าใหม่
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-14
+     * @lastModifiedBy นราธิป แสนทวีสุข
+     * @contributors
+     *  - พชร ไพศรีสกุล
+     *  - นราธิป แสนทวีสุข
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async addCategory(req, res) {
       try {
         const { ct_name } = req.body;
@@ -191,6 +289,21 @@ module.exports = (stockService) => {
       }
     },
 
+    /**
+     * แก้ไขข้อมูลหมวดหมู่สินค้า
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-14
+     * @lastModifiedBy นราธิป แสนทวีสุข
+     * @contributors
+     *  - พชร ไพศรีสกุล
+     *  - นราธิป แสนทวีสุข
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async updateCategory(req, res) {
       try {
         const { ct_name } = req.body;
@@ -208,6 +321,21 @@ module.exports = (stockService) => {
       }
     },
 
+    /**
+     * ลบหมวดหมู่สินค้า
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-14
+     * @lastModifiedBy นราธิป แสนทวีสุข
+     * @contributors
+     *  - พชร ไพศรีสกุล
+     *  - นราธิป แสนทวีสุข
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async deleteCategory(req, res) {
       try {
         await stockService.deleteCategory(req.params.id);
@@ -223,7 +351,22 @@ module.exports = (stockService) => {
       }
     },
 
-    /* --- Units --- */
+    /* --- UNIT CONTROLLER --- */
+    /**
+     * ดึงรายการหน่วยนับสินค้า (Units)
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-14
+     * @lastModifiedBy นราธิป แสนทวีสุข
+     * @contributors
+     *  - พชร ไพศรีสกุล
+     *  - นราธิป แสนทวีสุข
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async getUnits(req, res) {
       try {
         const result = await stockService.getAllUnits();
@@ -233,7 +376,21 @@ module.exports = (stockService) => {
       }
     },
 
-    /* --- Stock Forms (Withdrawal) --- */
+    /* --- STOCK FORM CONTROLLER --- */
+    /**
+     * ดึงรายการใบเบิกสินค้าทั้งหมด
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-17
+     * @lastModifiedBy พชร ไพศรีสกุล
+     * @contributors
+     *  - พชร ไพศรีสกุล
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async getAllStockForms(req, res) {
       try {
         const result = await stockService.getStockForms();
@@ -243,6 +400,18 @@ module.exports = (stockService) => {
       }
     },
 
+    /**
+     * ดึงรายการใบเบิกสินค้าของผู้ใช้งาน
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-17
+     * @lastModifiedBy พชร ไพศรีสกุล
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async getUserStockForms(req, res) {
       try {
         const result = await stockService.getStockForms(req.params.id);
@@ -252,6 +421,18 @@ module.exports = (stockService) => {
       }
     },
 
+    /**
+     * ดึงรายละเอียดใบเบิกสินค้า
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-17
+     * @lastModifiedBy พชร ไพศรีสกุล
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async getStockFormDetail(req, res) {
       try {
         const result = await stockService.getStockFormDetail(
@@ -263,11 +444,23 @@ module.exports = (stockService) => {
       }
     },
 
+    /**
+     * สร้างใบเบิกสินค้า (Withdraw)
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-17
+     * @lastModifiedBy พชร ไพศรีสกุล
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async withdraw(req, res) {
       try {
         const { repair_code, items } = req.body;
         if (!items || items.length === 0)
-          return res.status(400).json({ message: "ไม่มีรายการสินค้า" });
+          return res.status(400).json({ message: "ไม่มีรายการวัสดุ/อุปกรณ์" });
 
         const userId = req.user.us_id || req.user.id;
         
@@ -279,19 +472,34 @@ module.exports = (stockService) => {
           items,
         );
 
-        console.log("✅ [withdraw] Withdrawal completed:", { sfCode });
-        res.json({ message: "เบิกสินค้าเรียบร้อย", sf_code: sfCode });
+        res.json({ message: "ส่งคำขอเบิกเรียบร้อย", sf_code: sfCode });
       } catch (err) {
         if (err.message === "REPAIR_NOT_FOUND")
-          return res.status(404).json({ message: "ไม่พบใบแจ้งซ่อม" });
+          return res
+            .status(404)
+            .json({ message: "ไม่พบรายการแจ้งซ่อมที่ต้องการ" });
         if (err.message.includes("INSUFFICIENT_STOCK"))
-          return res.status(400).json({ message: "สินค้าไม่เพียงพอ" });
+          return res
+            .status(400)
+            .json({ message: "จำนวนวัสดุ/อุปกรณ์ที่ต้องการเบิกไม่เพียงพอ" });
         res
           .status(500)
-          .json({ message: "เบิกสินค้าไม่สำเร็จ", error: err.message });
+          .json({ message: "ส่งคำขอเบิกไม่สำเร็จ", error: err.message });
       }
     },
 
+    /**
+     * อัปเดตสถานะรายการสินค้าในใบเบิก
+     *
+     * @author นราธิป แสนทวีสุข
+     * @since 2026-02-14
+     * @lastModified 2026-02-14
+     * @lastModifiedBy นราธิป แสนทวีสุข
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async updateItemStatus(req, res) {
       try {
         const { sf_code, pd_id, status } = req.body;
@@ -318,6 +526,18 @@ module.exports = (stockService) => {
       }
     },
 
+    /**
+     * อัปเดตสถานะหลายรายการสินค้า
+     *
+     * @author นราธิป แสนทวีสุข
+     * @since 2026-02-14
+     * @lastModified 2026-02-14
+     * @lastModifiedBy นราธิป แสนทวีสุข
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async updateMultipleItemsStatus(req, res) {
       try {
         const { sf_code, items } = req.body;
@@ -346,6 +566,18 @@ module.exports = (stockService) => {
       }
     },
 
+    /**
+     * อัปเดตสถานะใบเบิกสินค้า
+     *
+     * @author นราธิป แสนทวีสุข
+     * @since 2026-02-14
+     * @lastModified 2026-02-14
+     * @lastModifiedBy นราธิป แสนทวีสุข
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async updateFormStatus(req, res) {
       try {
         const { sf_code, status } = req.body;
@@ -359,6 +591,19 @@ module.exports = (stockService) => {
       }
     },
 
+    // --- Import ข้อมูลสินค้า ---
+    /**
+     * Import ข้อมูลสินค้าเข้าสู่ระบบ
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-17
+     * @lastModified 2026-02-17
+     * @lastModifiedBy พชร ไพศรีสกุล
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async importStock(req, res) {
       try {
         const { items } = req.body;
@@ -377,13 +622,31 @@ module.exports = (stockService) => {
         res.status(500).json({ message: "Import ล้มเหลว", error: err.message });
       }
     },
+
+    /**
+     * คืนสินค้าเข้าสู่ระบบ
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-17
+     * @lastModified 2026-02-17
+     * @lastModifiedBy พชร ไพศรีสกุล
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async returnItem(req, res) {
       try {
-        const { sf_code, pd_id } = req.body;
+        const { sf_code, pd_id, quantity } = req.body;
 
         const userId = req.user.us_id;
 
-        await stockService.returnItem(sf_code, pd_id, userId);
+        if (!quantity || quantity <= 0)
+          return res.status(400).json({
+            message: "จำนวนไม่ถูกต้อง",
+          });
+
+        await stockService.returnItem(sf_code, pd_id, quantity, userId);
 
         res.json({
           message: "คืนอุปกรณ์สำเร็จ",

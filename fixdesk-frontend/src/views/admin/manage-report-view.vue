@@ -1,12 +1,15 @@
 /**
  * =====================================================================
  * @file            manage-report-view.vue
- * @module          จัดการรายงานและสร้าง PDF แบบฟอร์มแจ้งซ่อม
+ * @module          มอดูลส่งออกรายงาน และแดชบอร์ดสรุปผลการแจ้งซ่อม
+                      - การส่งออกใบแจ้งซ่อมเป็นไฟล์ PDF
+                      - การสร้างหนังสือบันทึกข้อความประจำเดือน
+                      - การส่งออกรายงานแจ้งซ่อมประจำเดือน ในรูปแบบ CSV
  * @layer           View (Presentation Layer)
- * @version         1.0.0
+ * @version         1.1.0
  * @since           2025-01-15
  * @author          นราธิป แสนทวีสุข
- * @lastModified    2026-02-17
+ * @lastModified    2026-02-22
  * @lastModifiedBy  นราธิป แสนทวีสุข
  * ---------------------------------------------------------------------
  * @description
@@ -28,12 +31,16 @@
  *
  * ---------------------------------------------------------------------
  * @changelog
- *  - แก้ไขคำในปุ่มให้ชัดเจนขึ้น                                          [2026-02-17, นราธิป แสนทวีสุข]
- *  - แก้ไข reporter และ assigner name ให้แสดงคำนำหน้าชื่อ              [2026-02-17, นราธิป แสนทวีสุข]
- *  - แก้ไขปัญหาตัวอักษรตกบรรทัดในปุ่ม CSV (whitespace-nowrap)           [2026-02-17, นราธิป แสนทวีสุข]
- *  - ปรับ padding และขนาดตัวอักษรปุ่มให้ไม่ชิดขอบเกินไป (text-sm, p-3)    [2026-02-17, นราธิป แสนทวีสุข]
+ *  - แก้ไขคำในปุ่มให้ชัดเจนขึ้น                                  [2026-02-17, นราธิป แสนทวีสุข]
+ *  - แก้ไข reporter และ assigner name ให้แสดงคำนำหน้าชื่อ        [2026-02-17, นราธิป แสนทวีสุข]
+ *  - แก้ไขปัญหาตัวอักษรตกบรรทัดในปุ่ม CSV (whitespace-nowrap)  [2026-02-17, นราธิป แสนทวีสุข]
+ *  - ปรับ padding และขนาดตัวอักษรปุ่มให้ไม่ชิดขอบเกินไป (text-sm, p-3) [2026-02-17, นราธิป แสนทวีสุข]
+ *  - แก้ไขข้อความคำอธิบาย                                    [2026-02-20, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *  - เปลี่ยนจาก rf_is_outsourced เป็น rf_repair_method
+ *    และเพิ่มฟิลด์ rf_result_status ใน PDF                       [2026-02-22, นราธิป แสนทวีสุข]
  * =====================================================================
  */
+
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
@@ -100,7 +107,7 @@ const getRepairFormHTML = (item, isPdf = false) => {
   const department = item.reporter?.department || '..............................................';
   const phone = item.reporter?.phone || '............................';
   const issue = item.rf_problem || item.rf_issue || '...................................................................................................................';
-  const assetId = item.rf_prop_number || '.............................................................................';
+  const assetId = item.rf_prop_number || '';
   const building = item.building_name || item.rf_building || '..................';
   const floor = item.floor_name || item.rf_floor || '..................';
   const room = item.room_name || item.rf_room || '..................';
@@ -111,7 +118,12 @@ const getRepairFormHTML = (item, isPdf = false) => {
 
   const technician = item.main_technician || '...............................................................................................................';
   const techSummary = item.rf_tech_summary || '........................................................................................................................................................................................\n........................................................................................................................................................................................';
-  const isOutsourced = item.rf_is_outsourced || false;
+
+  // เปลี่ยนจาก rf_is_outsourced เป็น rf_repair_method (DB Schema v1.1.0)
+  const repairMethod = item.rf_repair_method || 'in_house';
+  const repairMethodRemark = item.rf_repair_method_remark || '';
+  const resultStatus = item.rf_result_status || '';
+  const resultRemark = item.rf_result_remark || '';
 
   // รวมคำนำหน้า + ชื่อเต็มสำหรับผู้รับแจ้ง (ใช้ข้อมูลจาก backend)
   const assignerTitle = item.assigner?.title || '';
@@ -125,7 +137,7 @@ const getRepairFormHTML = (item, isPdf = false) => {
   // ถ้าเป็น PDF: เพิ่ม padding-bottom และเส้นหนาขึ้น (แก้บั๊ก html2canvas)
   // ถ้าเป็น Preview: ใช้ค่าปกติ สวยงามบนจอ
   const valueStyle = isPdf
-    ? `border-bottom: 2px dotted #888; padding-bottom: 8px; line-height: 1.2; margin-bottom: 2px;`
+    ? `border-bottom: 2px dotted #888; padding-bottom: 5px; line-height: 1.2; margin-bottom: 2px;`
     : `border-bottom: 1px dotted #000; padding-bottom: 0px; line-height: 1.4; margin-bottom: 2px;`;
 
   // Preview: top: 3px (สวยบนจอ)
@@ -134,6 +146,11 @@ const getRepairFormHTML = (item, isPdf = false) => {
   const checkboxLineHeight = isPdf ? '5px' : '12px'; // ปรับตำแหน่งเครื่องหมายถูกในกล่องนิดหน่อย
 
   const checkboxStyle = `width: 16px; height: 16px; border: 1px solid #000; display: inline-block; margin-right: 8px; position: relative; top: ${checkboxTop}; text-align: center; line-height: ${checkboxLineHeight}; font-size: 14px; font-weight: bold;`;
+
+  // Helper function: ถ้าค่าว่างให้ใส่ &nbsp; เพื่อให้มีความสูงแต่ไม่มีเนื้อหา (ให้ผู้ใช้เขียนด้วยปากกา)
+  const getValueOrSpace = (value) => {
+    return (value && value.trim() !== '') ? value : '&nbsp;';
+  };
   return `
     <div style="width: 100%; height: 100%; padding: 40px; box-sizing: border-box; font-family: 'THSarabun', 'Sarabun', sans-serif !important; background: white; color: #000; position: relative;">
       <style>
@@ -220,8 +237,9 @@ const getRepairFormHTML = (item, isPdf = false) => {
         <div class="box">
           <div style="font-weight: bold; margin-bottom: 12px; text-decoration: underline;">สำหรับเจ้าหน้าที่ ตรวจสอบ/ซ่อม</div>
 
-          <div><span style="${checkboxStyle}">${!isOutsourced ? '✓' : ''}</span> สามารถแก้ไข/ซ่อมบำรุงได้</div>
-          <div style="margin-top: 8px;"><span style="${checkboxStyle}">${isOutsourced ? '✓' : ''}</span> ต้องจ้างบริษัทฯมาดำเนินการ................................................................................................</div>
+          <div><span style="${checkboxStyle}">${repairMethod === 'in_house' ? '✓' : ''}</span> สามารถแก้ไข/ซ่อมบำรุงได้</div>
+          <div style="margin-top: 8px;"><span style="${checkboxStyle}">${repairMethod === 'outsource' ? '✓' : ''}</span> ต้องจ้างบริษัทฯมาดำเนินการ</div>
+          <div style="margin-top: 8px;"><span style="${checkboxStyle}">${repairMethod === 'other' ? '✓' : ''}</span> อื่นๆ <span class="value" style="width: 70%;">${getValueOrSpace(repairMethod === 'other' ? repairMethodRemark : '')}</span></div>
 
           <div class="divider"></div>
 
@@ -230,8 +248,9 @@ const getRepairFormHTML = (item, isPdf = false) => {
 
           <div style="margin-top: 16px;">
             สรุปผล:
-            <span style="margin-left: 16px;"><span style="${checkboxStyle}"></span> เรียบร้อย</span>
-            <span style="margin-left: 16px;"><span style="${checkboxStyle}"></span> ไม่เรียบร้อย เพราะ .............................................................</span>
+            <span style="margin-left: 16px;"><span style="${checkboxStyle}">${resultStatus === 'completed' ? '✓' : ''}</span> เรียบร้อย</span>
+            <span style="margin-left: 16px;"><span style="${checkboxStyle}">${resultStatus === 'incomplete' ? '✓' : ''}</span> ไม่เรียบร้อย เพราะ <span class="value" style="width: 34%;">${getValueOrSpace(resultStatus === 'incomplete' ? resultRemark : '')}</span></span><br>
+            <span style="margin-left: 56px;"><span style="${checkboxStyle}">${resultStatus === 'other' ? '✓' : ''}</span> อื่นๆ <span class="value" style="width: 67%;">${getValueOrSpace(resultStatus === 'other' ? resultRemark : '')}</span></span>
           </div>
 
           <div class="divider"></div>
@@ -639,7 +658,7 @@ onMounted(() => {
       <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-7xl-6">
         <!-- Page title and description -->
         <h1 class="text-2xl font-bold text-gray-800">สร้างรายงาน</h1>
-        <p class="text-gray-500 mt-1">การสร้างรายงานประจำเดือนหรือบันทึกใบแจ้งซ่อม</p>
+        <p class="text-gray-500 mt-1">สร้างรายงาน และดาวน์โหลดใบแจ้งซ่อมที่ดำเนินการเสร็จสิ้น</p>
         <div class="flex flex-col lg:flex-row gap-6">
           <!-- Sidebar: Month/Year selection and actions -->
           <div class="lg:w-72 flex-shrink-0 space-y-4">
@@ -765,7 +784,7 @@ onMounted(() => {
       <div v-if="showPrintModal" class="fixed inset-0 z-50 flex items-center justify-center">
         <div class="absolute inset-0 bg-black/50" @click="closePrintModal"></div>
         <div
-          class="relative bg-white rounded-xl shadow-2xl w-[95%] max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+          class="relative bg-white rounded-xl shadow-2xl w-[95%] max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
           <div class="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50">
             <h2 class="text-lg font-semibold text-gray-800">
               เตรียมดาวน์โหลดแบบฟอร์ม ({{ printSelection.length }} รายการ)
@@ -807,7 +826,7 @@ onMounted(() => {
               <div class="flex-1 overflow-auto p-4">
                 <div v-if="previewItem" class="mx-auto">
                   <div ref="previewDocRef" class="bg-white border border-gray-300 shadow-lg mx-auto overflow-hidden"
-                    style="width: 595px; min-height: 842px;" v-html="previewHtmlContent">
+                    style="width: 774px; min-height: 1095px; transform-origin: top center;" v-html="previewHtmlContent">
                   </div>
                 </div>
                 <div v-else class="flex items-center justify-center h-full text-gray-400">

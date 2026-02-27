@@ -1,39 +1,49 @@
 /**
  * =====================================================================
- * @file            admin-home-view.vue
- * @module          หน้าหลักผู้ดูแลระบบ (Admin Dashboard)
+ * @file            admin-home.view.vue
+ * @module          -
  * @layer           View (Presentation Layer)
- * @version         1.0.0
- * @since           2025-01-10
- * @author          พชร ไพศรีสกุล, นราธิป แสนทวีสุข
- * @lastModified    2026-02-17
- * @lastModifiedBy  นราธิป แสนทวีสุข
+ * @version         1.0.2
+ * @since           2025-10-21
+ * @author          เศรษฐพงศ์ หอมชื่น
+ * @contributors 
+     - พชร ไพศรีสกุล
+     - นราธิป แสนทวีสุข 
+     - ปฏิพัทธ์ จงนันทพันธ์กุล
+     - พิมลพรรณ มามาก
+ *     
+ * @lastModified    2026-02-21
+ * @lastModifiedBy  พิมลพรรณ มามาก
  * ---------------------------------------------------------------------
  * @description
- *  หน้าจอสำหรับผู้ดูแลระบบ แสดงภาพรวมและจัดการงานแจ้งซ่อม
- *  รองรับฟีเจอร์:
- *    - แสดงสถิติงานซ่อม (ทั้งหมด, วันนี้, กำลังดำเนินการ, เสร็จสิ้น)
- *    - แสดงตารางรายการแจ้งซ่อมพร้อมรายละเอียด
- *    - กรองข้อมูลตามสถานะและช่วงเวลา
- *    - นำทางไปยังหน้ารายละเอียดแต่ละรายการ
- *    - แสดงชื่อและหน่วยงานของผู้ใช้งาน
+ *  หน้าจอหลักสำหรับผู้ดูแลระบบ 
+ *  ใช้สำหรับ:
+ *   - แสดงสถิติของงานซ่อม (รายเดือน / วันนี้ / กำลังดำเนินการ / เสร็จสิ้น 7 วัน)
+ *   - แสดงตารางรายการแจ้งซ่อมทั้งหมด
  *
  * @requires
- *   - vue-router
- *   - @/services/repair (getAdminRepairList)
- *   - @/components/card-home-component.vue
- *   - @/components/table-component.vue
- *   - @/components/button/info-button-component.vue
- *   - @/composables/useUserProfile
- *   - @/composables/useAuthToken
- *   - @/composables/useTruncateText
+ *  - vue
+ *  - vue-router
+ *  - @/services/repair
+ *  - @/composables/useUserProfile
+ *  - @/composables/useAuthToken
+ *  - @/composables/useTruncateText
+ *  - @/components/card-home-component.vue
+ *  - @/components/table-component.vue
+ *  - @/components/button/repair-button-component.vue
+ *  - @/components/button/info-button-component.vue
  *
  * ---------------------------------------------------------------------
  * @changelog
- *  - แก้ไขการเรียกใช้ useUserProfile ให้ตรงกับ API ที่ถูกต้อง (fetchUserProfileData) [2026-02-17, นราธิป แสนทวีสุข]
- *  - แก้ไขชื่อตัวแปร displayName/displayDepartment เป็น userDisplayName/userDepartmentName [2026-02-17, นราธิป แสนทวีสุข]
+ *   - แก้ไขข้อความคำอธิบายสถานะ
+ *     [2026-02-17, ปฏิพัทธ์ จงนันทพันธ์กุล] V1.0.0
+ *   - แก้ไขข้อความคำอธิบายสถานะ, แก้ไขการใช้สัญลักษณ์
+ *     [2026-02-20, ปฏิพัทธ์ จงนันทพันธ์กุล] V1.0.1
+ *   - ดึงข้อมูลชื่อผู้ใช้ : 
+ *     [2026-02-21, พิมลพรรณ มามาก] V1.0.2
  * =====================================================================
  */
+
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
@@ -119,21 +129,21 @@ function buildDetailHtml(r) {
 
   // NOTE: คงรูปแบบ </br> เดิมไว้เพื่อไม่กระทบ UI ของ TableComponent
   return (
-    'วันที่แจ้ง: ' +
+    'วันที่แจ้งซ่อม : ' +
     formatThaiDate(r.rf_create_at) +
     '</br>' +
-    'ชื่อผู้แจ้ง: ' +
+    'ชื่อผู้แจ้ง : ' +
     reporterName +
     '</br>' +
-    'หน่วยงาน: ' +
+    'หน่วยงาน : ' +
     (r.department_name || '-') +
     '</br>' +
-    'รายละเอียด: ' +
+    'เรื่องที่แจ้ง : ' +
     truncateSentences(r.rf_problem, 1) +
     '</br>' +
-    'สถานที่: ' +
+    'สถานที่ : ' +
     (r.bd_name ?? '-') + ' ' +
-    (r.fl_name ?? '-') + ' ' +
+    'ชั้น ' + (r.fl_name ?? '-') + ' ' +
     (r.room_name ?? '-')
   )
 }
@@ -246,24 +256,24 @@ const completedTasks = computed(
 const statItems = computed(() => [
   {
     value: allTasks.value,
-    label: 'รายการแจ้งซ่อมทั้งหมดในเดือนนี้',
+    label: 'จำนวนงานซ่อมในเดือนนี้',
     colorClass: 'text-red-500',
   },
   {
     value: todayTasks.value,
-    label: 'รายการแจ้งซ่อมทั้งหมดภายในวันนี้',
+    label: 'จำนวนงานซ่อมในวันนี้',
     colorClass: 'text-amber-500',
     filterKey: 'today',
   },
   {
     value: progressTasks.value,
-    label: 'รายการแจ้งซ่อมที่กำลังดำเนินการ',
+    label: 'จำนวนงานซ่อมที่กำลังดำเนินการ',
     colorClass: 'text-blue-500',
     filterKey: 'in_progress',
   },
   {
     value: completedTasks.value,
-    label: 'รายการแจ้งซ่อมที่เสร็จสิ้นในระยะเวลา 7 วัน',
+    label: 'จำนวนงานซ่อมที่เสร็จสิ้นภายใน 7 วันที่ผ่านมา',
     colorClass: 'text-green-500',
     filterKey: 'completed_7days',
   },
@@ -295,14 +305,14 @@ onMounted(() => {
     <div class="flex justify-between items-center mb-6">
       <div>
         <p class="text-2xl font-extrabold text-gray-900">
-          หน้าหลักผู้ดูแลระบบ สวัสดีคุณ {{ userDisplayName }}
+          หน้าจอหลักของผู้ดูแลระบบ - สวัสดีคุณ{{ userDisplayName }}
         </p>
 
         <p class="text-lg font-semibold text-gray-700">
           {{ userDepartmentName }}
         </p>
 
-        <p class="text-sm text-gray-500">ตรวจสอบสถานะและดำเนินการงานแจ้งซ่อม</p>
+        <p class="text-sm text-gray-500">ตรวจสอบสถานะของรายการแจ้งซ่อม และมอบหมายงานซ่อม</p>
       </div>
     </div>
 
@@ -315,10 +325,10 @@ onMounted(() => {
         :columns="[
           'หมายเลขแจ้งซ่อม',
           'ประเภทงาน',
-          'รายละเอียด',
+          'รายละเอียดโดยย่อ',
           'ความเร่งด่วน',
           'สถานะงาน',
-          'การดำเนินการ',
+          'ตัวดำเนินการ',
         ]"
         :rows="rowsForDisplay"
         :perPage="10"

@@ -1,3 +1,53 @@
+/**
+ * =====================================================================
+ * @file            admin-user-info-view.vue
+ * @module          มอดูลการจัดการผู้ใช้ - การจัดการข้อมูลผู้ใข้งาน
+ * @layer           View (Presentation Layer)
+ * @version         1.0.2
+ * @since           2025-10-21
+ * @author          เศรษฐพงศ์ หอมชื่น
+ * @lastModified    2026-02-20
+ * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
+ * ---------------------------------------------------------------------
+ * @description
+ *  หน้าจอสำหรับใช้จัดการข้อมูลผู้ใช้งานในระบบของผู้ดูแลระบบ
+ *  แสดงรายการของผู้ใช้งานระบบทั้งหมด
+ *   รองรับการค้นหาด้วย
+ *    - ชื่อ-นามสกุล (ภาษาไทย / ภาษาอังกฤษ)
+ *    - ชื่อผู้ใช้ (Username)
+ *    - หน่วยงาน
+ *    - กรองตาม:
+ *      - บทบาท (Role)
+ *      - ตำแหน่งช่าง (Technician Type)
+ *   - เพิ่มผู้ใช้งานใหม่
+ *   - แก้ไขข้อมูลผู้ใช้งาน
+ *   - ดูรายละเอียดของผู้ใช้งาน
+ *   - ลบผู้ใช้งาน
+ *   - นำเข้าข้อมูลผู้ใช้งานจากไฟล์ Excel
+ *   - จัดการตำแหน่งช่าง (เพิ่ม / แก้ไข / ลบ)
+ *
+ * @requires
+ *   - vue
+ *   - vue-router
+ *   - sweetalert2
+ *   - @iconify/vue
+ *   - @/components/table-component.vue
+ *   - @/components/table-actions-component.vue
+ *   - @/components/modal/import-user-excel-component.vue
+ *   - @/components/button/import-button-component.vue
+ *   - @/components/button/base/base-button-component.vue
+ *   - @/composables/usePhoneFormat
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *   - ปรับปรุงข้อความที่ใช้ให้เหมาะสม                  [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - แก้ไขตำแหน่งของปุ่มยืินยันการแก้ไข/ลบ             [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - แก้ไขข้อความคำอธิบายรายละเอียดผู้ใช้/แก้ไขข้อมูลผู้ใช้ [2026-02-20, ปฏิพัทธ์ จงนันทพันธกุล]
+ *   - แก้ไขชื่อบทบาท "ผู้ใช้งาน"                      [2026-02-20, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - แก้ไขการสร้างบัญชีผู้ใช้ และ import จากไฟล์ ให้รองรับการสร้าง default รหัสผ่าน                      [2026-02-25, พชร ไพศรีสกุล]
+ * =====================================================================
+ */
+ 
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import TableComponent from '@/components/table-component.vue'
@@ -28,12 +78,11 @@ const userModalForm = ref({
   us_first_name_en: '',
   us_last_name_en: '',
   us_user_name: '',
-  us_user_pass: '',
   us_phone: '',
   us_department: '',
   us_role_id: '',
   us_tt_id: '',
-  us_job_title: '' || '-',
+  us_job_title: '',
   role_name: '',
   technician_type: '',
 })
@@ -58,9 +107,9 @@ const isEditMode = computed(() => userModalMode.value === 'edit')
 const isAddMode = computed(() => userModalMode.value === 'add')
 
 const modalTitle = computed(() => {
-  if (isAddMode.value) return 'เพิ่มผู้ใช้งาน'
-  if (isEditMode.value) return 'แก้ไขข้อมูลผู้ใช้'
-  return 'รายละเอียดผู้ใช้งาน'
+  if (isAddMode.value) return 'เพิ่มผู้ใช้งานใหม่'
+  if (isEditMode.value) return 'แก้ไขข้อมูลผู้ใช้ (สามารถแก้ไขได้)'
+  return 'รายละเอียดผู้ใช้งาน (ไม่สามารถแก้ไขได้)'
 })
 
 const modalIconClass = computed(() => {
@@ -203,7 +252,7 @@ function renderThaiRole(role) {
     case 'Manager':
       return 'ผู้บริหาร'
     case 'User':
-      return 'ผู้ใช้งานทั่วไป'
+      return 'ผู้ใช้งาน'
     case 'Stock':
       return 'ผู้ดูแลคลัง'
     default:
@@ -229,7 +278,6 @@ function resetModalForm() {
     us_first_name_en: '',
     us_last_name_en: '',
     us_user_name: '',
-    us_user_pass: '',
     us_phone: '',
     us_department: '',
     us_role_id: '',
@@ -325,27 +373,36 @@ async function confirmAddUser() {
   if (!validateUserForm()) return
   const result = await Sweetalert.fire({
     title: 'ยืนยันการเพิ่มผู้ใช้งาน?',
-    text: 'คุณต้องการเพิ่มผู้ใช้งานใหม่ในระบบหรือไม่?',
+    text: 'คุณต้องการเพิ่มผู้ใช้งานใหม่หรือไม่?',
     icon: 'question',
     showCancelButton: true,
-    confirmButtonText: 'บันทึก',
+    reverseButtons: true,
+    confirmButtonText: 'ยืนยัน',
     cancelButtonText: 'ยกเลิก',
     confirmButtonColor: '#16a34a',
   })
   if (!result.isConfirmed) return
 
   try {
+    // สร้าง payload ก่อน
+    const payload = {
+      ...userModalForm.value,
+      us_ttn_id: parseInt(userModalForm.value.us_ttn_id),
+      us_role_id: parseInt(userModalForm.value.us_role_id),
+      us_tt_id: userModalForm.value.us_tt_id ? parseInt(userModalForm.value.us_tt_id) : null,
+      us_phone: toRaw(userModalForm.value.us_phone),
+    }
+
+    // ลบ password ออกจาก payload
+    delete payload.us_user_pass
+
+    // ส่ง payload ไป backend
     const res = await fetch(`${API_BASE}/users`, {
       method: 'POST',
       headers: getAuthHeaders(),
-      body: JSON.stringify({
-        ...userModalForm.value,
-        us_ttn_id: parseInt(userModalForm.value.us_ttn_id),
-        us_role_id: parseInt(userModalForm.value.us_role_id),
-        us_tt_id: userModalForm.value.us_tt_id ? parseInt(userModalForm.value.us_tt_id) : null,
-        us_phone: toRaw(userModalForm.value.us_phone),
-      }),
+      body: JSON.stringify(payload),
     })
+
     const data = await res.json()
     if (!res.ok) throw new Error(data.message || 'เพิ่มผู้ใช้ไม่สำเร็จ')
 
@@ -372,10 +429,11 @@ async function confirmEditUser() {
   if (!validateUserForm()) return
   const result = await Sweetalert.fire({
     title: 'ยืนยันการแก้ไขข้อมูล?',
-    text: 'คุณต้องการบันทึกการแก้ไขนี้หรือไม่?',
+    text: 'คุณต้องการบันทึกการแก้ไขหรือไม่?',
     icon: 'question',
     showCancelButton: true,
-    confirmButtonText: 'บันทึก',
+    reverseButtons: true,
+    confirmButtonText: 'ยืนยัน',
     cancelButtonText: 'ยกเลิก',
     confirmButtonColor: '#f97316',
   })
@@ -423,10 +481,11 @@ async function confirmEditUser() {
 // Function: Confirm Delete
 async function confirmDelete(username) {
   const result = await Sweetalert.fire({
-    title: 'ยืนยันการลบ?',
+    title: 'ยืนยันการลบข้อมูล?',
     text: `คุณแน่ใจหรือไม่ว่าต้องการลบ "${username}"?`,
     icon: 'warning',
     showCancelButton: true,
+    reverseButtons: true,
     confirmButtonText: 'ลบ',
     cancelButtonText: 'ยกเลิก',
     confirmButtonColor: '#dc2626',
@@ -573,14 +632,6 @@ function validateUserForm() {
       userModalErrors.value.username = 'กรุณากรอกชื่อผู้ใช้'
       valid = false
     }
-    if (!f.us_user_pass.trim()) {
-      userModalErrors.value.password = 'กรุณากรอกรหัสผ่าน'
-      valid = false
-    }
-  }
-  if (isEditMode.value && f.us_user_pass && !f.us_user_pass.trim()) {
-    userModalErrors.value.password = 'รหัสผ่านใหม่ต้องไม่เป็นช่องว่าง'
-    valid = false
   }
 
   return valid
@@ -796,24 +847,61 @@ function handleImportError(message) {
     color: '#dc2626',
   })
 }
+
+async function handleResetPassword(userId) {
+  const result = await Sweetalert.fire({
+    title: 'รีเซ็ตรหัสผ่าน?',
+    text: 'ระบบจะสร้างรหัสผ่านใหม่โดยอัตโนมัติ',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'รีเซ็ต',
+    cancelButtonText: 'ยกเลิก',
+    confirmButtonColor: '#dc2626',
+  })
+
+  if (!result.isConfirmed) return
+
+  try {
+    const res = await fetch(`${API_BASE}/users/${userId}/reset-password`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    })
+
+    const data = await res.json()
+
+    if (!res.ok) {
+      throw new Error(data.message || 'รีเซ็ตไม่สำเร็จ')
+    }
+
+    toast.fire({
+      icon: 'success',
+      title: 'รีเซ็ตรหัสผ่านเรียบร้อย',
+    })
+  } catch (err) {
+    toast.fire({
+      icon: 'error',
+      title: err.message,
+    })
+  }
+}
 </script>
 
 <template>
   <div class="p-8 mx-auto bg-white shadow-md rounded-xl max-w-7xl">
-    <h1 class="mb-6 text-lg font-bold text-black sm:text-xl">จัดการผู้ใช้งานระบบ</h1>
+    <h1 class="mb-6 text-lg font-bold text-black sm:text-xl">จัดการข้อมูลผู้ใช้งานระบบ</h1>
     <div class="mb-6">
       <div class="flex flex-col gap-4 mb-4 md:flex-row md:items-center md:justify-between">
         <div class="relative z-40 flex flex-wrap items-center gap-3">
           <input
             v-model="searchQuery"
             type="text"
-            placeholder="ค้นหาชื่อผู้ใช้ / หน่วยงาน / บทบาท"
-            class="w-full sm:w-[260px] h-10 px-4 rounded-lg border border-gray-300 bg-white focus:ring-2 focus:ring-blue-500 text-gray-700"
+            placeholder="ค้นหารายการผู้ใช้"
+            class="w-full sm:w-[260px] h-10 px-4 rounded-lg border border-gray-300 bg-white focus:ring-2 focus:ring-blue-500 text-gray-500"
           />
           <div class="relative">
             <button
               @click.stop="toggleRoleFilter"
-              class="flex items-center h-10 gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg"
+              class="flex items-center h-10 gap-2 px-4 py-2 text-gray-500 bg-white border border-gray-300 rounded-lg"
             >
               บทบาท
               <Icon
@@ -842,7 +930,7 @@ function handleImportError(message) {
           <div class="relative">
             <button
               @click.stop="toggleTechFilter"
-              class="flex items-center h-10 gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg"
+              class="flex items-center h-10 gap-2 px-4 py-2 text-gray-500 bg-white border border-gray-300 rounded-lg"
             >
               ตำแหน่ง
               <Icon
@@ -951,16 +1039,12 @@ function handleImportError(message) {
               v-if="isAddMode || isEditMode"
             />
           </div>
-          <h2 class="text-xl font-bold text-gray-800">{{ modalTitle }}</h2>
+          <h2 class="text-xl font-bold p-1 text-gray-800">{{ modalTitle }}</h2>
         </div>
 
         <p v-if="isAddMode" class="mb-6 text-sm text-gray-600">
           กรอกข้อมูลเพื่อสร้างบัญชีผู้ใช้ใหม่ในระบบ
         </p>
-        <p v-else-if="isEditMode" class="mb-6 text-sm text-gray-600">
-          คุณต้องการบันทึกการแก้ไขข้อมูลผู้ใช้หรือไม่
-        </p>
-        <p v-else class="mb-6 text-sm text-gray-600">แสดงข้อมูลผู้ใช้ในระบบ (ไม่สามารถแก้ไขได้)</p>
 
         <form @submit.prevent="handleUserModalSubmit">
           <div v-if="isViewMode" class="mb-3">
@@ -994,26 +1078,16 @@ function handleImportError(message) {
                 {{ userModalErrors.username }}
               </p>
             </div>
-            <div>
-              <label class="block text-sm font-medium mb-1.5">
-                {{ isAddMode ? 'รหัสผ่าน' : 'เปลี่ยนรหัสผ่านใหม่' }}
-                <span v-if="isAddMode" class="text-red-500">*</span>
-              </label>
-              <input
-                v-model="userModalForm.us_user_pass"
-                @input="clearError('password')"
-                type="password"
-                :class="[
-                  'w-full px-3 py-2 border rounded-md',
-                  userModalErrors.password ? 'border-red-500' : 'border-gray-300',
-                  isAddMode ? 'placeholder-gray-400 bg-white' : 'placeholder-[#FF0000] bg-white',
-                ]"
-                :placeholder="isAddMode ? 'กรอกรหัสผ่าน' : 'รหัสผ่านใหม่'"
-                :title="isEditMode ? 'หากไม่ต้องการเปลี่ยนรหัสผ่านไม่จำเป็นต้องกรอก' : ''"
-              />
-              <p v-if="userModalErrors.password" class="mt-1 text-sm text-red-500">
-                {{ userModalErrors.password }}
-              </p>
+            <div v-if="isEditMode">
+              <label class="block text-sm font-medium mb-1.5"> รหัสผ่าน </label>
+
+              <button
+                type="button"
+                @click="handleResetPassword(userModalForm.us_id)"
+                class="w-full px-3 py-2 text-white bg-red-500 rounded-md hover:bg-red-600"
+              >
+                รีเซ็ตรหัสผ่าน
+              </button>
             </div>
           </div>
 
@@ -1334,7 +1408,7 @@ function handleImportError(message) {
                   isAddMode ? 'bg-green-500' : 'bg-orange-500',
                 ]"
               >
-                {{ isAddMode ? 'ยืนยันเพิ่ม' : 'บันทึกแก้ไข' }}
+                {{ isAddMode ? 'ยืนยันเพิ่ม' : 'บันทึกการแก้ไข' }}
               </button>
             </template>
           </div>

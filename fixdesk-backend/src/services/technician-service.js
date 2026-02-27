@@ -223,8 +223,29 @@ module.exports = (db) => {
       return rows;
     },
 
-    // ปิดงาน / ส่ง Outsource
-    async closeJob(techId, rfCode, status, summary, imageAfter) {
+    /**
+     * ปิดงาน / ส่ง Outsource / อื่นๆ
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-22
+     * @lastModifiedBy นราธิป แสนทวีสุข
+     * @contributors
+     *  - พชร ไพศรีสกุล
+     *  - นราธิป แสนทวีสุข
+     *
+     * @param {Number} techId - รหัสช่าง
+     * @param {String} rfCode - รหัสใบแจ้งซ่อม
+     * @param {String} status - สถานะการปิดงาน (done/outsource/other)
+     * @param {String} summary - สรุปผลการซ่อม
+     * @param {String} imageAfter - รูปภาพหลังซ่อม
+     * @param {String} repairMethod - วิธีการซ่อม (in_house/outsource/other)
+     * @param {String} repairMethodRemark - หมายเหตุวิธีการซ่อม (กรณีเลือก other)
+     * @param {String} resultStatus - สรุปผลงาน (completed/incomplete/other)
+     * @param {String} resultRemark - หมายเหตุสรุปผล
+     * @returns {Promise<Boolean>}
+     */
+    async closeJob(techId, rfCode, status, summary, imageAfter, repairMethod, repairMethodRemark, resultStatus, resultRemark) {
       // ⭐ ตรวจว่ามีใบเบิกค้างอยู่ไหม
       const [pendingStock] = await db.promise().query(
         `
@@ -244,26 +265,63 @@ module.exports = (db) => {
       }
 
       // =========================
-      // Logic เดิมของคุณ
+      // Logic ปิดงาน
       // =========================
 
       let updateFields = "";
       let params = [];
 
       if (status === "done") {
+        // ปิดงานสำเร็จ
         updateFields = `
       rf.rf_user_status = 'done',
       rf.rf_done_at = NOW(),
       rf.rf_tech_summary = ?,
-      rf.rf_tech_image_after = ?
+      rf.rf_tech_image_after = ?,
+      rf.rf_repair_method = ?,
+      rf.rf_repair_method_remark = ?,
+      rf.rf_result_status = ?,
+      rf.rf_result_remark = ?
     `;
-        params = [summary, imageAfter, rfCode, techId];
+        params = [
+          summary,
+          imageAfter,
+          repairMethod || 'in_house',
+          repairMethodRemark || null,
+          resultStatus || 'completed',
+          resultRemark || null,
+          rfCode,
+          techId
+        ];
       } else if (status === "outsource") {
+        // ส่งจ้างนอก
         updateFields = `
       rf.rf_user_status = 'outsource',
-      rf.rf_is_outsourced = 1
+      rf.rf_repair_method = 'outsource',
+      rf.rf_repair_method_remark = ?
     `;
-        params = [rfCode, techId];
+        params = [repairMethodRemark || null, rfCode, techId];
+      } else if (status === "other") {
+        // วิธีอื่นๆ
+        updateFields = `
+      rf.rf_user_status = 'done',
+      rf.rf_done_at = NOW(),
+      rf.rf_tech_summary = ?,
+      rf.rf_tech_image_after = ?,
+      rf.rf_repair_method = 'other',
+      rf.rf_repair_method_remark = ?,
+      rf.rf_result_status = ?,
+      rf.rf_result_remark = ?
+    `;
+        params = [
+          summary,
+          imageAfter,
+          repairMethodRemark || null,
+          resultStatus || 'completed',
+          resultRemark || null,
+          rfCode,
+          techId
+        ];
       } else {
         throw new Error("INVALID_STATUS");
       }
