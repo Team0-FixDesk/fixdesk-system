@@ -3,11 +3,11 @@
  * @file            repair-edit.view.vue
  * @module          มอดูลแจ้งซ่อม - การแก้ไข หรือยกเลิกคำร้องแจ้งซ่อม
  * @layer           View (Presentation Layer)
- * @version         1.0.0
+ * @version         1.0.1
  * @since           2026-02-04
  * @author          พชร ไพศรีสกุล
- * @lastModified    2026-02-23
- * @lastModifiedBy  นราธิป แสนทวีสุข
+ * @lastModified    2026-02-27
+ * @lastModifiedBy  เศรษฐพงศ์ หอมชื่น
  * ---------------------------------------------------------------------
  * @description
  *  หน้าจอสำหรับแก้ไขข้อมูลรายการแจ้งซ่อมที่มีอยู่แล้ว
@@ -35,6 +35,7 @@
  * ---------------------------------------------------------------------
  * @changelog
  *   - แก้ไขข้อความแจ้งเตือน  [2026-02-20, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - แก้ไขคำ และสีของปุ่ม   [2026-02-27, เศรษฐพงศ์ หอมชื่น]
  * =====================================================================
  */
 
@@ -194,9 +195,10 @@ async function submitRepairEdit() {
     icon: 'question',
     showCancelButton: true,
     reverseButtons: true,
-    confirmButtonText: 'ยืนยัน',
+    confirmButtonText: 'บันทึกการแก้ไข',
     cancelButtonText: 'ยกเลิก',
-    confirmButtonColor: '#2563eb',
+    confirmButtonColor: '#fb923c',
+    cancelButtonColor: '#d4d4d4', 
   })
 
   if (!confirm.isConfirmed) return
@@ -255,7 +257,8 @@ async function cancelRepairEdit() {
     showCancelButton: true,
     confirmButtonText: 'ยกเลิกการแก้ไข',
     cancelButtonText: 'กลับไปแก้ไขต่อ',
-    confirmButtonColor: '#e53e3e',
+    confirmButtonColor: '#dc2626',
+    cancelButtonColor: '#d4d4d4',
   })
   if (confirm.isConfirmed) {
     router.push('/main/my-list')
@@ -616,16 +619,16 @@ onMounted(async () => {
           <button
             type="button"
             :disabled="isSubmitting"
-            class="bg-gray-400 text-white px-6 py-2.5 sm:py-3 rounded-lg hover:bg-gray-500 transition disabled:opacity-50 mr-4"
+            class="bg-neutral-300 text-white px-6 py-2.5 sm:py-3 rounded-lg hover:bg-neutral-400 transition disabled:opacity-50 mr-4"
             @click="cancelRepairEdit"
           >
-            ยกเลิกการแก้ไข
+            ยกเลิก
           </button>
 
           <button
             type="button"
             :disabled="isSubmitting"
-            class="bg-[#1E48D1] text-white px-6 py-2.5 sm:py-3 rounded-lg hover:bg-sky-700 transition disabled:opacity-50"
+            class="bg-orange-400 text-white px-6 py-2.5 sm:py-3 rounded-lg hover:bg-orange-500 transition disabled:opacity-50"
             @click="submitRepairEdit"
           >
             บันทึกการแก้ไข
