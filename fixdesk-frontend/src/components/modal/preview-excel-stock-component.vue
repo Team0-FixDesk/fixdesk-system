@@ -64,7 +64,7 @@ async function importSelected() {
         // Map ข้อมูลตามคอลัมน์ใน Excel Stock
         items: selected.map((item) => ({
           pd_name: item.pd_name, // ชื่อรายการ
-          pd_asset_code: item.pd_asset_code, // หมายเลขครุภัณฑ์
+          pd_asset_code: item.assetNumber, // หมายเลขครุภัณฑ์
           pd_category_name: item.pd_category_name, // หมวดหมู่
           pd_quantity: Number(item.pd_quantity), // จำนวน (แปลงเป็นตัวเลข)
           pd_unit_name: item.pd_unit_name, // หน่วยนับ
