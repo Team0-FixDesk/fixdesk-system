@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
 import ImportStockModal from '@/components/modal/import-excel-stock-component.vue'
@@ -785,6 +785,16 @@ const statItems = computed(() => [
   },
 ])
 
+watch(() => formData.value.assetCode, (newVal) => {
+  if (newVal && newVal.trim() !== '') {
+    formData.value.quantity = 1
+  }
+})
+watch(() => editForm.value.assetCode, (newVal) => {
+  if (newVal && newVal.trim() !== '') {
+    editForm.value.quantity = 1
+  }
+})
 // 1.1.7. lifecycle hooks หรือ logic ขั้นตอนสุดท้าย [cite: 520]
 onMounted(() => {
   fetchCategories()
@@ -899,7 +909,7 @@ onBeforeUnmount(() => {
     </div>
     <div class="p-3 mx-auto max-w-8xl">
       <TableComponent :columns="columnList" :rows="filteredRowList" :perPage="10" :idColumnIndex="1"
-        :hiddenColumns="[0,3]"  :statusStockinventoryColumn="6" :columnAlign="['left', 'left', 'center', 'center']">
+        :hiddenColumns="[0, 3]" :statusStockinventoryColumn="6" :columnAlign="['left', 'left', 'center', 'center']">
         <template #cell-7="{ row }">
           <TableActions :row-id="row[0]" :open-menu-id="openMenuId" role="stock" :row="row" :status="row[5]"
             @toggle-menu="openMenuId = $event" @detail="goToDetail(row[0])" @edit="openEditModal(row[0])"
@@ -979,9 +989,10 @@ onBeforeUnmount(() => {
                 <label class="block mb-1 text-sm font-medium text-black">
                   จำนวน <span class="text-red-500">*</span>
                 </label>
-                <input v-model="formData.quantity" type="number" min="1" :class="[
+                <input v-model="formData.quantity" type="number" min="1" :disabled="!!formData.assetCode" :class="[
                   'text-black placeholder-gray-400 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all',
                   addErrors.quantity ? 'border-red-500' : 'border-gray-300',
+                  formData.assetCode ? 'bg-gray-100 cursor-not-allowed' : ''  /* เพิ่ม class แต่งสีตอนปิด */
                 ]" placeholder="กรุณากรอกจำนวน" />
                 <p v-if="addErrors.quantity" class="mt-1 text-sm text-red-500">
                   {{ addErrors.quantity }}
@@ -1168,8 +1179,10 @@ onBeforeUnmount(() => {
                 <label class="block mb-1 text-sm font-medium text-black">
                   จำนวน <span class="text-red-500">*</span>
                 </label>
-                <input v-model="editForm.quantity" type="number" min="1"
-                  class="w-full px-3 py-2 text-black placeholder-gray-400 transition-all border border-gray-300 rounded-md focus:outline-none focus:ring-1" />
+                <input v-model="editForm.quantity" type="number" min="1" :disabled="!!editForm.assetCode" :class="[
+                  'w-full px-3 py-2 text-black placeholder-gray-400 transition-all border border-gray-300 rounded-md focus:outline-none focus:ring-1',
+                  editForm.assetCode ? 'bg-gray-100 cursor-not-allowed' : '' /* เพิ่ม class แต่งสีตอนปิด */
+                ]" />
               </div>
 
               <div>

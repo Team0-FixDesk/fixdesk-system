@@ -745,6 +745,16 @@ function validateReturnQty(item) {
   if (item.returnQty > item.qty) item.returnQty = item.qty
 }
 
+function decreaseQty(item) {
+  item.returnQty = Math.max(1, item.returnQty - 1);
+  validateReturnQty(item);
+}
+
+function increaseQty(item) {
+  item.returnQty = Math.min(item.qty, item.returnQty + 1);
+  validateReturnQty(item);
+}
+
 // Lifecycle Hooks - วัฏจักรชีวิตของคอมโพเนนต์
 onMounted(() => {
   const state = history.state || {}
@@ -1503,23 +1513,21 @@ onMounted(() => {
               @change="toggleReturnItem(item)"
             />
 
-            <div>
-              <div class="font-medium">{{ item.name }}</div>
-
-              <div class="text-sm text-gray-500">จำนวนที่ยังคืนได้: {{ item.qty }}</div>
-
-              <!-- input ใหม่ -->
-              <input
-                type="number"
-                min="1"
-                :max="item.qty"
-                v-model.number="item.returnQty"
-                @input="validateReturnQty(item)"
-                class="mt-1 border rounded px-2 py-1 w-20"
-                @click.stop
-              />
+            <div class="text-center">
+              <span class="font-medium">{{ item.name }}</span> <span class="text-sm text-gray-500">- จำนวนที่ยังคืนได้: {{ item.qty }}</span>
             </div>
           </label>
+
+          <!-- input ใหม่ -->
+          <input
+            type="number"
+            min="1"
+            :max="item.qty"
+            v-model.number="item.returnQty"
+            @input="validateReturnQty(item)"
+            class="border rounded px-2 py-1 w-20"
+            @click.stop
+          />
         </div>
       </div>
 
@@ -1532,7 +1540,7 @@ onMounted(() => {
         <button
           @click="returnSelectedItems"
           :disabled="selectedReturnItems.length === 0"
-          class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+          class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
         >
           คืนที่เลือก
         </button>
