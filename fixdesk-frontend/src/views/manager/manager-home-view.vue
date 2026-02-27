@@ -86,7 +86,7 @@ defineOptions({ name: 'ManagerHomeView' })
 
 const API_BASE = import.meta.env.VITE_API_BASE
 
-const { userDisplayName, userDepartmentName, fetchUserProfileData} = useUserProfile()
+const { userDisplayName, userDepartmentName, userRoleName, fetchUserProfileData } = useUserProfile()
 const { fetchDashboardData: fetchManagerDashboard } = useManagerDashboard()
 
 const monthLabels = [
@@ -1092,9 +1092,9 @@ async function fetchDashboardData() {
     isLoading.value = true
     error.value = null
 
-  const { repairs, techTypes } = await fetchManagerDashboard(API_BASE)
-  allRepairs.value = repairs
-  allTechTypes.value = techTypes
+    const { repairs, techTypes } = await fetchManagerDashboard(API_BASE)
+    allRepairs.value = repairs
+    allTechTypes.value = techTypes
 
     const years = new Set()
     repairs.forEach((r) => years.add(new Date(r.rf_create_at).getFullYear()))
@@ -1133,21 +1133,25 @@ onMounted(() => {
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 class="text-2xl font-bold text-gray-800">
-              หน้าจอหลักของผู้บริหาร - สวัสดีคุณ{{ userDisplayName }}
-            </h1>
-            <p class="text-lg font-semibold text-gray-700">
-              {{ userDepartmentName }}
-            </p>
+                <span v-if="userRoleName === 'Admin'">
+                  หน้าจอสรุปภาพรวมการแจ้งซ่อม - สวัสดีคุณ{{ userDisplayName }}
+                </span>
+                <span v-else>
+                  หน้าจอหลักของผู้บริหาร - สวัสดีคุณ{{ userDisplayName }}
+                  <br>
+                  <p class="text-lg font-semibold text-gray-700">
+                    {{ userDepartmentName }}
+                  </p>
+                </span>
+              </h1>
+
             <p class="text-gray-600 mt-2">ภาพรวมของการแจ้งซ่อม และสถิติงานซ่อม</p>
           </div>
 
           <div class="flex items-center gap-3">
             <label class="text-sm font-medium text-gray-700">เลือกปี:</label>
-            <select
-              v-model.number="selectedYear"
-              @change="refreshDashboard"
-              class="px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm"
-            >
+            <select v-model.number="selectedYear" @change="refreshDashboard"
+              class="px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm">
               <option v-for="year in availableYears" :key="year" :value="year">
                 {{ formatYearDisplay(year) }}
               </option>
@@ -1166,10 +1170,8 @@ onMounted(() => {
       <div v-else-if="error" class="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
         <div class="text-red-600 mb-2">เกิดข้อผิดพลาด</div>
         <p class="text-red-700 mb-4">{{ error }}</p>
-        <button
-          @click="fetchDashboardData"
-          class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition"
-        >
+        <button @click="fetchDashboardData"
+          class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition">
           ลองใหม่อีกครั้ง
         </button>
       </div>
@@ -1186,11 +1188,8 @@ onMounted(() => {
 
           <div class="flex items-center gap-2">
             <label class="text-sm font-medium text-gray-700">เลือกเดือน:</label>
-            <select
-              v-model.number="selectedMonthIndex"
-              @change="refreshDashboard"
-              class="px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm text-sm"
-            >
+            <select v-model.number="selectedMonthIndex" @change="refreshDashboard"
+              class="px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm text-sm">
               <option v-for="(m, idx) in monthLabels" :key="m" :value="idx">
                 {{ m }}
               </option>
@@ -1200,11 +1199,7 @@ onMounted(() => {
 
         <!-- Summary Cards -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-          <div
-            v-for="(card, index) in summaryCards"
-            :key="index"
-            class="bg-white rounded-lg shadow p-6"
-          >
+          <div v-for="(card, index) in summaryCards" :key="index" class="bg-white rounded-lg shadow p-6">
             <div class="flex items-center justify-between">
               <div>
                 <p class="text-sm font-medium text-gray-600">{{ card.label }}</p>
@@ -1214,17 +1209,14 @@ onMounted(() => {
               </div>
 
               <div class="text-right">
-                <div
-                  v-if="card.growth !== undefined"
-                  :class="[
-                    'text-sm font-medium flex items-center justify-end',
-                    card.growth > 0
-                      ? 'text-green-600'
-                      : card.growth < 0
-                        ? 'text-red-600'
-                        : 'text-gray-500',
-                  ]"
-                >
+                <div v-if="card.growth !== undefined" :class="[
+                  'text-sm font-medium flex items-center justify-end',
+                  card.growth > 0
+                    ? 'text-green-600'
+                    : card.growth < 0
+                      ? 'text-red-600'
+                      : 'text-gray-500',
+                ]">
                   <span v-if="card.growth > 0">↗</span>
                   <span v-else-if="card.growth < 0">↘</span>
                   <span v-else>→</span>
@@ -1244,34 +1236,23 @@ onMounted(() => {
               ปริมาณงานแจ้งซ่อมรายเดือน - {{ formatYearDisplay(selectedYear) }}
             </h3>
 
-            <ApexChart
-              type="bar"
-              height="320"
-              :options="monthlyStackedOptions"
-              :series="monthlyStackedSeries"
-            />
+            <ApexChart type="bar" height="320" :options="monthlyStackedOptions" :series="monthlyStackedSeries" />
 
             <!-- Legend -->
             <div class="mt-4 flex flex-wrap items-center gap-4 text-sm text-gray-600">
               <span class="inline-flex items-center gap-2">
-                <span
-                  class="inline-block w-3.5 h-3.5 rounded-sm"
-                  :style="{ backgroundColor: MONTHLY_COLORS.total }"
-                ></span>
+                <span class="inline-block w-3.5 h-3.5 rounded-sm"
+                  :style="{ backgroundColor: MONTHLY_COLORS.total }"></span>
                 งานซ่อมทั้งหมด
               </span>
               <span class="inline-flex items-center gap-2">
-                <span
-                  class="inline-block w-3.5 h-3.5 rounded-sm"
-                  :style="{ backgroundColor: MONTHLY_COLORS.done }"
-                ></span>
+                <span class="inline-block w-3.5 h-3.5 rounded-sm"
+                  :style="{ backgroundColor: MONTHLY_COLORS.done }"></span>
                 งานที่เสร็จสิ้น
               </span>
               <span class="inline-flex items-center gap-2">
-                <span
-                  class="inline-block w-3.5 h-3.5 rounded-sm"
-                  :style="{ backgroundColor: MONTHLY_COLORS.outsource }"
-                ></span>
+                <span class="inline-block w-3.5 h-3.5 rounded-sm"
+                  :style="{ backgroundColor: MONTHLY_COLORS.outsource }"></span>
                 งานที่จ้างช่างภายนอก
               </span>
             </div>
@@ -1287,60 +1268,39 @@ onMounted(() => {
               <h3 class="text-lg font-semibold text-gray-900">สัดส่วนสถานะงานแจ้งซ่อม</h3>
 
               <div class="flex p-1 bg-gray-100 rounded-xl">
-                <button
-                  type="button"
-                  class="px-4 py-1.5 text-sm font-medium rounded-lg transition-all duration-200"
-                  :class="
-                    statusMode === 'week'
+                <button type="button" class="px-4 py-1.5 text-sm font-medium rounded-lg transition-all duration-200"
+                  :class="statusMode === 'week'
                       ? 'bg-white text-blue-600 shadow-sm'
                       : 'text-gray-500 hover:text-gray-700'
-                  "
-                  @click="setStatusMode('week')"
-                >
+                    " @click="setStatusMode('week')">
                   สัปดาห์
                 </button>
-                <button
-                  type="button"
-                  class="px-4 py-1.5 text-sm font-medium rounded-lg transition-all duration-200"
-                  :class="
-                    statusMode === 'month'
+                <button type="button" class="px-4 py-1.5 text-sm font-medium rounded-lg transition-all duration-200"
+                  :class="statusMode === 'month'
                       ? 'bg-white text-blue-600 shadow-sm'
                       : 'text-gray-500 hover:text-gray-700'
-                  "
-                  @click="setStatusMode('month')"
-                >
+                    " @click="setStatusMode('month')">
                   เดือน
                 </button>
               </div>
             </div>
 
-            <ApexChart
-              type="pie"
-              height="280"
-              :options="statusPieOptions"
-              :series="statusPieSeries"
-            />
+            <ApexChart type="pie" height="280" :options="statusPieOptions" :series="statusPieSeries" />
 
             <div class="mt-4 flex flex-wrap items-center gap-4 text-sm text-gray-600">
               <span class="inline-flex items-center gap-2">
-                <span
-                  class="inline-block w-3.5 h-3.5 rounded-sm"
-                  :style="{ backgroundColor: STATUS_COLORS.pending }"
-                ></span>
+                <span class="inline-block w-3.5 h-3.5 rounded-sm"
+                  :style="{ backgroundColor: STATUS_COLORS.pending }"></span>
                 รอดำเนินการ
               </span>
               <span class="inline-flex items-center gap-2">
-                <span
-                  class="inline-block w-3.5 h-3.5 rounded-sm"
-                  :style="{ backgroundColor: STATUS_COLORS.in_progress }"
-                ></span>
+                <span class="inline-block w-3.5 h-3.5 rounded-sm"
+                  :style="{ backgroundColor: STATUS_COLORS.in_progress }"></span>
                 กำลังดำเนินการ
               </span>
               <span class="inline-flex items-center gap-2">
-                <span
-                  class="inline-block w-3.5 h-3.5 rounded-sm"
-                  :style="{ backgroundColor: STATUS_COLORS.done }"
-                ></span>
+                <span class="inline-block w-3.5 h-3.5 rounded-sm"
+                  :style="{ backgroundColor: STATUS_COLORS.done }"></span>
                 เสร็จสิ้น
               </span>
             </div>
@@ -1359,40 +1319,27 @@ onMounted(() => {
               แนวโน้มปริมาณงานแจ้งซ่อมรายวัน (สัปดาห์ปัจจุบัน)
             </h3>
 
-            <ApexChart
-              type="line"
-              height="320"
-              :options="weeklyTrendOptions"
-              :series="weeklyTrendSeries"
-            />
+            <ApexChart type="line" height="320" :options="weeklyTrendOptions" :series="weeklyTrendSeries" />
 
             <div class="mt-4 flex flex-wrap items-center gap-4 text-sm text-gray-600">
               <span class="inline-flex items-center gap-2">
-                <span
-                  class="inline-block w-3.5 h-3.5 rounded-sm"
-                  :style="{ backgroundColor: TREND_COLORS.total }"
-                ></span>
+                <span class="inline-block w-3.5 h-3.5 rounded-sm"
+                  :style="{ backgroundColor: TREND_COLORS.total }"></span>
                 งานซ่อมทั้งหมด
               </span>
               <span class="inline-flex items-center gap-2">
-                <span
-                  class="inline-block w-3.5 h-3.5 rounded-sm"
-                  :style="{ backgroundColor: TREND_COLORS.pending }"
-                ></span>
+                <span class="inline-block w-3.5 h-3.5 rounded-sm"
+                  :style="{ backgroundColor: TREND_COLORS.pending }"></span>
                 รอดำเนินการ
               </span>
               <span class="inline-flex items-center gap-2">
-                <span
-                  class="inline-block w-3.5 h-3.5 rounded-sm"
-                  :style="{ backgroundColor: TREND_COLORS.in_progress }"
-                ></span>
+                <span class="inline-block w-3.5 h-3.5 rounded-sm"
+                  :style="{ backgroundColor: TREND_COLORS.in_progress }"></span>
                 กำลังดำเนินการ
               </span>
               <span class="inline-flex items-center gap-2">
-                <span
-                  class="inline-block w-3.5 h-3.5 rounded-sm"
-                  :style="{ backgroundColor: TREND_COLORS.done }"
-                ></span>
+                <span class="inline-block w-3.5 h-3.5 rounded-sm"
+                  :style="{ backgroundColor: TREND_COLORS.done }"></span>
                 เสร็จสิ้น
               </span>
             </div>
@@ -1408,46 +1355,28 @@ onMounted(() => {
               <h3 class="text-lg font-semibold text-gray-900">อัตราความสำเร็จการปฏิบัติงานของช่างแต่ละแผนก</h3>
 
               <div class="flex p-1 bg-gray-100 rounded-xl">
-                <button
-                  type="button"
-                  class="px-4 py-1.5 text-sm font-medium rounded-lg transition-all duration-200"
-                  :class="
-                    efficiencyMode === 'week'
+                <button type="button" class="px-4 py-1.5 text-sm font-medium rounded-lg transition-all duration-200"
+                  :class="efficiencyMode === 'week'
                       ? 'bg-white text-blue-600 shadow-sm'
                       : 'text-gray-500 hover:text-gray-700'
-                  "
-                  @click="setEfficiencyMode('week')"
-                >
+                    " @click="setEfficiencyMode('week')">
                   สัปดาห์
                 </button>
-                <button
-                  type="button"
-                  class="px-4 py-1.5 text-sm font-medium rounded-lg transition-all duration-200"
-                  :class="
-                    efficiencyMode === 'month'
+                <button type="button" class="px-4 py-1.5 text-sm font-medium rounded-lg transition-all duration-200"
+                  :class="efficiencyMode === 'month'
                       ? 'bg-white text-blue-600 shadow-sm'
                       : 'text-gray-500 hover:text-gray-700'
-                  "
-                  @click="setEfficiencyMode('month')"
-                >
+                    " @click="setEfficiencyMode('month')">
                   เดือน
                 </button>
               </div>
             </div>
 
-            <ApexChart
-              type="bar"
-              height="320"
-              :options="efficiencyChartOptions"
-              :series="efficiencyChartSeries"
-            />
+            <ApexChart type="bar" height="320" :options="efficiencyChartOptions" :series="efficiencyChartSeries" />
 
             <div class="mt-4 flex flex-wrap items-center gap-4 text-sm text-gray-600">
               <span class="inline-flex items-center gap-2">
-                <span
-                  class="inline-block w-3.5 h-3.5 rounded-sm"
-                  :style="{ backgroundColor: '#fb923c' }"
-                ></span>
+                <span class="inline-block w-3.5 h-3.5 rounded-sm" :style="{ backgroundColor: '#fb923c' }"></span>
                 อัตราสำเร็จ
               </span>
             </div>
@@ -1468,10 +1397,7 @@ onMounted(() => {
 
             <div class="mt-4 flex flex-wrap items-center gap-4 text-sm text-gray-600">
               <span class="inline-flex items-center gap-2">
-                <span
-                  class="inline-block w-3.5 h-3.5 rounded-sm"
-                  :style="{ backgroundColor: '#7c3aed' }"
-                ></span>
+                <span class="inline-block w-3.5 h-3.5 rounded-sm" :style="{ backgroundColor: '#7c3aed' }"></span>
                 งานซ่อมทั้งหมด
               </span>
             </div>
@@ -1489,10 +1415,7 @@ onMounted(() => {
 
             <div class="mt-4 flex flex-wrap items-center gap-4 text-sm text-gray-600">
               <span class="inline-flex items-center gap-2">
-                <span
-                  class="inline-block w-3.5 h-3.5 rounded-sm"
-                  :style="{ backgroundColor: '#166534' }"
-                ></span>
+                <span class="inline-block w-3.5 h-3.5 rounded-sm" :style="{ backgroundColor: '#166534' }"></span>
                 งานซ่อมทั้งหมด
               </span>
             </div>
@@ -1503,30 +1426,28 @@ onMounted(() => {
           </div>
 
           <!-- กราฟเปรียบเทียบช่างภายในองค์กรกับช่างภายนอก -->
-           <div class="mt-6 bg-white rounded-lg shadow p-6 lg:col-span-2">
+          <div class="mt-6 bg-white rounded-lg shadow p-6 lg:col-span-2">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">
               จำนวนการปิดงานของช่างภายในและช่างภายนอกตลอด{{ formatYearDisplay(selectedYear) }}
             </h3>
 
-            <ApexChart
-              type="bar"
-              height="350"
-              :options="compareBarOptions"
-              :series="compareBarSeries"
-            />
+            <ApexChart type="bar" height="350" :options="compareBarOptions" :series="compareBarSeries" />
 
             <div class="mt-4 flex flex-wrap items-center justify-center gap-6 text-sm text-gray-600">
               <span class="inline-flex items-center gap-2">
-                <span class="inline-block w-3.5 h-3.5 rounded-sm" :style="{ backgroundColor: MONTHLY_COLORS.done }"></span>
+                <span class="inline-block w-3.5 h-3.5 rounded-sm"
+                  :style="{ backgroundColor: MONTHLY_COLORS.done }"></span>
                 ช่างดำเนินการเอง
               </span>
               <span class="inline-flex items-center gap-2">
-                <span class="inline-block w-3.5 h-3.5 rounded-sm" :style="{ backgroundColor: MONTHLY_COLORS.outsource }"></span>
+                <span class="inline-block w-3.5 h-3.5 rounded-sm"
+                  :style="{ backgroundColor: MONTHLY_COLORS.outsource }"></span>
                 จ้างช่างภายนอก
               </span>
             </div>
             <div class="mt-2 text-xs text-gray-500">
-              <span class="text-red-400">*</span> วางเมาส์บนแท่งกราฟเพื่อดูข้อมูล (แสดงจำนวนงานของช่างในองค์กรและช่างภายนอก)
+              <span class="text-red-400">*</span> วางเมาส์บนแท่งกราฟเพื่อดูข้อมูล
+              (แสดงจำนวนงานของช่างในองค์กรและช่างภายนอก)
             </div>
           </div>
         </div>
