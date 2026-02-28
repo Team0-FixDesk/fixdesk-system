@@ -3,11 +3,11 @@
  * @file            repair-request.view.vue
  * @module          มอดูลแจ้งซ่อม - การสร้างแบบฟอร์มแจ้งซ่อม
  * @layer           View (Presentation Layer)
- * @version         1.0.1
+ * @version         1.0.2
  * @since           2026-02-04
  * @author          พชร ไพศรีสกุล
- * @lastModified    2026-02-23
- * @lastModifiedBy  นราธิป แสนทวีสุข
+ * @lastModified    2026-02-27
+ * @lastModifiedBy  เศรษฐพงศ์ หอมชื่น
  * ---------------------------------------------------------------------
  * @description
  *  หน้าจอแบบฟอร์มสำหรับสร้างรายการแจ้งซ่อมใหม่
@@ -34,6 +34,7 @@
  *   - แก้ไขข้อความช่องกรอกข้อมูล   [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
  *   - แก้ไขข้อความแจ้งเตือน       [2026-02-19, ปฏิพัทธ์ จงนันทพันธ์กุล]
  *   - แก้ไขข้อความแจ้งเตือน       [2026-02-20, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - แก้ไขข้อความ และสีปุ่ม       [2026-02-27, เศรษฐพงศ์ หอมชื่น]
  * =====================================================================
  */
 
@@ -157,9 +158,8 @@ async function submitRepairRequest() {
       position: 'top-end',
       icon: 'warning',
       title: 'กรุณากรอกข้อมูลให้ครบถ้วน',
-      showConfirmButton: false,
       timer: 2500,
-      timerProgressBar: true,
+      showConfirmButton: false,
     })
     return
   }
@@ -170,9 +170,8 @@ async function submitRepairRequest() {
       position: 'top-end',
       icon: 'warning',
       title: 'ยังไม่ได้เลือกระดับความเร่งด่วน',
-      showConfirmButton: false,
       timer: 2500,
-      timerProgressBar: true,
+      showConfirmButton: false,
     })
     return
   }
@@ -184,7 +183,10 @@ async function submitRepairRequest() {
     showCancelButton: true,
     reverseButtons: true,
     confirmButtonText: 'ยืนยัน',
-    cancelButtonText: 'ยกเลิก',    confirmButtonColor: '#2563eb',  })
+    cancelButtonText: 'ยกเลิก',    
+    confirmButtonColor: '#0048EF', 
+    cancelButtonColor: '#d4d4d4', 
+  })
 
   if (!confirmResult.isConfirmed) return
 
@@ -207,9 +209,8 @@ async function submitRepairRequest() {
       position: 'top-end',
       icon: 'success',
       title: 'ส่งแบบฟอร์มแจ้งซ่อมเรียบร้อยแล้ว',
-      showConfirmButton: false,
       timer: 2500,
-      timerProgressBar: true,
+      showConfirmButton: false,
       width: '380px',
     })
 
@@ -224,9 +225,8 @@ async function submitRepairRequest() {
       position: 'top-end',
       icon: 'error',
       title: 'ส่งแบบฟอร์มแจ้งซ่อมไม่สำเร็จ',
-      showConfirmButton: false,
       timer: 2500,
-      timerProgressBar: true,
+      showConfirmButton: false,
     })
   }
 }
@@ -239,7 +239,8 @@ async function cancelRepairRequest() {
     showCancelButton: true,
     confirmButtonText: 'ยกเลิกการแจ้งซ่อม',
     cancelButtonText: 'กลับไปแก้ไข',
-    confirmButtonColor: '#e53e3e',
+    confirmButtonColor: '#dc2626',
+    cancelButtonColor: '#d4d4d4',
   })
   if (confirmResult.isConfirmed) {
     router.push('/main/my-list')
@@ -580,7 +581,7 @@ async function cancelRepairRequest() {
           <button
             type="button"
             :disabled="isSubmitting"
-            class="bg-gray-500 text-white px-6 py-2.5 sm:py-3 rounded-lg hover:bg-gray-600 transition disabled:opacity-50 mr-4"
+            class="bg-neutral-300 text-white px-6 py-2.5 sm:py-3 rounded-lg hover:bg-neutral-400 transition disabled:opacity-50 mr-4"
             @click="cancelRepairRequest"
           >
             ยกเลิก
@@ -588,10 +589,10 @@ async function cancelRepairRequest() {
           <button
             type="button"
             :disabled="isSubmitting"
-            class="bg-[#1E48D1] text-white px-6 py-2.5 sm:py-3 rounded-lg hover:bg-sky-700 transition disabled:opacity-50"
+            class="bg-blue-700 text-white px-6 py-2.5 sm:py-3 rounded-lg hover:bg-blue-800 transition disabled:opacity-50"
             @click="submitRepairRequest"
           >
-            ส่งแบบฟอร์มแจ้งซ่อม
+            ยืนยัน
           </button>
         </div>
       </form>

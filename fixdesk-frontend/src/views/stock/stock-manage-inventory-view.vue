@@ -3,11 +3,11 @@
  * @file            stock-manage-inventory-view.vue
  * @module          มอดูลการจัดการคลัง - การจัดการสินค้าคงคลัง
  * @layer           View (Presentation Layer)
- * @version         1.0.0
+ * @version         1.0.1
  * @since           2025-10-21
  * @author          เศรษฐพงศ์ หอมชื่น
- * @lastModified    2026-02-23
- * @lastModifiedBy  นราธิป แสนทวีสุข
+ * @lastModified    2026-02-27
+ * @lastModifiedBy  เศรษฐพงศ์ หอมชื่น
  * ---------------------------------------------------------------------
  * @description
  *  หน้าจอสำหรับจัดการข้อมูลสินค้าคงคลัง
@@ -282,13 +282,11 @@ async function handleAddCategory() {
     }))
 
     Swal.fire({
-      toast: true,
-      position: 'top-end',
       icon: 'success',
-      title: 'เพิ่มหมวดหมู่เรียบร้อยแล้ว',
-      showConfirmButton: false,
+      title: 'สำเร็จ',
+      text: 'เพิ่มหมวดหมู่เรียบร้อยแล้ว',
       timer: 2000,
-      timerProgressBar: true,
+      showConfirmButton: false,
     })
   } catch (error) {
     console.error('Add category error:', error)
@@ -335,13 +333,11 @@ async function handleEditCategory(category) {
     }))
 
     Swal.fire({
-      toast: true,
-      position: 'top-end',
       icon: 'success',
-      title: 'แก้ไขหมวดหมู่เรียบร้อยแล้ว',
-      showConfirmButton: false,
+      title: 'สำเร็จ',
+      text: 'แก้ไขหมวดหมู่เรียบร้อยแล้ว',
       timer: 2000,
-      timerProgressBar: true,
+      showConfirmButton: false,
     })
   } catch (error) {
     console.error('Edit category error:', error)
@@ -358,6 +354,7 @@ async function handleDeleteCategory(category) {
     confirmButtonText: 'ลบ',
     cancelButtonText: 'ยกเลิก',
     confirmButtonColor: '#dc2626',
+    cancelButtonColor: '#d4d4d4',
   })
   if (!result.isConfirmed) return
 
@@ -378,13 +375,11 @@ async function handleDeleteCategory(category) {
     }))
 
     Swal.fire({
-      toast: true,
-      position: 'top-end',
       icon: 'success',
-      title: 'ลบหมวดหมู่เรียบร้อยแล้ว',
-      showConfirmButton: false,
+      title: 'สำเร็จ',
+      text: 'ลบหมวดหมู่เรียบร้อยแล้ว',
       timer: 2000,
-      timerProgressBar: true,
+      showConfirmButton: false,
     })
   } catch (error) {
     console.error('Delete category error:', error)
@@ -459,15 +454,7 @@ const processFile = (files) => {
 
   const file = files[0]
   if (!file.type.startsWith('image/')) {
-    Swal.fire({
-      toast: true,
-      position: 'top-end',
-      icon: 'warning',
-      title: 'กรุณาอัปโหลดเฉพาะไฟล์รูปภาพเท่านั้น',
-      showConfirmButton: false,
-      timer: 3000,
-      timerProgressBar: true,
-    })
+    alert('กรุณาอัปโหลดเฉพาะไฟล์รูปภาพเท่านั้น')
     return
   }
 
@@ -541,6 +528,8 @@ const confirmAddItem = async () => {
       title: 'สำเร็จ!',
       text: 'บันทึกรายการสำเร็จ!',
       icon: 'success',
+      background: '#f0f9ff',
+      color: '#1e3a8a',
     })
 
     closeAddModal()
@@ -575,7 +564,6 @@ const handleDelete = async (productIdFromTable) => {
       title: 'ไม่พบรายการสินค้า',
       showConfirmButton: false,
       timer: 3000,
-      timerProgressBar: true,
     })
     return
   }
@@ -586,8 +574,8 @@ const handleDelete = async (productIdFromTable) => {
     icon: 'warning',
     showCancelButton: true,
     confirmButtonColor: '#dc2626',
-    cancelButtonColor: '#6b7280',
-    confirmButtonText: 'ลบ',
+    cancelButtonColor: '#d4d4d4',
+    confirmButtonText: 'ยืนยันการลบ',
     cancelButtonText: 'ยกเลิก',
   }).then(async (result) => {
     if (!result.isConfirmed) return
@@ -616,7 +604,6 @@ const handleDelete = async (productIdFromTable) => {
         title: 'ลบเรียบร้อย',
         showConfirmButton: false,
         timer: 2000,
-        timerProgressBar: true,
       })
 
       fetchAllStock()
@@ -629,7 +616,6 @@ const handleDelete = async (productIdFromTable) => {
         text: error.message || 'เกิดข้อผิดพลาดในการลบรายการ',
         showConfirmButton: false,
         timer: 3000,
-        timerProgressBar: true,
       })
     }
   })
@@ -708,7 +694,6 @@ const confirmEditItem = async () => {
       title: 'แก้ไขข้อมูลสำเร็จ',
       showConfirmButton: false,
       timer: 2000,
-      timerProgressBar: true,
     })
 
     closeEditModal()
@@ -741,15 +726,7 @@ const processEditFile = (files) => {
   const file = files[0]
 
   if (!file.type.startsWith('image/')) {
-    Swal.fire({
-      toast: true,
-      position: 'top-end',
-      icon: 'warning',
-      title: 'กรุณาอัปโหลดเฉพาะรูปภาพ',
-      showConfirmButton: false,
-      timer: 3000,
-      timerProgressBar: true,
-    })
+    alert('กรุณาอัปโหลดเฉพาะรูปภาพ')
     return
   }
 
@@ -859,7 +836,7 @@ onBeforeUnmount(() => {
         <ImportButtonComponent @click="showImportModal = true" />
 
         <button @click="showAddModal = true"
-          class="flex items-center px-4 py-2 text-white transition-colors bg-blue-700 rounded-md shadow-sm hover:bg-blue-800">
+          class="flex items-center px-4 py-2 text-white transition-colors bg-blue-700 rounded-lg shadow-sm hover:bg-blue-800">
           <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mr-1" fill="none" viewBox="0 0 24 24"
             stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -1143,12 +1120,12 @@ onBeforeUnmount(() => {
 
             <div class="flex justify-end gap-4 pt-4 border-t border-gray-100 border-dashed">
               <button type="button" @click="closeAddModal"
-                class="px-8 py-2 text-sm font-medium text-gray-700 transition-colors bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50">
+                class="px-8 py-2 text-sm font-medium text-white transition-colors bg-neutral-300 border border-gray-300 rounded-lg shadow-sm hover:bg-neutral-400">
                 ยกเลิก
               </button>
 
               <button type="button" @click="confirmAddItem"
-                class="px-8 py-2 text-sm font-medium text-white transition-colors bg-blue-700 rounded-md shadow-sm hover:bg-blue-800">
+                class="px-8 py-2 text-sm font-medium text-white transition-colors bg-blue-700 rounded-lg shadow-sm hover:bg-blue-800">
                 บันทึก
               </button>
             </div>
@@ -1324,12 +1301,12 @@ onBeforeUnmount(() => {
 
             <div class="flex justify-end gap-4 pt-4 border-t border-gray-100 border-dashed">
               <button type="button" @click="closeEditModal"
-                class="px-8 py-2 text-sm font-medium text-gray-700 transition-colors bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50">
+                class="px-8 py-2 text-sm font-medium text-white transition-colors bg-neutral-300 border border-gray-300 rounded-lg shadow-sm hover:bg-neutral-400">
                 ยกเลิก
               </button>
 
               <button type="submit"
-                class="px-8 py-2 text-sm font-medium text-white transition-colors bg-orange-500 rounded-md shadow-sm hover:bg-orange-600">
+                class="px-8 py-2 text-sm font-medium text-white transition-colors bg-orange-400 rounded-lg shadow-sm hover:bg-orange-500">
                 บันทึกการแก้ไข
               </button>
             </div>

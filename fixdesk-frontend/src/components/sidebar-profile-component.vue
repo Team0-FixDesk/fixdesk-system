@@ -11,8 +11,8 @@
  *   - พชร ไพศรีสกุล
  *   - ปฏิพัทธ์ จงนันทพันธ์กุล
  *
- * @lastModified    2026-02-23
- * @lastModifiedBy  นราธิป แสนทวีสุข
+ * @lastModified    2026-02-22
+ * @lastModifiedBy  พชร ไพศรีสกุล
  * ---------------------------------------------------------------------
  * @description
  *  Component ส่วนท้ายของ Sidebar สำหรับแสดงข้อมูลผู้ใช้ และจัดการตั้งค่าบัญชีส่วนตัว
@@ -370,13 +370,10 @@ async function executeSave() {
 
     // 3. สำเร็จ
     Swal.fire({
-      toast: true,
-      position: 'top-end',
+      title: 'สำเร็จ',
+      text: type === 'password' ? 'เปลี่ยนรหัสผ่านเรียบร้อย' : 'อัปเดตข้อมูลเรียบร้อย',
       icon: 'success',
-      title: type === 'password' ? 'เปลี่ยนรหัสผ่านเรียบร้อย' : 'อัปเดตข้อมูลเรียบร้อย',
-      showConfirmButton: false,
-      timer: 2000,
-      timerProgressBar: true,
+      confirmButtonColor: '#1E48D1',
     })
 
     // Reset ค่าต่างๆ

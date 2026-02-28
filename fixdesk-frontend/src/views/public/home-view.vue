@@ -7,7 +7,7 @@
  * @since           2025-02-04
  * @author          พชร ไพศรีสกุล
  * @lastModified    2026-02-19
- * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล 
+ * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
  * ---------------------------------------------------------------------
  * @description
  *  หน้าจอสำหรับผู้ใช้งานภายนอกใช้ค้นหา และตรวจสอบสถานะงานซ่อม
@@ -103,12 +103,12 @@ const goToLogin = () => router.push('/login')
       </div>
 
       <div class="mt-3 text-sm text-slate-400">
-        ตัวอย่างการค้นหา : RF20250217001, สมชาย ใจดี, แผนก IT
+        ตัวอย่างการค้นหา : RF20250217001, สมชาย ใจดี
       </div>
     </div>
 
     <!-- ส่วนผลลัพธ์ - แสดงผลลัพธ์การค้นหา -->
-    <div class="w-full max-w-4xl">  
+    <div class="w-full max-w-4xl">
       <!-- แสดงข้อความกำลังค้นหา -->
       <div v-if="loading" class="text-center py-10 text-slate-500 animate-pulse">กำลังค้นหา...</div>
 
@@ -215,7 +215,7 @@ const goToLogin = () => router.push('/login')
     <!-- ส่วนท้ายเพจ - ข้อมูลลิขสิทธิ์ -->
 
     <footer class="mt-16 text-slate-400 text-sm pb-10">
-      92 Tech Co.,Ltd — 2025 FixDesk All rights reserved.
+      92 Tech Co.,Ltd — FixDesk All rights reserved.
     </footer>
   </div>
 </template>
