@@ -158,9 +158,8 @@ async function submitRepairRequest() {
       position: 'top-end',
       icon: 'warning',
       title: 'กรุณากรอกข้อมูลให้ครบถ้วน',
-      showConfirmButton: false,
       timer: 2500,
-      timerProgressBar: true,
+      showConfirmButton: false,
     })
     return
   }
@@ -171,9 +170,8 @@ async function submitRepairRequest() {
       position: 'top-end',
       icon: 'warning',
       title: 'ยังไม่ได้เลือกระดับความเร่งด่วน',
-      showConfirmButton: false,
       timer: 2500,
-      timerProgressBar: true,
+      showConfirmButton: false,
     })
     return
   }
@@ -211,9 +209,8 @@ async function submitRepairRequest() {
       position: 'top-end',
       icon: 'success',
       title: 'ส่งแบบฟอร์มแจ้งซ่อมเรียบร้อยแล้ว',
-      showConfirmButton: false,
       timer: 2500,
-      timerProgressBar: true,
+      showConfirmButton: false,
       width: '380px',
     })
 
@@ -228,9 +225,8 @@ async function submitRepairRequest() {
       position: 'top-end',
       icon: 'error',
       title: 'ส่งแบบฟอร์มแจ้งซ่อมไม่สำเร็จ',
-      showConfirmButton: false,
       timer: 2500,
-      timerProgressBar: true,
+      showConfirmButton: false,
     })
   }
 }

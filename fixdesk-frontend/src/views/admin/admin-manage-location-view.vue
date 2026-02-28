@@ -667,6 +667,8 @@ async function confirmDelete(username) {
       title: 'สำเร็จ!',
       text: 'ลบห้องเรียบร้อยแล้ว',
       icon: 'success',
+      background: '#f0f9ff',
+      color: '#1e3a8a',
     })
 
     await refreshData()
@@ -775,6 +777,8 @@ async function saveSingleLocation() {
       icon: 'success',
       title: 'สำเร็จ!',
       text: 'เพิ่มข้อมูลเรียบร้อยแล้ว',
+      background: '#f0f9ff',
+      color: '#1e3a8a',
     })
 
     await refreshData()
@@ -891,6 +895,8 @@ async function bulkCreateLocation() {
       icon: 'success',
       title: 'สำเร็จ!',
       text: 'สร้างสถานที่เรียบร้อยแล้ว',
+      background: '#f0f9ff',
+      color: '#1e3a8a',
     })
 
     await refreshData()
@@ -979,6 +985,8 @@ async function saveEditLocation() {
       icon: 'success',
       title: 'สำเร็จ!',
       text: 'แก้ไขข้อมูลห้องเรียบร้อยแล้ว',
+      background: '#f0f9ff',
+      color: '#1e3a8a',
     })
 
     await refreshData()
@@ -1042,13 +1050,8 @@ async function refreshData() {
 
 function handleImportSuccess() {
   Swal.fire({
-    toast: true,
-    position: 'top-end',
     icon: 'success',
     title: 'นำเข้าสถานที่เรียบร้อยแล้ว',
-    showConfirmButton: false,
-    timer: 2000,
-    timerProgressBar: true,
   })
   showImportModal.value = false
 }

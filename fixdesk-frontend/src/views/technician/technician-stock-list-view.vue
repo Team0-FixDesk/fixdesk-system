@@ -385,15 +385,7 @@ const confirmWithdraw = async (formData) => {
       throw new Error(responseBody.message)
     }
 
-    Swal.fire({
-      toast: true,
-      position: 'top-end',
-      icon: 'success',
-      title: 'เบิกสินค้าเรียบร้อย',
-      showConfirmButton: false,
-      timer: 2000,
-      timerProgressBar: true,
-    })
+    Swal.fire('ส่งแบบฟอร์มขอเบิกสำเร็จ', 'เบิกสินค้าเรียบร้อย', 'success')
 
     cartItemList.value = []
     isCartOpen.value = false

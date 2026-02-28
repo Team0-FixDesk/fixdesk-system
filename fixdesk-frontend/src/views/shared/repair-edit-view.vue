@@ -180,11 +180,9 @@ async function submitRepairEdit() {
     Swal.fire({
       toast: true,
       position: 'top-end',
-      icon: 'warning',
-      title: 'ข้อมูลไม่ครบถ้วน',
-      showConfirmButton: false,
       timer: 2500,
-      timerProgressBar: true,
+      icon: 'warning',
+      title: 'ข้อมูลไม่ครบถ้วน'
     })
     return
   }
@@ -221,11 +219,9 @@ async function submitRepairEdit() {
     Swal.fire({
       toast: true,
       position: 'top-end',
-      icon: 'success',
-      title: 'บันทึกการแก้ไขสำเร็จ',
-      showConfirmButton: false,
       timer: 2500,
-      timerProgressBar: true,
+      icon: 'success',
+      title: 'บันทึกการแก้ไขสำเร็จ'
     })
 
     router.push('/main/my-list')
@@ -235,11 +231,9 @@ async function submitRepairEdit() {
     Swal.fire({
       toast: true,
       position: 'top-end',
-      icon: 'error',
-      title: err.message,
-      showConfirmButton: false,
       timer: 3000,
-      timerProgressBar: true,
+      icon: 'error',
+      title: err.message
     })
 
   } finally {

@@ -336,15 +336,7 @@ const confirmApprove = async () => {
       { headers: { Authorization: `Bearer ${token}` } },
     )
 
-    await Sweetalert.fire({
-      toast: true,
-      position: 'top-end',
-      icon: 'success',
-      title: 'บันทึกผลการอนุมัติรายการเบิกเรียบร้อยแล้ว',
-      showConfirmButton: false,
-      timer: 1000,
-      timerProgressBar: true,
-    })
+    await Sweetalert.fire('บันทึกผลสำเร็จ', 'บันทึกผลการอนุมัติรายการเบิกเรียบร้อยแล้ว', 'success')
 
     // Redirect to stock-withdraw-list
     setTimeout(() => {
