@@ -1,94 +1,95 @@
 /**
-* =====================================================================
-* @file : repair-detail-view.vue
-* @module : แสดงรายละเอียดใบแจ้งซ่อม
-* @layer : View (Presentation Layer)
-* @version : 1.4.0
-* @since : 2026-02-17
-* @lastModified : 2026-02-25
-* @lastModifiedBy : ธนภัทร จันทร์งาม
-* ---------------------------------------------------------------------
-* @description
-* View สำหรับแสดงรายละเอียดใบแจ้งซ่อม (Repair Detail)
-* โดยแสดงข้อมูลที่เกี่ยวข้องกับงานซ่อม สถานที่ ผู้แจ้ง ช่างผู้รับผิดชอบ
-* สถานะการดำเนินงาน และรายการวัสดุ/อุปกรณ์ที่เบิกจากระบบ stock
-*
-* รองรับการทำงาน:
-* - โหลดและแสดงรายละเอียดใบแจ้งซ่อมจาก rf_code
-* - แสดง timeline ของสถานะงานซ่อม
-* - แสดงรายการวัสดุ/อุปกรณ์ที่เบิก (stock_items)
-* - คืนวัสดุ/อุปกรณ์ที่มีสถานะ approved
-* - คืนวัสดุแบบเลือกหลายรายการ (batch return)
-* - รับงานซ่อม (accept job)
-* - เปลี่ยนสถานะงาน (done, outsource)
-* - มอบหมายงานให้ช่าง (assign technician)
-* - แสดงรูปภาพและวิดีโอที่แนบมากับใบแจ้งซ่อม
-* - แสดง modal สำหรับ assign, accept และ summary
-*
-* เชื่อมต่อกับ API:
-* - GET /repair-requests/:code
-* - PUT /technician/close-job/:code
-* - PUT /stock-forms/return-item
-* - GET /technician-types
-*
-* @requires
-* - vue
-* - vue-router
-* - sweetalert2
-* - jwt-decode
-* - @iconify/vue
-*
-* - @/composables/useAuthToken
-* - @/composables/usePhoneFormat
-*
-* - @/utils/date.util
-* - @/utils/repairTimeline.util
-* - @/utils/badge.util
-*
-* - @/components/status-timeline-component.vue
-* - @/components/modal/assign-job-modal-component.vue
-* - @/components/modal/accept-job-modal-component.vue
-* - @/components/button/back-button-component.vue
-* - @/components/button/base/base-button-component.vue
-*
-* @dataFlow
-* Route Params → View → API → Backend Controller → Service → Database
-*
-* @stateManagement
-* - repair
-* - returnableItems
-* - selectedReturnItems
-* - showReturnModal
-* - showAssignPopup
-* - showAcceptPopup
-* - showStatusPopup
-* - showTechSummaryModal
-*
-* @responsibility
-* - แสดงข้อมูล repair detail
-* - จัดการ UI interactions
-* - เรียก API ที่เกี่ยวข้องกับ repair และ stock
-* - ควบคุม modal states
-* - จัดการ media display
-*
-* @author
-* - นายพชร ไพศรีสกุล
-*
-* ---------------------------------------------------------------------
-* @changelog
-* - เพิ่มระบบคืนอุปกรณ์แบบรายชิ้น และหลายรายการ (Return Item)
-* - เพิ่ม Return Modal และ logic สำหรับเลือกหลายรายการ
-* - เพิ่มการ refresh repair detail หลังคืนอุปกรณ์
-* [2026-02-17, นายพชร ไพศรีสกุล]
-* - เพิ่มฟิลด์รองรับ repair_method และ result_status
-* - ปรับ Modal ปิดงานให้มีตัวเลือกครบถ้วน
-* [2026-02-22, นราธิป แสนทวีสุข]
-* - รองรับการคืนอุปกรณ์แบบบางส่วน (Partial Return)ปรับปรุง UX/UI หน้า Return Modal และเพิ่มตัวเลือกจำนวนที่ต้องการคืน
-* [2026-02-23, พชร ไพศรีสกุล] V1.3.0
-* [2026-02-25, นายธนภัทร จันทร์งาม]
-* - แก้ไขปุ่มมอบหมายที่หายไปและปรับแต่งตำแหน่งการวางของปุ่ม
-* =====================================================================
-*/
+ * =====================================================================
+ * @file            : repair-detail-view.vue
+ * @module          : แสดงรายละเอียดใบแจ้งซ่อม
+ * @layer           : View (Presentation Layer)
+ * @version         : 1.3.1
+ * @since           : 2026-02-17
+ * @lastModified    : 2026-02-26
+ * @lastModifiedBy  : ธนภัทร จันทร์งาม
+ * ---------------------------------------------------------------------
+ * @description
+ *  View สำหรับแสดงรายละเอียดใบแจ้งซ่อม (Repair Detail)
+ *  โดยแสดงข้อมูลที่เกี่ยวข้องกับงานซ่อม สถานที่ ผู้แจ้ง ช่างผู้รับผิดชอบ
+ *  สถานะการดำเนินงาน และรายการวัสดุ/อุปกรณ์ที่เบิกจากระบบ stock
+ *
+ *  รองรับการทำงาน:
+ *    - โหลดและแสดงรายละเอียดใบแจ้งซ่อมจาก rf_code
+ *    - แสดง timeline ของสถานะงานซ่อม
+ *    - แสดงรายการวัสดุ/อุปกรณ์ที่เบิก (stock_items)
+ *    - คืนวัสดุ/อุปกรณ์ที่มีสถานะ approved
+ *    - คืนวัสดุแบบเลือกหลายรายการ (batch return)
+ *    - รับงานซ่อม (accept job)
+ *    - เปลี่ยนสถานะงาน (done, outsource)
+ *    - มอบหมายงานให้ช่าง (assign technician)
+ *    - แสดงรูปภาพและวิดีโอที่แนบมากับใบแจ้งซ่อม
+ *    - แสดง modal สำหรับ assign, accept และ summary
+ *
+ *  เชื่อมต่อกับ API:
+ *    - GET    /repair-requests/:code
+ *    - PUT    /technician/close-job/:code
+ *    - PUT    /stock-forms/return-item
+ *    - GET    /technician-types
+ *
+ * @requires
+ *   - vue
+ *   - vue-router
+ *   - sweetalert2
+ *   - jwt-decode
+ *   - @iconify/vue
+ *
+ *   - @/composables/useAuthToken
+ *   - @/composables/usePhoneFormat
+ *
+ *   - @/utils/date.util
+ *   - @/utils/repairTimeline.util
+ *   - @/utils/badge.util
+ *
+ *   - @/components/status-timeline-component.vue
+ *   - @/components/modal/assign-job-modal-component.vue
+ *   - @/components/modal/accept-job-modal-component.vue
+ *   - @/components/button/back-button-component.vue
+ *   - @/components/button/base/base-button-component.vue
+ *
+ * @dataFlow
+ *   Route Params → View → API → Backend Controller → Service → Database
+ *
+ * @stateManagement
+ *   - repair
+ *   - returnableItems
+ *   - selectedReturnItems
+ *   - showReturnModal
+ *   - showAssignPopup
+ *   - showAcceptPopup
+ *   - showStatusPopup
+ *   - showTechSummaryModal
+ *
+ * @responsibility
+ *   - แสดงข้อมูล repair detail
+ *   - จัดการ UI interactions
+ *   - เรียก API ที่เกี่ยวข้องกับ repair และ stock
+ *   - ควบคุม modal states
+ *   - จัดการ media display
+ *
+ * @author
+ *   - นายพชร ไพศรีสกุล
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *   - เพิ่มระบบคืนอุปกรณ์แบบรายชิ้น และหลายรายการ (Return Item)
+ *   - เพิ่ม Return Modal และ logic สำหรับเลือกหลายรายการ
+ *   - เพิ่มการ refresh repair detail หลังคืนอุปกรณ์
+ *     [2026-02-17, นายพชร ไพศรีสกุล]
+ *   - เพิ่มฟิลด์รองรับ repair_method และ result_status
+ *   - ปรับ Modal ปิดงานให้มีตัวเลือกครบถ้วน
+ *     [2026-02-22, นราธิป แสนทวีสุข]
+ *   - รองรับการคืนอุปกรณ์แบบบางส่วน (Partial Return)ปรับปรุง UX/UI หน้า Return Modal และเพิ่มตัวเลือกจำนวนที่ต้องการคืน
+ *     [2026-02-23, พชร ไพศรีสกุล] V1.3.0
+ *   - แก้ไขปุ่มมอบหมายที่หายไปและปรับแต่งตำแหน่งการวางของปุ่ม
+ *     [2026-02-26, นายธนภัทร จันทร์งาม] V1.3.1
+ *
+ * =====================================================================
+ */
 
 <script setup>
 defineOptions({ name: 'RepairDetailView' }) // ชื่อคอมโพเนนต์สำหรับ debug
