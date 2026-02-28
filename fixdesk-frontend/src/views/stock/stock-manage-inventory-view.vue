@@ -1,3 +1,23 @@
+/**
+ * =====================================================================
+ * @file            stock-manage-inventory-view.vue
+ * @module          มอดูลการจัดการคลัง - การจัดการสินค้าคงคลัง
+ * @layer           View (Presentation Layer)
+ * @version         1.0.1
+ * @since           2025-10-21
+ * @author          เศรษฐพงศ์ หอมชื่น
+ * @lastModified    2026-02-27
+ * @lastModifiedBy  เศรษฐพงศ์ หอมชื่น
+ * ---------------------------------------------------------------------
+ * @description
+ *  หน้าจอสำหรับจัดการข้อมูลสินค้าคงคลัง
+ *  รองรับฟีเจอร์:
+ *    - แสดงรายการสินค้าทั้งหมด
+ *    - เพิ่ม แก้ไข ลบสินค้า
+ *    - นำเข้าข้อมูลสินค้าจากไฟล์ Excel
+ *    - ตรวจสอบความถูกต้องของไฟล์ภาพ
+ * =====================================================================
+ */
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
@@ -334,6 +354,7 @@ async function handleDeleteCategory(category) {
     confirmButtonText: 'ลบ',
     cancelButtonText: 'ยกเลิก',
     confirmButtonColor: '#dc2626',
+    cancelButtonColor: '#d4d4d4',
   })
   if (!result.isConfirmed) return
 
@@ -553,8 +574,8 @@ const handleDelete = async (productIdFromTable) => {
     icon: 'warning',
     showCancelButton: true,
     confirmButtonColor: '#dc2626',
-    cancelButtonColor: '#6b7280',
-    confirmButtonText: 'ลบ',
+    cancelButtonColor: '#d4d4d4',
+    confirmButtonText: 'ยืนยันการลบ',
     cancelButtonText: 'ยกเลิก',
   }).then(async (result) => {
     if (!result.isConfirmed) return
@@ -815,7 +836,7 @@ onBeforeUnmount(() => {
         <ImportButtonComponent @click="showImportModal = true" />
 
         <button @click="showAddModal = true"
-          class="flex items-center px-4 py-2 text-white transition-colors bg-blue-700 rounded-md shadow-sm hover:bg-blue-800">
+          class="flex items-center px-4 py-2 text-white transition-colors bg-blue-700 rounded-lg shadow-sm hover:bg-blue-800">
           <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mr-1" fill="none" viewBox="0 0 24 24"
             stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -1099,12 +1120,12 @@ onBeforeUnmount(() => {
 
             <div class="flex justify-end gap-4 pt-4 border-t border-gray-100 border-dashed">
               <button type="button" @click="closeAddModal"
-                class="px-8 py-2 text-sm font-medium text-gray-700 transition-colors bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50">
+                class="px-8 py-2 text-sm font-medium text-white transition-colors bg-neutral-300 border border-gray-300 rounded-lg shadow-sm hover:bg-neutral-400">
                 ยกเลิก
               </button>
 
               <button type="button" @click="confirmAddItem"
-                class="px-8 py-2 text-sm font-medium text-white transition-colors bg-blue-700 rounded-md shadow-sm hover:bg-blue-800">
+                class="px-8 py-2 text-sm font-medium text-white transition-colors bg-blue-700 rounded-lg shadow-sm hover:bg-blue-800">
                 บันทึก
               </button>
             </div>
@@ -1280,12 +1301,12 @@ onBeforeUnmount(() => {
 
             <div class="flex justify-end gap-4 pt-4 border-t border-gray-100 border-dashed">
               <button type="button" @click="closeEditModal"
-                class="px-8 py-2 text-sm font-medium text-gray-700 transition-colors bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50">
+                class="px-8 py-2 text-sm font-medium text-white transition-colors bg-neutral-300 border border-gray-300 rounded-lg shadow-sm hover:bg-neutral-400">
                 ยกเลิก
               </button>
 
               <button type="submit"
-                class="px-8 py-2 text-sm font-medium text-white transition-colors bg-orange-500 rounded-md shadow-sm hover:bg-orange-600">
+                class="px-8 py-2 text-sm font-medium text-white transition-colors bg-orange-400 rounded-lg shadow-sm hover:bg-orange-500">
                 บันทึกการแก้ไข
               </button>
             </div>

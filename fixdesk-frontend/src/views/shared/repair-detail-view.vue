@@ -5,8 +5,8 @@
  * @layer           : View (Presentation Layer)
  * @version         : 1.3.1
  * @since           : 2026-02-17
- * @lastModified    : 2026-02-26
- * @lastModifiedBy  : ธนภัทร จันทร์งาม
+ * @lastModified    : 2026-02-27
+ * @lastModifiedBy  : เศรษฐพงศ์ หอมชื่น
  * ---------------------------------------------------------------------
  * @description
  *  View สำหรับแสดงรายละเอียดใบแจ้งซ่อม (Repair Detail)
@@ -85,9 +85,8 @@
  *     [2026-02-22, นราธิป แสนทวีสุข]
  *   - รองรับการคืนอุปกรณ์แบบบางส่วน (Partial Return)ปรับปรุง UX/UI หน้า Return Modal และเพิ่มตัวเลือกจำนวนที่ต้องการคืน
  *     [2026-02-23, พชร ไพศรีสกุล] V1.3.0
- *   - แก้ไขปุ่มมอบหมายที่หายไปและปรับแต่งตำแหน่งการวางของปุ่ม
- *     [2026-02-26, นายธนภัทร จันทร์งาม] V1.3.1
- *
+ *   - แก้ไขสีปุ่ม   
+       [2026-02-27, เศรษฐพงศ์ หอมชื่น]
  * =====================================================================
  */
 
@@ -335,6 +334,7 @@ async function confirmOutsource() {
     confirmButtonText: 'ใช่, ส่งงาน',
     cancelButtonText: 'ยกเลิก',
     confirmButtonColor: '#f59e0b',
+    cancelButtonColor: '#d4d4d4',
   })
 
   if (!result.isConfirmed) return
@@ -1222,16 +1222,22 @@ onMounted(() => {
         </div>
 
         <div class="p-5 border-t border-gray-100 flex gap-3">
-          <button @click="showTechSummaryModal = false"
-            class="flex-1 py-3 px-6 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl font-medium transition-colors">
+          <button
+            @click="showTechSummaryModal = false"
+            class="flex-1 py-3 px-6 text-white bg-neutral-300 hover:bg-neutral-400 rounded-lg font-medium transition-colors"
+          >
             ยกเลิก
           </button>
-          <button @click="confirmCloseJob" :disabled="!techSummary.trim()" :class="[
-            'flex-1 py-3 px-6 rounded-xl font-medium transition-colors text-white',
-            techSummary.trim()
-              ? 'bg-blue-600 hover:bg-blue-700'
-              : 'bg-gray-300 cursor-not-allowed',
-          ]">
+          <button
+            @click="confirmCloseJob"
+            :disabled="!techSummary.trim()"
+            :class="[
+              'flex-1 py-3 px-6 rounded-lg font-medium transition-colors text-white',
+              techSummary.trim()
+                ? 'bg-blue-700 hover:bg-blue-800'
+                : 'bg-gray-300 cursor-not-allowed',
+            ]"
+          >
             ยืนยันการปิดงาน
           </button>
         </div>
@@ -1293,8 +1299,14 @@ onMounted(() => {
         <!-- Select All -->
         <div class="flex items-center justify-between border-b pb-2">
           <label class="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" :checked="selectedReturnItems.length === returnableItems.length && returnableItems.length > 0
-              " @change="toggleSelectAll" />
+            <input
+              type="checkbox"
+              :checked="
+                selectedReturnItems.length === returnableItems.length && returnableItems.length > 0
+              "
+              @change="toggleSelectAll"
+              class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+            />
             เลือกทั้งหมด
           </label>
 
@@ -1310,8 +1322,14 @@ onMounted(() => {
         <div v-for="item in returnableItems" :key="item.sf_code + '-' + item.id"
           class="flex justify-between items-center border rounded-lg p-3">
           <label class="flex items-center gap-3 cursor-pointer flex-1">
-            <input type="checkbox" :checked="selectedReturnItems.some((i) => i.sf_code === item.sf_code && i.id === item.id)
-              " @change="toggleReturnItem(item)" />
+            <input
+              type="checkbox"
+              :checked="
+                selectedReturnItems.some((i) => i.sf_code === item.sf_code && i.id === item.id)
+              "
+              @change="toggleReturnItem(item)"
+              class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+            />
 
             <div class="text-center">
               <span class="font-medium">{{ item.name }}</span> <span class="text-sm text-gray-500">- จำนวนที่ยังคืนได้:
@@ -1328,12 +1346,15 @@ onMounted(() => {
 
       <!-- Footer -->
       <div class="p-4 border-t flex justify-end gap-2">
-        <button @click="closeReturnModal" class="px-4 py-2 border rounded-lg hover:bg-gray-100">
+        <button @click="closeReturnModal" class="px-4 py-2 border rounded-lg bg-neutral-300 hover:bg-neutral-400 text-white">
           ยกเลิก
         </button>
 
-        <button @click="returnSelectedItems" :disabled="selectedReturnItems.length === 0"
-          class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed">
+        <button
+          @click="returnSelectedItems"
+          :disabled="selectedReturnItems.length === 0"
+          class="px-4 py-2 bg-blue-700 text-white rounded-lg hover:bg-blue-800 disabled:bg-gray-300 disabled:cursor-not-allowed"
+        >
           คืนที่เลือก
         </button>
       </div>

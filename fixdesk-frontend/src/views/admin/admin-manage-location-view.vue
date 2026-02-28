@@ -6,8 +6,8 @@
  * @version         1.0.0
  * @since           2025-10-21
  * @author          เศรษฐพงศ์ หอมชื่น
- * @lastModified    2026-02-18
- * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
+ * @lastModified    2026-02-27
+ * @lastModifiedBy  เศรษฐพงศ์ หอมชื่น
  * ---------------------------------------------------------------------
  * @description
  *  หน้าจอสำหรับผู้ดูแลระบบ ใช้จัดการข้อมูลสถานที่ภายในระบบแจ้งซ่อม
@@ -34,6 +34,7 @@
  * ---------------------------------------------------------------------
  * @changelog
  *   - ปรับปรุงข้อความที่ใช้ให้เหมาะสม                 [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - แก้ไขสีปุ่ม                    [2026-02-27, เศรษฐพงศ์ หอมชื่น]
  * =====================================================================
  */
 
@@ -624,11 +625,11 @@ async function confirmDelete(username) {
            <small>อาคาร: ${item.building} ชั้น: ${item.floor}</small>`,
     icon: 'warning',
     showCancelButton: true,
-    reverseButtons: true,
-    confirmButtonText: 'ยืนยัน',
+    reverseButtons: false,
+    confirmButtonText: 'ยืนยันการลบ',
     cancelButtonText: 'ยกเลิก',
-    confirmButtonColor: '#EF4444',
-    cancelButtonColor: '#6B7280',
+    confirmButtonColor: '#dc2626',
+    cancelButtonColor: '#d4d4d4',
   })
 
   if (!result.isConfirmed) return
@@ -933,7 +934,8 @@ async function saveEditLocation() {
     reverseButtons: true,
     confirmButtonText: 'ยืนยัน',
     cancelButtonText: 'ยกเลิก',
-    confirmButtonColor: '#f97316',
+    confirmButtonColor: '#0048EF',
+    cancelButtonColor: '#d4d4d4',
   })
 
   if (!result.isConfirmed) {
@@ -1134,7 +1136,7 @@ onBeforeUnmount(() => {
           </ImportButtonComponent>
 
           <!-- เพิ่มสถานที่ (ปุ่มหลัก) -->
-          <BaseButtonComponent @click="openAddModal" class="inline-flex items-center justify-center h-10 px-4 rounded-lg bg-[#1E48D1] hover:bg-[#1539a9] text-white font-medium shadow-sm transition">
+          <BaseButtonComponent @click="openAddModal" class="inline-flex items-center justify-center h-10 px-4 rounded-lg bg-blue-700 hover:bg-blue-800 text-white font-medium shadow-sm transition">
             <Icon icon="fluent:add-12-filled" width="20" height="20" />
             เพิ่มสถานที่
           </BaseButtonComponent>
@@ -1361,7 +1363,7 @@ onBeforeUnmount(() => {
 
         <!-- ปุ่ม -->
         <div class="flex gap-3 mt-6">
-          <button type="button" @click="closeAddModal" class="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors font-medium">ยกเลิก</button>
+          <button type="button" @click="closeAddModal" class="flex-1 px-4 py-2.5 border border-gray-300 text-white rounded-lg bg-neutral-300 hover:bg-neutral-400 transition-colors font-medium">ยกเลิก</button>
           <button type="button" @click="saveAddLocation" class="flex-1 px-4 py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-md transition-colors font-medium">เพิ่มสถานที่</button>
         </div>
       </div>
@@ -1414,8 +1416,8 @@ onBeforeUnmount(() => {
 
         <!-- ปุ่ม -->
         <div class="flex gap-3 mt-6">
-          <button type="button" @click="closeEditModal" class="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors font-medium">ยกเลิก</button>
-          <button type="button" @click="saveEditLocation" class="flex-1 px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-md transition-colors font-medium">บันทึกการแก้ไข</button>
+          <button type="button" @click="closeEditModal" class="flex-1 px-4 py-2.5 border border-gray-300 text-white rounded-lg bg-neutral-300 hover:bg-neutral-400 transition-colors font-medium">ยกเลิก</button>
+          <button type="button" @click="saveEditLocation" class="flex-1 px-4 py-2.5 bg-orange-400 hover:bg-orange-500 text-white rounded-lg transition-colors font-medium">บันทึกการแก้ไข</button>
         </div>
       </div>
     </div>

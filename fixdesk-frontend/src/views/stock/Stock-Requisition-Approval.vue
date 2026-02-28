@@ -3,11 +3,11 @@
  * @file            stock-withdraw-approve-view.vue
  * @module          มอดูลการจัดการของผู้ดูแลคลัง - การตรวจสอบ และอนุมัติรายการเบิกของ
  * @layer           View (Presentation Layer)
- * @version         1.0.0
+ * @version         1.0.1
  * @since           2025-12-21
  * @author          ธนภัทร จันทร์งาม
- * @lastModified    2026-02-18
- * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
+ * @lastModified    2026-02-27
+ * @lastModifiedBy  เศรษฐพงศ์ หอมชื่น
  * ---------------------------------------------------------------------
  * @description
  *  หน้าจอสำหรับอนุมัติรายการเบิกของของผู้ดูแลคลัง
@@ -28,6 +28,7 @@
  * ---------------------------------------------------------------------
  * @changelog
  *   - ปรับปรุงข้อความที่ใช้ให้เหมาะสม   [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - แก้ไขสีปุ่ม และ border         [2026-02-27, เศรษฐพงศ์ หอมชื่น]
  * =====================================================================
  */
 
@@ -69,6 +70,7 @@
  *  - แยก Flow ระหว่างตั้งค่าและยืนยันบันทึก              [2026-02-17, นราธิป]
  *  - เปลี่ยน Alert เป็น Toast และเพิ่ม Auto Redirect    [2026-02-17, นราธิป]
  *  - ปรับ Checkbox ให้อยู่กลางบรรทัด                      [2026-02-17, นราธิป]
+ *  - ปรับสีของปุ่ม และปรับแต่ง checkbox                [2026-02-27, เศรษฐพงศ์]
  * =====================================================================
  */
 
@@ -307,6 +309,8 @@ const confirmApprove = async () => {
     showCancelButton: true,
     confirmButtonText: 'ยืนยัน',
     cancelButtonText: 'ยกเลิก',
+    confirmButtonColor: '#0048EF', 
+    cancelButtonColor: '#d4d4d4', 
     reverseButtons: true,
   })
 
@@ -417,7 +421,7 @@ function goBack() {
                   type="checkbox"
                   :checked="selectedItems.has(item.id)"
                   @change="toggleSelectItem(item.id)"
-                  class="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                  class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
                 />
               </div>
 
@@ -561,7 +565,7 @@ function goBack() {
                     type="checkbox"
                     :checked="isAllSelected"
                     @change="toggleSelectAll"
-                    class="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                    class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
                   />
                   <span class="text-sm font-semibold text-slate-700 group-hover:text-blue-700 transition">
                     เลือกทั้งหมด ({{ items.length }} รายการ)
@@ -620,7 +624,7 @@ function goBack() {
                 <button
                   @click="confirmApprove"
                   :disabled="!allReviewed || isSubmitting"
-                  class="w-full inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3.5 font-bold text-white bg-blue-600 hover:bg-blue-700 active:scale-[0.99] transition disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                  class="w-full inline-flex items-center justify-center gap-2 rounded-lg px-5 py-3.5 font-bold text-white bg-blue-700 hover:bg-blue-800 active:scale-[0.99] transition disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
                 >
                   <Icon v-if="!isSubmitting" icon="mdi:content-save-check" width="20" height="20" />
                   <span v-if="isSubmitting" class="inline-flex items-center gap-2">

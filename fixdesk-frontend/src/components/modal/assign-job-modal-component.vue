@@ -1,3 +1,22 @@
+/**
+ * =====================================================================
+ * @file            assign-job-modal-component.vue
+ * @module          มอดูลจัดการงานซ่อม - มอบหมายงานให้ช่าง
+ * @layer           Component (Presentation Layer)
+ * @version         1.0.1
+ * @since           2025-10-21
+ * @author          เศรษฐพงศ์ หอมชื่น
+ * @lastModified    2026-02-27
+ * @lastModifiedBy  เศรษฐพงศ์ หอมชื่น
+ * ---------------------------------------------------------------------
+ * @description
+ *  Component สำหรับเลือกช่างและมอบหมายงานซ่อม
+ *  รองรับฟีเจอร์:
+ *    - แสดงรายการช่างว่าง
+ *    - เลือกช่างเพื่อมอบหมายงาน
+ *    - แสดงประเภทช่างและความพร้อม
+ * =====================================================================
+ */
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import Swal from 'sweetalert2'
@@ -306,14 +325,14 @@ onBeforeUnmount(() => {
       <div class="flex justify-end gap-3 mt-6">
         <button
           @click="$emit('close')"
-          class="px-5 py-2 font-medium text-gray-700 transition bg-gray-200 rounded-md hover:bg-gray-300"
+          class="px-5 py-2 font-medium text-white transition bg-neutral-300 rounded-md hover:bg-neutral-400"
         >
           ยกเลิก
         </button>
         <button
           @click="confirmAssign"
           :disabled="!selectedTechnician || loadingAssign"
-          class="px-5 py-2 font-medium text-white transition bg-[#1E48D1] rounded-md hover:bg-blue-900 disabled:opacity-50"
+          class="px-5 py-2 font-medium text-white transition bg-blue-700 rounded-md hover:bg-blue-800 disabled:opacity-50"
         >
           {{ loadingAssign ? 'กำลังมอบหมาย...' : 'ยืนยัน' }}
         </button>
