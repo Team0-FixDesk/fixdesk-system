@@ -50,7 +50,7 @@ async function fetchTechnicians() {
       title: 'เกิดข้อผิดพลาด',
       text: 'ไม่สามารถโหลดรายชื่อช่างได้',
       icon: 'error',
-      background: '#fee2e2',
+      background: '#FFFFFF',
       color: '#dc2626',
     })
   }
@@ -100,7 +100,7 @@ async function confirmAssign() {
     Toast.fire({
       title: 'กรุณาเลือกช่างผู้รับผิดชอบ',
       icon: 'warning',
-      background: '#fef3c7',
+      background: '#FFFFFF',
       color: '#d97706',
     })
     return
@@ -197,7 +197,7 @@ async function confirmAssign() {
       title: 'เกิดข้อผิดพลาด',
       text: err.message,
       icon: 'error',
-      background: '#fee2e2',
+      background: '#FFFFFF',
       color: '#dc2626',
     })
   } finally {
