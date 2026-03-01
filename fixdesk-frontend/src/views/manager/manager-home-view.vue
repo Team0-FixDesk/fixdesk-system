@@ -3,40 +3,76 @@
  * @file            manager-home.view.vue
  * @module          หน้าหลักผู้บริหาร (Manager Dashboard)
  * @layer           View (Presentation Layer)
- * @version         1.0.0
- * @since           2026-02-20
+ * @version         1.5.4
+ * @since           2025-10-21
  * @author          พชร ไพศรีสกุล
  * @contributors
  *   - พชร ไพศรีสกุล
- *   - เศรษฐพงศ์ หอมชื่น    
- *                       
- * @lastModified    2026-02-17
- * @lastModifiedBy  เศรษฐพงศ์ หอมชื่น
+ *   - เศรษฐพงศ์ หอมชื่น
+ *   - พิมลพรรณ มามาก
+ *   - นราธิป แสนทวีสุข
+ *   - ปฏิพัทธ์ จงนันทพันธ์กุล
+ *   - บุณยกร จันประภาส
+ *   - พิมพ์ณัฐชยา สร้อยคำ
+ *
+ * @lastModified    2026-02-23
+ * @lastModifiedBy  พชร ไพศรีสกุล
  * ---------------------------------------------------------------------
  * @description
  * หน้าจอแดชบอร์ดสำหรับผู้บริหาร เพื่อแสดงภาพรวมการดำเนินงานของระบบแจ้งซ่อม
  * ประกอบด้วยการ์ดสรุปสถิติ และกราฟแสดงผลข้อมูลต่างๆ (ApexCharts) ได้แก่:
- * - ปริมาณงานแจ้งซ่อมรายเดือน (Stacked Bar Chart)
- * - สัดส่วนสถานะงานแจ้งซ่อมแบบรายสัปดาห์/รายเดือน (Pie Chart)
- * - แนวโน้มปริมาณงานแจ้งซ่อมรายวันในสัปดาห์ปัจจุบัน (Line Chart)
- * - อัตราความสำเร็จการปฏิบัติงานของช่างแต่ละแผนก (Horizontal Bar Chart)
- * - ปริมาณงานแจ้งซ่อมจำแนกตามประเภท (Horizontal Bar Chart)
- * - ปริมาณการแจ้งซ่อมจำแนกตามหน่วยงาน (Horizontal Bar Chart)
+ *  - ปริมาณงานแจ้งซ่อมรายเดือน (Stacked Bar Chart)
+ *  - สัดส่วนสถานะงานแจ้งซ่อมแบบรายสัปดาห์/รายเดือน (Pie Chart)
+ *  - แนวโน้มปริมาณงานแจ้งซ่อมรายวันในสัปดาห์ปัจจุบัน (Line Chart)
+ *  - อัตราความสำเร็จการปฏิบัติงานของช่างแต่ละแผนก (Horizontal Bar Chart)
+ *  - ปริมาณงานแจ้งซ่อมจำแนกตามประเภท (Horizontal Bar Chart)
+ *  - ปริมาณการแจ้งซ่อมจำแนกตามหน่วยงาน (Horizontal Bar Chart)
  *
  * @requires
- * - vue
- * - vue3-apexcharts
- * - @/composables/useUserProfile
- * - @/composables/useManagerDashboard
+ *  - vue
+ *  - vue3-apexcharts
+ *  - @/composables/useUserProfile
+ *  - @/composables/useManagerDashboard
  *
  * ---------------------------------------------------------------------
  * @changelog
- * - จัดทำ Dashboard ของ Manager                                                                          [2026-01-13, เศรษฐพงศ์ หอมชื่น]
- * - เพิ่มการตั้งค่าชื่อแกน (Title) แกน X และ Y ในทุกกราฟ                                                        [2026-02-17, เศรษฐพงศ์ หอมชื่น]
- * - ปรับปรุงการแสดงผลเส้นแกน (Axis Border)                                                                  [2026-02-17, เศรษฐพงศ์ หอมชื่น]
- * - ปรับแก้ Padding และ Responsive เพื่อป้องกันชื่อแกนตกขอบ                                                     [2026-02-17, เศรษฐพงศ์ หอมชื่น]
- * - ปรับแก้ กราฟสัดส่วนสถานะงานแจ้งซ่อม และอัตราความสำเร็จการปฏิบัติงานของช่างแต่ละแผนก ให้แสดงรายสัปดาห์ (จันทร์-อาทิตย์)  [2026-02-18, เศรษฐพงศ์ หอมชื่น]
- * - ปรับแก้เงื่อนไขการแสดงกราฟ                                                                                 [2026-02-20, เศรษฐพงศ์ หอมชื่น]
+ *   - feat(frontend): add sidebar and page structure for all actors
+ *     [2025-10-21, พชร ไพศรีสกุล] V 1.0.0
+ *   - feat(dashboard): implement manager dashboard with vue-echarts data visualization
+ *     [2025-12-07, นราธิป แสนทวีสุข] V 1.1.0
+ *   - style(frontend):หน้า home
+ *     [2025-12-07, พชร ไพศรีสกุล] V 1.1.1
+ *   - hotfix(managerHome):แก้สถานะให้แสดงผลถูกต้อง
+ *     [2025-12-07, นราธิป แสนทวีสุข] V 1.1.2
+ *   - feat(dashboard): add year selector and growth indicators
+ *     [2025-12-07, นราธิป แสนทวีสุข] V 1.2.0
+ *   - fix(frontend):แก้ไขการใช้ API_BASE ทุกไฟล์ที่มีการใช้ API
+ *     [2026-01-08, พชร ไพศรีสกุล] V 1.2.1
+ *   - fix(frontend): แก้ไข Dashboard ของ Manager
+ *     [2026-01-13, เศรษฐพงศ์ หอมชื่น] V 1.2.2
+ *   - fix(front):การดึงชื่อและหน่วยงาน โดยใช้ Composables
+ *     [2026-01-14, พชร ไพศรีสกุล] V 1.2.3
+ *   - fix(frontend): แก้ไขหน้า manager home
+ *     [2026-01-14, พชร ไพศรีสกุล] V 1.2.4
+ *   - refactor manager&stock home
+ *     [2026-01-15, พิมพ์ณัฐชยา สร้อยคำ] V 1.3.0
+ *   - fix(frontend): แก้ไขปัญหาการใช้ API ผิด
+ *     [2026-02-11, พชร ไพศรีสกุล] V 1.3.1
+ *   - ref(frontend) แก้ไขให้ตรงตาม Coding Standard
+ *     [2026-02-11, บุณยกร จันประภาส] V 1.4.0
+ *   - fix(frontend): แก้การแสดงกราฟ
+ *     [2026-02-17, เศรษฐพงศ์ หอมชื่น] V 1.4.1
+ *   - feat(frontend): เพิ่มกราฟเปรียบเทียบช่างในองค์กรณ์ กับช่างภายนอก
+ *     [2026-02-18, เศรษฐพงศ์ หอมชื่น] V 1.5.0
+ *   - fix(frontend): แก้ไขการใช้คำ และเพิ่มคำอธิบาย
+ *     [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล] V 1.5.1
+ *   - fix(frontend): แก้เงื่อนไขการแสดงกราฟ
+ *     [2026-02-21, เศรษฐพงศ์ หอมชื่น] V 1.5.2
+ *   - fix(frontend): ดึงข้อมูลชื่อผู้ใช้งานมาแสดงที่หน้าจอหลักของ Role ต่างๆ
+ *     [2026-02-22, พิมลพรรณ มามาก] V 1.5.3
+ *   - fix(frontend): แก้ไขการแสดงผลกราฟในหน้า Manager Dashboard
+ *     [2026-02-23, พชร ไพศรีสกุล] V 1.5.4
+ *
  * =====================================================================
  */
 
@@ -50,7 +86,7 @@ defineOptions({ name: 'ManagerHomeView' })
 
 const API_BASE = import.meta.env.VITE_API_BASE
 
-const { displayName, displayDepartment, fetchUserProfile } = useUserProfile(API_BASE)
+const { userDisplayName, userDepartmentName, fetchUserProfileData} = useUserProfile()
 const { fetchDashboardData: fetchManagerDashboard } = useManagerDashboard()
 
 const monthLabels = [
@@ -177,57 +213,11 @@ const calcPercentChange = (current, previous) => {
   return Math.round(((current - previous) / previous) * 100)
 }
 
-const getAuthHeaders = () => {
-  const token = localStorage.getItem('token') || sessionStorage.getItem('token')
-  return { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
-}
-
 const filterRepairsByMonth = (repairs, year, month) =>
   repairs.filter((r) => {
     const d = new Date(r.rf_create_at)
     return d.getFullYear() === year && d.getMonth() === month
   })
-
-const filterLast7Days = (repairs) => {
-  const today = new Date()
-  const start = new Date(today)
-  start.setDate(today.getDate() - 6)
-  start.setHours(0, 0, 0, 0)
-
-  return repairs.filter((r) => {
-    const d = new Date(r.rf_create_at)
-    return d >= start && d <= today
-  })
-}
-
-const filterCurrentWeek = (repairs) => {
-  const now = new Date()
-  const day = now.getDay()
-  const diffToMonday = (day + 6) % 7
-
-  const monday = new Date(now)
-  monday.setDate(now.getDate() - diffToMonday)
-  monday.setHours(0, 0, 0, 0)
-
-  const sunday = new Date(monday)
-  sunday.setDate(monday.getDate() + 6)
-  sunday.setHours(23, 59, 59, 999)
-
-  const getYear = (dateStr) => new Date(dateStr).getFullYear()
-  const getMonth = (dateStr) => new Date(dateStr).getMonth()
-
-  const filterByYear = (items, year) =>
-    items.filter((i) => getYear(i.rf_create_at) === year)
-
-  const countByStatus = (items, status) =>
-    items.filter((i) => i.rf_user_status === status).length
-
-
-  return repairs.filter((r) => {
-    const d = new Date(r.rf_create_at)
-    return d >= monday && d <= sunday
-  })
-}
 
 /* -----------------------------
    Summary Cards
@@ -379,14 +369,14 @@ const monthlyStackedOptions = shallowRef({
     },
   },
 
-  yaxis: { 
-    title: { 
-      text: 'จำนวน (รายการ)', 
+  yaxis: {
+    title: {
+      text: 'จำนวน (รายการ)',
       offsetX: 6,
-      style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' } 
+      style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' }
     },
     axisBorder: { show: true, color: '#9CA3AF' },
-    labels: { formatter: (v) => `${Math.round(v)}` } 
+    labels: { formatter: (v) => `${Math.round(v)}` }
   },
 })
 
@@ -483,7 +473,7 @@ function updateStatusPieChart() {
   const isMatch = (dateStr) => {
     if (!dateStr) return false
     const d = new Date(dateStr)
-    return isWeek 
+    return isWeek
       ? (d >= startOfWeek && d <= endOfWeek)
       : (d.getFullYear() === targetYear && d.getMonth() === targetMonth)
   }
@@ -515,9 +505,9 @@ const weeklyTrendOptions = shallowRef({
   xaxis: {
     categories: ['จันทร์', 'อังคาร', 'พุธ', 'พฤหัส', 'ศุกร์', 'เสาร์', 'อาทิตย์'],
     tooltip: { enabled: false },
-    title: { 
-      text: 'วันในสัปดาห์', 
-      style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' } 
+    title: {
+      text: 'วันในสัปดาห์',
+      style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' }
     },
     axisBorder: { show: true, color: '#9CA3AF' }
   },
@@ -556,14 +546,14 @@ const weeklyTrendOptions = shallowRef({
     },
   },
 
-  yaxis: { 
-    title: { 
-      text: 'จำนวน (รายการ)', 
+  yaxis: {
+    title: {
+      text: 'จำนวน (รายการ)',
       offsetX: 6,
-      style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' } 
+      style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' }
     },
     axisBorder: { show: true, color: '#9CA3AF' },
-    labels: { formatter: (v) => `${Math.round(v)}` } 
+    labels: { formatter: (v) => `${Math.round(v)}` }
   },
 })
 
@@ -581,12 +571,12 @@ function updateWeeklyTrendChart() {
 
   const now = new Date()
   const day = now.getDay()
-  const diffToMonday = (day + 6) % 7 
-  
+  const diffToMonday = (day + 6) % 7
+
   const startOfWeek = new Date(now)
   startOfWeek.setDate(now.getDate() - diffToMonday)
   startOfWeek.setHours(0, 0, 0, 0)
-  
+
   const endOfWeek = new Date(startOfWeek)
   endOfWeek.setDate(startOfWeek.getDate() + 6)
   endOfWeek.setHours(23, 59, 59, 999)
@@ -606,7 +596,7 @@ function updateWeeklyTrendChart() {
     if (isThisWeek(r.rf_create_at)) {
       const idx = idxOf(r.rf_create_at)
       buckets[idx].total += 1
-      
+
       if (r.rf_user_status === 'pending') {
         buckets[idx].pending += 1
       }
@@ -661,17 +651,17 @@ const efficiencyChartOptions = shallowRef({
     min: 0,
     max: 100,
     labels: { formatter: (v) => `${Math.round(v)}%` },
-    title: { 
-      text: 'อัตราสำเร็จ (%)', 
-      style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' } 
+    title: {
+      text: 'อัตราสำเร็จ (%)',
+      style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' }
     },
     axisBorder: { show: true, color: '#9CA3AF' }
   },
   yaxis: {
-    title: { 
-      text: 'รายชื่อช่าง', 
+    title: {
+      text: 'รายชื่อช่าง',
       offsetX: 6,
-      style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' } 
+      style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' }
     },
     axisBorder: { show: true, color: '#9CA3AF' }
   },
@@ -775,20 +765,20 @@ const typeOptions = shallowRef({
   colors: ['#7c3aed'],
   plotOptions: { bar: { horizontal: true, borderRadius: 6 } },
   dataLabels: { enabled: false },
-  xaxis: { 
+  xaxis: {
     categories: ['ไม่มีข้อมูล'],
-    title: { 
-      text: 'จำนวนงาน (รายการ)', 
-      style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' } 
+    title: {
+      text: 'จำนวนงาน (รายการ)',
+      style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' }
     },
     axisBorder: { show: true, color: '#9CA3AF' },
     labels: { formatter: (v) => `${Math.round(v)}` }
   },
   yaxis: {
-    title: { 
-      text: 'ประเภทงานซ่อม', 
+    title: {
+      text: 'ประเภทงานซ่อม',
       offsetX: 6,
-      style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' } 
+      style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' }
     },
     axisBorder: { show: true, color: '#9CA3AF' }
   },
@@ -832,11 +822,6 @@ const typeOptions = shallowRef({
 })
 
 const typeSeries = ref([{ name: 'จำนวนงาน', data: [0] }])
-const getEffectiveDate = (r) => {
-  if (r.rf_user_status === 'done') return r.rf_done_at || r.rf_update_at || r.rf_create_at;
-  if (r.rf_user_status === 'in_progress') return r.rf_in_process_at || r.rf_update_at || r.rf_create_at;
-  return r.rf_create_at;
-}
 
 function updateTypeChart() {
   const targetYear = selectedYear.value
@@ -846,7 +831,7 @@ function updateTypeChart() {
   allRepairs.value.forEach((r) => {
     if (!r.rf_create_at) return
     const d = new Date(r.rf_create_at)
-    
+
     if (d.getFullYear() === targetYear && d.getMonth() === targetMonth) {
       const name = r.tt_name || 'ไม่ระบุ'
       typeCounts[name] = (typeCounts[name] || 0) + 1
@@ -879,20 +864,20 @@ const deptOptions = shallowRef({
   colors: ['#166534'],
   plotOptions: { bar: { horizontal: true, borderRadius: 6 } },
   dataLabels: { enabled: false },
-  xaxis: { 
+  xaxis: {
     categories: ['ไม่มีข้อมูล'],
-    title: { 
-      text: 'จำนวนแจ้งซ่อม (รายการ)', 
-      style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' } 
+    title: {
+      text: 'จำนวนแจ้งซ่อม (รายการ)',
+      style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' }
     },
     axisBorder: { show: true, color: '#9CA3AF' },
     labels: { formatter: (v) => `${Math.round(v)}` }
   },
   yaxis: {
-    title: { 
-      text: 'หน่วยงาน', 
+    title: {
+      text: 'หน่วยงาน',
       offsetX: 6,
-      style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' } 
+      style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' }
     },
     axisBorder: { show: true, color: '#9CA3AF' }
   },
@@ -927,7 +912,7 @@ function updateDepartmentChart() {
   allRepairs.value.forEach((r) => {
     if (!r.rf_create_at) return
     const d = new Date(r.rf_create_at)
-    
+
     if (d.getFullYear() === targetYear && d.getMonth() === targetMonth) {
       const name = r.department_name || r.dp_name || r.rf_department_name || r.org_name || r.unit_name || 'ไม่ระบุ'
       deptCounts[name] = (deptCounts[name] || 0) + 1
@@ -1021,17 +1006,17 @@ const compareBarOptions = shallowRef({
   stroke: { show: true, width: 2, colors: ['transparent'] },
   xaxis: {
     categories: monthLabels,
-    title: { 
-      text: 'เดือน', 
-      style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' } 
+    title: {
+      text: 'เดือน',
+      style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' }
     },
     axisBorder: { show: true, color: '#9CA3AF' }
   },
   yaxis: {
-    title: { 
-      text: 'จำนวนงาน (รายการ)', 
+    title: {
+      text: 'จำนวนงาน (รายการ)',
       offsetX: 6,
-      style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' } 
+      style: { fontSize: '13px', fontWeight: 600, color: '#4B5563' }
     },
     axisBorder: { show: true, color: '#9CA3AF' },
     labels: { formatter: (v) => `${Math.round(v)}` }
@@ -1072,17 +1057,17 @@ function updateCompareBarChart() {
   allRepairs.value.forEach((r) => {
     if (r.rf_user_status === 'done') {
       // ใช้วันที่ทำเสร็จ (rf_done_at) เป็นเกณฑ์ หากไม่มีให้ใช้วันที่อัปเดตล่าสุด
-      const doneDateStr = r.rf_done_at || r.rf_update_at; 
+      const doneDateStr = r.rf_done_at || r.rf_update_at;
       if (!doneDateStr) return;
 
       const doneDate = new Date(doneDateStr);
-      
+
       // เช็คว่างานนี้ "ทำเสร็จ" ในปีที่เลือกใช่หรือไม่
       if (doneDate.getFullYear() === selectedYear.value) {
         const m = doneDate.getMonth()
-        if (r.rf_is_outsourced == 1) { 
+        if (r.rf_repair_method == 'outsource') {
           outsourceData[m] += 1
-        } else if (r.rf_is_outsourced == null || r.rf_is_outsourced == 0) {
+        } else if (r.rf_repair_method == 'in_house') {
           doneData[m] += 1
         }
       }
@@ -1135,6 +1120,8 @@ async function fetchDashboardData() {
 }
 onMounted(() => {
   fetchDashboardData()
+  fetchUserProfileData()
+
 })
 </script>
 
@@ -1146,10 +1133,10 @@ onMounted(() => {
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 class="text-2xl font-bold text-gray-800">
-              หน้าจอหลักของผู้บริหาร - สวัสดีคุณ {{ displayName }}
+              หน้าจอหลักของผู้บริหาร - สวัสดีคุณ{{ userDisplayName }}
             </h1>
             <p class="text-lg font-semibold text-gray-700">
-              {{ displayDepartment }}
+              {{ userDepartmentName }}
             </p>
             <p class="text-gray-600 mt-2">ภาพรวมของการแจ้งซ่อม และสถิติงานซ่อม</p>
           </div>
@@ -1520,14 +1507,14 @@ onMounted(() => {
             <h3 class="text-lg font-semibold text-gray-900 mb-4">
               จำนวนการปิดงานของช่างภายในและช่างภายนอกตลอด{{ formatYearDisplay(selectedYear) }}
             </h3>
-          
-            <ApexChart 
-              type="bar" 
-              height="350" 
-              :options="compareBarOptions" 
-              :series="compareBarSeries" 
+
+            <ApexChart
+              type="bar"
+              height="350"
+              :options="compareBarOptions"
+              :series="compareBarSeries"
             />
-          
+
             <div class="mt-4 flex flex-wrap items-center justify-center gap-6 text-sm text-gray-600">
               <span class="inline-flex items-center gap-2">
                 <span class="inline-block w-3.5 h-3.5 rounded-sm" :style="{ backgroundColor: MONTHLY_COLORS.done }"></span>

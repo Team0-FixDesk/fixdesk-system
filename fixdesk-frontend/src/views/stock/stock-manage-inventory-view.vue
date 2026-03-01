@@ -1,52 +1,5 @@
-/**
- * =====================================================================
- * @file            stock-manage-inventory-view.vue
- * @module          มอดูลการจัดการคลัง - จัดการข้อมูลวัสดุ/ครุภัณฑ์
- * @layer           View (Presentation Layer)
- * @version         1.0.3
- * @since           2025-10-21
- * @author          -
- * @lastModified    2026-02-21
- * @lastModifiedBy  ธนภัทร จันทร์งาม
- * ---------------------------------------------------------------------
- * @description
- *  หน้าจอสำหรับผู้ดูแลคลัง ใช้จัดการข้อมูลวัสดุและครุภัณฑ์ภายในระบบ
- *  รองรับการทำงานดังนี้:
- *   - แสดงรายการคลังทั้งหมด พร้อมสถานะ (พร้อมใช้งาน / ใกล้หมด / หมด)
- *   - ค้นหา และกรองข้อมูลตามชื่อ, หมวดหมู่ และสถานะคลัง
- *   - เพิ่ม / แก้ไข / ลบรายการวัสดุ
- *   - จัดการหมวดหมู่ (เพิ่ม / แก้ไข / ลบ)
- *   - นำเข้าข้อมูลคลังจากไฟล์ Excel ผ่าน Modal
- *
- *  การปรับปรุงเพิ่มเติม:
- *   - แยกการแสดง Toast หลังการนำเข้าข้อมูลออกจาก Modal
- *   - ใช้ sessionStorage เป็นตัวกลางส่งสถานะการนำเข้า
- *   - แสดง Toast เฉพาะเมื่อ Modal ถูกปิดสำเร็จ
- *   - ป้องกันการแสดง Toast ซ้ำเมื่อมีการ refresh หน้า
- *
- * @requires
- *   - vue
- *   - vue-router
- *   - sweetalert2
- *   - @iconify/vue
- *   - @/components/table-component.vue
- *   - @/components/table-actions-component.vue
- *   - @/components/card-home-component.vue
- *   - @/components/button/import-button-component.vue
- *   - @/components/modal/import-excel-stock-component.vue
- *
- * ---------------------------------------------------------------------
- * @changelog
- *   - ปรับปรุงข้อความ และรูปแบบการแสดง Toast
- *     [2026-02-21, ธนภัทร จันทร์งาม]
- *   - ปรับ Flow การแสดง Toast หลังนำเข้าข้อมูลจาก Excel
- *     โดยใช้ sessionStorage และ watch การปิด Modal
- *     [2026-02-21, ธนภัทร จันทร์งาม]
- * =====================================================================
- */
-
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
 import ImportStockModal from '@/components/modal/import-excel-stock-component.vue'
@@ -65,18 +18,6 @@ function getAuthHeaders() {
   }
 }
 
-function handleImportSuccess(message) {
-  Swal.fire({
-    toast: true,
-    position: 'top-end',
-    icon: 'success',
-    title: message || 'นำเข้าข้อมูลสำเร็จ',
-    showConfirmButton: false,
-    timer: 2500,
-    timerProgressBar: true,
-  })
-}
-
 defineOptions({ name: 'StockManageInventoryView' })
 
 const router = useRouter()
@@ -87,6 +28,7 @@ const columnList = [
   'ID',
   'ชื่อรายการ',
   'หมวดหมู่',
+  'หมายเลขครุภัณฑ์',
   'จำนวน',
   'หน่วยนับ',
   'สถานะ',
@@ -249,10 +191,11 @@ async function fetchAllStock() {
         productId, // 0
         item.pd_name ?? '-', // 1
         item.ct_name ?? '-', // 2
-        quantity, // 3
-        item.units_name ?? '-', // 4
-        stockStatus, // 5
-        'actions', // 6
+        item.pd_asset_code ? `${item.pd_asset_code}` : '-', // 3
+        quantity, // 4
+        item.units_name ?? '-', // 5
+        stockStatus, // 6
+        'actions', // 7
       ]
     })
 
@@ -546,7 +489,7 @@ const confirmAddItem = async () => {
       throw new Error('Server error - received HTML response')
     }
 
-    if (!response.ok) throw new Error(responseData.message || 'บันทึกข้อมูลไม่สำเร็จ')
+    if (!response.ok) throw new Error(responseData.message || 'บันทึกรายการสำเร็จ!')
 
     const Toast = Swal.mixin({
       toast: true,
@@ -561,10 +504,12 @@ const confirmAddItem = async () => {
       },
     })
     Toast.fire({
-      title: 'บันทึกรายการสำเร็จ!',
+      title: 'สำเร็จ!',
+      text: 'บันทึกรายการสำเร็จ!',
       icon: 'success',
+      background: '#f0f9ff',
+      color: '#1e3a8a',
     })
-
 
     closeAddModal()
   } catch (error) {
@@ -609,7 +554,7 @@ const handleDelete = async (productIdFromTable) => {
     showCancelButton: true,
     confirmButtonColor: '#dc2626',
     cancelButtonColor: '#6b7280',
-    confirmButtonText: 'ยืนยัน',
+    confirmButtonText: 'ลบ',
     cancelButtonText: 'ยกเลิก',
   }).then(async (result) => {
     if (!result.isConfirmed) return
@@ -685,6 +630,7 @@ const confirmEditItem = async () => {
 
     editErrors.value = {}
     if (!editForm.value.name) editErrors.value.name = 'กรุณากรอกชื่อรายการ'
+    if (!editForm.value.categoryId) editErrors.value.type_id = 'กรุณาเลือกหมวดหมู่'
     if (!editForm.value.quantity) editErrors.value.quantity = 'กรุณากรอกจำนวน'
     if (!editForm.value.unit) editErrors.value.unit = 'กรุณากรอกหน่วยนับ'
 
@@ -791,8 +737,9 @@ const openEditModal = async (productIdFromTable) => {
 
   // category
   let categoryId = productIdToCategoryIdMap.value[productId]
+
   if (categoryId == null) {
-    const categoryName = row[3]
+    const categoryName = row[2]
     const found = typeOptionList.value.find((o) => o.label === categoryName)
     categoryId = found ? found.value : null
   }
@@ -801,12 +748,12 @@ const openEditModal = async (productIdFromTable) => {
   const oldImage = productIdToImageMap.value[productId] ?? null
 
   editForm.value = {
-    name: row[2],
-    assetCode: row[1] === '-' ? '' : row[1],
+    name: row[1],
+    assetCode: row[3] !== '-' ? row[3] : '',
     categoryId: categoryId != null ? String(categoryId) : '',
     quantity: row[4],
     unit: row[5],
-    status: row[6] === 'พร้อมใช้งาน' ? 'active' : 'inactive',
+    status: row[6] === 'active' ? 'active' : 'inactive',
     uploadImage: oldImage,
   }
 
@@ -843,27 +790,6 @@ onMounted(() => {
   fetchCategories()
   fetchAllStock()
   document.addEventListener('click', closeDropdown)
-})
-
-watch(showImportModal, (isOpen, wasOpen) => {
-  // modal เพิ่งปิด
-  if (wasOpen === true && isOpen === false) {
-    const toastMsg = sessionStorage.getItem('stockImportSuccessToast')
-
-    if (toastMsg) {
-      sessionStorage.removeItem('stockImportSuccessToast')
-
-      Swal.fire({
-        toast: true,
-        position: 'top-end',
-        icon: 'success',
-        title: toastMsg,
-        showConfirmButton: false,
-        timer: 2500,
-        timerProgressBar: true,
-      })
-    }
-  }
 })
 
 onBeforeUnmount(() => {
@@ -973,8 +899,8 @@ onBeforeUnmount(() => {
     </div>
     <div class="p-3 mx-auto max-w-8xl">
       <TableComponent :columns="columnList" :rows="filteredRowList" :perPage="10" :idColumnIndex="1"
-        :hiddenColumns="[0]" :statusStockinventoryColumn="5" :columnAlign="['left', 'left', 'center', 'center']">
-        <template #cell-6="{ row }">
+        :hiddenColumns="[0,3]"  :statusStockinventoryColumn="6" :columnAlign="['left', 'left', 'center', 'center']">
+        <template #cell-7="{ row }">
           <TableActions :row-id="row[0]" :open-menu-id="openMenuId" role="stock" :row="row" :status="row[5]"
             @toggle-menu="openMenuId = $event" @detail="goToDetail(row[0])" @edit="openEditModal(row[0])"
             @delete="handleDelete(row[0])" />
@@ -1416,8 +1342,7 @@ onBeforeUnmount(() => {
       </div>
     </div>
   </div>
-  <ImportStockModal v-if="showImportModal" @close="showImportModal = false" @refresh="fetchAllStock"
-    @success="handleImportSuccess" />
+  <ImportStockModal v-if="showImportModal" @close="showImportModal = false" @refresh="fetchAllStock" />
 </template>
 
 <style scoped>

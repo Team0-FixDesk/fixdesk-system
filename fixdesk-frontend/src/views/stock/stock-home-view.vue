@@ -6,6 +6,13 @@
  * @version         1.0.0
  * @since           2025-10-21
  * @author          พชร ไพศรีสกุล
+ * @contributors 
+     - เศรษฐพงศ์ หอมชื่น
+     - พชร ไพศรีสกุล
+     - นราธิป แสนทวีสุข 
+     - ปฏิพัทธ์ จงนันทพันธ์กุล
+     - พิมลพรรณ มามาก
+ *   
  * @lastModified    2026-02-20
  * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
  * ---------------------------------------------------------------------
@@ -33,10 +40,11 @@
  *
  * ---------------------------------------------------------------------
  * @changelog
- *   - แก้ไขข้อความหัวตาราง      [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - แก้ไขข้อความหัวตาราง      [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล] V 1.0.1
  *   - แก้ไขข้อความคำอธิบายสถานะ [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
  *   - เพิ่มคำอธิบายหน้าจอ        [2026-02-20, ปฏิพัทธ์ จงนันทพันธ์กุล]
  *   - แก้ไขข้อความคำอธิบายสถานะ [2026-02-20, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - ดึงข้อมูลชื่อผู้ใช้            [2026-02-21, พิมลพรรณ มามาก] V 1.0.2
  * =====================================================================
  */
  
@@ -62,7 +70,7 @@ defineOptions({ name: 'StockHomeView' })
 // ==================== Router / API ====================
 const router = useRouter()
 
-const { displayName, displayDepartment, fetchUserProfile } = useUserProfile()
+const { userDisplayName, userDepartmentName, fetchUserProfileData } = useUserProfile()
 
 
 
@@ -309,6 +317,8 @@ const chartOptions = computed(() => ({
 // ==================== Lifecycle ====================
 onMounted(() => {
   fetchDashboard()
+  fetchUserProfileData()
+
 })
 </script>
 
@@ -318,10 +328,10 @@ onMounted(() => {
     <div class="flex justify-between items-center mb-6">
       <div>
         <h1 class="text-2xl font-bold text-gray-800">
-          หน้าจอหลักของผู้ดูแลคลัง - สวัสดีคุณ {{ displayName }}
+          หน้าจอหลักของผู้ดูแลคลัง - สวัสดีคุณ {{ userDisplayName }}
         </h1>
-        <p class="text-lg font-semibold text-gray-700">
-          {{ displayDepartment }}
+        <p class="text-lg text-gray-700">
+          {{ userDepartmentName }}
         </p>
 
         <p class="text-sm text-gray-500">ตรวจสอบสถานะของรายการเบิก และสถิติของการเบิก</p>

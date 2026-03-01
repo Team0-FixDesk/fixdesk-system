@@ -254,14 +254,17 @@ module.exports = (techService) => {
     },
 
     /**
-     * ปิดงานซ่อมหรือส่งต่อ Outsource
+     * ปิดงานซ่อมหรือส่งต่อ Outsource / อื่นๆ
      *
      * @author พชร ไพศรีสกุล
      * @since 2026-02-10
-     * @lastModified 2026-02-10
-     * @lastModifiedBy พชร ไพศรีสกุล
+     * @lastModified 2026-02-22
+     * @lastModifiedBy นราธิป แสนทวีสุข
+     * @contributors
+     *  - พชร ไพศรีสกุล
+     *  - นราธิป แสนทวีสุข
      *
-     * @param {Object} req
+     * @param {Object} req - { status, tech_summary, tech_image_after, repair_method, repair_method_remark, result_status, result_remark }
      * @param {Object} res
      * @returns {Promise<void>}
      */
@@ -269,7 +272,15 @@ module.exports = (techService) => {
       try {
         const techId = req.user.us_id;
         const { rf_code } = req.params;
-        const { status, tech_summary, tech_image_after } = req.body;
+        const { 
+          status, 
+          tech_summary, 
+          tech_image_after,
+          repair_method,
+          repair_method_remark,
+          result_status,
+          result_remark
+        } = req.body;
 
         // Default status = done
         const targetStatus = status || "done";
@@ -280,11 +291,20 @@ module.exports = (techService) => {
           targetStatus,
           tech_summary,
           tech_image_after,
+          repair_method,
+          repair_method_remark,
+          result_status,
+          result_remark
         );
 
+        const statusMessages = {
+          done: "ปิดงานสำเร็จ",
+          outsource: "ส่ง Outsource สำเร็จ",
+          other: "บันทึกข้อมูลสำเร็จ"
+        };
+
         res.json({
-          message:
-            targetStatus === "done" ? "ปิดงานสำเร็จ" : "ส่ง Outsource สำเร็จ",
+          message: statusMessages[targetStatus] || "บันทึกข้อมูลสำเร็จ",
         });
       } catch (err) {
         if (err.message === "PENDING_STOCK_APPROVAL")

@@ -625,9 +625,9 @@ onBeforeUnmount(() => {
                 cartStep = 'list'
               }
             "
-            class="inline-flex items-center h-10 px-4 bg-blue-600 text-white rounded-lg"
+            class="inline-flex items-center gap-2 h-10 px-4 bg-blue-600 text-white rounded-lg"
           >
-            <Icon icon="typcn:shopping-cart" width="24" height="24" style="color: #ffffff" /> ตะกร้า
+            <Icon icon="akar-icons:basket" width="24" height="24" style="color: #ffffff" />ตะกร้า
             {{ totalInCart }}
           </button>
         </div>

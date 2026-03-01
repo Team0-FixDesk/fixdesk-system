@@ -1,3 +1,46 @@
+/**
+ * =====================================================================
+ * @file            preview-user-excel-component.vue
+ * @layer           Component Layer (UI Component)
+ * @version         1.2.0
+ * @since           2026-01-13
+ * @author          นายณัฐภัทร จันทร์อิ่ม
+ * @contributors
+ *   - ณัฐภัทร (Nattaphat2004)
+ *   - พชร ไพศรีสกุล (Pachara2004)
+ *
+ * @lastModified    2026-02-25
+ * @lastModifiedBy  พชร ไพศรีสกุล
+ * ---------------------------------------------------------------------
+ * @description
+ *  Component สำหรับ preview ข้อมูลผู้ใช้งานก่อน import จากไฟล์ Excel
+ *  ทำหน้าที่แสดงรายการผู้ใช้งานที่ parse แล้ว และให้ผู้ใช้เลือกข้อมูลที่จะ import
+ *  พร้อมตรวจสอบความถูกต้องของข้อมูลก่อนส่งไปยัง backend
+ *
+ *  รองรับการทำงาน:
+ *    - แสดง preview ข้อมูลผู้ใช้งานจาก Excel
+ *    - เลือก / ยกเลิกเลือกผู้ใช้งานรายบุคคล หรือเลือกทั้งหมด
+ *    - แสดงสถานะข้อมูลที่ valid / invalid
+ *    - ส่งข้อมูลผู้ใช้ที่เลือกไปยัง API เพื่อ import
+ *    - แสดงจำนวนรายการที่เลือก
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *  [2026-01-13] V1.0.0 - นายณัฐภัทร จันทร์อิ่ม
+ *  - สร้าง component preview สำหรับ import ข้อมูลผู้ใช้จาก Excel
+ *  [2026-01-16] V1.0.1 - พชร ไพศรีสกุล
+ *  - แก้ไข logic การ import user ฝั่ง frontend
+ *  [2026-01-31] V1.0.2 - นายณัฐภัทร จันทร์อิ่ม
+ *  - ปรับปรุงโครงสร้าง import Excel ให้รองรับระบบใหม่
+ *  [2026-02-05] V1.1.0 - พชร ไพศรีสกุล
+ *  - ปรับปรุงการ import user ให้สอดคล้องกับ backend
+ *  - เพิ่ม validation และปรับปรุง UX การเลือก import
+ *  [2026-02-25, พชร ไพศรีสกุล] V 1.2.0
+ *  - แก้ไขการสร้างบัญชีผู้ใช้จากการ import จากไฟล์ ให้รองรับการสร้าง default รหัสผ่าน
+ *
+ * =====================================================================
+ */
+
 <script setup>
 import { computed } from 'vue'
 
@@ -5,17 +48,16 @@ import { computed } from 'vue'
  * รับข้อมูล users จาก component import-user-component
  * คาดหวังว่าข้อมูลที่ส่งมา (props.users) จะถูก map มาจาก Excel แล้วตาม Key ด้านล่างนี้:
  * Col 0: username
- * Col 1: password
- * Col 2: title_name
- * Col 3: position (ตำแหน่งบุคลากร)
- * Col 4: first_name_th
- * Col 5: last_name_th
- * Col 6: first_name_en
- * Col 7: last_name_en
- * Col 8: phone
- * Col 9: department
- * Col 10: role_name
- * Col 11: technician_type
+ * Col 1: title_name
+ * Col 2: position (ตำแหน่งบุคลากร)
+ * Col 3: first_name_th
+ * Col 4: last_name_th
+ * Col 5: first_name_en
+ * Col 6: last_name_en
+ * Col 7: phone
+ * Col 8: department
+ * Col 9: role_name
+ * Col 10: technician_type
  */
 const props = defineProps({
   users: {
@@ -66,17 +108,16 @@ async function importSelected() {
         // Map ข้อมูลตามคอลัมน์ใน Excel/CSV
         users: selected.map((u) => ({
           username: u.username,               // Col 0: ชื่อผู้ใช้
-          password: u.password,               // Col 1: รหัสผ่าน (เพิ่มใหม่)
-          title_name: u.title_name,           // Col 2: คำนำหน้า
-          position: u.position,               // Col 3: ตำแหน่งบุคลากร (เพิ่มใหม่)
-          first_name_th: u.first_name_th,     // Col 4: ชื่อไทย
-          last_name_th: u.last_name_th,       // Col 5: นามสกุลไทย
-          first_name_en: u.first_name_en,     // Col 6: ชื่ออังกฤษ
-          last_name_en: u.last_name_en,       // Col 7: นามสกุลอังกฤษ
-          phone: u.phone,                     // Col 8: เบอร์โทร
-          department: u.department,           // Col 9: หน่วยงาน
-          role_name: u.role_name,             // Col 10: บทบาท
-          technician_type: u.technician_type, // Col 11: ตำแหน่งช่าง
+          title_name: u.title_name,           // Col 1: คำนำหน้า
+          position: u.position,               // Col 2: ตำแหน่งบุคลากร (เพิ่มใหม่)
+          first_name_th: u.first_name_th,     // Col 3: ชื่อไทย
+          last_name_th: u.last_name_th,       // Col 4: นามสกุลไทย
+          first_name_en: u.first_name_en,     // Col 5: ชื่ออังกฤษ
+          last_name_en: u.last_name_en,       // Col 6: นามสกุลอังกฤษ
+          phone: u.phone,                     // Col 7: เบอร์โทร
+          department: u.department,           // Col 8: หน่วยงาน
+          role_name: u.role_name,             // Col 9: บทบาท
+          technician_type: u.technician_type, // Col 10: ตำแหน่งช่าง
         })),
       }),
     })
