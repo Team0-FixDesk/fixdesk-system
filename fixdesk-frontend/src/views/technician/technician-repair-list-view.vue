@@ -3,11 +3,11 @@
  * @file            technician-repair-list.view.vue
  * @module          มอดูลการจัดการงานของช่าง - การรับงาน และเปลี่ยนแปลงสถานะงานซ่อม
  * @layer           View (Presentation Layer)
- * @version         1.0.0
+ * @version         1.0.1
  * @since           2025-10-21
  * @author          เศรษฐพงศ์ หอมชื่น
- * @lastModified    2026-02-22
- * @lastModifiedBy  นราธิป แสนทวีสุข
+ * @lastModified    2026-02-27
+ * @lastModifiedBy  เศรษฐพงศ์ หอมชื่น
  * ---------------------------------------------------------------------
  * @description
  *  หน้าจอรายการงานซ่อมของช่างซ่อม
@@ -36,6 +36,7 @@
  *   - แก้ไขข้อความหัวตาราง                              [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล]
  *   - เพิ่มฟิลด์รองรับ repair_method และ result_status  [2026-02-22, นราธิป แสนทวีสุข]
  *   - ปรับ Modal ปิดงานให้มีตัวเลือกครบถ้วน             [2026-02-22, นราธิป แสนทวีสุข]
+ *   - แก้ไขสีปุ่ม                                    [2026-02-27, เศรษฐพงศ์ หอมชื่น]
  * =====================================================================
  */
 
@@ -166,6 +167,7 @@ async function handleOutsource(code) {
     confirmButtonText: 'ใช่, ส่งงาน',
     cancelButtonText: 'ยกเลิก',
     confirmButtonColor: '#f59e0b',
+    cancelButtonColor: '#d4d4d4',
   })
 
   if (!result.isConfirmed) return

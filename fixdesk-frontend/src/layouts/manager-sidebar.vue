@@ -9,9 +9,10 @@
  *   - เศรษฐพงศ์ หอมชื่น
  *   - พชร ไพศรีสกุล
  *   - นราธิป แสนทวีสุข
+ *   - วิศรุต ภู่ระหงษ์
  *
- * @lastModified    2026-02-22
- * @lastModifiedBy  พชร ไพศรีสกุล
+ * @lastModified    2026-02-27
+ * @lastModifiedBy  วิศรุต ภู่ระหงษ์
  * ---------------------------------------------------------------------
  * @description
  *  Sidebar Component สำหรับผู้ใช้งาน (Manager Role)
@@ -54,7 +55,7 @@
  *     [2026-02-08, นราธิป แสนทวีสุข] V 2.2.0
  *   - Refactor Sidebar เป็น Section-based และปรับปรุง UX
  *     [2026-02-22, พชร ไพศรีสกุล] V 2.3.0
- *
+ *   - fix(frontend): แก้ไขหัวข้อหน้า
  * =====================================================================
  */
 
@@ -65,6 +66,7 @@ import LogoFIXDESK from '@/assets/icons/LogoFIXDESK-logo.png'
 import HomeIcon from '@/assets/icons/sidebar/home-icon.svg'
 import RepairIcon from '@/assets/icons/sidebar/repair-icon.svg'
 import ListIcon from '@/assets/icons/sidebar/list-icon.svg'
+import ReportIcon from '@/assets/icons/sidebar/report-icon.svg'
 
 /**
  * สถานะการเปิด/ปิด Sidebar
@@ -97,6 +99,7 @@ const menuSections = [
       { icon: HomeIcon, label: 'หน้าหลัก', path: '/main/Dashboard' },
       { icon: RepairIcon, label: 'แจ้งซ่อม', path: '/main/repair-request' },
       { icon: ListIcon, label: 'รายการของฉัน', path: '/main/my-list' },
+      { icon: ReportIcon, label: 'สร้างรายงาน', path: '/main/manage-report' },
     ],
   },
 ]

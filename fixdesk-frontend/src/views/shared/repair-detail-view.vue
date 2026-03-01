@@ -3,10 +3,10 @@
  * @file            : repair-detail-view.vue
  * @module          : แสดงรายละเอียดใบแจ้งซ่อม
  * @layer           : View (Presentation Layer)
- * @version         : 1.3.0
+ * @version         : 1.3.1
  * @since           : 2026-02-17
- * @lastModified    : 2026-02-23
- * @lastModifiedBy  : พชร ไพศรีสกุล
+ * @lastModified    : 2026-02-27
+ * @lastModifiedBy  : เศรษฐพงศ์ หอมชื่น
  * ---------------------------------------------------------------------
  * @description
  *  View สำหรับแสดงรายละเอียดใบแจ้งซ่อม (Repair Detail)
@@ -85,6 +85,8 @@
  *     [2026-02-22, นราธิป แสนทวีสุข]
  *   - รองรับการคืนอุปกรณ์แบบบางส่วน (Partial Return)ปรับปรุง UX/UI หน้า Return Modal และเพิ่มตัวเลือกจำนวนที่ต้องการคืน
  *     [2026-02-23, พชร ไพศรีสกุล] V1.3.0
+ *   - แก้ไขสีปุ่ม   
+       [2026-02-27, เศรษฐพงศ์ หอมชื่น]
  * =====================================================================
  */
 
@@ -333,6 +335,7 @@ async function confirmOutsource() {
     confirmButtonText: 'ยืนยัน',
     cancelButtonText: 'ยกเลิก',
     confirmButtonColor: '#f59e0b',
+    cancelButtonColor: '#d4d4d4',
   })
 
   if (!result.isConfirmed) return
@@ -746,11 +749,27 @@ function validateReturnQty(item) {
   if (item.returnQty > item.qty) item.returnQty = item.qty
 }
 
+function decreaseQty(item) {
+  item.returnQty = Math.max(1, item.returnQty - 1);
+  validateReturnQty(item);
+}
+
+function increaseQty(item) {
+  item.returnQty = Math.min(item.qty, item.returnQty + 1);
+  validateReturnQty(item);
+}
+
 // Lifecycle Hooks - วัฏจักรชีวิตของคอมโพเนนต์
 onMounted(() => {
-  const state = history.state || {}
-  canAssign.value = !!state.fromAdmin
-  canAccept.value = !!state.fromTechnician
+  try {
+    const decoded = token?.value ? jwtDecode(token.value) : null
+
+    canAssign.value = decoded?.role_name === 'Admin'
+    canAccept.value = decoded?.role_name === 'Technician'
+  } catch {
+    canAssign.value = false
+    canAccept.value = false
+  }
 
   fetchRepairDetail()
   fetchTechnicianTypeList()
@@ -763,17 +782,12 @@ onMounted(() => {
       กำลังโหลดข้อมูล...
     </div>
 
-    <div
-      v-else-if="isError"
-      class="text-center text-red-500 py-16 text-base sm:text-lg font-medium"
-    >
+    <div v-else-if="isError" class="text-center text-red-500 py-16 text-base sm:text-lg font-medium">
       ไม่พบข้อมูลใบแจ้งซ่อม {{ repairCode }}
     </div>
 
     <div v-else-if="repair" class="space-y-8">
-      <div
-        class="bg-white rounded-xl shadow-sm p-4 sm:p-6 lg:p-8 mx-auto max-w-7xl border border-gray-100"
-      >
+      <div class="bg-white rounded-xl shadow-sm p-4 sm:p-6 lg:p-8 mx-auto max-w-7xl border border-gray-100">
         <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
             <div class="flex items-center gap-4 mb-6">
@@ -789,14 +803,11 @@ onMounted(() => {
           </div>
 
           <div class="flex flex-col items-start md:items-end gap-3">
-            <div
-              class="flex flex-wrap gap-2 sm:gap-3 justify-start md:justify-end items-center text-xs sm:text-sm"
-            >
+            <div class="flex flex-wrap gap-2 sm:gap-3 justify-start md:justify-end items-center text-xs sm:text-sm">
               <span v-html="getRepairStatusBadge(repair?.rf_user_status)"></span>
               <span v-html="getUrgencyLevelBadge(repair?.rf_urgency)"></span>
               <span
-                class="inline-flex justify-center items-center px-4 py-1.5 rounded-full bg-gray-100 text-gray-600 font-medium whitespace-nowrap"
-              >
+                class="inline-flex justify-center items-center px-4 py-1.5 rounded-full bg-gray-100 text-gray-600 font-medium whitespace-nowrap">
                 ประเภท: {{ repair?.repair_type_name || '-' }}
               </span>
             </div>
@@ -857,17 +868,14 @@ onMounted(() => {
               <div class="space-y-4">
                 <div class="flex items-start gap-3">
                   <div
-                    class="min-w-[42px] min-h-[42px] sm:min-w-[46px] sm:min-h-[46px] flex items-center justify-center rounded-lg bg-blue-500"
-                  >
+                    class="min-w-[42px] min-h-[42px] sm:min-w-[46px] sm:min-h-[46px] flex items-center justify-center rounded-lg bg-blue-500">
                     <Icon icon="lucide:building" width="36" height="36" style="color: #ffffff" />
                   </div>
                   <div>
                     <span class="text-sm sm:text-base leading-tight text-gray-500 block">
                       อาคาร/ชั้น/ห้อง:
                     </span>
-                    <span
-                      class="text-sm sm:text-base leading-tight text-gray-700 block tracking-wide break-all"
-                    >
+                    <span class="text-sm sm:text-base leading-tight text-gray-700 block tracking-wide break-all">
                       {{ repair?.building_name || '-' }}/{{ repair?.floor_name || '-' }}/{{
                         repair?.room_name || '-'
                       }}
@@ -877,17 +885,12 @@ onMounted(() => {
 
                 <div class="flex items-start gap-3">
                   <div
-                    class="min-w-[42px] min-h-[42px] sm:min-w-[46px] sm:min-h-[46px] flex items-center justify-center rounded-lg bg-green-500"
-                  >
+                    class="min-w-[42px] min-h-[42px] sm:min-w-[46px] sm:min-h-[46px] flex items-center justify-center rounded-lg bg-green-500">
                     <Icon icon="mdi:paper-outline" width="36" height="36" style="color: #ffffff" />
                   </div>
                   <div class="break-word">
-                    <span class="text-sm sm:text-base leading-tight text-gray-500 block"
-                      >หมายเลขครุภัณฑ์:</span
-                    >
-                    <span
-                      class="text-sm sm:text-base leading-tight text-gray-700 block tracking-wide"
-                    >
+                    <span class="text-sm sm:text-base leading-tight text-gray-500 block">หมายเลขครุภัณฑ์:</span>
+                    <span class="text-sm sm:text-base leading-tight text-gray-700 block tracking-wide">
                       {{ repair?.rf_prop_number || '-' }}
                     </span>
                   </div>
@@ -895,18 +898,13 @@ onMounted(() => {
 
                 <div class="flex items-start gap-3">
                   <div
-                    class="min-w-[42px] min-h-[42px] sm:min-w-[46px] sm:min-h-[46px] flex items-center justify-center rounded-lg bg-amber-500"
-                  >
+                    class="min-w-[42px] min-h-[42px] sm:min-w-[46px] sm:min-h-[46px] flex items-center justify-center rounded-lg bg-amber-500">
                     <Icon icon="ix:box-open" width="36" height="36" style="color: #ffffff" />
                   </div>
 
                   <div>
-                    <span class="text-sm sm:text-base leading-tight text-gray-500 block"
-                      >อุปกรณ์ที่ชำรุด:</span
-                    >
-                    <span
-                      class="text-sm sm:text-base leading-tight text-gray-700 block tracking-wide"
-                    >
+                    <span class="text-sm sm:text-base leading-tight text-gray-500 block">อุปกรณ์ที่ชำรุด:</span>
+                    <span class="text-sm sm:text-base leading-tight text-gray-700 block tracking-wide">
                       {{ repair?.rf_problem || '-' }}
                     </span>
                   </div>
@@ -916,20 +914,12 @@ onMounted(() => {
               <div class="border border-dashed border-gray-300 rounded-lg p-2 sm:p-3">
                 <template v-if="mediaFileList.length > 0">
                   <template v-if="mediaFileList.length === 1">
-                    <img
-                      v-if="mediaFileList[0].isImage"
-                      :src="mediaFileList[0].fullUrl"
+                    <img v-if="mediaFileList[0].isImage" :src="mediaFileList[0].fullUrl"
                       :alt="mediaFileList[0].fileName"
                       class="max-h-40 sm:max-h-56 rounded-lg object-contain w-full cursor-pointer hover:opacity-90 transition"
-                      @click="openMedia(0)"
-                    />
-                    <video
-                      v-else-if="mediaFileList[0].isVideo"
-                      :src="mediaFileList[0].fullUrl"
-                      controls
-                      class="max-h-40 sm:max-h-56 rounded-lg w-full cursor-pointer"
-                      @click="openMedia(0)"
-                    >
+                      @click="openMedia(0)" />
+                    <video v-else-if="mediaFileList[0].isVideo" :src="mediaFileList[0].fullUrl" controls
+                      class="max-h-40 sm:max-h-56 rounded-lg w-full cursor-pointer" @click="openMedia(0)">
                       เบราว์เซอร์ของคุณไม่สามารถเล่นวิดีโอได้
                     </video>
                   </template>
@@ -938,52 +928,34 @@ onMounted(() => {
                     <div class="grid grid-cols-2 gap-2">
                       <template v-for="(file, index) in mediaFileList.slice(0, 3)" :key="index">
                         <div class="relative">
-                          <img
-                            v-if="file.isImage"
-                            :src="file.fullUrl"
-                            :alt="file.fileName"
+                          <img v-if="file.isImage" :src="file.fullUrl" :alt="file.fileName"
                             class="h-20 sm:h-24 w-full rounded-lg object-cover cursor-pointer hover:opacity-90 transition"
-                            @click="openMedia(index)"
-                          />
-                          <video
-                            v-else-if="file.isVideo"
-                            :src="file.fullUrl"
-                            class="h-20 sm:h-24 w-full rounded-lg object-cover"
-                            muted
-                            @click="openMedia(index)"
-                          ></video>
+                            @click="openMedia(index)" />
+                          <video v-else-if="file.isVideo" :src="file.fullUrl"
+                            class="h-20 sm:h-24 w-full rounded-lg object-cover" muted @click="openMedia(index)"></video>
 
-                          <div
-                            v-if="file.isVideo"
+                          <div v-if="file.isVideo"
                             class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 rounded-lg cursor-pointer"
-                            @click="openMedia(index)"
-                          >
+                            @click="openMedia(index)">
                             <svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
                               <path
-                                d="M6.3 2.84A1 1 0 004 3.75v12.5a1 1 0 001.65.76L17.3 10.76a1 1 0 000-1.52L5.65 3.08z"
-                              />
+                                d="M6.3 2.84A1 1 0 004 3.75v12.5a1 1 0 001.65.76L17.3 10.76a1 1 0 000-1.52L5.65 3.08z" />
                             </svg>
                           </div>
                         </div>
                       </template>
 
-                      <div
-                        v-if="mediaFileList.length > 3"
+                      <div v-if="mediaFileList.length > 3"
                         class="h-20 sm:h-24 rounded-lg bg-gray-100 flex items-center justify-center cursor-pointer"
-                        @click="openMedia(3)"
-                      >
-                        <span class="text-gray-500 font-medium"
-                          >+{{ mediaFileList.length - 3 }}</span
-                        >
+                        @click="openMedia(3)">
+                        <span class="text-gray-500 font-medium">+{{ mediaFileList.length - 3 }}</span>
                       </div>
                     </div>
                   </template>
                 </template>
 
                 <template v-else>
-                  <div
-                    class="flex items-center justify-center text-gray-400 text-xs sm:text-sm min-h-[80px]"
-                  >
+                  <div class="flex items-center justify-center text-gray-400 text-xs sm:text-sm min-h-[80px]">
                     ไม่มีการแนบไฟล์
                   </div>
                 </template>
@@ -994,18 +966,13 @@ onMounted(() => {
           <div class="bg-white border border-gray-200 rounded-xl p-4 sm:p-6 shadow-sm">
             <div class="flex items-center justify-between mb-4 border-b border-gray-300 pb-2 mb-4">
               <h2 class="text-lg font-semibold text-gray-800">รายการเบิก</h2>
-              <div
-                v-if="
-                  canAccept &&
-                  repair?.rf_user_status !== 'done' &&
-                  repair?.rf_user_status !== 'pending'
-                "
-                class="relative"
-              >
-                <BaseButtonComponent
-                  @click="openReturnModal"
-                  class="border-2 border-gray-400 p-2 text-gray-500 rounded-lg hover:bg-gray-100 text-sm"
-                >
+              <div v-if="
+                canAccept &&
+                repair?.rf_user_status !== 'done' &&
+                repair?.rf_user_status !== 'pending'
+              " class="relative">
+                <BaseButtonComponent @click="openReturnModal"
+                  class="border-2 border-gray-400 p-2 text-gray-500 rounded-lg hover:bg-gray-100 text-sm">
                   <Icon icon="oui:return-key" width="24" height="24" style="color: gray" />
                   คืนอุปกรณ์
                 </BaseButtonComponent>
@@ -1013,14 +980,10 @@ onMounted(() => {
             </div>
 
             <div v-if="repair?.stock_items?.length" class="space-y-4 h-[250px] overflow-y-auto">
-              <div
-                v-for="(item, i) in repair.stock_items"
-                :key="i"
-                class="flex items-center justify-between py-1 p-3"
+              <div v-for="(item, i) in repair.stock_items" :key="i" class="flex items-center justify-between py-1 p-3"
                 :class="{
                   'border-b border-gray-200': i < repair.stock_items.length - 1,
-                }"
-              >
+                }">
                 <!-- LEFT -->
                 <div class="flex-1 pr-4">
                   <p class="text-gray-800 font-semibold text-sm mb-1">
@@ -1037,10 +1000,7 @@ onMounted(() => {
 
                 <!-- RIGHT -->
                 <div class="flex flex-col items-end gap-1">
-                  <div
-                    class="flex justify-end w-full mb-1"
-                    v-html="getStockStatusBadge(item.status)"
-                  ></div>
+                  <div class="flex justify-end w-full mb-1" v-html="getStockStatusBadge(item.status)"></div>
 
                   <div class="text-xs text-gray-500 flex justify-between w-full">
                     <span>จำนวน</span>
@@ -1080,55 +1040,46 @@ onMounted(() => {
             <div class="border-b border-gray-300 pb-2 mb-4 flex items-center gap-2">
               <Icon icon="fluent:clock-16-filled" width="40" height="40" style="color: #8e8e8e" />
               <h2 class="text-base sm:text-lg font-semibold text-gray-800">สถานะการดำเนินงาน</h2>
-
-              <button
-                v-if="canAssign && repair?.rf_user_status !== 'done'"
-                :disabled="isAssigned"
-                @click="openAssignPopup"
-                :class="[
-                  'px-3 py-2 text-sm font-medium rounded-lg shadow-sm transition flex items-center gap-2 ml-auto',
-                  isAssigned
-                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    : 'bg-green-600 hover:bg-green-700 text-white',
-                ]"
-              >
-                {{ isAssigned ? 'มอบหมายแล้ว' : 'มอบหมายงาน' }}
-              </button>
             </div>
 
             <RepairStatusTimeline :timeline-steps="repair?.timeline || []" />
           </div>
-
+          <!-- ✅ ปุ่มมอบหมายงาน (อยู่นอกกรอบสถานะงาน) -->
+          <div v-if="canAssign && repair?.rf_user_status !== 'done'" class="mt-4">
+            <button :disabled="isAssigned" @click="openAssignPopup" :class="[
+              'w-full px-6 py-3.5 text-sm sm:text-base font-semibold rounded-xl shadow-md transition-all duration-200 flex items-center justify-center gap-3',
+              isAssigned
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                : 'bg-green-600 hover:bg-green-700 text-white'
+            ]">
+              <Icon icon="mdi:account-plus-outline" width="24" height="24" />
+              {{ isAssigned ? 'มอบหมายแล้ว' : 'มอบหมายงาน' }}
+            </button>
+          </div>
           <div v-if="showWithdrawButton || (canAccept && repair?.rf_user_status !== 'done')">
             <div :class="['grid gap-4', showWithdrawButton ? 'grid-cols-2' : 'grid-cols-1']">
-              <button
-                v-if="showWithdrawButton"
-                type="button"
+              <button v-if="showWithdrawButton" type="button"
                 class="w-full px-6 py-3.5 text-sm sm:text-base font-semibold rounded-xl shadow-md transition-all duration-200 flex items-center justify-center gap-3 hover:shadow-lg hover:-translate-y-0.5 bg-blue-600 hover:bg-blue-700 text-white"
-                @click="handleRepairFrom(repair?.rf_code)"
-              >
+                @click="handleRepairFrom(repair?.rf_code)">
                 <Icon icon="ix:box-open" width="24" height="24" style="color: #ffffff" />
                 เบิกวัสดุ/อุปกรณ์
               </button>
 
               <div v-if="canAccept && repair?.rf_user_status !== 'done'" class="relative">
-                <button
-                  @click="
-                    repair?.rf_user_status === 'pending'
-                      ? openActionPopup()
-                      : repair?.rf_user_status === 'outsource'
-                        ? confirmCloseJobWithSummary()
-                        : openActionPopup()
-                  "
-                  :class="[
+                <button @click="
+                  repair?.rf_user_status === 'pending'
+                    ? openActionPopup()
+                    : repair?.rf_user_status === 'outsource'
+                      ? confirmCloseJobWithSummary()
+                      : openActionPopup()
+                  " :class="[
                     'w-full px-6 py-3.5 text-sm sm:text-base font-semibold rounded-xl shadow-md transition-all duration-200 flex items-center justify-center gap-3 text-white hover:shadow-lg hover:-translate-y-0.5',
                     repair?.rf_user_status === 'pending'
                       ? 'bg-teal-500 hover:bg-teal-600'
                       : repair?.rf_user_status === 'outsource'
                         ? 'bg-green-600 hover:bg-green-700'
                         : 'bg-amber-500 hover:bg-amber-600',
-                  ]"
-                >
+                  ]">
                   <Icon icon="fa7-solid:rotate" width="24" height="24" style="color: #ffffff" />
                   <span>
                     {{
@@ -1142,54 +1093,29 @@ onMounted(() => {
                 </button>
 
                 <!-- Popup เลือกสถานะ (dropdown) -->
-                <div
-                  v-if="showStatusPopup"
-                  class="absolute bottom-full mb-2 right-0 w-72 bg-white border border-gray-200 rounded-xl shadow-xl z-50"
-                >
+                <div v-if="showStatusPopup"
+                  class="absolute bottom-full mb-2 right-0 w-72 bg-white border border-gray-200 rounded-xl shadow-xl z-50">
                   <!-- หน้าเลือกตัวเลือก -->
                   <div class="p-3">
                     <div class="flex items-center gap-2 mb-3 pb-2 border-b border-gray-100">
-                      <div
-                        class="w-7 h-7 rounded-full bg-amber-500 flex items-center justify-center"
-                      >
-                        <Icon
-                          icon="fa7-solid:rotate"
-                          width="16"
-                          height="16"
-                          style="color: #ffffff"
-                        />
+                      <div class="w-7 h-7 rounded-full bg-amber-500 flex items-center justify-center">
+                        <Icon icon="fa7-solid:rotate" width="16" height="16" style="color: #ffffff" />
                       </div>
                       <div>
                         <h3 class="text-xs font-bold text-gray-800">เปลี่ยนสถานะงาน</h3>
                       </div>
-                      <button
-                        @click="closeStatusPopup"
-                        class="ml-auto p-1 hover:bg-gray-100 rounded transition"
-                      >
-                        <Icon
-                          icon="radix-icons:cross-2"
-                          width="24"
-                          height="24"
-                          style="color: #8e8e8e"
-                        />
+                      <button @click="closeStatusPopup" class="ml-auto p-1 hover:bg-gray-100 rounded transition">
+                        <Icon icon="radix-icons:cross-2" width="24" height="24" style="color: #8e8e8e" />
                       </button>
                     </div>
 
                     <div class="space-y-1.5">
                       <!-- ปิดงาน -->
-                      <button
-                        @click="handleSelectStatus('done')"
-                        class="w-full flex items-center gap-2.5 p-2.5 rounded-lg hover:bg-green-50 transition-all duration-200 group"
-                      >
+                      <button @click="handleSelectStatus('done')"
+                        class="w-full flex items-center gap-2.5 p-2.5 rounded-lg hover:bg-green-50 transition-all duration-200 group">
                         <div
-                          class="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center group-hover:bg-green-200 transition"
-                        >
-                          <Icon
-                            icon="fluent:checkmark-32-filled"
-                            width="18"
-                            height="18"
-                            style="color: #ffffff"
-                          />
+                          class="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center group-hover:bg-green-200 transition">
+                          <Icon icon="fluent:checkmark-32-filled" width="18" height="18" style="color: #ffffff" />
                         </div>
                         <div class="text-left">
                           <p class="text-sm font-medium text-gray-800 group-hover:text-green-700">
@@ -1200,20 +1126,12 @@ onMounted(() => {
                       </button>
 
                       <!-- จ้างช่างภายนอก (ไม่แสดงถ้าสถานะเป็น outsource อยู่แล้ว) -->
-                      <button
-                        v-if="repair?.rf_user_status !== 'outsource'"
-                        @click="handleSelectStatus('outsource')"
-                        class="w-full flex items-center gap-2.5 p-2.5 rounded-lg hover:bg-amber-50 transition-all duration-200 group"
-                      >
+                      <button v-if="repair?.rf_user_status !== 'outsource'" @click="handleSelectStatus('outsource')"
+                        class="w-full flex items-center gap-2.5 p-2.5 rounded-lg hover:bg-amber-50 transition-all duration-200 group">
                         <div
-                          class="w-8 h-8 rounded-full bg-amber-400 flex items-center justify-center group-hover:bg-amber-200 transition"
-                        >
-                          <Icon
-                            icon="fluent:people-community-12-regular"
-                            width="18"
-                            height="18"
-                            style="color: #ffffff"
-                          />
+                          class="w-8 h-8 rounded-full bg-amber-400 flex items-center justify-center group-hover:bg-amber-200 transition">
+                          <Icon icon="fluent:people-community-12-regular" width="18" height="18"
+                            style="color: #ffffff" />
                         </div>
                         <div class="text-left">
                           <p class="text-sm font-medium text-gray-800 group-hover:text-amber-700">
@@ -1232,32 +1150,18 @@ onMounted(() => {
       </div>
     </div>
 
-    <assignJobModalComponent
-      v-if="showAssignPopup"
-      :repairCode="repair?.rf_code"
-      :isOpen="showAssignPopup"
-      @close="showAssignPopup = false"
-      @completed="handleAssignSuccess"
-    />
+    <assignJobModalComponent v-if="showAssignPopup" :repairId="repair?.rf_code" @close="showAssignPopup = false"
+      @completed="handleAssignSuccess" />
 
-    <AcceptJobModalComponent
-      v-if="showAcceptPopup"
-      :repairCode="repair?.rf_code"
-      :isOpen="showAcceptPopup"
-      :currentUserId="currentUserId"
-      @close="showAcceptPopup = false"
-      @success="handleAcceptSuccess"
-    />
+    <AcceptJobModalComponent v-if="showAcceptPopup" :repairCode="repair?.rf_code" :isOpen="showAcceptPopup"
+      :currentUserId="currentUserId" @close="showAcceptPopup = false" @success="handleAcceptSuccess" />
 
     <!-- Modal สำหรับกรอกรายละเอียดการตรวจสอบ/ซ่อม -->
-    <div
-      v-if="showTechSummaryModal"
+    <div v-if="showTechSummaryModal"
       class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-60 backdrop-blur-sm"
-      @click.self="showTechSummaryModal = false"
-    >
+      @click.self="showTechSummaryModal = false">
       <div
-        class="bg-white rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden animate-in fade-in zoom-in duration-200"
-      >
+        class="bg-white rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden animate-in fade-in zoom-in duration-200">
         <div class="p-5 text-center border-b border-gray-100">
           <h3 class="text-xl font-bold text-gray-800">รายละเอียดการดำเนินการ</h3>
         </div>
@@ -1265,102 +1169,63 @@ onMounted(() => {
         <div class="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
           <!-- 1. วิธีการซ่อม (ซ่อนถ้าเป็น outsource อยู่แล้ว) -->
           <div v-if="repairMethod !== 'outsource'">
-            <label class="block text-sm font-semibold text-gray-700 mb-2"
-              >1. สำหรับเจ้าหน้าที่ ตรวจสอบ/ซ่อม</label
-            >
+            <label class="block text-sm font-semibold text-gray-700 mb-2">1. สำหรับเจ้าหน้าที่ ตรวจสอบ/ซ่อม</label>
             <div class="space-y-2">
               <label class="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  v-model="repairMethod"
-                  value="in_house"
-                  class="text-blue-600 focus:ring-blue-500"
-                />
+                <input type="radio" v-model="repairMethod" value="in_house" class="text-blue-600 focus:ring-blue-500" />
                 สามารถแก้ไข/ซ่อมบำรุงได้
               </label>
               <label class="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  v-model="repairMethod"
-                  value="other"
-                  class="text-blue-600 focus:ring-blue-500"
-                />
+                <input type="radio" v-model="repairMethod" value="other" class="text-blue-600 focus:ring-blue-500" />
                 อื่นๆ
               </label>
-              <input
-                v-if="repairMethod === 'other'"
-                v-model="repairMethodRemark"
-                type="text"
+              <input v-if="repairMethod === 'other'" v-model="repairMethodRemark" type="text"
                 placeholder="ระบุเหตุผลอื่นๆ..."
-                class="mt-2 w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-              />
+                class="mt-2 w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" />
             </div>
           </div>
 
           <!-- 2. รายละเอียดการทำงาน -->
           <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-2"
-              >{{ repairMethod === 'outsource' ? '1' : '2' }}. รายละเอียดการตรวจสอบ/ซ่อม</label
-            >
-            <textarea
-              v-model="techSummary"
-              placeholder="กรอกรายละเอียด..."
+            <label class="block text-sm font-semibold text-gray-700 mb-2">{{ repairMethod === 'outsource' ? '1' : '2'
+            }}.
+              รายละเอียดการตรวจสอบ/ซ่อม</label>
+            <textarea v-model="techSummary" placeholder="กรอกรายละเอียด..."
               class="w-full h-24 p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500"
-              maxlength="500"
-            ></textarea>
+              maxlength="500"></textarea>
             <div class="text-right text-xs text-gray-400 mt-1">{{ techSummary.length }}/500</div>
           </div>
 
           <!-- 3. สรุปผล -->
           <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-2"
-              >{{ repairMethod === 'outsource' ? '2' : '3' }}. สรุปผล</label
-            >
+            <label class="block text-sm font-semibold text-gray-700 mb-2">{{ repairMethod === 'outsource' ? '2' : '3'
+            }}.
+              สรุปผล</label>
             <div class="flex gap-4 mb-2">
               <label class="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  v-model="resultStatus"
-                  value="completed"
-                  class="text-green-600 focus:ring-green-500"
-                />
+                <input type="radio" v-model="resultStatus" value="completed"
+                  class="text-green-600 focus:ring-green-500" />
                 เรียบร้อย
               </label>
               <label class="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  v-model="resultStatus"
-                  value="incomplete"
-                  class="text-red-600 focus:ring-red-500"
-                />
+                <input type="radio" v-model="resultStatus" value="incomplete" class="text-red-600 focus:ring-red-500" />
                 ไม่เรียบร้อย
               </label>
               <label class="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  v-model="resultStatus"
-                  value="other"
-                  class="text-amber-600 focus:ring-amber-500"
-                />
+                <input type="radio" v-model="resultStatus" value="other" class="text-amber-600 focus:ring-amber-500" />
                 อื่นๆ
               </label>
             </div>
-            <input
-              v-if="resultStatus === 'incomplete' || resultStatus === 'other'"
-              v-model="resultRemark"
-              type="text"
-              :placeholder="
-                resultStatus === 'incomplete' ? 'ระบุสาเหตุที่ไม่เรียบร้อย...' : 'ระบุอื่นๆ...'
-              "
-              class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-            />
+            <input v-if="resultStatus === 'incomplete' || resultStatus === 'other'" v-model="resultRemark" type="text"
+              :placeholder="resultStatus === 'incomplete' ? 'ระบุสาเหตุที่ไม่เรียบร้อย...' : 'ระบุอื่นๆ...'
+                " class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" />
           </div>
         </div>
 
         <div class="p-5 border-t border-gray-100 flex gap-3">
           <button
             @click="showTechSummaryModal = false"
-            class="flex-1 py-3 px-6 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl font-medium transition-colors"
+            class="flex-1 py-3 px-6 text-white bg-neutral-300 hover:bg-neutral-400 rounded-lg font-medium transition-colors"
           >
             ยกเลิก
           </button>
@@ -1368,9 +1233,9 @@ onMounted(() => {
             @click="confirmCloseJob"
             :disabled="!techSummary.trim()"
             :class="[
-              'flex-1 py-3 px-6 rounded-xl font-medium transition-colors text-white',
+              'flex-1 py-3 px-6 rounded-lg font-medium transition-colors text-white',
               techSummary.trim()
-                ? 'bg-blue-600 hover:bg-blue-700'
+                ? 'bg-blue-700 hover:bg-blue-800'
                 : 'bg-gray-300 cursor-not-allowed',
             ]"
           >
@@ -1380,68 +1245,35 @@ onMounted(() => {
       </div>
     </div>
 
-    <div
-      v-if="showLightbox"
+    <div v-if="showLightbox"
       class="fixed inset-0 z-[100] bg-black bg-opacity-95 flex flex-col items-center justify-center p-4 backdrop-blur-md"
-      @click.self="closeMedia"
-    >
-      <button
-        @click="closeMedia"
-        class="absolute top-6 right-6 text-white hover:text-gray-300 transition p-2 bg-white/10 rounded-full"
-      >
+      @click.self="closeMedia">
+      <button @click="closeMedia"
+        class="absolute top-6 right-6 text-white hover:text-gray-300 transition p-2 bg-white/10 rounded-full">
         <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M6 18L18 6M6 6l12 12"
-          />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
         </svg>
       </button>
 
       <div class="relative w-full max-w-5xl h-[70vh] flex items-center justify-center">
-        <button
-          v-if="currentMediaIndex > 0"
-          @click="prevMedia"
-          class="absolute left-0 z-10 p-4 text-white hover:bg-white/10 rounded-full transition"
-        >
+        <button v-if="currentMediaIndex > 0" @click="prevMedia"
+          class="absolute left-0 z-10 p-4 text-white hover:bg-white/10 rounded-full transition">
           <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M15 19l-7-7 7-7"
-            />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
           </svg>
         </button>
 
         <div class="w-full h-full flex items-center justify-center">
-          <img
-            v-if="mediaFileList[currentMediaIndex].isImage"
-            :src="mediaFileList[currentMediaIndex].fullUrl"
-            class="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
-          />
-          <video
-            v-else-if="mediaFileList[currentMediaIndex].isVideo"
-            :src="mediaFileList[currentMediaIndex].fullUrl"
-            controls
-            autoplay
-            class="max-w-full max-h-full rounded-lg shadow-2xl"
-          ></video>
+          <img v-if="mediaFileList[currentMediaIndex].isImage" :src="mediaFileList[currentMediaIndex].fullUrl"
+            class="max-w-full max-h-full object-contain rounded-lg shadow-2xl" />
+          <video v-else-if="mediaFileList[currentMediaIndex].isVideo" :src="mediaFileList[currentMediaIndex].fullUrl"
+            controls autoplay class="max-w-full max-h-full rounded-lg shadow-2xl"></video>
         </div>
 
-        <button
-          v-if="currentMediaIndex < mediaFileList.length - 1"
-          @click="nextMedia"
-          class="absolute right-0 z-10 p-4 text-white hover:bg-white/10 rounded-full transition"
-        >
+        <button v-if="currentMediaIndex < mediaFileList.length - 1" @click="nextMedia"
+          class="absolute right-0 z-10 p-4 text-white hover:bg-white/10 rounded-full transition">
           <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M9 5l7 7-7 7"
-            />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
           </svg>
         </button>
       </div>
@@ -1454,11 +1286,8 @@ onMounted(() => {
       </div>
     </div>
   </div>
-ั  <!-- Return Modal -->
-  <div
-    v-if="showReturnModal"
-    class="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
-  >
+  ั <!-- Return Modal -->
+  <div v-if="showReturnModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
     <div class="bg-white rounded-xl shadow-lg w-[500px] max-h-[80vh] overflow-auto">
       <!-- Header -->
       <div class="flex justify-between items-center p-4 border-b">
@@ -1477,6 +1306,7 @@ onMounted(() => {
                 selectedReturnItems.length === returnableItems.length && returnableItems.length > 0
               "
               @change="toggleSelectAll"
+              class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
             />
             เลือกทั้งหมด
           </label>
@@ -1490,11 +1320,8 @@ onMounted(() => {
         </div>
 
         <!-- Items -->
-        <div
-          v-for="item in returnableItems"
-          :key="item.sf_code + '-' + item.id"
-          class="flex justify-between items-center border rounded-lg p-3"
-        >
+        <div v-for="item in returnableItems" :key="item.sf_code + '-' + item.id"
+          class="flex justify-between items-center border rounded-lg p-3">
           <label class="flex items-center gap-3 cursor-pointer flex-1">
             <input
               type="checkbox"
@@ -1502,38 +1329,32 @@ onMounted(() => {
                 selectedReturnItems.some((i) => i.sf_code === item.sf_code && i.id === item.id)
               "
               @change="toggleReturnItem(item)"
+              class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
             />
 
-            <div>
-              <div class="font-medium">{{ item.name }}</div>
-
-              <div class="text-sm text-gray-500">จำนวนที่ยังคืนได้: {{ item.qty }}</div>
-
-              <!-- input ใหม่ -->
-              <input
-                type="number"
-                min="1"
-                :max="item.qty"
-                v-model.number="item.returnQty"
-                @input="validateReturnQty(item)"
-                class="mt-1 border rounded px-2 py-1 w-20"
-                @click.stop
-              />
+            <div class="text-center">
+              <span class="font-medium">{{ item.name }}</span> <span class="text-sm text-gray-500">- จำนวนที่ยังคืนได้:
+                {{
+                item.qty }}</span>
             </div>
           </label>
+
+          <!-- input ใหม่ -->
+          <input type="number" min="1" :max="item.qty" v-model.number="item.returnQty" @input="validateReturnQty(item)"
+            class="border rounded px-2 py-1 w-20" @click.stop />
         </div>
       </div>
 
       <!-- Footer -->
       <div class="p-4 border-t flex justify-end gap-2">
-        <button @click="closeReturnModal" class="px-4 py-2 border rounded-lg hover:bg-gray-100">
+        <button @click="closeReturnModal" class="px-4 py-2 border rounded-lg bg-neutral-300 hover:bg-neutral-400 text-white">
           ยกเลิก
         </button>
 
         <button
           @click="returnSelectedItems"
           :disabled="selectedReturnItems.length === 0"
-          class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+          class="px-4 py-2 bg-blue-700 text-white rounded-lg hover:bg-blue-800 disabled:bg-gray-300 disabled:cursor-not-allowed"
         >
           คืนที่เลือก
         </button>

@@ -1,44 +1,39 @@
 /**
-* =====================================================================
-* @file stock-withdraw-approve-view.vue
-* @module มอดูลการจัดการของผู้ดูแลคลัง - การตรวจสอบ และอนุมัติรายการเบิกของ
-* @layer View (Presentation Layer)
-* @version 1.0.1
-* @since 2025-12-21
-* @author ธนภัทร จันทร์งาม
-* @lastModified 2026-02-21
-* @lastModifiedBy ธนภัทร จันทร์งาม
-* ---------------------------------------------------------------------
-* @description
-* หน้าจอสำหรับอนุมัติรายการเบิกของของผู้ดูแลคลัง
-* แสดงรายละเอียดรายการเบิก และรายการวัสดุ/ครุภัณฑ์ที่ขอเบิก
-* ผู้อนุมัติสามารถ:
-* - ตรวจสอบข้อมูลผู้เบิก และสถานที่ใช้งาน
-* - ดูรายการวัสดุ/อุปกรณ์ที่ขอเบิก
-* - เลือกผลการพิจารณาแต่ละรายการ (อนุมัติ / ไม่อนุมัติ)
-*
-* การปรับปรุงล่าสุด:
-* - ปรับข้อความแจ้งเตือน (Toast / Alert) ให้ชัดเจนและเข้าใจง่ายขึ้น
-* - ปรับพฤติกรรมการแจ้งเตือนให้แสดงผลทันทีหลังการอนุมัติหรือไม่อนุมัติ
-* - ปรับรูปแบบการแจ้งเตือนให้เป็นมาตรฐานเดียวกับหน้าจัดการคลังอื่น ๆ
-*
-* @requires
-* - vue
-* - vue-router
-* - axios
-* - sweetalert2
-* - @iconify/vue
-* - @/components/button/back-button-component.vue
-*
-* ---------------------------------------------------------------------
-* @changelog
-* - ปรับปรุงข้อความที่ใช้ให้เหมาะสม
-*   [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
-* - ปรับข้อความและรูปแบบการแจ้งเตือน (Toast / Alert)
-*   ให้สอดคล้องกับมาตรฐานของระบบ
-*   [2026-02-21, ธนภัทร จันทร์งาม]
-* =====================================================================
-*/
+ * =====================================================================
+ * @file            stock-withdraw-approve-view.vue
+ * @module          มอดูลการจัดการของผู้ดูแลคลัง - การตรวจสอบ และอนุมัติรายการเบิกของ
+ * @layer           View (Presentation Layer)
+ * @version         1.0.1
+ * @since           2025-12-21
+ * @author          ธนภัทร จันทร์งาม
+ * @lastModified    2026-02-27
+ * @lastModifiedBy  เศรษฐพงศ์ หอมชื่น
+ * ---------------------------------------------------------------------
+ * @description
+ *  หน้าจอสำหรับอนุมัติรายการเบิกของของผู้ดูแลคลัง
+ *  แสดงรายละเอียดรายการเบิก และรายการวัสดุ/ครุภัณฑ์ที่ขอเบิก
+ *  ผู้อนุมัติสามารถ:
+ *   - ตรวจสอบข้อมูลผู้เบิก และสถานที่ใช้งาน
+ *   - ดูรายการวัสดุ/อุปกรณ์ที่ขอเบิก
+ *   - เลือกผลการพิจารณาแต่ละรายการ (อนุมัติ / ไม่อนุมัติ)
+ *
+ * @requires
+ *   - vue
+ *   - vue-router
+ *   - axios
+ *   - sweetalert2
+ *   - @iconify/vue
+ *   - @/components/button/back-button-component.vue
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *   - ปรับข้อความและรูปแบบการแจ้งเตือน (Toast / Alert)
+ *   ให้สอดคล้องกับมาตรฐานของระบบ
+ *   [2026-02-21, ธนภัทร จันทร์งาม]
+ *   - ปรับปรุงข้อความที่ใช้ให้เหมาะสม   [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - แก้ไขสีปุ่ม และ border         [2026-02-27, เศรษฐพงศ์ หอมชื่น]
+ * =====================================================================
+ */
 
 <script setup>
 /**
@@ -78,6 +73,7 @@
  *  - แยก Flow ระหว่างตั้งค่าและยืนยันบันทึก              [2026-02-17, นราธิป]
  *  - เปลี่ยน Alert เป็น Toast และเพิ่ม Auto Redirect    [2026-02-17, นราธิป]
  *  - ปรับ Checkbox ให้อยู่กลางบรรทัด                      [2026-02-17, นราธิป]
+ *  - ปรับสีของปุ่ม และปรับแต่ง checkbox                [2026-02-27, เศรษฐพงศ์]
  * =====================================================================
  */
 
@@ -318,13 +314,11 @@ const confirmApprove = async () => {
 
     confirmButtonText: 'ยืนยัน',
     cancelButtonText: 'ยกเลิก',
-
-    confirmButtonColor: '#1E48D1',
-    cancelButtonColor: '#6B7280',
-
+    confirmButtonColor: '#0048EF', 
+    cancelButtonColor: '#d4d4d4', 
     reverseButtons: true,
 
-    // ✅ ปรับขนาด title ให้เล็กลง
+    // ปรับขนาด title ให้เล็กลง
     customClass: {
       title: 'text-2xl font-bold',   // เดิมจะประมาณ text-2xl
     }
@@ -427,9 +421,16 @@ function goBack() {
             <!-- สำคัญ: items-stretch -->
             <div class="flex gap-4 items-stretch">
               <!-- Checkbox (Show only when status is waiting) -->
-              <div v-if="request.status === 'waiting'" class="flex items-center">
-                <input type="checkbox" :checked="selectedItems.has(item.id)" @change="toggleSelectItem(item.id)"
-                  class="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500 cursor-pointer" />
+              <div
+                v-if="request.status === 'waiting'"
+                class="flex items-center"
+              >
+                <input
+                  type="checkbox"
+                  :checked="selectedItems.has(item.id)"
+                  @change="toggleSelectItem(item.id)"
+                  class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+                />
               </div>
 
               <!-- รูป -->
@@ -553,10 +554,13 @@ function goBack() {
               <!-- Action Buttons (Show when status is waiting) -->
               <div v-if="canApprove" class="space-y-3">
                 <!-- Select All Checkbox -->
-                <label
-                  class="flex items-center gap-3 cursor-pointer group p-3 rounded-xl border-2 border-slate-200 hover:border-blue-300 transition bg-slate-50">
-                  <input type="checkbox" :checked="isAllSelected" @change="toggleSelectAll"
-                    class="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500 cursor-pointer" />
+                <label class="flex items-center gap-3 cursor-pointer group p-3 rounded-xl border-2 border-slate-200 hover:border-blue-300 transition bg-slate-50">
+                  <input
+                    type="checkbox"
+                    :checked="isAllSelected"
+                    @change="toggleSelectAll"
+                    class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+                  />
                   <span class="text-sm font-semibold text-slate-700 group-hover:text-blue-700 transition">
                     เลือกทั้งหมด ({{ items.length }} รายการ)
                   </span>
@@ -598,13 +602,16 @@ function goBack() {
 
                 <!-- Error Message -->
                 <div v-if="actionError" class="rounded-xl border border-rose-200 bg-rose-50 p-3">
-                  <p class="text-sm text-rose-700 font-semibold">⚠️ ยังทำรายการไม่ครบ</p>
+                  <p class="text-sm text-rose-700 font-semibold">ยังทำรายการไม่ครบ</p>
                   <p class="text-xs text-rose-600 mt-1">{{ actionError }}</p>
                 </div>
 
                 <!-- Confirm Button (Only enabled when all items reviewed) -->
-                <button @click="confirmApprove" :disabled="!allReviewed || isSubmitting"
-                  class="w-full inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3.5 font-bold text-white bg-blue-600 hover:bg-blue-700 active:scale-[0.99] transition disabled:opacity-50 disabled:cursor-not-allowed shadow-lg">
+                <button
+                  @click="confirmApprove"
+                  :disabled="!allReviewed || isSubmitting"
+                  class="w-full inline-flex items-center justify-center gap-2 rounded-lg px-5 py-3.5 font-bold text-white bg-blue-700 hover:bg-blue-800 active:scale-[0.99] transition disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                >
                   <Icon v-if="!isSubmitting" icon="mdi:content-save-check" width="20" height="20" />
                   <span v-if="isSubmitting" class="inline-flex items-center gap-2">
                     <span

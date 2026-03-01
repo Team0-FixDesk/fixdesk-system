@@ -1,42 +1,42 @@
 /**
-* =====================================================================
-* @file repair-request.view.vue
-* @module มอดูลแจ้งซ่อม - การสร้างแบบฟอร์มแจ้งซ่อม
-* @layer View (Presentation Layer)
-* @version 1.0.1
-* @since 2026-02-04
-* @author พชร ไพศรีสกุล
-* @lastModified 2026-02-20
-* @lastModifiedBy ธนภัทร จันทร์งาม
-* ---------------------------------------------------------------------
-* @description
-* หน้าจอแบบฟอร์มสำหรับสร้างรายการแจ้งซ่อมใหม่
-* ผู้ใช้งานสามารถ:
-* - กรอกข้อมูลรายละเอียดปัญหา
-* - เลือกประเภทงาน อาคาร ชั้น และห้อง
-* - ระบุระดับความเร่งด่วน
-* - แนบรูปภาพ หรือวิดีโอประกอบ (สูงสุด 5 ไฟล์)
-*
-* @requires
-* - vue
-* - vue-router
-* - sweetalert2
-* - @iconify/vue
-* - @/composables/usePhoneFormat
-* - @/composables/location/useRepairLocationData
-* - @/composables/useFileUpload
-* - @/composables/repair/useRepairFormValidation
-* - @/composables/repair/useRepairService
-* - @/utils/jwt.util
-*
-* ---------------------------------------------------------------------
-* @changelog
-* - แก้ไขข้อความช่องกรอกข้อมูล [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
-* - แก้ไขข้อความแจ้งเตือน [2026-02-19, ปฏิพัทธ์ จงนันทพันธ์กุล]
-* - แก้ไขข้อความแจ้งเตือน [2026-02-20, ปฏิพัทธ์ จงนันทพันธ์กุล]
-* - ปรับปรุงการแจ้งเตือนหลังสร้างใบแจ้งซ่อมสำเร็จ [2026-02-21, ธนภัทร จันทร์งาม]
-* =====================================================================
-*/
+ * =====================================================================
+ * @file            repair-request.view.vue
+ * @module          มอดูลแจ้งซ่อม - การสร้างแบบฟอร์มแจ้งซ่อม
+ * @layer           View (Presentation Layer)
+ * @version         1.0.2
+ * @since           2026-02-04
+ * @author          พชร ไพศรีสกุล
+ * @lastModified    2026-02-27
+ * @lastModifiedBy  เศรษฐพงศ์ หอมชื่น
+ * ---------------------------------------------------------------------
+ * @description
+ *  หน้าจอแบบฟอร์มสำหรับสร้างรายการแจ้งซ่อมใหม่
+ *  ผู้ใช้งานสามารถ:
+ *   - กรอกข้อมูลรายละเอียดปัญหา
+ *   - เลือกประเภทงาน อาคาร ชั้น และห้อง
+ *   - ระบุระดับความเร่งด่วน
+ *   - แนบรูปภาพ หรือวิดีโอประกอบ (สูงสุด 5 ไฟล์)
+ *
+ * @requires
+ *   - vue
+ *   - vue-router
+ *   - sweetalert2
+ *   - @iconify/vue
+ *   - @/composables/usePhoneFormat
+ *   - @/composables/location/useRepairLocationData
+ *   - @/composables/useFileUpload
+ *   - @/composables/repair/useRepairFormValidation
+ *   - @/composables/repair/useRepairService
+ *   - @/utils/jwt.util
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *   - แก้ไขข้อความช่องกรอกข้อมูล   [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - แก้ไขข้อความแจ้งเตือน       [2026-02-19, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - แก้ไขข้อความแจ้งเตือน       [2026-02-20, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - แก้ไขข้อความ และสีปุ่ม       [2026-02-27, เศรษฐพงศ์ หอมชื่น]
+ * =====================================================================
+ */
 
 <script setup>
 defineOptions({ name: 'RepairRequestView' })
@@ -183,10 +183,9 @@ async function submitRepairRequest() {
     showCancelButton: true,
     reverseButtons: true,
     confirmButtonText: 'ยืนยัน',
-    cancelButtonText: 'ยกเลิก',
-
-    confirmButtonColor: '#1E48D1', // น้ำเงิน Sidebar
-    cancelButtonColor: '#6B7280',  // เทา
+    cancelButtonText: 'ยกเลิก',    
+    confirmButtonColor: '#0048EF', 
+    cancelButtonColor: '#d4d4d4', 
   })
 
   if (!confirmResult.isConfirmed) return
@@ -240,7 +239,8 @@ async function cancelRepairRequest() {
     showCancelButton: true,
     confirmButtonText: 'ยกเลิกการแจ้งซ่อม',
     cancelButtonText: 'กลับไปแก้ไข',
-    confirmButtonColor: '#e53e3e',
+    confirmButtonColor: '#dc2626',
+    cancelButtonColor: '#d4d4d4',
   })
   if (confirmResult.isConfirmed) {
     router.push('/main/my-list')
@@ -499,15 +499,21 @@ async function cancelRepairRequest() {
         </div>
 
         <div class="flex justify-center sm:justify-end mt-8">
-          <button type="button" :disabled="isSubmitting"
-            class="bg-gray-500 text-white px-6 py-2.5 sm:py-3 rounded-lg hover:bg-gray-600 transition disabled:opacity-50 mr-4"
-            @click="cancelRepairRequest">
+          <button
+            type="button"
+            :disabled="isSubmitting"
+            class="bg-neutral-300 text-white px-6 py-2.5 sm:py-3 rounded-lg hover:bg-neutral-400 transition disabled:opacity-50 mr-4"
+            @click="cancelRepairRequest"
+          >
             ยกเลิก
           </button>
-          <button type="button" :disabled="isSubmitting"
-            class="bg-[#1E48D1] text-white px-6 py-2.5 sm:py-3 rounded-lg hover:bg-sky-700 transition disabled:opacity-50"
-            @click="submitRepairRequest">
-            ส่งแบบฟอร์มแจ้งซ่อม
+          <button
+            type="button"
+            :disabled="isSubmitting"
+            class="bg-blue-700 text-white px-6 py-2.5 sm:py-3 rounded-lg hover:bg-blue-800 transition disabled:opacity-50"
+            @click="submitRepairRequest"
+          >
+            ยืนยัน
           </button>
         </div>
       </form>
