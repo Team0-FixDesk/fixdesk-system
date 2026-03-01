@@ -359,10 +359,12 @@ module.exports = (userService) => {
           return res.status(400).json({ message: "กรุณากรอกรหัสผ่านเดิม" });
         }
 
-        // สำหรับการแก้ไขข้อมูลธรรมชาติ ต้องตรวจสอบข้อมูลที่เป็นสำคัญ
-        // สำหรับ first login หรือเปลี่ยนรหัสผ่านอย่างเดียว ไม่ต้องตรวจสอบข้อมูลโปรไฟล์
+        // ตรวจสอบเฉพาะฟิลด์ที่ส่งมาจริง (ส่งมาแต่เป็นค่าว่าง)
+        // service layer รองรับ partial update อยู่แล้ว — ฟิลด์ที่ไม่ส่งมาจะไม่ถูกอัปเดต
         if (!isFirstLogin && !password) {
-          if (!body.us_first_name_th || !body.us_last_name_th || !body.us_phone) {
+          const hasEmptyRequired =
+            (body.us_phone !== undefined && body.us_phone !== null && !body.us_phone);
+          if (hasEmptyRequired) {
             return res.status(400).json({ message: "กรุณากรอกข้อมูลให้ครบ" });
           }
         }

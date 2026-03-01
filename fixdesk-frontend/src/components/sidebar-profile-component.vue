@@ -327,16 +327,17 @@ async function executeSave(type = '') {
 
     if (!res.ok) {
       console.log('Response data:', data)
-      // แสดงข้อผิดพลาดชั่วคราวเพื่อใช้ตรวจสอบและดีบักปัญหา
-      Swal.fire({
-        title: 'ผิดพลาด',
-        text: data.message || 'เกิดข้อผิดพลาด',
-        icon: 'error',
-        confirmButtonColor: '#1E48D1',
-      })
       // ตรวจสอบว่าเป็นกรณีกรอกรหัสผ่านปัจจุบันไม่ถูกต้องหรือไม่
       if (data.message && (data.message.includes('รหัสผ่านเดิมไม่ถูกต้อง') || data.message.includes('รหัสผ่านปัจจุบันไม่ถูกต้อง'))) {
         errors.value.tempOldPassword = 'รหัสผ่านปัจจุบันไม่ถูกต้อง'
+      } else {
+        // แสดง SweetAlert เฉพาะกรณีข้อผิดพลาดอื่น ๆ ที่ไม่ใช่รหัสผ่านผิด
+        Swal.fire({
+          title: 'ผิดพลาด',
+          text: data.message || 'เกิดข้อผิดพลาด',
+          icon: 'error',
+          confirmButtonColor: '#1E48D1',
+        })
       }
       return
     }
@@ -385,10 +386,10 @@ const getFullNameEN = () => {
 }
 
 // เปิดหน้าต่างแก้ไขข้อมูลส่วนตัวและโหลดข้อมูลล่าสุดของผู้ใช้
-function openProfilePopup() {
+async function openProfilePopup() {
   resetProfileForm()
   // โหลดข้อมูลล่าสุดจากเซิร์ฟเวอร์ทุกครั้งที่เปิดหน้าต่าง
-  loadUserData()
+  await loadUserData()
   showPopupProfile.value = true
 }
 

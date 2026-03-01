@@ -1,0 +1,15 @@
+sidebar-profile-component.vue:317 
+ PUT http://localhost:3000/edit-personal/96 400 (Bad Request)
+executeSave	@	sidebar-profile-component.vue:317
+saveProfile	@	sidebar-profile-component.vue:266
+_createElementVNode.onClick._cache.<computed>._cache.<computed>	@	sidebar-profile-component.vue:608
+
+sidebar-profile-component.vue:329 Response data: 
+{message: 'กรุณากรอกข้อมูลให้ครบ'}
+message
+: 
+"กรุณากรอกข้อมูลให้ครบ"
+[[Prototype]]
+: 
+Object
+﻿
