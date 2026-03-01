@@ -1,37 +1,42 @@
 /**
  * =====================================================================
- * @file            my-repair-list.view.vue
- * @module          มอดูลแจ้งซ่อม - การติดตามสถานะ และดูรายละเอียดคำร้องแจ้งซ่อม
- * @layer           View (Presentation Layer)
- * @version         1.0.0
- * @since           2026-02-04
- * @author          พชร ไพศรีสกุล
- * @lastModified    2026-02-20
- * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
+ * @file my-repair-list.view.vue
+ * @module มอดูลแจ้งซ่อม - การติดตามสถานะ และดูรายละเอียดคำร้องแจ้งซ่อม
+ * @layer View (Presentation Layer)
+ * @version 1.0.1
+ * @since 2026-02-04
+ * @author พชร ไพศรีสกุล
+ * @lastModified 2026-02-21
+ * @lastModifiedBy ธนภัทร จันทร์งาม
  * ---------------------------------------------------------------------
  * @description
- *  หน้าจอสำหรับแสดงรายการแจ้งซ่อมของผู้ใช้งานปัจจุบัน
- *  ผู้ใช้งานสามารถ:
- *   - ดูรายการแจ้งซ่อมทั้งหมดของตนเอง
- *   - ค้นหา และกรองข้อมูลตามสถานะ ความเร่งด่วน และวันที่
- *   - ดูรายละเอียดงานซ่อม
- *   - แก้ไขรายละเอียดงานซ่อม
- *   - ลบรายการแจ้งซ่อม
+ * หน้าจอสำหรับแสดงรายการแจ้งซ่อมของผู้ใช้งานปัจจุบัน
+ * ผู้ใช้งานสามารถ:
+ * - ดูรายการแจ้งซ่อมทั้งหมดของตนเอง
+ * - ค้นหา และกรองข้อมูลตามสถานะ ความเร่งด่วน และวันที่
+ * - ดูรายละเอียดงานซ่อม
+ * - แก้ไขรายละเอียดงานซ่อม
+ * - ลบรายการแจ้งซ่อม
  *
  * @requires
- *   - vue
- *   - vue-router
- *   - sweetalert2
- *   - @/composables/useMyRepairs
- *   - @/components/table-component.vue
- *   - @/components/table-actions-component.vue
- *   - @/components/button/repair-button-component.vue
- *   - @/components/filters/repair-filter-bar-component.vue
+ * - vue
+ * - vue-router
+ * - sweetalert2
+ * - @/composables/useMyRepairs
+ * - @/components/table-component.vue
+ * - @/components/table-actions-component.vue
+ * - @/components/button/repair-button-component.vue
+ * - @/components/filters/repair-filter-bar-component.vue
  *
  * ---------------------------------------------------------------------
  * @changelog
- *   - แก้ไขข้อความหัวตาราง  [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
- *.  - แก้ไขข้อความแจ้งเตือน  [2026-02-20, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ * - แก้ไขข้อความหัวตาราง
+ *   [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ * - แก้ไขข้อความแจ้งเตือน
+ *   [2026-02-20, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ * - ปรับปรุงข้อความ Confirm และ Toast ในการลบรายการ
+ *   พร้อมกำหนดสีปุ่มยืนยัน/ยกเลิกให้ชัดเจนขึ้น
+ *   [2026-02-21, ธนภัทร จันทร์งาม]
  * =====================================================================
  */
 
@@ -118,22 +123,44 @@ const openEdit = (code) => router.push(`/main/repair-edit/${code}`)
 // show confirm dialog and call composable delete
 async function handleDeleteRepair(repairCode) {
   const confirm = await Sweetalert.fire({
-    title: 'ลบรายการนี้?',
+    title: 'ยืนยันลบรายการนี้?',
     text: `คุณต้องการลบรายการแจ้งซ่อมหมายเลข ${repairCode} หรือไม่?`,
     icon: 'warning',
+
     showCancelButton: true,
-    reverseButtons: true,
+    // ❌ ไม่ใช้ reverseButtons → confirm จะอยู่ซ้าย
+
+    confirmButtonText: 'ยืนยันการลบ',
     cancelButtonText: 'ยกเลิก',
-    confirmButtonText: 'ยืนยัน',
-    confirmButtonColor: '#e53e3e',
+
+    // 🔴 Destructive action
+    confirmButtonColor: '#DC2626', // red-600
+    cancelButtonColor: '#6B7280',  // gray-500
   })
+
   if (!confirm.isConfirmed) return
 
   const result = await deleteRepair(repairCode)
+
   if (result.ok) {
-    Sweetalert.fire({ toast: true, position: 'top-end', title: `ลบรายการแจ้งซ่อม ${repairCode} เรียบร้อยแล้ว`, icon: 'success', timer: 2500, showConfirmButton: false })
+    Sweetalert.fire({
+      toast: true,
+      position: 'top-end',
+      icon: 'success',
+      title: `ลบรายการแจ้งซ่อม ${repairCode} เรียบร้อยแล้ว`,
+      timer: 2500,
+      showConfirmButton: false,
+    })
   } else {
-    Sweetalert.fire({ toast: true, position: 'top-end', title: 'เกิดข้อผิดพลาด', text: result.message || 'DELETE_FAILED', icon: 'error', timer: 2500, showConfirmButton: false })
+    Sweetalert.fire({
+      toast: true,
+      position: 'top-end',
+      icon: 'error',
+      title: 'เกิดข้อผิดพลาด',
+      text: result.message || 'DELETE_FAILED',
+      timer: 2500,
+      showConfirmButton: false,
+    })
   }
 }
 
@@ -151,14 +178,8 @@ onMounted(() => {
     <h1 class="text-xl font-bold text-black mb-6">รายการแจ้งซ่อมของฉัน</h1>
 
     <!-- แถบตัวกรอง - ค้นหา, กรองสถานะ, ความเร่งด่วน, วันที่ -->
-    <RepairFilterBar
-      mode="repair"
-      v-model:search="searchInput"
-      v-model:statuses="selectedStatuseList"
-      v-model:urgencies="selectedUrgencieLsit"
-      v-model:date="selectedDate"
-      @reset="resetFilters"
-    >
+    <RepairFilterBar mode="repair" v-model:search="searchInput" v-model:statuses="selectedStatuseList"
+      v-model:urgencies="selectedUrgencieLsit" v-model:date="selectedDate" @reset="resetFilters">
       <!-- ส่วนขวา: ปุ่มเพิ่มการซ่อมใหม่ -->
       <template #right>
         <RepairButton />
@@ -167,31 +188,15 @@ onMounted(() => {
 
     <!-- ตาราง - แสดงรายการการซ่อมของผู้ใช้ -->
     <div class="p-3 mx-auto max-w-8xl">
-      <TableComponent
-        :columns="tableColumnList"
-        :rows="filteredRows"
-        :perPage="10"
-        :urgencyColumn="3"
-        :statusColumn="4"
-        :columnAlign="['left', 'left', 'left', 'center', 'center', 'center']"
-        :id-column-index="0"
-        :id-column-as-link="true"
-        @detail="openDetail"
-      >
+      <TableComponent :columns="tableColumnList" :rows="filteredRows" :perPage="10" :urgencyColumn="3" :statusColumn="4"
+        :columnAlign="['left', 'left', 'left', 'center', 'center', 'center']" :id-column-index="0"
+        :id-column-as-link="true" @detail="openDetail">
         <!-- เทมเพลต: คอลัมน์การกระทำ (ปุ่มแก้ไข/ลบ) -->
         <!-- คอลัมน์ Action (ดัชนี 5) -->
         <template #cell-5="{ row }">
-          <TableActions
-            :row-id="row[0]"
-            :open-menu-id="openMenuId"
-            @toggle-menu="openMenuId = $event"
-            role="user"
-            :row="row"
-            :status="row[4]"
-            @detail="openDetail(row[0])"
-            @edit="openEdit(row[0])"
-            @delete="handleDeleteRepair(row[0])"
-          />
+          <TableActions :row-id="row[0]" :open-menu-id="openMenuId" @toggle-menu="openMenuId = $event" role="user"
+            :row="row" :status="row[4]" @detail="openDetail(row[0])" @edit="openEdit(row[0])"
+            @delete="handleDeleteRepair(row[0])" />
         </template>
       </TableComponent>
     </div>
