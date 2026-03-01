@@ -41,7 +41,7 @@
  *
  * ---------------------------------------------------------------------
  * @changelog
- *   - refactor(auth-backend): update database structure and adjust login & profile components
+ *   - refactor(auth-backend): ปรับโครงสร้างฐานข้อมูลและปรับหน้าเข้าสู่ระบบและโปรไฟล์ให้รองรับโครงสร้างใหม่
  *     [2025-10-23, พชร ไพศรีสกุล] V 1.0.0
  *   - feat(profile): เพิ่ม popup สำหรับแก้ไขข้อมูลผู้ใช้
  *     [2025-11-29, เศรษฐพงศ์ หอมชื่น] V 1.1.0
@@ -69,7 +69,7 @@
  *     [2026-02-09, พชร ไพศรีสกุล] V 1.9.3
  *   - style(profile): ปรับปรุงข้อความและ UI แจ้งเตือน
  *     [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล] V 1.9.4
- *   - Refactor Sidebar ปรับปรุง UX
+ *   - ปรับปรุง Sidebar และประสบการณ์ใช้งาน (UX)
  *     [2026-02-22, พชร ไพศรีสกุล] V 1.10.0
  *
  * =====================================================================
@@ -178,7 +178,7 @@ function logout(e) {
   window.location.href = '/login'
 }
 
-// รีเซ็ตฟอร์มและ errors
+// รีเซ็ตฟอร์มและข้อความข้อผิดพลาด
 function resetProfileForm() {
   editForm.value.us_phone = ''
   tempOldPassword.value = ''
@@ -223,7 +223,7 @@ function validatePasswordForm() {
   errors.value.password = ''
   errors.value.confirmPassword = ''
 
-  // ตรวจ current password (ไม่ล้างเพราะอาจมี error จาก backend)
+  // ตรวจรหัสผ่านปัจจุบัน (ไม่ล้างข้อความผิดพลาดที่มาจากฝั่งเซิร์ฟเวอร์)
   if (!tempOldPassword.value) {
     errors.value.tempOldPassword = 'กรุณากรอกรหัสผ่านปัจจุบัน'
     valid = false
@@ -258,7 +258,7 @@ async function saveProfile(type = 'profile') {
   const userId = tokenData.value?.us_id
   if (!userId) return
 
-  // 1. ตรวจสอบความถูกต้องของฟอร์ม (Validate)
+  // 1. ตรวจสอบความถูกต้องของฟอร์ม (ตรวจสอบข้อมูลก่อนส่ง)
   let valid = type === 'profile' ? validateProfileForm() : validatePasswordForm()
   if (!valid) return
 
@@ -276,7 +276,7 @@ async function loadUserData() {
 
     const data = await res.json()
 
-    // อัปเดตข้อมูลใน popup
+    // อัปเดตข้อมูลในหน้าต่างป๊อปอัป
     editForm.value.us_ttn_id = data.us_ttn_id
     editForm.value.us_department = data.us_department
     editForm.value.us_phone = toDisplay(data.us_phone)
@@ -294,7 +294,7 @@ async function executeSave(type = '') {
   const userId = tokenData.value?.us_id
   const token = localStorage.getItem('token') || sessionStorage.getItem('token')
 
-  // เตรียม Payload
+  // เตรียมข้อมูลสำหรับส่งไปยังเซิร์ฟเวอร์
   const payload = {
     us_ttn_id: editForm.value.us_ttn_id,
     us_department: editForm.value.us_department,
@@ -327,21 +327,21 @@ async function executeSave(type = '') {
 
     if (!res.ok) {
       console.log('Response data:', data)
-      // Temporarily show error to debug
+      // แสดงข้อผิดพลาดชั่วคราวเพื่อใช้ตรวจสอบและดีบักปัญหา
       Swal.fire({
         title: 'ผิดพลาด',
         text: data.message || 'เกิดข้อผิดพลาด',
         icon: 'error',
         confirmButtonColor: '#1E48D1',
       })
-      // Check if it's a wrong current password error
+      // ตรวจสอบว่าเป็นกรณีกรอกรหัสผ่านปัจจุบันไม่ถูกต้องหรือไม่
       if (data.message && (data.message.includes('รหัสผ่านเดิมไม่ถูกต้อง') || data.message.includes('รหัสผ่านปัจจุบันไม่ถูกต้อง'))) {
         errors.value.tempOldPassword = 'รหัสผ่านปัจจุบันไม่ถูกต้อง'
       }
       return
     }
 
-    // สำเร็จ
+  // สำเร็จ: แสดงข้อความแจ้งเตือนตามประเภทการบันทึก
     Swal.fire({
       title: 'สำเร็จ',
       text: type === 'password' ? 'เปลี่ยนรหัสผ่านเรียบร้อย' : 'อัปเดตข้อมูลเรียบร้อย',
@@ -349,7 +349,7 @@ async function executeSave(type = '') {
       confirmButtonColor: '#1E48D1',
     })
 
-    // Reset ค่าต่างๆ
+    // รีเซ็ตค่าฟิลด์ที่เกี่ยวข้องหลังจากบันทึกสำเร็จ
     editForm.value.password = ''
     editForm.value.confirmPassword = ''
     tempOldPassword.value = ''
@@ -384,13 +384,15 @@ const getFullNameEN = () => {
   return `${title}${firstNameEN.value} ${lastNameEN.value}`.trim()
 }
 
+// เปิดหน้าต่างแก้ไขข้อมูลส่วนตัวและโหลดข้อมูลล่าสุดของผู้ใช้
 function openProfilePopup() {
   resetProfileForm()
-  // Always load fresh data from server
+  // โหลดข้อมูลล่าสุดจากเซิร์ฟเวอร์ทุกครั้งที่เปิดหน้าต่าง
   loadUserData()
   showPopupProfile.value = true
 }
 
+// เปิดหน้าต่างสำหรับเปลี่ยนรหัสผ่านและตั้งค่าชื่อผู้ใช้จาก Token
 function openPasswordPopup() {
   resetPasswordForm()
   username.value = tokenData.value?.us_user_name || ''
@@ -406,7 +408,7 @@ function closeAllPopup() {
 watch(
   () => tempOldPassword.value,
   () => {
-    // Clear backend error when user modifies the field
+    // เคลียร์ข้อความข้อผิดพลาดจากฝั่งเซิร์ฟเวอร์เมื่อผู้ใช้แก้ไขช่องรหัสผ่านปัจจุบัน
     errors.value.tempOldPassword = ''
   },
 )
@@ -416,7 +418,7 @@ watch(
   (newVal) => {
     if (!newVal) {
       showDropdown.value = false
-      closeAllPopup()
+      // อย่าปิดหน้าต่างป๊อปอัปเมื่อ Sidebar พับ เก็บเฉพาะเมนูดรอปดาวน์เท่านั้น
     }
   },
 )
@@ -479,15 +481,13 @@ watch(
     </div>
   </footer>
 
-  <!-- Popup Profile -->
+  <!-- หน้าต่างตั้งค่าบัญชี (แก้ไขข้อมูลส่วนตัว) -->
   <div
     v-if="showPopupProfile"
     class="fixed inset-0 z-50 bg-black/50 overflow-y-auto"
-    @click.self="closeAllPopup"
   >
     <div
       class="flex min-h-full items-center justify-center p-4 text-center sm:p-0"
-      @click.self="closeAllPopup"
     >
       <div
         class="relative bg-white w-full max-w-2xl rounded-lg shadow-xl text-left overflow-hidden sm:my-8 transform transition-all"
@@ -620,14 +620,13 @@ watch(
     </div>
   </div>
 
+  <!-- หน้าต่างตั้งค่ารหัสผ่าน -->
   <div
     v-if="showPopupPassword"
     class="fixed inset-0 z-50 bg-black/50 overflow-y-auto"
-    @click.self="closeAllPopup"
   >
     <div
       class="flex min-h-full items-center justify-center p-4 text-center sm:p-0"
-      @click.self="closeAllPopup"
     >
       <div
         class="relative bg-white w-full max-w-2xl rounded-lg shadow-xl text-left overflow-hidden sm:my-8 transform transition-all"
