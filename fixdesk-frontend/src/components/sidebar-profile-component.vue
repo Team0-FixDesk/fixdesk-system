@@ -393,8 +393,10 @@ function openProfilePopup() {
 }
 
 // เปิดหน้าต่างสำหรับเปลี่ยนรหัสผ่านและตั้งค่าชื่อผู้ใช้จาก Token
-function openPasswordPopup() {
+async function openPasswordPopup() {
   resetPasswordForm()
+  // โหลดข้อมูลล่าสุดจากเซิร์ฟเวอร์เพื่อให้ payload มีข้อมูลครบ (เช่น us_phone)
+  await loadUserData()
   username.value = tokenData.value?.us_user_name || ''
   showPopupPassword.value = true
 }

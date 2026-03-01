@@ -360,8 +360,8 @@ module.exports = (userService) => {
         }
 
         // สำหรับการแก้ไขข้อมูลธรรมชาติ ต้องตรวจสอบข้อมูลที่เป็นสำคัญ
-        // สำหรับ first login อาจไม่ต้องตรวจสอบทั้งหมด
-        if (!isFirstLogin) {
+        // สำหรับ first login หรือเปลี่ยนรหัสผ่านอย่างเดียว ไม่ต้องตรวจสอบข้อมูลโปรไฟล์
+        if (!isFirstLogin && !password) {
           if (!body.us_first_name_th || !body.us_last_name_th || !body.us_phone) {
             return res.status(400).json({ message: "กรุณากรอกข้อมูลให้ครบ" });
           }

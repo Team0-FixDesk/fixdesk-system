@@ -47,7 +47,7 @@ import TechnicianSidebar from './technician-sidebar.vue'
 import ManagerSidebar from './manager-sidebar.vue'
 
 // import first-login modal
-import FirstLoginChangePasswordModal from '@/components/first-login-change-password-modal.vue'
+import FirstLoginChangePasswordModal from '@/components/modal/first-login-change-password-modal.vue'
 
 const router = useRouter()
 const role = ref(null)
