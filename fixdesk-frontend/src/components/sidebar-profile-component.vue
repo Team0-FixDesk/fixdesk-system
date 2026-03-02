@@ -409,7 +409,6 @@ async function openPasswordPopup() {
 function closeAllPopup() {
   showPopupProfile.value = false
   showPopupPassword.value = false
-  showPopupConfirm.value = false
 }
 
 watch(
