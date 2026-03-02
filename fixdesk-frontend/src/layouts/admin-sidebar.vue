@@ -106,6 +106,7 @@ const menuSections = [
       { icon: HomeIcon, label: 'หน้าหลัก', path: '/main/admin-home' },
       { icon: RepairIcon, label: 'แจ้งซ่อม', path: '/main/repair-request' },
       { icon: ListIcon, label: 'รายการของฉัน', path: '/main/my-list' },
+      { icon: HistoryListIcon, label: 'ประวัติการแจ้งซ่อม', path: '/main/admin-history' },
     ],
   },
   {
@@ -114,8 +115,6 @@ const menuSections = [
       { icon: ListChecksIcon, label: 'ตรวจสอบคำร้อง', path: '/main/admin-check-request' },
       { icon: LogsListIcon, label: 'รายการเบิกของ', path: '/main/stock-withdraw-list' },
       { icon: HistoryListIcon, label: 'ประวัติการเบิกของ', path: '/main/stock-withdraw-history' },
-      { icon: HistoryListIcon, label: 'ประวัติการแจ้งซ่อม', path: '/main/admin-history' },
-
     ],
   },
   {
