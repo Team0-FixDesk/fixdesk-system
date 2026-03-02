@@ -308,11 +308,6 @@ async function executeSave(type = '') {
     password: type === 'password' ? editForm.value.password.trim() : null,
   }
 
-  console.log('Payload being sent:', payload)
-  console.log('firstNameTH:', firstNameTH.value)
-  console.log('lastNameTH:', lastNameTH.value)
-  console.log('editForm.us_phone:', editForm.value.us_phone)
-
   try {
     const res = await fetch(`${API_BASE}/edit-personal/${userId}`, {
       method: 'PUT',
