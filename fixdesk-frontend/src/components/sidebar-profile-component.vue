@@ -353,6 +353,15 @@ async function executeSave(type = '') {
     closeAllPopup() // ปิดทุก Popup
   } catch (err) {
     console.error(err)
+    Swal.fire({
+      title: 'เกิดข้อผิดพลาด',
+      text:
+        (err && err.response && err.response.data && err.response.data.message) ||
+        (err && err.message) ||
+        'ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง',
+      icon: 'error',
+      confirmButtonColor: '#1E48D1',
+    })
   }
 }
 
