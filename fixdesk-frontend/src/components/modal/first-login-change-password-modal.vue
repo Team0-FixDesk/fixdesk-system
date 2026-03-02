@@ -104,7 +104,7 @@ async function handleSubmit() {
       },
       body: JSON.stringify({
         password: password.value.trim(),
-        isFirstLogin: true, // ต้องส่งฟ้ง isFirstLogin เพื่อข้ามการตรวจสอบ oldPassword
+        isFirstLogin: true, // ต้องส่ง flag isFirstLogin เพื่อข้ามการตรวจสอบ oldPassword
         us_first_name_th: '',
         us_last_name_th: '',
         us_phone: '',
