@@ -20,6 +20,7 @@ import AdminHomeView from '../views/admin/admin-home-view.vue'
 import AdminCheckRequestView from '../views/admin/admin-check-request-view.vue'
 import AdminUserInfoView from '../views/admin/admin-user-info-view.vue'
 import AdminManageLocationView from '../views/admin/admin-manage-location-view.vue'
+import AdminReportHistoryView from '../views/admin/admin-report-history-view.vue'
 
 // MANAGER
 import ManagerHomeView from '../views/manager/manager-home-view.vue'
@@ -60,6 +61,11 @@ const router = createRouter({
         },
         { path: 'admin-user-info', component: AdminUserInfoView, meta: { roles: ['Admin'] } },
         { path: 'admin-manage-location', component: AdminManageLocationView, meta: { roles: ['Admin'] } },
+        {
+          path: 'admin-history',
+          component: AdminReportHistoryView,
+          meta: { roles: ['Admin'] },
+        },
         { path: 'dashboard', component: ManagerHomeView, meta: { roles: ['Manager', 'Admin'] } },
         { path: 'information-summary', component: ManagerSummaryView, meta: { roles: ['Manager', 'Admin'] } },
 
