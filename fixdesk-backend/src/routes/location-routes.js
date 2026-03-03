@@ -2,14 +2,14 @@
  * =====================================================================
  * @file            location.route.js
  * @layer           Route Layer (Routing Layer)
- * @version         1.0.0
+ * @version         1.1.0
  * @since           2026-02-10
  * @author          พชร ไพศรีสกุล
  * @contributors
  *   - พชร ไพศรีสกุล
  *
- * @lastModified    2026-02-10
- * @lastModifiedBy  พชร ไพศรีสกุล
+ * @lastModified    2026-03-03
+ * @lastModifiedBy  นราธิป แสนทวีสุข
  * ---------------------------------------------------------------------
  * @description
  *  Route สำหรับจัดการข้อมูลสถานที่ (Location Management)
@@ -25,6 +25,9 @@
  *
  * ---------------------------------------------------------------------
  * @changelog
+ *   - [2026-03-03, นราธิป แสนทวีสุข] V 1.1.0
+ *     เพิ่ม endpoint GET /locations/check-usage/:type/:id
+ *     เพื่อตรวจสอบการใช้งานสถานที่ในใบแจ้งซ่อมก่อนแก้ไข/ลบ
  *   - Initial implementation Location Route ตาม Layered Architecture
  *     [2026-02-18, พชร ไพศรีสกุล] V 1.0.0
  *
@@ -178,6 +181,19 @@ module.exports = (db) => {
     "/locations/import",
     authMiddleware,
     locationController.importLocations,
+  );
+
+  // --- USAGE CHECK ROUTES ---
+  /**
+   * GET /locations/check-usage/:type/:id
+   * เช็คการใช้งานในรายการแจ้งซ่อม
+   * @route GET /locations/check-usage/:type/:id
+   * @param {string} type - building, floor หรือ room
+   * @param {number} id - ID ของสถานที่
+   */
+  router.get(
+    "/locations/check-usage/:type/:id",
+    locationController.checkUsageInRepairs,
   );
 
   return router;

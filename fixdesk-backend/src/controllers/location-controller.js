@@ -2,14 +2,14 @@
  * =====================================================================
  * @file            location.controller.js
  * @layer           Controller Layer (Presentation Layer)
- * @version         1.0.0
+ * @version         1.1.0
  * @since           2026-02-10
  * @author          พชร ไพศรีสกุล
  * @contributors
  *   - พชร ไพศรีสกุล
  *
- * @lastModified    2026-02-10
- * @lastModifiedBy  พชร ไพศรีสกุล
+ * @lastModified    2026-03-03
+ * @lastModifiedBy  นราธิป แสนทวีสุข
  * ---------------------------------------------------------------------
  * @description
  *  Controller สำหรับจัดการข้อมูลสถานที่ (Location Management)
@@ -26,6 +26,9 @@
  *
  * ---------------------------------------------------------------------
  * @changelog
+ *   - [2026-03-03, นราธิป แสนทวีสุข] V 1.1.0
+ *     เพิ่ม checkUsageInRepairs() controller function
+ *     เพื่อตรวจสอบการใช้งานสถานที่ในใบแจ้งซ่อมก่อนแก้ไข/ลบ
  *   - Initial implementation Location Controller ตาม Layered Architecture
  *     [2026-02-10, พชร ไพศรีสกุล] V 1.0.0
  *
@@ -438,6 +441,42 @@ module.exports = (locationService) => {
         res
           .status(500)
           .json({ message: "Import ล้มเหลว", error: error.message });
+      }
+    },
+
+    /* --- USAGE CHECK CONTROLLER --- */
+    /**
+     * เช็คการใช้งาน Building, Floor หรือ Room ในรายการแจ้งซ่อม
+     *
+     * @author GitHub Copilot
+     * @since 2026-03-02
+     * @lastModified 2026-03-02
+     * @lastModifiedBy GitHub Copilot
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
+    async checkUsageInRepairs(req, res) {
+      try {
+        const { type, id } = req.params;
+        
+        if (!['building', 'floor', 'room'].includes(type)) {
+          return res.status(400).json({ message: 'ประเภทไม่ถูกต้อง' });
+        }
+        
+        if (!id || isNaN(id)) {
+          return res.status(400).json({ message: 'ID ไม่ถูกต้อง' });
+        }
+        
+        const result = await locationService.checkUsageInRepairs(type, id);
+        res.json(result);
+      } catch (error) {
+        console.error(error);
+        res.status(500).json({ 
+          message: 'เกิดข้อผิดพลาดในการตรวจสอบการใช้งาน',
+          error: error.message 
+        });
       }
     },
   };
