@@ -2,7 +2,7 @@
  * =====================================================================
  * @file            repair-service.js
  * @layer           Service Layer (Business Logic Layer)
- * @version         1.5.0
+ * @version         1.6.0
  * @since           2026-02-10
  * @author          พชร ไพศรีสกุล
  * @contributors
@@ -10,7 +10,7 @@
  *   - นราธิป แสนทวีสุข
  *   - เศรษฐพงศ์ หอมชื่น
  *
- * @lastModified    2026-02-25
+ * @lastModified    2026-03-03
  * @lastModifiedBy  นราธิป แสนทวีสุข
  * ---------------------------------------------------------------------
  * @description
@@ -81,6 +81,8 @@
  *     [2026-02-23, พชร ไพศรีสกุล] V1.4.0
  *   - feat(line): เพิ่มการแจ้งเตือน LINE เมื่อมีงานแจ้งซ่อมใหม่เข้ามา
  *     [2026-02-25, นราธิป แสนทวีสุข] V 1.5.0
+ *   - refactor(location): ใช้ Location Snapshot แทน Real-time JOIN เพื่อรักษาความถูกต้องของข้อมูลประวัติ
+ *     [2026-03-03, นราธิป แสนทวีสุข] V 1.6.0
  *
  * =====================================================================
  */
@@ -115,13 +117,31 @@ module.exports = (db) => {
           ? JSON.stringify(data.filePaths)
           : null;
 
-      // 3. บันทึกข้อมูล
+      // 3. ดึงชื่อสถานที่เพื่อบันทึกเป็น snapshot (Historical Data Integrity)
+      const locationSql = `
+        SELECT 
+          b.bd_name AS building_name,
+          f.fl_name AS floor_name,
+          r.room_name AS room_name
+        FROM room r
+        LEFT JOIN floor f ON r.room_fl_id = f.fl_id
+        LEFT JOIN building b ON f.fl_bd_id = b.bd_id
+        WHERE r.room_id = ?
+      `;
+      const [locationData] = await db.promise().query(locationSql, [data.roomId]);
+      
+      const buildingSnapshot = locationData[0]?.building_name || null;
+      const floorSnapshot = locationData[0]?.floor_name || null;
+      const roomSnapshot = locationData[0]?.room_name || null;
+
+      // 4. บันทึกข้อมูล (รวม snapshot)
       const sql = `
         INSERT INTO repair_form
           (rf_code, rf_us_id, rf_tt_id, rf_room_id, rf_prop_number,
           rf_problem, rf_detail, rf_phone, rf_urgency, rf_image,
+          rf_building_snapshot, rf_floor_snapshot, rf_room_snapshot,
           rf_user_status, rf_create_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())
       `;
 
       const params = [
@@ -135,27 +155,27 @@ module.exports = (db) => {
         data.phoneNumber,
         data.urgency,
         imageData,
+        buildingSnapshot,
+        floorSnapshot,
+        roomSnapshot,
       ];
 
       const [result] = await db.promise().query(sql, params);
 
-      // 4. ส่งการแจ้งเตือนไปยัง LINE Group
+      // 5. ส่งการแจ้งเตือนไปยัง LINE Group
       try {
         const notifSql = `
           SELECT
             rf.rf_code,
             CONCAT(u.us_first_name_th, ' ', u.us_last_name_th) AS user_name,
             rf.rf_problem,
-            CONCAT(b.bd_name, ' ', f.fl_name, ' ', r.room_name) AS location,
+            CONCAT(rf.rf_building_snapshot, ' ', rf.rf_floor_snapshot, ' ', rf.rf_room_snapshot) AS location,
             tt.tt_name AS repair_type,
             rf.rf_urgency,
             rf.rf_phone
           FROM repair_form rf
           LEFT JOIN user u ON rf.rf_us_id = u.us_id
           LEFT JOIN technician_type tt ON rf.rf_tt_id = tt.tt_id
-          LEFT JOIN room r ON rf.rf_room_id = r.room_id
-          LEFT JOIN floor f ON r.room_fl_id = f.fl_id
-          LEFT JOIN building b ON f.fl_bd_id = b.bd_id
           WHERE rf.rf_id = ?
         `;
 
@@ -185,7 +205,9 @@ module.exports = (db) => {
       const sql = `
         SELECT
           rf.rf_id, rf.rf_code, rf.rf_problem, rf.rf_create_at, rf.rf_update_at, rf.rf_in_process_at, rf.rf_done_at, rf.rf_user_status, rf.rf_repair_method, rf.rf_repair_method_remark,
-          b.bd_name, f.fl_name, r.room_name,
+          rf.rf_building_snapshot AS bd_name, 
+          rf.rf_floor_snapshot AS fl_name, 
+          rf.rf_room_snapshot AS room_name,
           COALESCE(rf.rf_urgency, 'medium') AS rf_urgency,
           u.us_first_name_th AS us_first_name, u.us_last_name_th AS us_last_name,
           u.us_department AS department_name,
@@ -195,9 +217,6 @@ module.exports = (db) => {
         FROM repair_form rf
         LEFT JOIN user u ON rf.rf_us_id = u.us_id
         LEFT JOIN technician_type tt ON rf.rf_tt_id = tt.tt_id
-        LEFT JOIN room r ON rf.rf_room_id = r.room_id
-        LEFT JOIN floor f ON r.room_fl_id = f.fl_id
-        LEFT JOIN building b ON f.fl_bd_id = b.bd_id
         LEFT JOIN repair_assignment ra ON rf.rf_id = ra.ra_rf_id AND ra.ra_is_lead = 1
         LEFT JOIN user tech ON ra.ra_us_id = tech.us_id
         ORDER BY rf.rf_create_at DESC
@@ -212,13 +231,12 @@ module.exports = (db) => {
         SELECT
           rf.rf_id, rf.rf_code, rf.rf_prop_number, rf.rf_problem,
           rf.rf_urgency, rf.rf_user_status, rf.rf_create_at,
-          b.bd_name, f.fl_name, r.room_name,
+          rf.rf_building_snapshot AS bd_name, 
+          rf.rf_floor_snapshot AS fl_name, 
+          rf.rf_room_snapshot AS room_name,
           u.us_department AS department_name, tt.tt_name AS tt_name
         FROM repair_form rf
         LEFT JOIN technician_type tt ON rf.rf_tt_id = tt.tt_id
-        LEFT JOIN room r ON rf.rf_room_id = r.room_id
-        LEFT JOIN floor f ON r.room_fl_id = f.fl_id
-        LEFT JOIN building b ON f.fl_bd_id = b.bd_id
         LEFT JOIN user u ON rf.rf_us_id = u.us_id
         WHERE rf.rf_us_id = ?
         ORDER BY rf.rf_create_at DESC
@@ -236,9 +254,12 @@ module.exports = (db) => {
           rf.rf_user_status, rf.rf_prop_number, rf.rf_image, rf.rf_tech_summary,
           rf.rf_repair_method, rf.rf_repair_method_remark, rf.rf_result_status, rf.rf_result_remark,
           t.tt_id AS repair_type_id, t.tt_name AS repair_type_name,
-          b.bd_id AS building_id, b.bd_name AS building_name,
-          f.fl_id AS floor_id, f.fl_name AS floor_name,
-          r.room_id AS room_id, r.room_name AS room_name,
+          r.room_id AS room_id, 
+          f.fl_id AS floor_id, 
+          b.bd_id AS building_id,
+          rf.rf_building_snapshot AS building_name,
+          rf.rf_floor_snapshot AS floor_name,
+          rf.rf_room_snapshot AS room_name,
           CONCAT(tn.ttn_title_th, u.us_first_name_th, ' ', u.us_last_name_th) AS reporter_name,
           u.us_phone AS reporter_phone, u.us_department AS reporter_department,
           tech.us_id AS main_technician_id,
@@ -467,16 +488,13 @@ WHERE sf.sf_rf_id = ?
             rf.rf_code, rf.rf_problem, rf.rf_urgency,
             CONCAT(tn_tech.ttn_title_th, tech.us_first_name_th, ' ', tech.us_last_name_th) AS technician_name,
             CONCAT(tn_assign.ttn_title_th, assigner.us_first_name_th, ' ', assigner.us_last_name_th) AS assigned_by_name,
-            CONCAT(b.bd_name, ' ', f.fl_name, ' ', r.room_name) AS location,
+            CONCAT(rf.rf_building_snapshot, ' ', rf.rf_floor_snapshot, ' ', rf.rf_room_snapshot) AS location,
             tt.tt_name AS technician_type
           FROM repair_form rf
           LEFT JOIN user tech ON tech.us_id = ?
           LEFT JOIN title_name tn_tech ON tech.us_ttn_id = tn_tech.ttn_id
           LEFT JOIN user assigner ON assigner.us_id = ?
           LEFT JOIN title_name tn_assign ON assigner.us_ttn_id = tn_assign.ttn_id
-          LEFT JOIN room r ON rf.rf_room_id = r.room_id
-          LEFT JOIN floor f ON r.room_fl_id = f.fl_id
-          LEFT JOIN building b ON f.fl_bd_id = b.bd_id
           LEFT JOIN technician_type tt ON rf.rf_tt_id = tt.tt_id
           WHERE rf.rf_id = ?
         `,
@@ -573,15 +591,12 @@ WHERE sf.sf_rf_id = ?
             SELECT
               rf.rf_code, rf.rf_problem, rf.rf_urgency,
               GROUP_CONCAT(CONCAT(tn.ttn_title_th, u.us_first_name_th, ' ', u.us_last_name_th) SEPARATOR ', ') AS technician_names,
-              CONCAT(b.bd_name, ' ', f.fl_name, ' ', r.room_name) AS location,
+              CONCAT(rf.rf_building_snapshot, ' ', rf.rf_floor_snapshot, ' ', rf.rf_room_snapshot) AS location,
               tt.tt_name AS technician_type
             FROM repair_form rf
             LEFT JOIN repair_assignment ra ON rf.rf_id = ra.ra_rf_id
             LEFT JOIN user u ON ra.ra_us_id = u.us_id
             LEFT JOIN title_name tn ON u.us_ttn_id = tn.ttn_id
-            LEFT JOIN room r ON rf.rf_room_id = r.room_id
-            LEFT JOIN floor f ON r.room_fl_id = f.fl_id
-            LEFT JOIN building b ON f.fl_bd_id = b.bd_id
             LEFT JOIN technician_type tt ON rf.rf_tt_id = tt.tt_id
             WHERE rf.rf_id = ?
             GROUP BY rf.rf_id
@@ -647,15 +662,12 @@ WHERE sf.sf_rf_id = ?
             SELECT
               rf.rf_code, rf.rf_problem, rf.rf_urgency,
               CONCAT(tn.ttn_title_th, u.us_first_name_th, ' ', u.us_last_name_th) AS technician_name,
-              CONCAT(b.bd_name, ' ', f.fl_name, ' ', r.room_name) AS location,
+              CONCAT(rf.rf_building_snapshot, ' ', rf.rf_floor_snapshot, ' ', rf.rf_room_snapshot) AS location,
               tt.tt_name AS technician_type
             FROM repair_form rf
             LEFT JOIN repair_assignment ra ON rf.rf_id = ra.ra_rf_id AND ra.ra_us_id = ?
             LEFT JOIN user u ON ra.ra_us_id = u.us_id
             LEFT JOIN title_name tn ON u.us_ttn_id = tn.ttn_id
-            LEFT JOIN room r ON rf.rf_room_id = r.room_id
-            LEFT JOIN floor f ON r.room_fl_id = f.fl_id
-            LEFT JOIN building b ON f.fl_bd_id = b.bd_id
             LEFT JOIN technician_type tt ON rf.rf_tt_id = tt.tt_id
             WHERE rf.rf_code = ?
           `,
@@ -686,15 +698,15 @@ WHERE sf.sf_rf_id = ?
           rf.rf_id, rf.rf_code, rf.rf_create_at, rf.rf_user_status, rf.rf_problem,
           COALESCE(rf.rf_urgency, 'medium') AS rf_urgency,
           u.us_first_name_th AS us_first_name, u.us_last_name_th AS us_last_name, u.us_department AS department_name,
-          tt.tt_name, r.room_name, f.fl_name, b.bd_name,
+          tt.tt_name, 
+          rf.rf_building_snapshot AS bd_name,
+          rf.rf_floor_snapshot AS fl_name,
+          rf.rf_room_snapshot AS room_name,
           ra.ra_id, ra.ra_is_lead, ra.ra_assigned_at, ra.ra_accepted_at
         FROM repair_form rf
         INNER JOIN repair_assignment ra ON rf.rf_id = ra.ra_rf_id
         LEFT JOIN user u ON rf.rf_us_id = u.us_id
         LEFT JOIN technician_type tt ON rf.rf_tt_id = tt.tt_id
-        LEFT JOIN room r ON rf.rf_room_id = r.room_id
-        LEFT JOIN floor f ON r.room_fl_id = f.fl_id
-        LEFT JOIN building b ON f.fl_bd_id = b.bd_id
         WHERE ra.ra_us_id = ?
         ORDER BY rf.rf_create_at DESC
       `;
