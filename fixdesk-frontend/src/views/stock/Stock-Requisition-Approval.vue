@@ -346,13 +346,13 @@ const confirmApprove = async () => {
       { headers: { Authorization: `Bearer ${token}` } },
     )
 
-    // ✅ เก็บข้อความ success ไว้ชั่วคราว
+    //  เก็บข้อความ success ไว้ชั่วคราว
     sessionStorage.setItem(
   'stockWithdrawSuccess',
   'บันทึกผลการอนุมัติรายการเบิกเรียบร้อยแล้ว'
 )
 
-    // ✅ redirect ไปหน้าปลายทาง
+    // redirect ไปหน้าปลายทาง
     router.push('/main/stock-withdraw-history')
 
     // Redirect to stock-withdraw-list

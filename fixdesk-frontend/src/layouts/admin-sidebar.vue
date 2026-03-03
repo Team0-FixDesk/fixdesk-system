@@ -74,6 +74,7 @@ import UserIcon from '@/assets/icons/sidebar/user-icon.svg'
 import DashboardIcon from '@/assets/icons/sidebar/dashboard-icon.svg'
 import BuildingIcon from '@/assets/icons/sidebar/building-icon.svg'
 import ReportIcon from '@/assets/icons/sidebar/report-icon.svg'
+import { Icon } from '@iconify/vue'
 
 /**
  * สถานะการเปิด/ปิด Sidebar
@@ -112,6 +113,7 @@ const menuSections = [
     title: 'การดำเนินงาน',
     items: [
       { icon: ListChecksIcon, label: 'ตรวจสอบคำร้อง', path: '/main/admin-check-request' },
+      { icon: { name: 'fluent-mdl2:full-history' }, label: 'ประวัติการแจ้งซ่อม', path: '/main/admin-history' },
       { icon: LogsListIcon, label: 'รายการเบิกของ', path: '/main/stock-withdraw-list' },
       { icon: HistoryListIcon, label: 'ประวัติการเบิกของ', path: '/main/stock-withdraw-history' },
     ],
@@ -172,10 +174,13 @@ const menuSections = [
           class="group flex items-center rounded-lg transition-all duration-200 h-10 px-2 hover:bg-blue-800"
           active-class="bg-blue-900 shadow-inner"
         >
-          <div
-            class="flex items-center justify-center w-10 h-10 shrink-0 transition-all duration-300"
-          >
-            <img :src="menu.icon" :alt="menu.label" class="w-5 h-5" />
+          <div class="flex items-center justify-center w-10 h-10 shrink-0 transition-all duration-300">
+            <template v-if="typeof menu.icon === 'string'">
+              <img :src="menu.icon" :alt="menu.label" class="w-5 h-5" />
+            </template>
+            <template v-else>
+              <Icon :icon="menu.icon.name" width="20" height="20" style="color: #ffffff" />
+            </template>
           </div>
 
           <span

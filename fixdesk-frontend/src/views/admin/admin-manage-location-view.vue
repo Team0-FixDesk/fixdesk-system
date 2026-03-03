@@ -675,6 +675,8 @@ async function confirmDelete(username) {
     Toast.fire({
       title: 'ลบห้องเรียบร้อยแล้ว',
       icon: 'success',
+      background: '#f0f9ff',
+      color: '#1e3a8a',
     })
 
     await refreshData()
