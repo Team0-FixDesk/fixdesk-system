@@ -68,6 +68,7 @@ module.exports = (db) => {
             title.ttn_title_th, user.us_first_name_th, user.us_last_name_th,
             user.us_first_name_en, user.us_last_name_en,
             user.us_phone, user.us_department, user.us_job_title,
+            user.us_active,
             role.role_name
         FROM user AS user
         LEFT JOIN title_name AS title ON user.us_ttn_id = title.ttn_id
@@ -112,6 +113,7 @@ module.exports = (db) => {
         us_tel: currentUser.us_phone || "",
         us_department: currentUser.us_department || "",
         us_job_title: currentUser.us_job_title || "",
+        us_active: currentUser.us_active || 0,
         role_name: currentUser.role_name || "",
       };
 
