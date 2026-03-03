@@ -1,4 +1,3 @@
-<script setup>
 /**
  * =====================================================================
  * @file            first-login-change-password-modal.vue
@@ -22,7 +21,7 @@
  *    - Validation: ตรวจสอบว่ากรอกข้อมูลครบและรหัสผ่านตรงกัน
  *    - ปิดแบบบังคับ (ไม่มีปุ่มยกเลิก)
  *    - ปรากฏตรงกลางหน้าจอ
- * 
+ *
  * @requires
  *   - vue
  *   - sweetalert2
@@ -30,6 +29,8 @@
  *
  * =====================================================================
  */
+<script setup>
+
 import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import Swal from 'sweetalert2'

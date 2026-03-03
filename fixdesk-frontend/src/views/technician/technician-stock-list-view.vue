@@ -11,8 +11,8 @@
  *   - ธนภันทร จันทร์งาม
  *   - ปฏิพัทธ์ จงนันทพันธ์กุล
  *
- * @lastModified    2026-02-27
- * @lastModifiedBy  เศรษฐพงศ์ หอมชื่น
+ * @lastModified    2026-03-03
+ * @lastModifiedBy  พชร ไพศรีสกุล
  * ---------------------------------------------------------------------
  * @description
  *  หน้าจอรายการคลังสินค้าสำหรับช่างซ่อม
@@ -46,7 +46,9 @@
  *     [2026-02-21, ธนภัทร จันทร์งาม]
  *      [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล] V1.0.1
  *   - แก้ไขสีปุ่ม
- *      [2026-02-27, เศรษฐพงศ์ หอมชื่น]
+ *      [2026-02-27, เศรษฐพงศ์ หอมชื่น] V1.0.2
+ *   - แก้ไขการแสดงรายการแจ้งซ่อม
+ *      [2026-03-03, พชร ไพศรีสกุล] V1.0.3
  * =====================================================================
  */
 
@@ -101,17 +103,6 @@ const loadTechnicianProfile = () => {
 // --- Repair Jobs ---
 const repairJobList = ref([]) //
 const selectedRepairCode = ref(null)
-
-/**
- * จำกัดจำนวนตัวอักษรเพื่อการแสดงผล
- */
-const limitWords = (text, maxChars = 20) => {
-  if (!text) {
-    return ''
-  }
-
-  return text.length > maxChars ? text.slice(0, maxChars) + '...' : text
-}
 
 /**
  * ดึงรายการใบแจ้งซ่อมจาก API
@@ -704,7 +695,7 @@ onBeforeUnmount(() => {
 
         <div class="flex-1 overflow-y-auto px-5 py-4">
           <div v-if="cartStep === 'list'">
-            
+
             <div v-if="cartItemList.length === 0" class="text-gray-400 text-center mt-20">
               ไม่มีวัสดุ/อุปกรณ์ในตะกร้า
             </div>
