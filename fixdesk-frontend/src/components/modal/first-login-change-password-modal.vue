@@ -4,14 +4,15 @@
  * @file            first-login-change-password-modal.vue
  * @module          Modal สำหรับเปลี่ยนรหัสผ่านครั้งแรก
  * @layer           Component (Presentation Layer)
- * @version         1.0.0
+ * @version         1.0.1
  * @since           2026-02-27
  * @author          อาจอนนต์ ภคนันทานนท์
  * @contributors
- *   - GitHub Copilot
+ *   - อาจอนนต์ ภคนันทานนท์
+ *   - พชร ไพศรีสกุล
  *
- * @lastModified    2026-02-27
- * @lastModifiedBy  อาจอนนต์ ภคนันทานนท์
+ * @lastModified    2026-03-03
+ * @lastModifiedBy  พชร ไพศรีสกุล
  * ---------------------------------------------------------------------
  * @description
  *  Modal ที่ป้องกันการปิดเพื่อบังคับให้ผู้ใช้เปลี่ยนรหัสผ่านครั้งแรกเมื่อ us_active=0
@@ -21,7 +22,7 @@
  *    - Validation: ตรวจสอบว่ากรอกข้อมูลครบและรหัสผ่านตรงกัน
  *    - ปิดแบบบังคับ (ไม่มีปุ่มยกเลิก)
  *    - ปรากฏตรงกลางหน้าจอ
-
+ * 
  * @requires
  *   - vue
  *   - sweetalert2
