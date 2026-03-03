@@ -351,13 +351,22 @@ module.exports = (userService) => {
     async updatePersonalProfile(req, res) {
       try {
         const id = req.params.id;
-        const { oldPassword, password, ...body } = req.body;
+        const { oldPassword, password, usActive, isFirstLogin, ...body } = req.body;
 
-        // ตรวจสอบค่าจำเป็น
-        if (!oldPassword)
+        // สำหรับ first login ไม่ต้องตรวจสอบ oldPassword
+        // สำหรับการแก้ไขธรรมชาติ ต้องตรวจสอบ oldPassword
+        if (!isFirstLogin && !oldPassword) {
           return res.status(400).json({ message: "กรุณากรอกรหัสผ่านเดิม" });
-        if (!body.us_first_name_th || !body.us_last_name_th || !body.us_phone) {
-          return res.status(400).json({ message: "กรุณากรอกข้อมูลให้ครบ" });
+        }
+
+        // ตรวจสอบเฉพาะฟิลด์ที่ส่งมาจริง (ส่งมาแต่เป็นค่าว่าง)
+        // service layer รองรับ partial update อยู่แล้ว — ฟิลด์ที่ไม่ส่งมาจะไม่ถูกอัปเดต
+        if (!isFirstLogin && !password) {
+          const hasEmptyRequired =
+            (body.us_phone !== undefined && body.us_phone !== null && !body.us_phone);
+          if (hasEmptyRequired) {
+            return res.status(400).json({ message: "กรุณากรอกข้อมูลให้ครบ" });
+          }
         }
 
         const userData = {
@@ -369,13 +378,15 @@ module.exports = (userService) => {
           firstNameEn: body.us_first_name_en,
           lastNameEn: body.us_last_name_en,
           userName: body.us_user_name,
+          usActive: usActive,
         };
 
         await userService.updatePersonalProfile(
           id,
           userData,
-          oldPassword,
+          oldPassword || "", // ส่ง empty string ถ้าเป็น first login
           password,
+          isFirstLogin || false // ส่ง flag สำหรับการระบุว่าเป็น first login
         );
         res.json({ message: "อัปเดตข้อมูลส่วนตัวสำเร็จ" });
       } catch (error) {
