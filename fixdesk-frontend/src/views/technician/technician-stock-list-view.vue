@@ -10,9 +10,9 @@
  *   - เศรษฐพงศ์ หอมชื่น
  *   - ธนภันทร จันทร์งาม
  *   - ปฏิพัทธ์ จงนันทพันธ์กุล
- *                       
- * @lastModified    2026-02-27
- * @lastModifiedBy  เศรษฐพงศ์ หอมชื่น
+ *
+ * @lastModified    2026-03-03
+ * @lastModifiedBy  พชร ไพศรีสกุล
  * ---------------------------------------------------------------------
  * @description
  *  หน้าจอรายการคลังสินค้าสำหรับช่างซ่อม
@@ -39,14 +39,16 @@
  * ---------------------------------------------------------------------
  * @changelog
  *   - แก้ไขขนาดช่องของสินค้า
- *      [2569-02-17, ธนภัทร จันทร์งาม] V1.0.0       
- *   - แก้ไขชื่อหน้าจอ   
+ *      [2569-02-17, ธนภัทร จันทร์งาม] V1.0.0
+ *   - แก้ไขชื่อหน้าจอ
  *      [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล] V1.0.1
  *     - เพิ่มการแจ้งเตือน (Toast) หลังยืนยันการเบิกสินค้าเรียบร้อย
  *     [2026-02-21, ธนภัทร จันทร์งาม]
  *      [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล] V1.0.1
  *   - แก้ไขสีปุ่ม
- *      [2026-02-27, เศรษฐพงศ์ หอมชื่น]
+ *      [2026-02-27, เศรษฐพงศ์ หอมชื่น] V1.0.2
+ *   - แก้ไขการแสดงรายการแจ้งซ่อม
+ *      [2026-03-03, พชร ไพศรีสกุล] V1.0.3
  * =====================================================================
  */
 
@@ -101,17 +103,6 @@ const loadTechnicianProfile = () => {
 // --- Repair Jobs ---
 const repairJobList = ref([]) //
 const selectedRepairCode = ref(null)
-
-/**
- * จำกัดจำนวนตัวอักษรเพื่อการแสดงผล
- */
-const limitWords = (text, maxChars = 20) => {
-  if (!text) {
-    return ''
-  }
-
-  return text.length > maxChars ? text.slice(0, maxChars) + '...' : text
-}
 
 /**
  * ดึงรายการใบแจ้งซ่อมจาก API
@@ -704,24 +695,7 @@ onBeforeUnmount(() => {
 
         <div class="flex-1 overflow-y-auto px-5 py-4">
           <div v-if="cartStep === 'list'">
-            <div class="mb-5">
-              <label class="text-sm text-gray-700 mb-1 block">รายการแจ้งซ่อม <span class="text-red-500">*</span></label>
 
-              <select
-                v-model="selectedRepairCode"
-                class="w-full h-10 px-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
-              >
-                <option disabled value="">กรุณาเลือกใบแจ้งซ่อม</option>
-                <option
-                  v-for="job in repairJobList"
-                  :key="job.rf_code"
-                  :value="job.rf_code"
-                  :title="job.rf_title"
-                >
-                  {{ job.rf_code }} — {{ limitWords(job.rf_title) }}
-                </option>
-              </select>
-            </div>
             <div v-if="cartItemList.length === 0" class="text-gray-400 text-center mt-20">
               ไม่มีวัสดุ/อุปกรณ์ในตะกร้า
             </div>

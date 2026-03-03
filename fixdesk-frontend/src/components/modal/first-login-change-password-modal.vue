@@ -3,14 +3,15 @@
  * @file            first-login-change-password-modal.vue
  * @module          Modal สำหรับเปลี่ยนรหัสผ่านครั้งแรก
  * @layer           Component (Presentation Layer)
- * @version         1.0.0
+ * @version         1.0.1
  * @since           2026-02-27
  * @author          อาจอนนต์ ภคนันทานนท์
  * @contributors
- *   - GitHub Copilot
+ *   - อาจอนนต์ ภคนันทานนท์
+ *   - พชร ไพศรีสกุล
  *
- * @lastModified    2026-02-27
- * @lastModifiedBy  อาจอนนต์ ภคนันทานนท์
+ * @lastModified    2026-03-03
+ * @lastModifiedBy  พชร ไพศรีสกุล
  * ---------------------------------------------------------------------
  * @description
  *  Modal ที่ป้องกันการปิดเพื่อบังคับให้ผู้ใช้เปลี่ยนรหัสผ่านครั้งแรกเมื่อ us_active=0
@@ -20,7 +21,7 @@
  *    - Validation: ตรวจสอบว่ากรอกข้อมูลครบและรหัสผ่านตรงกัน
  *    - ปิดแบบบังคับ (ไม่มีปุ่มยกเลิก)
  *    - ปรากฏตรงกลางหน้าจอ
-
+ *
  * @requires
  *   - vue
  *   - sweetalert2
@@ -28,8 +29,8 @@
  *
  * =====================================================================
  */
-
 <script setup>
+
 import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
@@ -120,12 +121,24 @@ async function handleSubmit() {
       return
     }
 
-    Swal.fire({
-      title: 'สำเร็จ',
-      text: 'เปลี่ยนรหัสผ่านเรียบร้อยแล้ว',
+    await Swal.fire({
+      title: 'เปลี่ยนรหัสผ่านสำเร็จ',
+      text: 'กรุณาเข้าสู่ระบบใหม่ด้วยรหัสผ่านที่ตั้งไว้',
       icon: 'success',
       confirmButtonColor: '#1E48D1',
+      confirmButtonText: 'เข้าสู่ระบบใหม่',
     })
+
+    /* บังคับ Logout */
+    localStorage.removeItem('token')
+    localStorage.removeItem('session_user')
+    sessionStorage.removeItem('token')
+    sessionStorage.removeItem('session_user')
+
+    resetForm()
+
+    /* edirect ไปหน้า Login */
+    router.replace('/login')
 
     resetForm()
     emit('success')
@@ -140,15 +153,6 @@ async function handleSubmit() {
   } finally {
     isLoading.value = false
   }
-}
-
-function handleBackToLogin() {
-  localStorage.removeItem('token')
-  localStorage.removeItem('session_user')
-  sessionStorage.removeItem('token')
-  sessionStorage.removeItem('session_user')
-
-  router.push('/login')
 }
 
 watch(
@@ -176,19 +180,6 @@ watch(
       <!-- Modal Header -->
       <div class="p-6 sm:p-8">
         <div class="flex items-center justify-between mb-4 sm:mb-6 border-b border-gray-100 pb-4">
-          <button
-            type="button"
-            @click="handleBackToLogin"
-            class="p-2 hover:bg-gray-100 rounded-lg transition text-gray-600 hover:text-gray-900"
-            title="กลับไปหน้าเข้าสู่ระบบ"
-          >
-            <Icon
-              icon="fluent:arrow-left-24-regular"
-              width="24"
-              height="24"
-              style="color: currentColor"
-            />
-          </button>
           <div class="flex items-center gap-3">
             <div class="p-2 bg-blue-600 rounded-full">
               <Icon
@@ -198,9 +189,7 @@ watch(
                 style="color: #ffffff"
               />
             </div>
-            <h2 class="text-black text-xl sm:text-2xl font-bold">
-              เปลี่ยนรหัสผ่านครั้งแรก
-            </h2>
+            <h2 class="text-black text-xl sm:text-2xl font-bold">เปลี่ยนรหัสผ่านครั้งแรก</h2>
           </div>
           <div class="w-10"></div>
         </div>
@@ -272,35 +261,21 @@ watch(
         </div>
 
         <!-- Alert Message -->
-        <div class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <p class="text-sm text-blue-700">
-            <span class="font-semibold">หมายเหตุ:</span>
-            กรุณาเปลี่ยนรหัสผ่านของคุณเพื่อทำการกระบวนการยืนยัน
-            ขั้นแรก ท่านจำเป็นต้องกำหนดรหัสผ่านใหม่เพื่อใช้ในการเข้าสู่ระบบในครั้งต่อไป
-          </p>
+        <div class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg text-black text-sm">
+          <span class="font-semibold">จำเป็นต้องดำเนินการ:</span>
+          เพื่อใช้งานระบบต่อไป กรุณาเปลี่ยนรหัสผ่านของคุณก่อน เมื่อดำเนินการเสร็จสิ้น
+          ระบบจะออกจากระบบอัตโนมัติ และให้เข้าสู่ระบบใหม่อีกครั้ง
         </div>
 
-        <!-- Footer - ปุ่มยืนยันและปุ่มกลับ -->
-        <div class="flex flex-col-reverse sm:flex-row sm:justify-between gap-3 mt-6 pt-4 border-t border-gray-200">
-          <button
-            type="button"
-            @click="handleBackToLogin"
-            class="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition font-semibold text-sm sm:text-base flex items-center justify-center gap-2"
-          >
-            <Icon
-              icon="fluent:arrow-left-24-regular"
-              width="18"
-              height="18"
-            />
-            <span>กลับไปเข้าสู่ระบบ</span>
-          </button>
+        <!-- Footer - ปุ่มยืนยัน -->
+        <div class="flex justify-end mt-6 pt-4 border-lg border-gray-200">
           <button
             type="button"
             @click="handleSubmit"
             :disabled="isLoading"
-            class="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold text-sm sm:text-base disabled:opacity-60"
+            class="px-6 py-2.5 bg-blue-700 text-white rounded-lg hover:bg-blue-800 transition text-sm sm:text-base disabled:opacity-60"
           >
-            {{ isLoading ? 'กำลังบันทึก...' : 'ยืนยัน' }}
+            {{ isLoading ? 'กำลังบันทึก...' : 'เปลี่ยนรหัสผ่าน' }}
           </button>
         </div>
       </div>

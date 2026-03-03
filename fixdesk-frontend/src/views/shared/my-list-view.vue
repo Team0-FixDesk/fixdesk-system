@@ -6,8 +6,8 @@
  * @version 1.0.1
  * @since 2026-02-04
  * @author พชร ไพศรีสกุล
- * @lastModified 2026-02-21
- * @lastModifiedBy ธนภัทร จันทร์งาม
+ * @lastModified 2026-03-03
+ * @lastModifiedBy พชร ไพศรีสกุล
  * ---------------------------------------------------------------------
  * @description
  * หน้าจอสำหรับแสดงรายการแจ้งซ่อมของผู้ใช้งานปัจจุบัน
@@ -37,11 +37,14 @@
  * - ปรับปรุงข้อความ Confirm และ Toast ในการลบรายการ
  *   พร้อมกำหนดสีปุ่มยืนยัน/ยกเลิกให้ชัดเจนขึ้น
  *   [2026-02-21, ธนภัทร จันทร์งาม]
+ *   แก้ไขการ filter Date
+ *   [2026-03-03, พชร ไพศรีสกุล]
  * =====================================================================
  */
 
 <script setup>
-defineOptions({ name: 'MyListView' })  // กำหนดชื่อของ component สำหรับการ debug
+
+defineOptions({ name: 'MyListView' }) // กำหนดชื่อของ component สำหรับการ debug
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import Sweetalert from 'sweetalert2'
@@ -49,10 +52,10 @@ import { useMyRepairs } from '@/composables/useMyRepairs'
 
 // utils and HTML generation moved into composable; no local import needed
 
-import TableComponent from '@/components/table-component.vue'  // คอมโพเนนต์ตาราง
-import TableActions from '@/components/table-actions-component.vue'  // คอมโพเนนต์ปุ่มการกระทำของแถว
-import RepairButton from '@/components/button/repair-button-component.vue'  // ปุ่มสำหรับเพิ่มการซ่อมใหม่
-import RepairFilterBar from '@/components/filters/repair-filter-bar-component.vue'  // แถบกรองสำหรับการซ่อม
+import TableComponent from '@/components/table-component.vue' // คอมโพเนนต์ตาราง
+import TableActions from '@/components/table-actions-component.vue' // คอมโพเนนต์ปุ่มการกระทำของแถว
+import RepairButton from '@/components/button/repair-button-component.vue' // ปุ่มสำหรับเพิ่มการซ่อมใหม่
+import RepairFilterBar from '@/components/filters/repair-filter-bar-component.vue' // แถบกรองสำหรับการซ่อม
 
 // auth handled inside composable
 
@@ -74,9 +77,6 @@ const openMenuId = ref(null)
 
 // use composable to centralize data and actions
 const {
-  tableRows,
-  isLoading,
-  errorMessage,
   search,
   selectedStatuses,
   selectedUrgencies,
@@ -92,7 +92,6 @@ const {
 const searchInput = search
 const selectedStatuseList = selectedStatuses
 const selectedUrgencieLsit = selectedUrgencies
-const selectedDateLocal = selectedDate
 
 // ฟังก์ชันโหลดข้อมูล
 /**
@@ -135,7 +134,7 @@ async function handleDeleteRepair(repairCode) {
 
     // 🔴 Destructive action
     confirmButtonColor: '#DC2626', // red-600
-    cancelButtonColor: '#6B7280',  // gray-500
+    cancelButtonColor: '#6B7280', // gray-500
   })
 
   if (!confirm.isConfirmed) return
@@ -178,8 +177,14 @@ onMounted(() => {
     <h1 class="text-xl font-bold text-black mb-6">รายการแจ้งซ่อมของฉัน</h1>
 
     <!-- แถบตัวกรอง - ค้นหา, กรองสถานะ, ความเร่งด่วน, วันที่ -->
-    <RepairFilterBar mode="repair" v-model:search="searchInput" v-model:statuses="selectedStatuseList"
-      v-model:urgencies="selectedUrgencieLsit" v-model:date="selectedDate" @reset="resetFilters">
+    <RepairFilterBar
+      mode="repair"
+      v-model:search="searchInput"
+      v-model:statuses="selectedStatuseList"
+      v-model:urgencies="selectedUrgencieLsit"
+      v-model:date="selectedDate"
+      @reset="resetFilters"
+    >
       <!-- ส่วนขวา: ปุ่มเพิ่มการซ่อมใหม่ -->
       <template #right>
         <RepairButton />
@@ -188,15 +193,31 @@ onMounted(() => {
 
     <!-- ตาราง - แสดงรายการการซ่อมของผู้ใช้ -->
     <div class="p-3 mx-auto max-w-8xl">
-      <TableComponent :columns="tableColumnList" :rows="filteredRows" :perPage="10" :urgencyColumn="3" :statusColumn="4"
-        :columnAlign="['left', 'left', 'left', 'center', 'center', 'center']" :id-column-index="0"
-        :id-column-as-link="true" @detail="openDetail">
+      <TableComponent
+        :columns="tableColumnList"
+        :rows="filteredRows"
+        :perPage="10"
+        :urgencyColumn="3"
+        :statusColumn="4"
+        :columnAlign="['left', 'left', 'left', 'center', 'center', 'center']"
+        :id-column-index="0"
+        :id-column-as-link="true"
+        @detail="openDetail"
+      >
         <!-- เทมเพลต: คอลัมน์การกระทำ (ปุ่มแก้ไข/ลบ) -->
         <!-- คอลัมน์ Action (ดัชนี 5) -->
         <template #cell-5="{ row }">
-          <TableActions :row-id="row[0]" :open-menu-id="openMenuId" @toggle-menu="openMenuId = $event" role="user"
-            :row="row" :status="row[4]" @detail="openDetail(row[0])" @edit="openEdit(row[0])"
-            @delete="handleDeleteRepair(row[0])" />
+          <TableActions
+            :row-id="row[0]"
+            :open-menu-id="openMenuId"
+            @toggle-menu="openMenuId = $event"
+            role="user"
+            :row="row"
+            :status="row[4]"
+            @detail="openDetail(row[0])"
+            @edit="openEdit(row[0])"
+            @delete="handleDeleteRepair(row[0])"
+          />
         </template>
       </TableComponent>
     </div>
