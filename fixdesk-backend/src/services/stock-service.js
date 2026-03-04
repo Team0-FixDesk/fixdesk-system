@@ -941,7 +941,7 @@ module.exports = (db) => {
         // บันทึก transaction IN (คืนของ) - ระบุชื่อ column ชัดเจน + userId
         await connection.query(
           "INSERT INTO stock_transactions (stt_product_id, stt_user_id, stt_type, stt_quantity, stt_created_at, stt_ref_sf_id) VALUES (?, ?, 'IN', ?, NOW(), ?)",
-          [pdId, userId, item[0].sfd_qty, sfId],
+          [pdId, userId, returnQty, sfId],
         );
 
         await connection.commit();
