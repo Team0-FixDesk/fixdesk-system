@@ -1,6 +1,5 @@
 import { ref, computed } from 'vue'
 import { useAuthToken } from '@/composables/useAuthToken'
-import { extractDateFromCellContent } from '@/utils/date.util'
 import { createRepairDescriptionHtml } from '@/utils/repairRow.util'
 
 const API_BASE = import.meta.env.VITE_API_BASE
@@ -38,14 +37,17 @@ export function useMyRepairs() {
       if (!res.ok) throw new Error(data.message || 'LOAD_FAILED')
 
       // normalize row shape for TableComponent
-      tableRows.value = data.map((repair) => [
-        repair.rf_code,
-        repair.tt_name,
-        createRepairDescriptionHtml(repair),
-        repair.rf_urgency,
-        repair.rf_user_status,
-        '',
-      ])
+      tableRows.value = data.map((repair) => ({
+        row: [
+          repair.rf_code,
+          repair.tt_name,
+          createRepairDescriptionHtml(repair),
+          repair.rf_urgency,
+          repair.rf_user_status,
+          '',
+        ],
+        createdDate: repair.rf_create_at,
+      }))
     } catch (err) {
       errorMessage.value = err.message || String(err)
       console.error('useMyRepairs.loadMyRepairs:', err)
@@ -90,24 +92,43 @@ export function useMyRepairs() {
 
   const filteredRows = computed(() => {
     const q = String(search.value || '').toLowerCase()
-    const dateFilter = selectedDate.value
 
-    return tableRows.value.filter((row) => {
-      const dateFromRow = extractDateFromCellContent(row[2])
-      const code = String(row[0] || '').toLowerCase()
-      const type = String(row[1] || '').toLowerCase()
-      const location = String(row[2] || '').toLowerCase()
-      const urgency = row[3]
-      const status = row[4]
+    return tableRows.value
+      .filter((item) => {
+        const row = item.row
 
-      const matchesSearch = code.includes(q) || type.includes(q) || location.includes(q)
-      const matchesUrgency = selectedUrgencies.value.length === 0 || selectedUrgencies.value.includes(urgency)
-      const matchesStatus = selectedStatuses.value.length === 0 || selectedStatuses.value.includes(status)
-      const matchesDate = !dateFilter || dateFromRow === new Date(dateFilter).toLocaleDateString('th-TH')
+        const code = String(row[0] || '').toLowerCase()
+        const type = String(row[1] || '').toLowerCase()
+        const location = String(row[2] || '').toLowerCase()
+        const urgency = row[3]
+        const status = row[4]
 
-      return matchesSearch && matchesUrgency && matchesStatus && matchesDate
-    })
+        const matchesSearch = code.includes(q) || type.includes(q) || location.includes(q)
+
+        const matchesUrgency =
+          selectedUrgencies.value.length === 0 || selectedUrgencies.value.includes(urgency)
+
+        const matchesStatus =
+          selectedStatuses.value.length === 0 || selectedStatuses.value.includes(status)
+
+        const matchesDate =
+          !selectedDate.value || toLocalYmd(item.createdDate) === selectedDate.value
+
+        return matchesSearch && matchesUrgency && matchesStatus && matchesDate
+      })
+      .map((item) => item.row) // สำคัญมาก
   })
+
+  function toLocalYmd(date) {
+    const d = new Date(date)
+    if (Number.isNaN(d.getTime())) return ''
+
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+
+    return `${y}-${m}-${day}`
+  }
 
   return {
     tableRows,

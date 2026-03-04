@@ -6,8 +6,8 @@
  * @version         1.0.2
  * @since           2025-10-21
  * @author          เศรษฐพงศ์ หอมชื่น
- * @lastModified    2026-02-23
- * @lastModifiedBy  นราธิป แสนทวีสุข
+ * @lastModified    2026-02-20
+ * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
  * ---------------------------------------------------------------------
  * @description
  *  หน้าจอสำหรับใช้จัดการข้อมูลผู้ใช้งานในระบบของผู้ดูแลระบบ
@@ -45,9 +45,10 @@
  *   - แก้ไขข้อความคำอธิบายรายละเอียดผู้ใช้/แก้ไขข้อมูลผู้ใช้ [2026-02-20, ปฏิพัทธ์ จงนันทพันธกุล]
  *   - แก้ไขชื่อบทบาท "ผู้ใช้งาน"                      [2026-02-20, ปฏิพัทธ์ จงนันทพันธ์กุล]
  *   - แก้ไขการสร้างบัญชีผู้ใช้ และ import จากไฟล์ ให้รองรับการสร้าง default รหัสผ่าน                      [2026-02-25, พชร ไพศรีสกุล]
+ *   - แก้ไขสีปุ่ม                          [2026-02-27, เศรษฐพงศ์ หอมชื่น]
  * =====================================================================
  */
- 
+
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import TableComponent from '@/components/table-component.vue'
@@ -379,7 +380,8 @@ async function confirmAddUser() {
     reverseButtons: true,
     confirmButtonText: 'ยืนยัน',
     cancelButtonText: 'ยกเลิก',
-    confirmButtonColor: '#16a34a',
+    confirmButtonColor: '#0048EF',
+    cancelButtonColor: '#d4d4d4',
   })
   if (!result.isConfirmed) return
 
@@ -409,6 +411,8 @@ async function confirmAddUser() {
     toast.fire({
       icon: 'success',
       title: 'เพิ่มผู้ใช้เรียบร้อยแล้ว',
+      background: '#f0f9ff',
+      color: '#1e3a8a',
     })
     showUserModal.value = false
     await fetchUsers()
@@ -431,9 +435,10 @@ async function confirmEditUser() {
     icon: 'question',
     showCancelButton: true,
     reverseButtons: true,
-    confirmButtonText: 'ยืนยัน',
+    confirmButtonText: 'บันทึการแก้ไข',
     cancelButtonText: 'ยกเลิก',
-    confirmButtonColor: '#2563eb',
+    confirmButtonColor: '#fb923c',
+    cancelButtonColor: '#d4d4d4',
   })
   if (!result.isConfirmed) return
   try {
@@ -461,6 +466,8 @@ async function confirmEditUser() {
     toast.fire({
       icon: 'success',
       title: 'แก้ไขข้อมูลผู้ใช้เรียบร้อยแล้ว',
+      background: '#f0f9ff',
+      color: '#1e3a8a',
     })
     showUserModal.value = false
     await fetchUsers()
@@ -481,10 +488,11 @@ async function confirmDelete(username) {
     text: `คุณแน่ใจหรือไม่ว่าต้องการลบ "${username}"?`,
     icon: 'warning',
     showCancelButton: true,
-    reverseButtons: true,
-    confirmButtonText: 'ลบ',
+    reverseButtons: false,
+    confirmButtonText: 'ยืนยันลบ',
     cancelButtonText: 'ยกเลิก',
     confirmButtonColor: '#dc2626',
+    cancelButtonColor: '#d4d4d4',
   })
   if (!result.isConfirmed) return
   try {
@@ -521,6 +529,8 @@ async function confirmDelete(username) {
     toast.fire({
       icon: 'success',
       title: 'ลบผู้ใช้เรียบร้อยแล้ว',
+      background: '#f0f9ff',
+      color: '#1e3a8a',
     })
     await fetchUsers()
   } catch (err) {
@@ -705,7 +715,6 @@ async function handleAddTechType() {
     showCancelButton: true,
     confirmButtonText: 'บันทึก',
     cancelButtonText: 'ยกเลิก',
-    confirmButtonColor: '#2563eb',
     inputValidator: (value) => {
       if (!value || !value.trim()) return 'กรุณากรอกชื่อตำแหน่งช่าง'
       return null
@@ -725,6 +734,8 @@ async function handleAddTechType() {
     toast.fire({
       icon: 'success',
       title: 'เพิ่มตำแหน่งช่างเรียบร้อยแล้ว',
+      background: '#f0f9ff',
+      color: '#1e3a8a',
     })
     await fetchMasterData()
     await fetchUsers()
@@ -748,7 +759,6 @@ async function handleEditTechType(item) {
     showCancelButton: true,
     confirmButtonText: 'บันทึก',
     cancelButtonText: 'ยกเลิก',
-    confirmButtonColor: '#2563eb',
     inputValidator: (value) => {
       if (!value || !value.trim()) return 'กรุณากรอกชื่อตำแหน่งช่าง'
       return null
@@ -768,6 +778,8 @@ async function handleEditTechType(item) {
     toast.fire({
       icon: 'success',
       title: 'แก้ไขตำแหน่งช่างเรียบร้อยแล้ว',
+      background: '#f0f9ff',
+      color: '#1e3a8a',
     })
     await fetchMasterData()
     await fetchUsers()
@@ -805,6 +817,8 @@ async function handleDeleteTechType(item) {
     toast.fire({
       icon: 'success',
       title: 'ลบตำแหน่งช่างเรียบร้อยแล้ว',
+      background: '#f0f9ff',
+      color: '#1e3a8a',
     })
     await fetchMasterData()
     await fetchUsers()
@@ -823,6 +837,8 @@ function handleImportSuccess() {
   toast.fire({
     icon: 'success',
     title: 'นำเข้าผู้ใช้งานเรียบร้อยแล้ว',
+    background: '#f0f9ff',
+    color: '#1e3a8a',
   })
   showImportModal.value = false
 }
@@ -967,7 +983,7 @@ async function handleResetPassword(userId) {
         <div class="flex flex-col gap-2 sm:flex-row">
           <ImportButtonComponent @click="showImportModal = true" />
           <BaseButtonComponent
-            class="h-10 px-4 rounded-lg bg-[#1E48D1] hover:bg-[#1539a9] text-white font-medium shadow-sm"
+            class="h-10 px-4 rounded-lg bg-blue-700 hover:bg-blue-800 text-white font-medium shadow-sm"
             @click="openAddModal"
           >
             <Icon icon="fluent:add-12-filled" width="20" height="20" />
@@ -1385,18 +1401,18 @@ async function handleResetPassword(userId) {
               <button
                 type="button"
                 @click="closeUserModal"
-                class="px-4 py-2 text-gray-700 border border-gray-300 rounded-md"
+                class="px-4 py-2 text-white border border-gray-300 rounded-lg bg-neutral-300 hover:bg-neutral-400"
               >
                 ยกเลิก
               </button>
               <button
                 type="submit"
                 :class="[
-                  'px-4 py-2 text-white rounded-md',
-                  isAddMode ? 'bg-green-500' : 'bg-orange-500',
+                  'px-4 py-2 text-white rounded-lg',
+                  isAddMode ? 'bg-green-500 hover:bg-green-600' : 'bg-orange-400 hover:bg-orange-500',
                 ]"
               >
-                {{ isAddMode ? 'ยืนยันเพิ่ม' : 'บันทึกการแก้ไข' }}
+                {{ isAddMode ? 'เพิ่มผู้ใช้งาน' : 'บันทึกการแก้ไข' }}
               </button>
             </template>
           </div>
@@ -1418,7 +1434,6 @@ async function handleResetPassword(userId) {
             <h2 class="text-lg font-bold text-black">จัดการตำแหน่งช่าง</h2>
           </div>
           <BaseButtonComponent
-            to="/main/repair-request"
             @click="handleAddTechType"
             class="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-white bg-blue-700 rounded-md hover:bg-blue-900"
           >

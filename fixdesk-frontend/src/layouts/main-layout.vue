@@ -46,9 +46,15 @@ import UserSidebar from './user-sidebar.vue'
 import TechnicianSidebar from './technician-sidebar.vue'
 import ManagerSidebar from './manager-sidebar.vue'
 
+// import first-login modal
+import FirstLoginChangePasswordModal from '@/components/modal/first-login-change-password-modal.vue'
+
 const router = useRouter()
 const role = ref(null)
 const isInitialized = ref(false)
+const showFirstLoginModal = ref(false)
+const userIdForFirstLogin = ref(null)
+const usernameForFirstLogin = ref(null)
 
 /* Idle timeout: 2 ชั่วโมง */
 const IDLE_TIMEOUT = 2 * 60 * 60 * 1000
@@ -99,6 +105,14 @@ onMounted(() => {
     const decoded = jwtDecode(token)
     console.log('decoded token:', decoded)
     role.value = decoded.role_name
+
+    // ตรวจสอบ us_active สำหรับ first-login
+    if (decoded.us_active === 0) {
+      showFirstLoginModal.value = true
+      userIdForFirstLogin.value = decoded.us_id
+      usernameForFirstLogin.value = decoded.us_user_name
+    }
+
     isInitialized.value = true
 
     const current = router.currentRoute.value.path
@@ -161,6 +175,13 @@ const SidebarComponent = computed(() => {
       return UserSidebar
   }
 })
+
+// Handler สำหรับเมื่อเปลี่ยนรหัสผ่านครั้งแรกสำเร็จ
+function handleFirstLoginSuccess() {
+  showFirstLoginModal.value = false
+  // ปิด modal เท่านั้น - ไม่ต้องรีเฟรช
+  // รหัสผ่านมีการเปลี่ยนแล้วในฐานข้อมูล และ us_active ถูกตั้งเป็น 1
+}
 </script>
 
 <template>
@@ -178,5 +199,13 @@ const SidebarComponent = computed(() => {
     >
       <RouterView />
     </main>
+
+    <!-- First Login Modal -->
+    <FirstLoginChangePasswordModal
+      :isOpen="showFirstLoginModal"
+      :username="usernameForFirstLogin || ''"
+      :userId="userIdForFirstLogin || 0"
+      @success="handleFirstLoginSuccess"
+    />
   </div>
 </template>

@@ -126,6 +126,7 @@ CREATE TABLE user (
   us_department VARCHAR(255),               -- หน่วยงาน
   us_role_id INT,                           -- บทบาทผู้ใช้
   us_tt_id INT,                             -- ประเภทช่าง (ถ้ามี)
+  us_active TINYINT DEFAULT 0,              -- สถานะการเปลี่ยนรหัสผ่านครั้งแรก (0=ยังไม่เปลี่ยน, 1=เปลี่ยนแล้ว)
   FOREIGN KEY (us_ttn_id) REFERENCES title_name(ttn_id)
     ON UPDATE CASCADE
     ON DELETE SET NULL,

@@ -54,3 +54,16 @@ export async function getAllStockFormList(userAuthenticationToken) {
 
   return apiResponse.json()
 }
+
+// 4. ฟังก์ชันดึงข้อมูล Stock Transactions ทั้งหมด
+export async function getAllTransactions(userAuthenticationToken) {
+  const apiResponse = await fetch(`${API_BASE_URL}/transactions`, {
+    headers: createAuthHeaders(userAuthenticationToken),
+  })
+
+  if (!apiResponse.ok) {
+    throw new Error('Fetch transactions failed')
+  }
+
+  return apiResponse.json()
+}
