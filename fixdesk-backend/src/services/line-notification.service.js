@@ -326,7 +326,7 @@ async function notifyJobAssignment(assignmentData) {
               action: {
                 type: 'uri',
                 label: 'ดูรายละเอียดบนเว็บไซต์',
-                uri: process.env.FRONTEND_URL || 'https://fixdesk.zeenontakorn-demo.xyz/#/home'
+                uri: process.env.FRONTEND_URL || 'https://fixdesk.zeenontakorn-demo.xyz/login#/login'
               },
               style: 'primary',
               color: '#0367D1'
@@ -593,7 +593,7 @@ async function notifyJobAccepted(acceptData) {
               action: {
                 type: 'uri',
                 label: 'ดูรายละเอียดบนเว็บไซต์',
-                uri: process.env.FRONTEND_URL || 'https://fixdesk.zeenontakorn-demo.xyz/#/home'
+                uri: process.env.FRONTEND_URL || 'https://fixdesk.zeenontakorn-demo.xyz/login#/login'
               },
               style: 'primary',
               color: '#10B981'
@@ -609,6 +609,304 @@ async function notifyJobAccepted(acceptData) {
     return { success: true, message: 'Notification sent' };
   } catch (error) {
     console.error('❌ Failed to send LINE acceptance notification:', error.message);
+    return { success: false, message: error.message };
+  }
+}
+
+
+/**
+ * ส่งข้อความแจ้งเตือนเมื่อมีงานแจ้งซ่อมใหม่เข้ามา
+ * @param {Object} newRepairData - ข้อมูลใบแจ้งซ่อมใหม่
+ * @param {string} newRepairData.rf_code - รหัสใบแจ้งซ่อม
+ * @param {string} newRepairData.user_name - ชื่อผู้แจ้งซ่อม
+ * @param {string} newRepairData.repair_title - หัวข้อการซ่อม
+ * @param {string} newRepairData.location - สถานที่
+ * @param {string} newRepairData.repair_type - ประเภทการซ่อม
+ * @param {string} newRepairData.urgency - ความเร่งด่วน (low/medium/high)
+ * @param {string} newRepairData.phone - เบอร์โทรติดต่อ
+ */
+async function notifyNewRepair(newRepairData) {
+  if (!client || !TARGET_GROUP_ID) {
+    console.warn('⚠️ LINE notification is not configured or GROUP_ID is missing. Skipping notification.');
+    return { success: false, message: 'LINE not configured or GROUP_ID missing' };
+  }
+
+  try {
+    const {
+      rf_code,
+      user_name,
+      repair_title,
+      location,
+      repair_type,
+      urgency = 'medium',
+      phone
+    } = newRepairData;
+
+    // กำหนดสีและข้อความตามความเร่งด่วน
+    const urgencyConfig = {
+      high: { color: '#DC2626', bgColor: '#FEE2E2', text: '🔴 เร่งด่วนมาก', textColor: '#991B1B' },
+      medium: { color: '#F59E0B', bgColor: '#FEF3C7', text: '🟡 ปานกลาง', textColor: '#92400E' },
+      low: { color: '#10B981', bgColor: '#D1FAE5', text: '🟢 ไม่เร่งด่วน', textColor: '#065F46' }
+    };
+    const urgencyInfo = urgencyConfig[urgency] || urgencyConfig.medium;
+
+    const currentTime = new Date().toLocaleString('th-TH', {
+      timeZone: 'Asia/Bangkok',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+
+    const message = {
+      type: 'flex',
+      altText: `🆕 มีงานแจ้งซ่อมใหม่: ${rf_code}`,
+      contents: {
+        type: 'bubble',
+        size: 'giga',
+        header: {
+          type: 'box',
+          layout: 'vertical',
+          contents: [
+            {
+              type: 'text',
+              text: '🆕 มีงานแจ้งซ่อมใหม่',
+              weight: 'bold',
+              size: 'xl',
+              color: '#ffffff'
+            }
+          ],
+          backgroundColor: '#F97316'
+        },
+        body: {
+          type: 'box',
+          layout: 'vertical',
+          contents: [
+            {
+              type: 'box',
+              layout: 'horizontal',
+              contents: [
+                {
+                  type: 'text',
+                  text: 'รหัสงาน:',
+                  size: 'sm',
+                  color: '#8c8c8c',
+                  flex: 2
+                },
+                {
+                  type: 'text',
+                  text: rf_code || '-',
+                  size: 'sm',
+                  color: '#111111',
+                  align: 'end',
+                  weight: 'bold',
+                  flex: 4
+                }
+              ]
+            },
+            {
+              type: 'box',
+              layout: 'horizontal',
+              margin: 'md',
+              contents: [
+                {
+                  type: 'text',
+                  text: 'ความเร่งด่วน:',
+                  size: 'sm',
+                  color: '#8c8c8c',
+                  flex: 2
+                },
+                {
+                  type: 'box',
+                  layout: 'horizontal',
+                  contents: [
+                    {
+                      type: 'text',
+                      text: urgencyInfo.text,
+                      size: 'xs',
+                      color: urgencyInfo.textColor,
+                      weight: 'bold',
+                      align: 'center',
+                      gravity: 'center'
+                    }
+                  ],
+                  backgroundColor: urgencyInfo.bgColor,
+                  paddingAll: '5px',
+                  cornerRadius: 'md',
+                  flex: 4,
+                  justifyContent: 'flex-end'
+                }
+              ]
+            },
+            {
+              type: 'separator',
+              margin: 'md'
+            },
+            {
+              type: 'box',
+              layout: 'vertical',
+              margin: 'lg',
+              spacing: 'sm',
+              contents: [
+                {
+                  type: 'box',
+                  layout: 'baseline',
+                  spacing: 'md',
+                  contents: [
+                    {
+                      type: 'text',
+                      text: '👤',
+                      size: 'sm',
+                      flex: 1
+                    },
+                    {
+                      type: 'text',
+                      text: user_name || '-',
+                      size: 'sm',
+                      color: '#111111',
+                      flex: 9,
+                      weight: 'bold',
+                      wrap: true
+                    }
+                  ]
+                },
+                ...(repair_type ? [{
+                  type: 'box',
+                  layout: 'baseline',
+                  spacing: 'md',
+                  contents: [
+                    {
+                      type: 'text',
+                      text: '⚙️',
+                      size: 'sm',
+                      flex: 1
+                    },
+                    {
+                      type: 'text',
+                      text: repair_type,
+                      size: 'sm',
+                      color: '#555555',
+                      flex: 9
+                    }
+                  ]
+                }] : []),
+                {
+                  type: 'box',
+                  layout: 'baseline',
+                  spacing: 'md',
+                  contents: [
+                    {
+                      type: 'text',
+                      text: '📝',
+                      size: 'sm',
+                      flex: 1
+                    },
+                    {
+                      type: 'text',
+                      text: repair_title || '-',
+                      size: 'sm',
+                      color: '#111111',
+                      flex: 9,
+                      wrap: true
+                    }
+                  ]
+                },
+                {
+                  type: 'box',
+                  layout: 'baseline',
+                  spacing: 'md',
+                  contents: [
+                    {
+                      type: 'text',
+                      text: '📍',
+                      size: 'sm',
+                      flex: 1
+                    },
+                    {
+                      type: 'text',
+                      text: location || '-',
+                      size: 'sm',
+                      color: '#111111',
+                      flex: 9,
+                      wrap: true
+                    }
+                  ]
+                },
+                ...(phone ? [{
+                  type: 'box',
+                  layout: 'baseline',
+                  spacing: 'md',
+                  contents: [
+                    {
+                      type: 'text',
+                      text: '📞',
+                      size: 'sm',
+                      flex: 1
+                    },
+                    {
+                      type: 'text',
+                      text: phone,
+                      size: 'sm',
+                      color: '#111111',
+                      flex: 9
+                    }
+                  ]
+                }] : [])
+              ]
+            },
+            {
+              type: 'box',
+              layout: 'vertical',
+              margin: 'lg',
+              backgroundColor: '#FFF7ED',
+              paddingAll: '10px',
+              cornerRadius: 'md',
+              contents: [
+                {
+                  type: 'text',
+                  text: '⏰ เวลาแจ้งซ่อม: ' + currentTime,
+                  size: 'xs',
+                  color: '#555555'
+                },
+                {
+                  type: 'text',
+                  text: '⚠️ กรุณามอบหมายช่างโดยเร็วที่สุด',
+                  size: 'xs',
+                  color: '#EA580C',
+                  weight: 'bold',
+                  margin: 'sm'
+                }
+              ]
+            }
+          ]
+        },
+        footer: {
+          type: 'box',
+          layout: 'vertical',
+          contents: [
+            {
+              type: 'button',
+              action: {
+                type: 'uri',
+                label: 'มอบหมายช่างเลย',
+                uri: process.env.FRONTEND_URL || 'https://fixdesk.zeenontakorn-demo.xyz/login#/login'
+              },
+              style: 'primary',
+              color: '#F97316'
+            }
+          ]
+        }
+      }
+    };
+
+    await client.pushMessage(TARGET_GROUP_ID, message);
+    
+    console.log('✅ LINE new repair notification sent successfully for:', rf_code);
+    return { success: true, message: 'New repair notification sent' };
+  } catch (error) {
+    console.error('❌ Failed to send LINE new repair notification:', error.message);
     return { success: false, message: error.message };
   }
 }
@@ -638,5 +936,6 @@ async function testNotification() {
 module.exports = {
   notifyJobAssignment,
   notifyJobAccepted,
+  notifyNewRepair,
   testNotification
 };
