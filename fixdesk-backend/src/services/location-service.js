@@ -2,14 +2,14 @@
  * =====================================================================
  * @file            location.service.js
  * @layer           Service Layer (Business Logic Layer)
- * @version         1.1.0
+ * @version         1.2.0
  * @since           2026-02-18
  * @author          พชร ไพศรีสกุล
  * @contributors
  *   - พชร ไพศรีสกุล
  *   - นราธิป แสนทวีสุข
  *
- * @lastModified    2026-02-13
+ * @lastModified    2026-03-03
  * @lastModifiedBy  นราธิป แสนทวีสุข
  * ---------------------------------------------------------------------
  * @description
@@ -28,6 +28,8 @@
  *     [2026-02-10, พชร ไพศรีสกุล] V 1.0.0
  *   - แก้ไขการจัดการ transaction ของฐานข้อมูลในการ import locations
  *     [2026-02-13, นราธิป แสนทวีสุข] V 1.1.0
+ *   - feat(location): เพิ่ม checkUsageInRepairs() เพื่อตรวจสอบการใช้งานสถานที่ในใบแจ้งซ่อมก่อนแก้ไข/ลบ
+ *     [2026-03-03, นราธิป แสนทวีสุข] V 1.2.0
  *
  * =====================================================================
  */
@@ -458,6 +460,53 @@ module.exports = (db) => {
       } finally {
         connection.release();
       }
+    },
+
+    /* ================== USAGE CHECK SERVICE ================== */
+    /**
+     * เช็คว่า Building, Floor หรือ Room มีการใช้งานในรายการแจ้งซ่อมหรือไม่
+     * @param {string} type - ประเภท: 'building', 'floor', 'room'
+     * @param {number} id - ID ของ Building, Floor หรือ Room
+     * @returns {Promise<{inUse: boolean, count: number}>}
+     */
+    async checkUsageInRepairs(type, id) {
+      let sql;
+      
+      if (type === 'building') {
+        // เช็คว่ามีห้องในอาคารนี้ที่ถูกใช้ในรายการแจ้งซ่อมหรือไม่
+        sql = `
+          SELECT COUNT(DISTINCT rf.rf_id) as count 
+          FROM repair_form rf
+          JOIN room r ON rf.rf_room_id = r.room_id
+          JOIN floor f ON r.room_fl_id = f.fl_id
+          WHERE f.fl_bd_id = ?
+        `;
+      } else if (type === 'floor') {
+        // เช็คว่ามีห้องในชั้นนี้ที่ถูกใช้ในรายการแจ้งซ่อมหรือไม่
+        sql = `
+          SELECT COUNT(DISTINCT rf.rf_id) as count 
+          FROM repair_form rf
+          JOIN room r ON rf.rf_room_id = r.room_id
+          WHERE r.room_fl_id = ?
+        `;
+      } else if (type === 'room') {
+        // เช็คว่าห้องนี้ถูกใช้ในรายการแจ้งซ่อมหรือไม่
+        sql = `
+          SELECT COUNT(*) as count 
+          FROM repair_form 
+          WHERE rf_room_id = ?
+        `;
+      } else {
+        throw new Error('INVALID_TYPE');
+      }
+
+      const [result] = await db.promise().query(sql, [id]);
+      const count = result[0].count;
+      
+      return {
+        inUse: count > 0,
+        count: count
+      };
     },
   };
 };
