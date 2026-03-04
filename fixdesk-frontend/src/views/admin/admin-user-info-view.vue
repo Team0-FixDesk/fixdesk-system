@@ -48,7 +48,7 @@
  *   - แก้ไขสีปุ่ม                          [2026-02-27, เศรษฐพงศ์ หอมชื่น]
  * =====================================================================
  */
- 
+
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import TableComponent from '@/components/table-component.vue'
@@ -380,7 +380,7 @@ async function confirmAddUser() {
     reverseButtons: true,
     confirmButtonText: 'ยืนยัน',
     cancelButtonText: 'ยกเลิก',
-    confirmButtonColor: '#0048EF', 
+    confirmButtonColor: '#0048EF',
     cancelButtonColor: '#d4d4d4',
   })
   if (!result.isConfirmed) return
@@ -437,7 +437,7 @@ async function confirmEditUser() {
     reverseButtons: true,
     confirmButtonText: 'บันทึการแก้ไข',
     cancelButtonText: 'ยกเลิก',
-    confirmButtonColor: '#fb923c', 
+    confirmButtonColor: '#fb923c',
     cancelButtonColor: '#d4d4d4',
   })
   if (!result.isConfirmed) return
@@ -1434,7 +1434,6 @@ async function handleResetPassword(userId) {
             <h2 class="text-lg font-bold text-black">จัดการตำแหน่งช่าง</h2>
           </div>
           <BaseButtonComponent
-            to="/main/repair-request"
             @click="handleAddTechType"
             class="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-white bg-blue-700 rounded-md hover:bg-blue-900"
           >
