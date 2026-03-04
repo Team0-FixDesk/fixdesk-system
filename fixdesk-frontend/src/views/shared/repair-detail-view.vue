@@ -85,7 +85,7 @@
  *     [2026-02-22, นราธิป แสนทวีสุข]
  *   - รองรับการคืนอุปกรณ์แบบบางส่วน (Partial Return)ปรับปรุง UX/UI หน้า Return Modal และเพิ่มตัวเลือกจำนวนที่ต้องการคืน
  *     [2026-02-23, พชร ไพศรีสกุล] V1.3.0
- *   - แก้ไขสีปุ่ม   
+ *   - แก้ไขสีปุ่ม
        [2026-02-27, เศรษฐพงศ์ หอมชื่น]
  * =====================================================================
  */
@@ -761,15 +761,9 @@ function increaseQty(item) {
 
 // Lifecycle Hooks - วัฏจักรชีวิตของคอมโพเนนต์
 onMounted(() => {
-  try {
-    const decoded = token?.value ? jwtDecode(token.value) : null
-
-    canAssign.value = decoded?.role_name === 'Admin'
-    canAccept.value = decoded?.role_name === 'Technician'
-  } catch {
-    canAssign.value = false
-    canAccept.value = false
-  }
+  const state = history.state || {}
+  canAssign.value = !!state.fromAdmin
+  canAccept.value = !!state.fromTechnician
 
   fetchRepairDetail()
   fetchTechnicianTypeList()
