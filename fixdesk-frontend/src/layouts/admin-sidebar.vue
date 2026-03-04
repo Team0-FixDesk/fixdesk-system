@@ -68,6 +68,7 @@ import HomeIcon from '@/assets/icons/sidebar/home-icon.svg'
 import RepairIcon from '@/assets/icons/sidebar/repair-icon.svg'
 import ListIcon from '@/assets/icons/sidebar/list-icon.svg'
 import ListChecksIcon from '@/assets/icons/sidebar/list-checks-icon.svg'
+import HistoryListChecksIcon from '@/assets/icons/sidebar/clock-icon.svg'
 import LogsListIcon from '@/assets/icons/sidebar/logs-list-icon.svg'
 import HistoryListIcon from '@/assets/icons/sidebar/history-list-icon.svg'
 import UserIcon from '@/assets/icons/sidebar/user-icon.svg'
@@ -113,7 +114,7 @@ const menuSections = [
     title: 'การดำเนินงาน',
     items: [
       { icon: ListChecksIcon, label: 'ตรวจสอบคำร้อง', path: '/main/admin-check-request' },
-      { icon: { name: 'fluent-mdl2:full-history' }, label: 'ประวัติการแจ้งซ่อม', path: '/main/admin-history' },
+      { icon: HistoryListChecksIcon , label: 'ประวัติการแจ้งซ่อม', path: '/main/admin-history' },
       { icon: LogsListIcon, label: 'รายการเบิกของ', path: '/main/stock-withdraw-list' },
       { icon: HistoryListIcon, label: 'ประวัติการเบิกของ', path: '/main/stock-withdraw-history' },
     ],
