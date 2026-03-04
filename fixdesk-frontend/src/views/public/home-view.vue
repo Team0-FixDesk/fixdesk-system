@@ -146,7 +146,7 @@ const goToLogin = () => router.push('/login')
 
           <!-- สถานะการซ่อม -->
           <span
-            class="px-3 py-1 text-sm rounded-full"
+            class="px-3 py-1 text-sm rounded-lg w-[125px] text-center"
             :class="getRepairStatusColorClass(item.rf_user_status)"
           >
             {{ getRepairStatusLabel(item.rf_user_status) }}

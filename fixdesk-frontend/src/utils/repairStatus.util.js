@@ -38,8 +38,8 @@ const REPAIR_STATUS_LABELS = {
 
 // เก็บสี (CSS Class) ของแต่ละสถานะ
 const REPAIR_STATUS_COLORS = {
-  pending: 'bg-blue-200 text-blue-600',
-  in_progress: 'bg-amber-100 text-amber-600',
+  pending: 'bg-amber-100 text-amber-600',
+  in_progress: 'bg-blue-200 text-blue-600',
   done: 'bg-green-100 text-green-600',
   cancel: 'bg-gray-100 text-gray-600', // เพิ่มสีสำหรับยกเลิกให้ครบ
 }
@@ -94,7 +94,7 @@ export function getRepairStepNumber(statusKey) {
  *  โดยเปรียบเทียบลำดับสถานะปัจจุบันของงานซ่อมกับลำดับเป้าหมาย
 *
  * @author พชร ไพศรีสกุล
- * 
+ *
  *  หลักการทำงาน:
  *   - ถ้าสถานะปัจจุบันยังไม่ถึงขั้นตอนที่กำหนด → แสดงสีเทา
  *   - ถ้าถึงหรือเกินขั้นตอนที่กำหนดแล้ว → แสดงสีเขียวและตัวหนา
