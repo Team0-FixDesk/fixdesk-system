@@ -244,7 +244,7 @@ const resetFilters = () => {
 }
 
 const openDetail = (code) => {
-  router.push(`/main/repair-detail/${code}`)
+  router.push({ path: `/main/repair-detail/${code}`, state: { fromAdmin: true } })
 }
 
 const openAssignModal = (row) => {
