@@ -1040,7 +1040,7 @@ async function handleResetPassword(userId) {
               width="35"
               height="35"
               style="color: #8e8e8e"
-              v-if="isAddMode || isEditMode"
+              v-if="isAddMode || isEditMode || isViewMode"
             />
           </div>
           <h2 class="text-xl font-bold p-1 text-gray-800">{{ modalTitle }}</h2>

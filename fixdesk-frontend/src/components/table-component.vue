@@ -144,7 +144,7 @@ function getColumnWidth(columnIndex) {
 <template>
   <div class="relative overflow-x-auto">
     <div class="relative overflow-x-auto min-h-[200px] max-h-[600px]">
-      <table class="min-w-[640px] w-full text-xs sm:text-sm border-collapse table-fixed">
+      <table class="min-w-[640px] w-full text-xs sm:text-sm border-collapse">
         <thead class="bg-gray-100 border-b border-gray-300">
           <tr>
             <th
@@ -175,7 +175,7 @@ function getColumnWidth(columnIndex) {
               v-for="(cell, cellIndex) in item.row"
               :key="cellIndex"
               v-show="!hiddenColumns.includes(cellIndex)"
-              class="px-3 py-2 align-middle"
+              class="px-3 py-2 align-middle "
               :class="[
                 getAlignClass(cellIndex),
                 cellIndex === 0 ? 'whitespace-nowrap overflow-hidden' : 'whitespace-nowrap',

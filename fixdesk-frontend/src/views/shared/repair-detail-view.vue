@@ -607,50 +607,6 @@ function getStockStatusBadge(status) {
   }
 }
 
-async function returnItem(item) {
-  try {
-    if (!requireAuth()) return
-
-    const res = await fetch(`${API_BASE_URL}/stock-forms/return-item`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token.value}`, // ✅ ใช้อันนี้
-      },
-      body: JSON.stringify({
-        sf_code: item.sf_code,
-        pd_id: item.id,
-      }),
-    })
-
-    const data = await res.json()
-
-    if (!res.ok) throw new Error(data.message)
-
-    await fetchRepairDetail()
-
-    Swal.fire({
-      toast: true,
-      position: 'top-end',
-      icon: 'success',
-      title: 'คืนอุปกรณ์สำเร็จ',
-      showConfirmButton: false,
-      timer: 2000,
-    })
-  } catch (err) {
-    console.error(err)
-
-    Swal.fire({
-      toast: true,
-      position: 'top-end',
-      icon: 'error',
-      title: err.message || 'คืนอุปกรณ์ไม่สำเร็จ',
-      showConfirmButton: false,
-      timer: 3000,
-    })
-  }
-}
-
 function openReturnModal() {
   selectedReturnItems.value = []
   showReturnModal.value = true
@@ -747,16 +703,6 @@ function validateReturnQty(item) {
   if (item.returnQty < 1) item.returnQty = 1
 
   if (item.returnQty > item.qty) item.returnQty = item.qty
-}
-
-function decreaseQty(item) {
-  item.returnQty = Math.max(1, item.returnQty - 1);
-  validateReturnQty(item);
-}
-
-function increaseQty(item) {
-  item.returnQty = Math.min(item.qty, item.returnQty + 1);
-  validateReturnQty(item);
 }
 
 // Lifecycle Hooks - วัฏจักรชีวิตของคอมโพเนนต์
