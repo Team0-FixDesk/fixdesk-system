@@ -147,12 +147,14 @@ module.exports = (db) => {
     stockController.deleteProduct,
   );
 
-  // --- CATEGORY ROUTES ---
-  /**
-   * GET /category
-   * ดึงรายการหมวดหมู่สินค้า
-   * @route GET /category
-   */
+  // --- Stock Transactions ---
+  router.get(
+    "/transactions",
+    authMiddleware,
+    stockController.getAllTransactions,
+  );
+
+  // --- Category ---
   router.get("/category", stockController.getCategories);
 
   /**

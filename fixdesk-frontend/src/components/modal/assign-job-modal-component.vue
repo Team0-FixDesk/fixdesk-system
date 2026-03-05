@@ -3,11 +3,11 @@
  * @file            assign-job-modal-component.vue
  * @module          มอดูลจัดการงานซ่อม - มอบหมายงานให้ช่าง
  * @layer           Component (Presentation Layer)
- * @version         1.0.0
+ * @version         1.0.1
  * @since           2025-10-21
  * @author          เศรษฐพงศ์ หอมชื่น
- * @lastModified    2026-02-23
- * @lastModifiedBy  นราธิป แสนทวีสุข
+ * @lastModified    2026-02-27
+ * @lastModifiedBy  เศรษฐพงศ์ หอมชื่น
  * ---------------------------------------------------------------------
  * @description
  *  Component สำหรับเลือกช่างและมอบหมายงานซ่อม
@@ -69,7 +69,7 @@ async function fetchTechnicians() {
       title: 'เกิดข้อผิดพลาด',
       text: 'ไม่สามารถโหลดรายชื่อช่างได้',
       icon: 'error',
-      background: '#fee2e2',
+      background: '#FFFFFF',
       color: '#dc2626',
     })
   }
@@ -119,7 +119,7 @@ async function confirmAssign() {
     Toast.fire({
       title: 'กรุณาเลือกช่างผู้รับผิดชอบ',
       icon: 'warning',
-      background: '#fef3c7',
+      background: '#FFFFFF',
       color: '#d97706',
     })
     return
@@ -196,6 +196,8 @@ async function confirmAssign() {
     Toast.fire({
       title: 'มอบหมายงานเรียบร้อยแล้ว',
       icon: 'success',
+      background: '#f0f9ff',
+      color: '#1e3a8a',
     })
     console.log('✅ [Assign Modal] Success - emitting completed & close')
     emit('completed')
@@ -214,7 +216,7 @@ async function confirmAssign() {
       title: 'เกิดข้อผิดพลาด',
       text: err.message,
       icon: 'error',
-      background: '#fee2e2',
+      background: '#FFFFFF',
       color: '#dc2626',
     })
   } finally {
@@ -323,14 +325,14 @@ onBeforeUnmount(() => {
       <div class="flex justify-end gap-3 mt-6">
         <button
           @click="$emit('close')"
-          class="px-5 py-2 font-medium text-gray-700 transition bg-gray-200 rounded-md hover:bg-gray-300"
+          class="px-5 py-2 font-medium text-white transition bg-neutral-300 rounded-md hover:bg-neutral-400"
         >
           ยกเลิก
         </button>
         <button
           @click="confirmAssign"
           :disabled="!selectedTechnician || loadingAssign"
-          class="px-5 py-2 font-medium text-white transition bg-[#1E48D1] rounded-md hover:bg-blue-900 disabled:opacity-50"
+          class="px-5 py-2 font-medium text-white transition bg-blue-700 rounded-md hover:bg-blue-800 disabled:opacity-50"
         >
           {{ loadingAssign ? 'กำลังมอบหมาย...' : 'ยืนยัน' }}
         </button>

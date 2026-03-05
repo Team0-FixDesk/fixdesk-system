@@ -1,13 +1,13 @@
 /**
  * =====================================================================
  * @file            admin-user-info-view.vue
- * @module          มอดูลการจัดการผู้ใช้ - การจัดการข้อมูลผู้ใข้งาน 
+ * @module          มอดูลการจัดการผู้ใช้ - การจัดการข้อมูลผู้ใข้งาน
  * @layer           View (Presentation Layer)
  * @version         1.0.2
  * @since           2025-10-21
  * @author          เศรษฐพงศ์ หอมชื่น
- * @lastModified    2026-02-23
- * @lastModifiedBy  นราธิป แสนทวีสุข
+ * @lastModified    2026-02-20
+ * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
  * ---------------------------------------------------------------------
  * @description
  *  หน้าจอสำหรับใช้จัดการข้อมูลผู้ใช้งานในระบบของผู้ดูแลระบบ
@@ -44,6 +44,8 @@
  *   - แก้ไขตำแหน่งของปุ่มยืินยันการแก้ไข/ลบ             [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
  *   - แก้ไขข้อความคำอธิบายรายละเอียดผู้ใช้/แก้ไขข้อมูลผู้ใช้ [2026-02-20, ปฏิพัทธ์ จงนันทพันธกุล]
  *   - แก้ไขชื่อบทบาท "ผู้ใช้งาน"                      [2026-02-20, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - แก้ไขการสร้างบัญชีผู้ใช้ และ import จากไฟล์ ให้รองรับการสร้าง default รหัสผ่าน                      [2026-02-25, พชร ไพศรีสกุล]
+ *   - แก้ไขสีปุ่ม                          [2026-02-27, เศรษฐพงศ์ หอมชื่น]
  * =====================================================================
  */
 
@@ -77,12 +79,11 @@ const userModalForm = ref({
   us_first_name_en: '',
   us_last_name_en: '',
   us_user_name: '',
-  us_user_pass: '',
   us_phone: '',
   us_department: '',
   us_role_id: '',
   us_tt_id: '',
-  us_job_title: '' || '-',
+  us_job_title: '',
   role_name: '',
   technician_type: '',
 })
@@ -278,7 +279,6 @@ function resetModalForm() {
     us_first_name_en: '',
     us_last_name_en: '',
     us_user_name: '',
-    us_user_pass: '',
     us_phone: '',
     us_department: '',
     us_role_id: '',
@@ -380,28 +380,39 @@ async function confirmAddUser() {
     reverseButtons: true,
     confirmButtonText: 'ยืนยัน',
     cancelButtonText: 'ยกเลิก',
-    confirmButtonColor: '#16a34a',
+    confirmButtonColor: '#0048EF',
+    cancelButtonColor: '#d4d4d4',
   })
   if (!result.isConfirmed) return
 
   try {
+    // สร้าง payload ก่อน
+    const payload = {
+      ...userModalForm.value,
+      us_ttn_id: parseInt(userModalForm.value.us_ttn_id),
+      us_role_id: parseInt(userModalForm.value.us_role_id),
+      us_tt_id: userModalForm.value.us_tt_id ? parseInt(userModalForm.value.us_tt_id) : null,
+      us_phone: toRaw(userModalForm.value.us_phone),
+    }
+
+    // ลบ password ออกจาก payload
+    delete payload.us_user_pass
+
+    // ส่ง payload ไป backend
     const res = await fetch(`${API_BASE}/users`, {
       method: 'POST',
       headers: getAuthHeaders(),
-      body: JSON.stringify({
-        ...userModalForm.value,
-        us_ttn_id: parseInt(userModalForm.value.us_ttn_id),
-        us_role_id: parseInt(userModalForm.value.us_role_id),
-        us_tt_id: userModalForm.value.us_tt_id ? parseInt(userModalForm.value.us_tt_id) : null,
-        us_phone: toRaw(userModalForm.value.us_phone),
-      }),
+      body: JSON.stringify(payload),
     })
+
     const data = await res.json()
     if (!res.ok) throw new Error(data.message || 'เพิ่มผู้ใช้ไม่สำเร็จ')
 
     toast.fire({
       icon: 'success',
       title: 'เพิ่มผู้ใช้เรียบร้อยแล้ว',
+      background: '#f0f9ff',
+      color: '#1e3a8a',
     })
     showUserModal.value = false
     await fetchUsers()
@@ -424,9 +435,10 @@ async function confirmEditUser() {
     icon: 'question',
     showCancelButton: true,
     reverseButtons: true,
-    confirmButtonText: 'ยืนยัน',
+    confirmButtonText: 'บันทึการแก้ไข',
     cancelButtonText: 'ยกเลิก',
-    confirmButtonColor: '#2563eb',
+    confirmButtonColor: '#fb923c',
+    cancelButtonColor: '#d4d4d4',
   })
   if (!result.isConfirmed) return
   try {
@@ -454,6 +466,8 @@ async function confirmEditUser() {
     toast.fire({
       icon: 'success',
       title: 'แก้ไขข้อมูลผู้ใช้เรียบร้อยแล้ว',
+      background: '#f0f9ff',
+      color: '#1e3a8a',
     })
     showUserModal.value = false
     await fetchUsers()
@@ -474,10 +488,11 @@ async function confirmDelete(username) {
     text: `คุณแน่ใจหรือไม่ว่าต้องการลบ "${username}"?`,
     icon: 'warning',
     showCancelButton: true,
-    reverseButtons: true,
-    confirmButtonText: 'ลบ',
+    reverseButtons: false,
+    confirmButtonText: 'ยืนยันลบ',
     cancelButtonText: 'ยกเลิก',
     confirmButtonColor: '#dc2626',
+    cancelButtonColor: '#d4d4d4',
   })
   if (!result.isConfirmed) return
   try {
@@ -514,6 +529,8 @@ async function confirmDelete(username) {
     toast.fire({
       icon: 'success',
       title: 'ลบผู้ใช้เรียบร้อยแล้ว',
+      background: '#f0f9ff',
+      color: '#1e3a8a',
     })
     await fetchUsers()
   } catch (err) {
@@ -619,14 +636,6 @@ function validateUserForm() {
       userModalErrors.value.username = 'กรุณากรอกชื่อผู้ใช้'
       valid = false
     }
-    if (!f.us_user_pass.trim()) {
-      userModalErrors.value.password = 'กรุณากรอกรหัสผ่าน'
-      valid = false
-    }
-  }
-  if (isEditMode.value && f.us_user_pass && !f.us_user_pass.trim()) {
-    userModalErrors.value.password = 'รหัสผ่านใหม่ต้องไม่เป็นช่องว่าง'
-    valid = false
   }
 
   return valid
@@ -706,7 +715,6 @@ async function handleAddTechType() {
     showCancelButton: true,
     confirmButtonText: 'บันทึก',
     cancelButtonText: 'ยกเลิก',
-    confirmButtonColor: '#2563eb',
     inputValidator: (value) => {
       if (!value || !value.trim()) return 'กรุณากรอกชื่อตำแหน่งช่าง'
       return null
@@ -726,6 +734,8 @@ async function handleAddTechType() {
     toast.fire({
       icon: 'success',
       title: 'เพิ่มตำแหน่งช่างเรียบร้อยแล้ว',
+      background: '#f0f9ff',
+      color: '#1e3a8a',
     })
     await fetchMasterData()
     await fetchUsers()
@@ -749,7 +759,6 @@ async function handleEditTechType(item) {
     showCancelButton: true,
     confirmButtonText: 'บันทึก',
     cancelButtonText: 'ยกเลิก',
-    confirmButtonColor: '#2563eb',
     inputValidator: (value) => {
       if (!value || !value.trim()) return 'กรุณากรอกชื่อตำแหน่งช่าง'
       return null
@@ -769,6 +778,8 @@ async function handleEditTechType(item) {
     toast.fire({
       icon: 'success',
       title: 'แก้ไขตำแหน่งช่างเรียบร้อยแล้ว',
+      background: '#f0f9ff',
+      color: '#1e3a8a',
     })
     await fetchMasterData()
     await fetchUsers()
@@ -806,6 +817,8 @@ async function handleDeleteTechType(item) {
     toast.fire({
       icon: 'success',
       title: 'ลบตำแหน่งช่างเรียบร้อยแล้ว',
+      background: '#f0f9ff',
+      color: '#1e3a8a',
     })
     await fetchMasterData()
     await fetchUsers()
@@ -824,6 +837,8 @@ function handleImportSuccess() {
   toast.fire({
     icon: 'success',
     title: 'นำเข้าผู้ใช้งานเรียบร้อยแล้ว',
+    background: '#f0f9ff',
+    color: '#1e3a8a',
   })
   showImportModal.value = false
 }
@@ -835,6 +850,43 @@ function handleImportError(message) {
     background: '#fee2e2',
     color: '#dc2626',
   })
+}
+
+async function handleResetPassword(userId) {
+  const result = await Sweetalert.fire({
+    title: 'รีเซ็ตรหัสผ่าน?',
+    text: 'ระบบจะสร้างรหัสผ่านใหม่โดยอัตโนมัติ',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'รีเซ็ต',
+    cancelButtonText: 'ยกเลิก',
+    confirmButtonColor: '#dc2626',
+  })
+
+  if (!result.isConfirmed) return
+
+  try {
+    const res = await fetch(`${API_BASE}/users/${userId}/reset-password`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    })
+
+    const data = await res.json()
+
+    if (!res.ok) {
+      throw new Error(data.message || 'รีเซ็ตไม่สำเร็จ')
+    }
+
+    toast.fire({
+      icon: 'success',
+      title: 'รีเซ็ตรหัสผ่านเรียบร้อย',
+    })
+  } catch (err) {
+    toast.fire({
+      icon: 'error',
+      title: err.message,
+    })
+  }
 }
 </script>
 
@@ -931,7 +983,7 @@ function handleImportError(message) {
         <div class="flex flex-col gap-2 sm:flex-row">
           <ImportButtonComponent @click="showImportModal = true" />
           <BaseButtonComponent
-            class="h-10 px-4 rounded-lg bg-[#1E48D1] hover:bg-[#1539a9] text-white font-medium shadow-sm"
+            class="h-10 px-4 rounded-lg bg-blue-700 hover:bg-blue-800 text-white font-medium shadow-sm"
             @click="openAddModal"
           >
             <Icon icon="fluent:add-12-filled" width="20" height="20" />
@@ -988,7 +1040,7 @@ function handleImportError(message) {
               width="35"
               height="35"
               style="color: #8e8e8e"
-              v-if="isAddMode || isEditMode"
+              v-if="isAddMode || isEditMode || isViewMode"
             />
           </div>
           <h2 class="text-xl font-bold p-1 text-gray-800">{{ modalTitle }}</h2>
@@ -1030,26 +1082,16 @@ function handleImportError(message) {
                 {{ userModalErrors.username }}
               </p>
             </div>
-            <div>
-              <label class="block text-sm font-medium mb-1.5">
-                {{ isAddMode ? 'รหัสผ่าน' : 'เปลี่ยนรหัสผ่านใหม่' }}
-                <span v-if="isAddMode" class="text-red-500">*</span>
-              </label>
-              <input
-                v-model="userModalForm.us_user_pass"
-                @input="clearError('password')"
-                type="password"
-                :class="[
-                  'w-full px-3 py-2 border rounded-md',
-                  userModalErrors.password ? 'border-red-500' : 'border-gray-300',
-                  isAddMode ? 'placeholder-gray-400 bg-white' : 'placeholder-[#FF0000] bg-white',
-                ]"
-                :placeholder="isAddMode ? 'กรอกรหัสผ่าน' : 'รหัสผ่านใหม่'"
-                :title="isEditMode ? 'หากไม่ต้องการเปลี่ยนรหัสผ่านไม่จำเป็นต้องกรอก' : ''"
-              />
-              <p v-if="userModalErrors.password" class="mt-1 text-sm text-red-500">
-                {{ userModalErrors.password }}
-              </p>
+            <div v-if="isEditMode">
+              <label class="block text-sm font-medium mb-1.5"> รหัสผ่าน </label>
+
+              <button
+                type="button"
+                @click="handleResetPassword(userModalForm.us_id)"
+                class="w-full px-3 py-2 text-white bg-red-500 rounded-md hover:bg-red-600"
+              >
+                รีเซ็ตรหัสผ่าน
+              </button>
             </div>
           </div>
 
@@ -1359,18 +1401,18 @@ function handleImportError(message) {
               <button
                 type="button"
                 @click="closeUserModal"
-                class="px-4 py-2 text-gray-700 border border-gray-300 rounded-md"
+                class="px-4 py-2 text-white border border-gray-300 rounded-lg bg-neutral-300 hover:bg-neutral-400"
               >
                 ยกเลิก
               </button>
               <button
                 type="submit"
                 :class="[
-                  'px-4 py-2 text-white rounded-md',
-                  isAddMode ? 'bg-green-500' : 'bg-orange-500',
+                  'px-4 py-2 text-white rounded-lg',
+                  isAddMode ? 'bg-green-500 hover:bg-green-600' : 'bg-orange-400 hover:bg-orange-500',
                 ]"
               >
-                {{ isAddMode ? 'ยืนยันเพิ่ม' : 'บันทึกการแก้ไข' }}
+                {{ isAddMode ? 'เพิ่มผู้ใช้งาน' : 'บันทึกการแก้ไข' }}
               </button>
             </template>
           </div>
@@ -1392,7 +1434,6 @@ function handleImportError(message) {
             <h2 class="text-lg font-bold text-black">จัดการตำแหน่งช่าง</h2>
           </div>
           <BaseButtonComponent
-            to="/main/repair-request"
             @click="handleAddTechType"
             class="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-white bg-blue-700 rounded-md hover:bg-blue-900"
           >
