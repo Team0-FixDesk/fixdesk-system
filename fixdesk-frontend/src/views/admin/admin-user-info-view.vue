@@ -3,11 +3,11 @@
  * @file            admin-user-info-view.vue
  * @module          มอดูลการจัดการผู้ใช้ - การจัดการข้อมูลผู้ใข้งาน
  * @layer           View (Presentation Layer)
- * @version         1.0.2
+ * @version         1.0.3
  * @since           2025-10-21
  * @author          เศรษฐพงศ์ หอมชื่น
- * @lastModified    2026-02-20
- * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
+ * @lastModified    2026-03-06
+ * @lastModifiedBy  เศรษฐพงศ์ หอมชื่น
  * ---------------------------------------------------------------------
  * @description
  *  หน้าจอสำหรับใช้จัดการข้อมูลผู้ใช้งานในระบบของผู้ดูแลระบบ
@@ -46,6 +46,7 @@
  *   - แก้ไขชื่อบทบาท "ผู้ใช้งาน"                      [2026-02-20, ปฏิพัทธ์ จงนันทพันธ์กุล]
  *   - แก้ไขการสร้างบัญชีผู้ใช้ และ import จากไฟล์ ให้รองรับการสร้าง default รหัสผ่าน                      [2026-02-25, พชร ไพศรีสกุล]
  *   - แก้ไขสีปุ่ม                          [2026-02-27, เศรษฐพงศ์ หอมชื่น]
+ *   - แก้ไข alert                          [2026-03-06, เศรษฐพงศ์ หอมชื่น]
  * =====================================================================
  */
 
@@ -507,7 +508,7 @@ async function confirmDelete(username) {
     icon: 'warning',
     showCancelButton: true,
     reverseButtons: false,
-    confirmButtonText: 'ยืนยันลบ',
+    confirmButtonText: 'ยืนยันการลบ',
     cancelButtonText: 'ยกเลิก',
     confirmButtonColor: '#dc2626',
     cancelButtonColor: '#a3a3a3',
@@ -730,6 +731,9 @@ async function handleAddTechType() {
     showCancelButton: true,
     confirmButtonText: 'บันทึก',
     cancelButtonText: 'ยกเลิก',
+    reverseButtons: true,
+    confirmButtonColor: '#0048EF',
+    cancelButtonColor: '#d4d4d4',
     inputValidator: (value) => {
       if (!value || !value.trim()) return 'กรุณากรอกชื่อตำแหน่งช่าง'
       return null
@@ -774,6 +778,9 @@ async function handleEditTechType(item) {
     showCancelButton: true,
     confirmButtonText: 'บันทึก',
     cancelButtonText: 'ยกเลิก',
+    reverseButtons: true,
+    confirmButtonColor: '#0048EF',
+    cancelButtonColor: '#d4d4d4',
     inputValidator: (value) => {
       if (!value || !value.trim()) return 'กรุณากรอกชื่อตำแหน่งช่าง'
       return null
@@ -812,10 +819,10 @@ async function handleEditTechType(item) {
 async function handleDeleteTechType(item) {
   const result = await Sweetalert.fire({
     title: 'ยืนยันการลบ?',
-    text: `ต้องการลบ "${item.name}" หรือไม่`,
+    text: `ต้องการลบตำแหน่ง "${item.name}" หรือไม่`,
     icon: 'warning',
     showCancelButton: true,
-    confirmButtonText: 'ลบ',
+    confirmButtonText: 'ยืนยันการลบ',
     cancelButtonText: 'ยกเลิก',
     confirmButtonColor: '#dc2626',
     cancelButtonColor: '#a3a3a3',

@@ -3,10 +3,10 @@
  * @file            stock-manage-inventory-view.vue
  * @module          มอดูลการจัดการคลัง - การจัดการสินค้าคงคลัง
  * @layer           View (Presentation Layer)
- * @version         1.0.1
+ * @version         1.0.2
  * @since           2025-10-21
  * @author          เศรษฐพงศ์ หอมชื่น
- * @lastModified    2026-02-27
+ * @lastModified    2026-03-06
  * @lastModifiedBy  เศรษฐพงศ์ หอมชื่น
  * ---------------------------------------------------------------------
  * @description
@@ -160,7 +160,7 @@ async function fetchAllStock() {
     if (!token) {
       Sweetalert.fire({
         title: 'หมดเวลาในการใช้งาน',
-        text: 'คุณไม่ได้ใช้งานเป็นระยะเวลาหนึ่ง กรุณาลงชื่อเข้าสู่ระบบใหม่อีกครั้ง',
+        text: 'คุณไม่ได้ใช้งานเป็นระยะเวลาหนึ่ง กรุณาลงชื่อเข้าสู่ระบบใหม่',
         icon: 'warning',
         confirmButtonColor: '#0048EF', 
         confirmButtonText: 'ตกลง'
@@ -363,7 +363,7 @@ async function handleDeleteCategory(category) {
     text: `ต้องการลบหมวดหมู่ "${category.name}" หรือไม่?`,
     icon: 'warning',
     showCancelButton: true,
-    confirmButtonText: 'ลบ',
+    confirmButtonText: 'ยืนยันการลบ',
     cancelButtonText: 'ยกเลิก',
     confirmButtonColor: '#dc2626',
     cancelButtonColor: '#a3a3a3',
