@@ -287,7 +287,7 @@ function handleCardClick(item) {
 }
 
 function goToRepairDetail(ticketId) {
-  router.push(`/main/repair-detail/${ticketId}`)
+  router.push({ path: `/main/repair-detail/${ticketId}`, state: { fromAdmin: true } })
 }
 
 /* =========================

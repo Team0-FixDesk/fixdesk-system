@@ -1226,7 +1226,7 @@ onMounted(() => {
       </div>
     </div>
   </div>
-  ั <!-- Return Modal -->
+  <!-- Return Modal -->
   <div v-if="showReturnModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
     <div class="bg-white rounded-xl shadow-lg w-[500px] max-h-[80vh] overflow-auto">
       <!-- Header -->
