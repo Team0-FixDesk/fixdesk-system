@@ -2,39 +2,56 @@
  * =====================================================================
  * @file            repairRow.util.js
  * @layer           Utility (Presentation Support Layer)
- * @version         1.0.0
+ * @version         1.1.0
  * @since           2026-02-08
  * @author          พชร ไพศรีสกุล
- * @lastModified    2026-02-21
- * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
+ * @lastModified    2026-03-06
+ * @lastModifiedBy  นราธิป แสนทวีสุข
  * ---------------------------------------------------------------------
  * @description
  *  Utility สำหรับสร้างข้อความรายละเอียดการแจ้งซ่อมในรูปแบบ HTML
  *   - จัดรูปแบบวันที่แจ้งซ่อมด้วย formatThaiShortDate
+ *   - แสดงประเภทงานซ่อม (tt_name)
+ *   - แสดงเรื่องที่แจ้ง (rf_problem) พร้อมตัดข้อความให้สั้นลง
  *   - รวมข้อมูลสถานที่ (ตึก / ชั้น / ห้อง) เป็นข้อความเดียว
- *   - กำหนดค่าเริ่มต้นเป็น "-" หากไม่มีข้อมูลสถานที่
+ *   - กำหนดค่าเริ่มต้นเป็น "-" หากไม่มีข้อมูล
  *   - คืนค่าเป็น String พร้อมแท็ก <br> สำหรับแสดงผลบนหน้าเว็บ
  *
  * @requires
  *   - @/utils/date.util (formatThaiShortDate)
+ *   - @/composables/useTruncateText (useTruncateText)
  *
  * ---------------------------------------------------------------------
  * @changelog
- *   - แก้ไขการใช้สัญลักษณ์ : ในตาราง  [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - เพิ่มการแสดงประเภทงานซ่อมและเรื่องที่แจ้ง [2026-03-06, นราธิป แสนทวีสุข]
+ *   - แก้ไขการใช้สัญลักษณ์ : ในตาราง         [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล]
  * =====================================================================
  */
 
 import { formatThaiShortDate } from '@/utils/date.util'
+import { useTruncateText } from '@/composables/useTruncateText'
+
+// สร้าง instance ของ truncate function
+const { truncateSentences } = useTruncateText()
 
 // ฟังก์ชันสร้างข้อความรายละเอียดการแจ้งซ่อม (สำหรับแสดงผลหน้าเว็บ)
 export function createRepairDescriptionHtml(repairRequestItem) {
-  // 1. ตรวจสอบและเตรียมข้อมูลสถานที่:
-  // ถ้ามีข้อมูลตึก (bd_name) ให้เอา "ชื่อตึก + ชั้น + ห้อง" มาต่อกัน
-  // แต่ถ้าไม่มีข้อมูล (เป็นค่าว่าง) ให้ใส่เครื่องหมายขีด (-) แทน
-  const fullLocationText = repairRequestItem.bd_name ? `${repairRequestItem.bd_name} ${repairRequestItem.fl_name} ${repairRequestItem.room_name}` : '-'
+  // 1. จัดรูปแบบวันที่แจ้ง
+  const formattedDate = formatThaiShortDate(repairRequestItem.rf_create_at)
 
-  // 2. จัดรูปแบบข้อความเพื่อส่งกลับไปแสดงผล:
-  // เอา "วันที่แจ้ง" มาต่อกับ "สถานที่" โดยคั่นบรรทัดด้วย <br>
-  // (ใช้ Backticks `...` ช่วยให้ใส่ตัวแปรลงในข้อความได้เลย ไม่ต้องใช้เครื่องหมาย + เชื่อม)
-  return `วันที่แจ้ง : ${formatThaiShortDate(repairRequestItem.rf_create_at)}<br>สถานที่ : ${fullLocationText}`
+  // 2. ประเภทงานซ่อม
+  const repairType = repairRequestItem.tt_name || '-'
+
+  // 3. เรื่องที่แจ้ง (ตัดให้สั้นลง)
+  const problemText = repairRequestItem.rf_problem
+    ? truncateSentences(repairRequestItem.rf_problem)
+    : '-'
+
+  // 4. สถานที่ (ตึก + ชั้น + ห้อง)
+  const fullLocationText = repairRequestItem.bd_name
+    ? `${repairRequestItem.bd_name} ${repairRequestItem.fl_name} ${repairRequestItem.room_name}`
+    : '-'
+
+  // 5. สร้างข้อความ HTML ที่จะแสดงผล
+  return `วันที่แจ้ง : ${formattedDate}<br>ประเภทงานซ่อม : ${repairType}<br>เรื่องที่แจ้ง : ${problemText}<br>สถานที่ : ${fullLocationText}`
 }
