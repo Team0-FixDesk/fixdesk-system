@@ -3,7 +3,7 @@
  * @file            manager-home.view.vue
  * @module          หน้าหลักผู้บริหาร (Manager Dashboard)
  * @layer           View (Presentation Layer)
- * @version         1.5.5
+ * @version         1.5.6
  * @since           2025-10-21
  * @author          พชร ไพศรีสกุล
  * @contributors
@@ -16,8 +16,8 @@
  *   - พิมพ์ณัฐชยา สร้อยคำ
  *   - วิศรุต ภู่ระหงษ์
  *
- * @lastModified    2026-02-27
- * @lastModifiedBy  วิศรุต ภู่ระหงษ์
+ * @lastModified    2026-03-05
+ * @lastModifiedBy  เศรษฐพงศ์ หอมชื่น
  * ---------------------------------------------------------------------
  * @description
  * หน้าจอแดชบอร์ดสำหรับผู้บริหาร เพื่อแสดงภาพรวมการดำเนินงานของระบบแจ้งซ่อม
@@ -75,6 +75,8 @@
  *     [2026-02-23, พชร ไพศรีสกุล] V 1.5.4
  *   - fix(frontend): แก้ไขหัวข้อหน้าจอหัวข้อของหน้าจอ Manager Dashboard
  *     [2026-02-27, วิศรุต ภู่ระหงษ์] V 1.5.5
+ *   - fix(frontend): แก้ไขคำอธิบายกราฟ
+ *     [2026-03-05, เศรษฐพงศ์ หอมชื่น] V 1.5.6
  *
  * =====================================================================
  */
@@ -1003,12 +1005,6 @@ onMounted(() => {
                   :style="{ backgroundColor: MONTHLY_COLORS.done }"></span>
                 งานที่เสร็จสิ้น
               </span>
-              <span class="inline-flex items-center gap-2">
-                <span class="inline-block w-3.5 h-3.5 rounded-sm"
-                  :style="{ backgroundColor: MONTHLY_COLORS.outsource }"></span>
-                งานที่จ้างช่างภายนอก
-              </span>
-
             </div>
 
             <div class="mt-2 text-xs text-gray-500">
