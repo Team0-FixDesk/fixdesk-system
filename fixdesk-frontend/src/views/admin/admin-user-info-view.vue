@@ -328,6 +328,11 @@ function openEditModal(username) {
     userModalMode.value = 'edit'
     const data = { ...row.raw }
     data.us_phone = toDisplay(data.us_phone)
+    if (data.us_tt_id === null || data.us_tt_id === undefined) {
+      data.us_tt_id = ''
+    } else {
+      data.us_tt_id = String(data.us_tt_id)
+    }
     Object.assign(userModalForm.value, data)
     userModalForm.value.us_user_pass = ''
     showUserModal.value = true
@@ -352,6 +357,11 @@ function openViewModal(username) {
     userModalMode.value = 'view'
     const data = { ...row.raw }
     data.us_phone = toDisplay(data.us_phone)
+    if (data.us_tt_id === null || data.us_tt_id === undefined) {
+      data.us_tt_id = ''
+    } else {
+      data.us_tt_id = String(data.us_tt_id)
+    }
     Object.assign(userModalForm.value, data)
     showUserModal.value = true
   } catch (err) {
@@ -1380,11 +1390,11 @@ async function handleResetPassword(userId) {
                 <option value="" v-if="userModalForm.us_role_id !== '2' && userModalForm.us_role_id !== 2">
                   ไม่ระบุ
                 </option>
-                
+
                 <option value="" disabled v-else>
                   เลือกตำแหน่ง
                 </option>
-                
+
                 <option v-for="opt in technicianOptions" :key="opt.value" :value="opt.value">
                   {{ opt.label }}
                 </option>
