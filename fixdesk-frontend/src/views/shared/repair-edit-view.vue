@@ -193,7 +193,7 @@ async function submitRepairEdit() {
     icon: 'question',
     showCancelButton: true,
     reverseButtons: true,
-    confirmButtonText: 'บันทึกการแก้ไข',
+    confirmButtonText: 'ยืนยัน',
     cancelButtonText: 'ยกเลิก',
     confirmButtonColor: '#fb923c',
     cancelButtonColor: '#d4d4d4', 
@@ -221,7 +221,8 @@ async function submitRepairEdit() {
       position: 'top-end',
       timer: 2500,
       icon: 'success',
-      title: 'บันทึกการแก้ไขสำเร็จ'
+      title: 'บันทึกการแก้ไขสำเร็จ',
+      showConfirmButton: false
     })
 
     router.push('/main/my-list')
@@ -252,7 +253,7 @@ async function cancelRepairEdit() {
     confirmButtonText: 'ยกเลิกการแก้ไข',
     cancelButtonText: 'กลับไปแก้ไขต่อ',
     confirmButtonColor: '#dc2626',
-    cancelButtonColor: '#d4d4d4',
+    cancelButtonColor: '#a3a3a3',
   })
   if (confirm.isConfirmed) {
     router.push('/main/my-list')

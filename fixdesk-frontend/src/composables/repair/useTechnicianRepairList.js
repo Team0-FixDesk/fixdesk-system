@@ -65,7 +65,13 @@ export function useTechnicianRepairList(API_BASE, token, isAuthenticated, logout
       })
 
       if (res.status === 401) {
-        Swal.fire('หมดเวลาเข้าสู่ระบบ', 'กรุณาเข้าสู่ระบบใหม่', 'warning')
+        Sweetalert.fire({
+        title: 'หมดเวลาในการใช้งาน',
+        text: 'คุณไม่ได้ใช้งานเป็นระยะเวลาหนึ่ง กรุณาลงชื่อเข้าสู่ระบบใหม่อีกครั้ง',
+        icon: 'warning',
+        confirmButtonColor: '#0048EF', 
+        confirmButtonText: 'ตกลง'
+      })
         logout()
         return
       }
