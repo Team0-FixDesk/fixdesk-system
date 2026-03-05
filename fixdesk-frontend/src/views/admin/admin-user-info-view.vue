@@ -261,6 +261,14 @@ function renderThaiRole(role) {
   }
 }
 
+function handlePhoneInput(event) {
+  // 1. ให้ maskInput จัดการรูปแบบเบอร์และกรองข้อความบน UI ก่อน
+  maskInput(event.target)
+  // 2. บังคับอัปเดตค่าที่ผ่านการกรองแล้ว กลับไปที่ตัวแปร เพื่อไม่ให้ Vue เก็บค่าผิดๆ ไว้
+  userModalForm.value.us_phone = event.target.value
+  clearError('phone')
+}
+
 onMounted(() => {
   fetchUsers()
   fetchMasterData()
@@ -320,6 +328,11 @@ function openEditModal(username) {
     userModalMode.value = 'edit'
     const data = { ...row.raw }
     data.us_phone = toDisplay(data.us_phone)
+    if (data.us_tt_id === null || data.us_tt_id === undefined) {
+      data.us_tt_id = ''
+    } else {
+      data.us_tt_id = String(data.us_tt_id)
+    }
     Object.assign(userModalForm.value, data)
     userModalForm.value.us_user_pass = ''
     showUserModal.value = true
@@ -344,6 +357,11 @@ function openViewModal(username) {
     userModalMode.value = 'view'
     const data = { ...row.raw }
     data.us_phone = toDisplay(data.us_phone)
+    if (data.us_tt_id === null || data.us_tt_id === undefined) {
+      data.us_tt_id = ''
+    } else {
+      data.us_tt_id = String(data.us_tt_id)
+    }
     Object.assign(userModalForm.value, data)
     showUserModal.value = true
   } catch (err) {
@@ -435,7 +453,7 @@ async function confirmEditUser() {
     icon: 'question',
     showCancelButton: true,
     reverseButtons: true,
-    confirmButtonText: 'บันทึการแก้ไข',
+    confirmButtonText: 'ยืนยัน',
     cancelButtonText: 'ยกเลิก',
     confirmButtonColor: '#fb923c',
     cancelButtonColor: '#d4d4d4',
@@ -492,7 +510,7 @@ async function confirmDelete(username) {
     confirmButtonText: 'ยืนยันลบ',
     cancelButtonText: 'ยกเลิก',
     confirmButtonColor: '#dc2626',
-    cancelButtonColor: '#d4d4d4',
+    cancelButtonColor: '#a3a3a3',
   })
   if (!result.isConfirmed) return
   try {
@@ -678,10 +696,7 @@ async function fetchMasterData() {
       label: role.role_label_th || role.role_name,
     }))
 
-    technicianOptions.value = [
-      { value: '', label: 'ไม่ระบุ' },
-      ...techData.map((tech) => ({ value: String(tech.tt_id), label: tech.tt_name })),
-    ]
+    technicianOptions.value = techData.map((tech) => ({ value: String(tech.tt_id), label: tech.tt_name }))
     technicianFilterOptions.value = techData.map((tech) => tech.tt_name)
     manageTechList.value = techData.map((t) => ({ id: t.tt_id, name: t.tt_name }))
   } catch (err) {
@@ -803,6 +818,7 @@ async function handleDeleteTechType(item) {
     confirmButtonText: 'ลบ',
     cancelButtonText: 'ยกเลิก',
     confirmButtonColor: '#dc2626',
+    cancelButtonColor: '#a3a3a3',
   })
   if (!result.isConfirmed) return
 
@@ -1281,7 +1297,7 @@ async function handleResetPassword(userId) {
               >
               <input
                 v-model="userModalForm.us_phone"
-                @input="(maskInput($event.target), clearError('phone'))"
+                @input="handlePhoneInput($event)"
                 type="tel"
                 :disabled="isViewMode"
                 :class="[
@@ -1371,13 +1387,14 @@ async function handleResetPassword(userId) {
                     : 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200',
                 ]"
               >
-                <option value="">
-                  {{
-                    userModalForm.us_role_id === '2' || userModalForm.us_role_id === 2
-                      ? 'เลือกตำแหน่ง'
-                      : 'ไม่ระบุ'
-                  }}
+                <option value="" v-if="userModalForm.us_role_id !== '2' && userModalForm.us_role_id !== 2">
+                  ไม่ระบุ
                 </option>
+
+                <option value="" disabled v-else>
+                  เลือกตำแหน่ง
+                </option>
+
                 <option v-for="opt in technicianOptions" :key="opt.value" :value="opt.value">
                   {{ opt.label }}
                 </option>
