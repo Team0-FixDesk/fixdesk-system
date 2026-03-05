@@ -11,7 +11,6 @@
  * @description
  *  Service สำหรับส่งการแจ้งเตือนไปยัง LINE Group ผ่าน LINE Bot SDK
  *  ใช้สำหรับ:
- *    - แจ้งเตือนเมื่อมีงานแจ้งซ่อมใหม่เข้ามา
  *    - แจ้งเตือนการมอบหมายงานช่าง (แบบเดี่ยวและทีม)
  *    - แจ้งเตือนเมื่อช่างรับงาน
  *    - แจ้งเตือนเมื่อมีงานแจ้งซ่อมใหม่
@@ -30,7 +29,6 @@
  *   - FRONTEND_URL: URL ของ frontend สำหรับปุ่มลิงก์
  *
  * @exports
- *   - notifyNewRepair(newRepairData): ส่งการแจ้งเตือนงานแจ้งซ่อมใหม่
  *   - notifyJobAssignment(assignmentData): ส่งการแจ้งเตือนการมอบหมายงาน
  *   - notifyJobAccepted(acceptData): ส่งการแจ้งเตือนการรับงาน
  *   - testNotification(): ทดสอบการส่งข้อความ
@@ -417,7 +415,7 @@ async function notifyJobAssignment(assignmentData) {
               action: {
                 type: 'uri',
                 label: 'ดูรายละเอียดบนเว็บไซต์',
-                uri: process.env.FRONTEND_URL || 'http://dekdee2.informatics.buu.ac.th:8057/#/home'
+                uri: process.env.FRONTEND_URL || 'https://fixdesk.zeenontakorn-demo.xyz/login#/login'
               },
               style: 'primary',
               color: '#0367D1'
@@ -684,7 +682,7 @@ async function notifyJobAccepted(acceptData) {
               action: {
                 type: 'uri',
                 label: 'ดูรายละเอียดบนเว็บไซต์',
-                uri: process.env.FRONTEND_URL || 'http://dekdee2.informatics.buu.ac.th:8057/#/home'
+                uri: process.env.FRONTEND_URL || 'https://fixdesk.zeenontakorn-demo.xyz/login#/login'
               },
               style: 'primary',
               color: '#10B981'
@@ -703,6 +701,7 @@ async function notifyJobAccepted(acceptData) {
     return { success: false, message: error.message };
   }
 }
+
 
 /**
  * ส่งข้อความแจ้งเตือนเมื่อมีงานแจ้งซ่อมใหม่เข้ามา
@@ -981,7 +980,7 @@ async function notifyNewRepair(newRepairData) {
               action: {
                 type: 'uri',
                 label: 'มอบหมายช่างเลย',
-                uri: process.env.FRONTEND_URL || 'http://dekdee2.informatics.buu.ac.th:8057/#/home'
+                uri: process.env.FRONTEND_URL || 'https://fixdesk.zeenontakorn-demo.xyz/login#/login'
               },
               style: 'primary',
               color: '#F97316'

@@ -12,14 +12,12 @@ services:
       dockerfile: Dockerfile
     container_name: fixdesk-backend-prod
     ports:
-      - "8059:8059"
-    env_file:
-      - ./fixdesk-backend/.env
+      - "127.0.0.1:8059:8059"
     environment:
       NODE_ENV: production
       PORT: 8059
-      VITE_BASE: http://dekdee2.informatics.buu.ac.th:8057
-      VITE_API_URL: http://dekdee2.informatics.buu.ac.th:8059
+      VITE_BASE: https://fixdesk.zeenontakorn-demo.xyz
+      VITE_API_URL: https://fixdesk-api.zeenontakorn-demo.xyz
     volumes:
       - fixdesk_uploads:/app/uploads
     networks:
@@ -40,10 +38,10 @@ services:
         - NODE_ENV=production
     container_name: fixdesk-frontend-prod
     ports:
-      - "8057:80"
+      - "127.0.0.1:8057:80"
     environment:
       - NODE_ENV=production
-      - VITE_API_BASE=http://dekdee2.informatics.buu.ac.th:8059
+      - VITE_API_BASE=https://fixdesk-api.zeenontakorn-demo.xyz
     networks:
       - fixdesk-network
     depends_on:
