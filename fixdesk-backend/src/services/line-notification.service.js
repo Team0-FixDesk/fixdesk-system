@@ -2,10 +2,10 @@
  * =====================================================================
  * @file            line-notification.service.js
  * @layer           Service (Business Logic Layer)
- * @version         1.0.0
+ * @version         1.2.0
  * @since           2025-01-15
  * @author          นราธิป แสนทวีสุข
- * @lastModified    2026-02-17
+ * @lastModified    2026-03-05
  * @lastModifiedBy  นราธิป แสนทวีสุข
  * ---------------------------------------------------------------------
  * @description
@@ -13,9 +13,11 @@
  *  ใช้สำหรับ:
  *    - แจ้งเตือนการมอบหมายงานช่าง (แบบเดี่ยวและทีม)
  *    - แจ้งเตือนเมื่อช่างรับงาน
+ *    - แจ้งเตือนเมื่อมีงานแจ้งซ่อมใหม่
  *    - ส่งข้อความทดสอบระบบ
  *    - รองรับ Flex Message พร้อม UI ที่สวยงาม
  *    - แสดงข้อมูลความเร่งด่วน, สถานที่, ช่าง, และรายละเอียดงาน
+ *    - ป้องกัน Rate Limit 429 ด้วย Message Queue และ Exponential Backoff
  *
  * @dependencies
  *   - @line/bot-sdk (LINE Messaging API)
@@ -33,8 +35,14 @@
  *
  * ---------------------------------------------------------------------
  * @changelog
- *  - เปลี่ยน GROUP_ID จาก hardcode เป็น environment variable (LINE_GROUP_ID) [2026-02-17, นราธิป แสนทวีสุข]
- *  - เพิ่มการตรวจสอบและ warning เมื่อไม่มี GROUP_ID                         [2026-02-17, นราธิป แสนทวีสุข]
+ *  - เพิ่มการรองรับ Retry-After header และเพิ่ม delay เป็น 2s, 5s, 15s, 30s, 60s  [2026-03-05, นราธิป แสนทวีสุข]
+ *  - เพิ่ม RATE_LIMIT_DELAY เป็น 2 วินาที และเพิ่ม MAX_RETRIES เป็น 4 ครั้ง       [2026-03-05, นราธิป แสนทวีสุข]
+ *  - เพิ่ม Message Queue และ Rate Limiting เพื่อป้องกัน 429 Error                [2026-03-05, นราธิป แสนทวีสุข]
+ *  - เพิ่ม Exponential Backoff Retry mechanism (2s, 5s, 10s)                     [2026-03-05, นราธิป แสนทวีสุข]
+ *  - เพิ่มการจัดการ Rate Limit 1 วินาที ระหว่างการส่งข้อความ                     [2026-03-05, นราธิป แสนทวีสุข]
+ *  - เปลี่ยน GROUP_ID จาก hardcode เป็น environment variable (LINE_GROUP_ID)   [2026-02-17, นราธิป แสนทวีสุข]
+ *  - เพิ่มการตรวจสอบและ warning เมื่อไม่มี GROUP_ID                               [2026-02-17, นราธิป แสนทวีสุข]
+ *  - เพิ่ม notifyNewRepair สำหรับแจ้งเตือนเมื่อมีงานแจ้งซ่อมใหม่เข้าระบบ         [2026-02-25, นราธิป แสนทวีสุข]
  * =====================================================================
  */
 const line = require('@line/bot-sdk');
@@ -55,6 +63,13 @@ const TARGET_GROUP_ID = process.env.LINE_GROUP_ID || '';
 
 let client = null;
 
+// Queue และ Rate Limiting
+const messageQueue = [];
+let isProcessingQueue = false;
+const RATE_LIMIT_DELAY = 2000; // 2 วินาที ระหว่างการส่งแต่ละข้อความ (เพิ่มจาก 1 วินาที)
+const MAX_RETRIES = 4; // เพิ่มจาก 3 เป็น 4 ครั้ง
+const RETRY_DELAYS = [5000, 15000, 30000, 60000]; // 5, 15, 30, 60 วินาที (เพิ่มความล่าช้า)
+
 // สร้าง LINE client เมื่อมี credentials
 if (config.channelAccessToken && config.channelSecret) {
   client = new line.Client(config);
@@ -62,6 +77,80 @@ if (config.channelAccessToken && config.channelSecret) {
   if (!TARGET_GROUP_ID) {
     console.warn('⚠️ LINE_GROUP_ID is not set in environment variables. Notifications will not be sent.');
   }
+}
+
+/**
+ * ส่งข้อความผ่าน Queue พร้อม Rate Limiting และ Retry
+ * @param {Object} message - LINE message object
+ * @param {number} retryCount - จำนวนครั้งที่ retry แล้ว
+ */
+async function sendMessageWithRetry(message, retryCount = 0) {
+  try {
+    await client.pushMessage(TARGET_GROUP_ID, message);
+    return { success: true };
+  } catch (error) {
+    // ถ้าเป็น error 429 (Too Many Requests) ให้ retry
+    if (error.statusCode === 429 && retryCount < MAX_RETRIES) {
+      // ตรวจสอบ Retry-After header จาก LINE API
+      let delay = RETRY_DELAYS[retryCount];
+      
+      if (error.originalError?.response?.headers?.['retry-after']) {
+        const retryAfter = parseInt(error.originalError.response.headers['retry-after']);
+        if (!isNaN(retryAfter)) {
+          delay = Math.max(retryAfter * 1000, delay); // ใช้ค่าที่มากกว่า
+          console.warn(`⚠️ Rate limit hit (429). LINE API suggests waiting ${retryAfter}s. Using ${delay/1000}s...`);
+        }
+      } else {
+        console.warn(`⚠️ Rate limit hit (429). Retrying in ${delay/1000} seconds... (Attempt ${retryCount + 1}/${MAX_RETRIES})`);
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, delay));
+      return sendMessageWithRetry(message, retryCount + 1);
+    }
+    
+    throw error;
+  }
+}
+
+/**
+ * เพิ่มข้อความเข้า Queue และประมวลผล
+ * @param {Object} message - LINE message object
+ */
+async function queueMessage(message) {
+  return new Promise((resolve, reject) => {
+    messageQueue.push({ message, resolve, reject });
+    processQueue();
+  });
+}
+
+/**
+ * ประมวลผล Queue ทีละข้อความพร้อม Rate Limiting
+ */
+async function processQueue() {
+  if (isProcessingQueue || messageQueue.length === 0) {
+    return;
+  }
+
+  isProcessingQueue = true;
+
+  while (messageQueue.length > 0) {
+    const { message, resolve, reject } = messageQueue.shift();
+
+    try {
+      await sendMessageWithRetry(message);
+      resolve({ success: true });
+    } catch (error) {
+      console.error('❌ Failed to send message after retries:', error.message);
+      reject(error);
+    }
+
+    // รอ delay ก่อนส่งข้อความถัดไป (Rate Limiting)
+    if (messageQueue.length > 0) {
+      await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_DELAY));
+    }
+  }
+
+  isProcessingQueue = false;
 }
 
 /**
@@ -336,7 +425,7 @@ async function notifyJobAssignment(assignmentData) {
       }
     };
 
-    await client.pushMessage(TARGET_GROUP_ID, message);
+    await queueMessage(message);
     
     console.log('✅ LINE notification sent successfully for:', rf_code);
     return { success: true, message: 'Notification sent' };
@@ -603,7 +692,7 @@ async function notifyJobAccepted(acceptData) {
       }
     };
 
-    await client.pushMessage(TARGET_GROUP_ID, message);
+    await queueMessage(message);
     
     console.log('✅ LINE acceptance notification sent for:', rf_code);
     return { success: true, message: 'Notification sent' };
@@ -901,7 +990,7 @@ async function notifyNewRepair(newRepairData) {
       }
     };
 
-    await client.pushMessage(TARGET_GROUP_ID, message);
+    await queueMessage(message);
     
     console.log('✅ LINE new repair notification sent successfully for:', rf_code);
     return { success: true, message: 'New repair notification sent' };
@@ -925,7 +1014,7 @@ async function testNotification() {
       text: '🔔 ทดสอบการแจ้งเตือนจากระบบ FixDesk\n\nการแจ้งเตือนทำงานปกติ ✅'
     };
 
-    await client.pushMessage(TARGET_GROUP_ID, message);
+    await queueMessage(message);
     return { success: true, message: 'Test notification sent' };
   } catch (error) {
     console.error('❌ Test notification failed:', error.message);
