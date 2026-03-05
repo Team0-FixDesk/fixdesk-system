@@ -85,7 +85,8 @@ const handleAuthError = (status) => {
       icon: 'warning',
       title: 'หมดเวลาเข้าสู่ระบบ',
       text: 'กรุณาเข้าสู่ระบบใหม่',
-      confirmButtonText: 'ตกลง',
+      confirmButtonColor: '#1d4ed8',
+      confirmButtonText: 'ตกลง'
     }).then(() => {
       localStorage.removeItem('token')
       sessionStorage.removeItem('token')
@@ -789,7 +790,7 @@ async function confirmDelete(username) {
     confirmButtonText: 'ยืนยันการลบ',
     cancelButtonText: 'ยกเลิก',
     confirmButtonColor: '#dc2626',
-    cancelButtonColor: '#d4d4d4',
+    cancelButtonColor: '#a3a3a3',
   })
 
   if (!result.isConfirmed) return
@@ -1145,7 +1146,7 @@ async function saveEditLocation() {
     reverseButtons: true,
     confirmButtonText: 'ยืนยัน',
     cancelButtonText: 'ยกเลิก',
-    confirmButtonColor: '#0048EF',
+    confirmButtonColor: '#fb923c',
     cancelButtonColor: '#d4d4d4',
   })
 

@@ -71,6 +71,7 @@ function clearAuthAndGoLogin(showAlert = false) {
       icon: 'warning',
       title: 'หมดเวลาในการใช้งาน',
       text: 'คุณไม่ได้ใช้งานเป็นระยะเวลาหนึ่ง กรุณาลงชื่อเข้าสู่ระบบใหม่อีกครั้ง',
+      confirmButtonColor: '#0048EF',
       confirmButtonText: 'ตกลง',
       allowOutsideClick: false,
       allowEscapeKey: false,

@@ -158,7 +158,13 @@ async function fetchAllStock() {
   try {
     const token = localStorage.getItem('token') || sessionStorage.getItem('token')
     if (!token) {
-      Swal.fire('หมดเวลาเข้าสู่ระบบ', 'กรุณาเข้าสู่ระบบใหม่', 'warning')
+      Sweetalert.fire({
+        title: 'หมดเวลาในการใช้งาน',
+        text: 'คุณไม่ได้ใช้งานเป็นระยะเวลาหนึ่ง กรุณาลงชื่อเข้าสู่ระบบใหม่อีกครั้ง',
+        icon: 'warning',
+        confirmButtonColor: '#0048EF', 
+        confirmButtonText: 'ตกลง'
+      })
       router.push('/login')
       return
     }
@@ -166,7 +172,13 @@ async function fetchAllStock() {
     const response = await fetch(`${API_BASE}/show-stock`, { headers: getAuthHeaders() })
 
     if (response.status === 401) {
-      Swal.fire('หมดเวลาเข้าสู่ระบบ', 'กรุณาเข้าสู่ระบบใหม่', 'warning')
+      Swal.fire({
+        title: 'หมดเวลาเข้าสู่ระบบ',
+        text: 'กรุณาเข้าสู่ระบบใหม่',
+        icon: 'warning',
+        confirmButtonColor: '#1d4ed8',
+        confirmButtonText: 'ตกลง'
+      })
       sessionStorage.removeItem('token')
       localStorage.removeItem('token')
       router.push('/login')
@@ -354,7 +366,7 @@ async function handleDeleteCategory(category) {
     confirmButtonText: 'ลบ',
     cancelButtonText: 'ยกเลิก',
     confirmButtonColor: '#dc2626',
-    cancelButtonColor: '#d4d4d4',
+    cancelButtonColor: '#a3a3a3',
   })
   if (!result.isConfirmed) return
 
@@ -574,7 +586,7 @@ const handleDelete = async (productIdFromTable) => {
     icon: 'warning',
     showCancelButton: true,
     confirmButtonColor: '#dc2626',
-    cancelButtonColor: '#d4d4d4',
+    cancelButtonColor: '#a3a3a3',
     confirmButtonText: 'ยืนยันการลบ',
     cancelButtonText: 'ยกเลิก',
   }).then(async (result) => {

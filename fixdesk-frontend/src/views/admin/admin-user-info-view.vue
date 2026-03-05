@@ -435,7 +435,7 @@ async function confirmEditUser() {
     icon: 'question',
     showCancelButton: true,
     reverseButtons: true,
-    confirmButtonText: 'บันทึการแก้ไข',
+    confirmButtonText: 'ยืนยัน',
     cancelButtonText: 'ยกเลิก',
     confirmButtonColor: '#fb923c',
     cancelButtonColor: '#d4d4d4',
@@ -492,7 +492,7 @@ async function confirmDelete(username) {
     confirmButtonText: 'ยืนยันลบ',
     cancelButtonText: 'ยกเลิก',
     confirmButtonColor: '#dc2626',
-    cancelButtonColor: '#d4d4d4',
+    cancelButtonColor: '#a3a3a3',
   })
   if (!result.isConfirmed) return
   try {
@@ -803,6 +803,7 @@ async function handleDeleteTechType(item) {
     confirmButtonText: 'ลบ',
     cancelButtonText: 'ยกเลิก',
     confirmButtonColor: '#dc2626',
+    cancelButtonColor: '#a3a3a3',
   })
   if (!result.isConfirmed) return
 
