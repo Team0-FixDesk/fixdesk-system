@@ -113,7 +113,6 @@ async function fetchMyRequisitions() {
 
     const responseData = await response.json()
     if (!response.ok) throw new Error(responseData.message || 'โหลดข้อมูลล้มเหลว')
-    console.log(Object.keys(responseData[0]))
 
     tableRowsList.value = responseData.map((form) => {
       const locationName =

@@ -255,7 +255,6 @@ async function fetchAllData() {
         building_name: item.building,
       }))
   } catch (err) {
-    console.error('Error fetching from /locations/all:', err)
     // ถ้า endpoint ใหม่ยังไม่มี ให้ใช้วิธีเก่า
     await fetchAllDataAlternative()
   }

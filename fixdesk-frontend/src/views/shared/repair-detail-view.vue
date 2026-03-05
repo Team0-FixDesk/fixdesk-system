@@ -483,14 +483,6 @@ async function fetchRepairDetail() {
       timeline,
     }
     processMediaFileList(data.rf_image)
-
-    console.log('📄 [Detail] Repair data loaded:', {
-      code: data.rf_code,
-      main_technician: data.main_technician,
-      main_technician_id: data.main_technician_id,
-      rf_assigned_tech_id: data.rf_assigned_tech_id,
-    })
-    console.log(data.stock_items)
   } catch (err) {
     console.error('โหลดข้อมูลไม่สำเร็จ:', err)
     isError.value = true
