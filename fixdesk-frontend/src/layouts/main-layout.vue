@@ -104,7 +104,6 @@ onMounted(() => {
 
   try {
     const decoded = jwtDecode(token)
-    console.log('decoded token:', decoded)
     role.value = decoded.role_name
 
     // ตรวจสอบ us_active สำหรับ first-login
