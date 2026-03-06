@@ -115,10 +115,11 @@ const dynamicTableData = computed(() => {
       subtitle: '5 รายการล่าสุด',
       columns: ['รายการ', 'ประเภท', 'จำนวน'],
       rows: recentTransactions.map((t) => {
-        const productName = products.value.find((p) => p.pd_id === t.stt_product_id)?.pd_name || 'ไม่ระบุ'
+        const productName =
+          products.value.find((p) => p.pd_id === t.stt_product_id)?.pd_name || 'ไม่ระบุ'
 
         return [
-          productName,
+          truncate(productName),
           t.stt_type, // 'IN' or 'OUT'
           `${t.stt_quantity} ชิ้น`
         ]
@@ -144,7 +145,7 @@ const dynamicTableData = computed(() => {
         else if (p.pd_quantity <= lowThreshold) status = 'low_stock'
 
         return [
-          p.pd_name || 'ไม่ระบุ',
+          truncate(p.pd_name || 'ไม่ระบุ'),
           status,
           `${p.pd_quantity} ชิ้น`
         ]
@@ -188,18 +189,19 @@ async function fetchDashboard() {
       .filter((i) => i.sf_status === 'waiting')
       .sort((a, b) => new Date(b.sf_create_at) - new Date(a.sf_create_at))
       .slice(0, 5)
-      .map((item) => ({
-        row: [
-          item.sf_code,
+      .map((item) => {
+        const details =
           'วันที่: ' +
-            new Date(item.sf_create_at).toLocaleDateString('th-TH') +
-            '<br>ผู้ขอเบิก: ' +
-            item.requester +
-            '<br>หน่วยงาน: ' +
-            item.us_department,
-          '',
-        ],
-      }))
+          new Date(item.sf_create_at).toLocaleDateString('th-TH') +
+          '<br>ผู้ขอเบิก: ' +
+          item.requester +
+          '<br>หน่วยงาน: ' +
+          item.us_department
+
+        return {
+          row: [item.sf_code, truncateHtml(details), ''],
+        }
+      })
   } catch (err) {
     console.error(err)
   } finally {
@@ -245,6 +247,37 @@ const statItems = computed(() => [
 // ==================== Helpers ====================
 function isSameDay(dateString, dateObj) {
   return new Date(dateString).toDateString() === dateObj.toDateString()
+}
+
+// ตัดความยาวของสตริงปกติ
+function truncate(str, max = 26) {
+  if (str == null) return ''
+  const s = str.toString()
+  return s.length > max ? s.slice(0, max) + '...' : s
+}
+
+// ตัดความยาวของสตริงที่มี HTML (เก็บ tag ไว้)
+function truncateHtml(str, max = 36) {
+  if (!str) return ''
+  const textOnly = str.replace(/<[^>]*>/g, '')
+  if (textOnly.length <= max) return str
+
+  let count = 0
+  let result = ''
+  let inTag = false
+
+  for (let i = 0; i < str.length; i++) {
+    const ch = str[i]
+    if (ch === '<') inTag = true
+    if (!inTag) count++
+    result += ch
+    if (ch === '>') inTag = false
+    if (count >= max) {
+      result += '...'
+      break
+    }
+  }
+  return result
 }
 
 function getLast7Days() {
@@ -304,8 +337,6 @@ const requestSeries = computed(() => {
     { name: 'อนุมัติแล้ว', data: approved },
     { name: 'ไม่อนุมัติ', data: rejected },
   ]
-
-  console.log('📊 REQUEST SERIES DATA:', result)
   return result
 })
 
@@ -527,11 +558,6 @@ const chartOptions = computed(() => ({
 watch(
   [products, stockForms, transactions, last7Days, chartMode],
   () => {
-    console.log('🔍 === GRAPH DEBUG INFO ===')
-    console.log('📅 Last 7 Days:', last7Days.value.map((d) => d.toLocaleDateString('th-TH')))
-    console.log('📦 Total Products:', products.value.length)
-    console.log('📝 Total Stock Forms:', stockForms.value.length)
-    console.log('📦 Total Transactions:', transactions.value.length)
 
     // แสดงยอดรวม quantity
     const totalInQty = transactions.value
@@ -540,12 +566,6 @@ watch(
     const totalOutQty = transactions.value
       .filter((t) => t.stt_type === 'OUT')
       .reduce((sum, t) => sum + (Number(t.stt_quantity) || 0), 0)
-
-    console.log('📥 IN Transactions:', transactions.value.filter((t) => t.stt_type === 'IN').length, 'รายการ', `(${totalInQty} ชิ้น)`)
-    console.log('📤 OUT Transactions:', transactions.value.filter((t) => t.stt_type === 'OUT').length, 'รายการ', `(${totalOutQty} ชิ้น)`)
-    console.log('🎯 Current Chart Mode:', chartMode.value)
-    console.log('📊 Current Series:', chartMode.value === 'request' ? requestSeries.value : stockSeries.value)
-    console.log('🔍 === END DEBUG INFO ===')
   },
   { deep: true }
 )

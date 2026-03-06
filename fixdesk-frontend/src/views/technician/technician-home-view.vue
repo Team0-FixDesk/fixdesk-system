@@ -3,7 +3,7 @@
  * @file            technician-home.view.vue
  * @module          -
  * @layer           View (Presentation Layer)
- * @version         1.0.0
+ * @version         1.0.3
  * @since           2025-10-21
  * @author          เศรษฐพงศ์ หอมชื่น
  * @contributors 
@@ -12,9 +12,8 @@
      - นราธิป แสนทวีสุข 
      - ปฏิพัทธ์ จงนันทพันธ์กุล
      - พิมลพรรณ มามาก
- *   
- * @lastModified    2026-02-21
- * @lastModifiedBy  พิมลพรรณ มามาก
+ * * @lastModified    2026-03-05
+ * @lastModifiedBy  เศรษฐพงศ์ หอมชื่น
  * ---------------------------------------------------------------------
  * @description
  *  หน้าจอหลักสำหรับช่างซ่อม
@@ -44,13 +43,16 @@
  *   - แก้ไขข้อความหัวตาราง และการใช้สัญลักษณ์ : ในตาราง [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล]
  *   - แก้ไขข้อความคำอธิบายสถานะ                     [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล]
  *   - ดึงข้อมูลชื่อผู้ใช้                                [2026-02-21, พิมลพรรณ มามาก] V 1.0.2
+ *   - เปลี่ยนกราฟโดนัทเป็น ApexCharts และเพิ่ม Tooltip  [2026-03-05, เศรษฐพงศ์ หอมชื่น] V 1.0.3
  * =====================================================================
  */
 
 <script setup>
 defineOptions({ name: 'TechnicianHomeView' })
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, shallowRef } from 'vue'
 import { useRouter } from 'vue-router'
+import ApexChart from 'vue3-apexcharts'
+
 import { useAuthToken } from '@/composables/useAuthToken'
 import { useUserProfile } from '@/composables/useUserProfile'
 
@@ -85,20 +87,108 @@ const { stockTableRows, truncateItem, extractQuantity, openDetail } = useTechnic
 )
 const { userDisplayName, userDepartmentName, fetchUserProfileData } = useUserProfile()
 
-// --- Chart Data ---
-const donutChart = computed(() => {
-  const total = repairRequests.value.length || 1
+// --- Tooltip Setup (จาก Manager) ---
+const TOOLTIP_STYLE = {
+  padding: '10px 12px',
+  fontSize: '12px',
+  minWidth: '190px',
+  borderTop: '1px solid #eee',
+  footerColor: '#6b7280',
+  rowGap: '10px',
+}
+
+const escapeHtml = (s) =>
+  String(s ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;')
+
+function buildTooltipHTML({ title = '', rows = [] }) {
+  const safeTitle = escapeHtml(title)
+
+  const rowsHtml = rows
+    .filter(Boolean)
+    .map((r) => {
+      const label = escapeHtml(r.label ?? '')
+      const value = escapeHtml(r.value ?? 0)
+      const color = r.color || '#111827'
+
+      return `
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:${TOOLTIP_STYLE.rowGap};margin:4px 0;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span style="display:inline-block;width:10px;height:10px;background:${color};border-radius:2px;"></span>
+            <span>${label}</span>
+          </div>
+          <b>${value}</b>
+        </div>
+      `
+    })
+    .join('')
+
+  return `
+    <div style="padding:${TOOLTIP_STYLE.padding};font-size:${TOOLTIP_STYLE.fontSize};min-width:${TOOLTIP_STYLE.minWidth};">
+      <div style="font-weight:700;margin-bottom:6px;">${safeTitle}</div>
+      ${rowsHtml}
+    </div>
+  `
+}
+
+// --- Chart Data (ApexCharts) ---
+const donutSeries = computed(() => {
   const done = repairRequests.value.filter((r) => r.rf_user_status === 'done').length
   const prog = repairRequests.value.filter((r) => r.rf_user_status === 'in_progress').length
   const cancel = repairRequests.value.filter((r) => r.rf_user_status === 'cancel').length
+  
+  const total = repairRequests.value.length
+  const others = total - (done + prog + cancel)
 
-  const p1 = Math.round((done / total) * 100)
-  const p2 = p1 + Math.round((prog / total) * 100)
-  const p3 = p2 + Math.round((cancel / total) * 100)
+  return [done, prog, cancel, others > 0 ? others : 0]
+})
 
-  return {
-    backgroundImage: `conic-gradient(#16a34a 0% ${p1}%, #f97316 ${p1}% ${p2}%, #dc2626 ${p2}% ${p3}%, #1d4ed8 ${p3}% 100%)`,
-  }
+const donutOptions = shallowRef({
+  chart: { type: 'donut', toolbar: { show: false } },
+  labels: ['ดำเนินการเสร็จสิ้น', 'กำลังดำเนินการ', 'ยกเลิก', 'อื่นๆ'],
+  colors: ['#16a34a', '#f97316', '#dc2626', '#1d4ed8'], // เขียว, ส้ม, แดง, น้ำเงิน
+  legend: { show: false },
+  dataLabels: { enabled: false },
+  plotOptions: {
+    pie: {
+      donut: {
+        size: '75%',
+        labels: {
+          show: true,
+          name: { show: true, fontSize: '12px', color: '#9ca3af', offsetY: -10 },
+          value: { show: true, fontSize: '24px', fontWeight: 'bold', color: '#111827', offsetY: 5 },
+          total: {
+            show: true,
+            showAlways: true,
+            label: 'ภาพรวม',
+            color: '#9ca3af',
+            formatter: (w) => w.globals.seriesTotals.reduce((a, b) => a + b, 0)
+          }
+        }
+      }
+    }
+  },
+  tooltip: {
+    enabled: true,
+    custom: ({ series, seriesIndex, w }) => {
+      const label = w.globals.labels?.[seriesIndex] ?? ''
+      const value = series?.[seriesIndex] ?? 0
+      const percent = w.globals.seriesPercent?.[seriesIndex] ?? 0
+      const color = w.globals.colors?.[seriesIndex] ?? '#111827'
+
+      return buildTooltipHTML({
+        title: label,
+        rows: [
+          { label: 'จำนวนงานซ่อม', value: `${value} รายการ`, color },
+          { label: 'สัดส่วน', value: `${Number(percent).toFixed(1)}%`, color },
+        ],
+      })
+    },
+  },
 })
 
 const onCardClick = (item) =>
@@ -159,14 +249,11 @@ onMounted(() => {
         class="flex flex-col items-center justify-center p-6 bg-white border border-gray-200 shadow-sm rounded-2xl"
       >
         <h2 class="self-start mb-6 text-lg font-bold text-gray-800">สัดส่วนงานทั้งหมด</h2>
-        <div class="relative w-48 h-48">
-          <div class="w-full h-full rounded-full" :style="donutChart"></div>
-          <div
-            class="absolute flex items-center justify-center w-32 h-32 -translate-x-1/2 -translate-y-1/2 bg-white rounded-full top-1/2 left-1/2"
-          >
-            <span class="text-xs text-gray-400">ภาพรวม</span>
-          </div>
+        
+        <div class="relative flex justify-center w-48 h-48">
+          <ApexChart type="donut" width="100%" height="100%" :options="donutOptions" :series="donutSeries" />
         </div>
+        
         <div class="grid w-full grid-cols-2 mt-6 text-xs gap-x-4 gap-y-2">
           <div class="flex items-center">
             <span class="w-3 h-3 mr-2 bg-green-600 rounded"></span>ดำเนินการเสร็จสิ้น
@@ -207,6 +294,7 @@ onMounted(() => {
             {{ row[0] }}
           </a>
         </template>
+
         <!-- รายการของ -->
         <template #cell-2="{ row }">
           <div class="space-y-1 text-sm">

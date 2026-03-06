@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 
 const props = defineProps({
   columns: { type: Array, default: () => [] },
@@ -32,6 +32,20 @@ function getRowId(row) {
 const totalPages = computed(() => {
   const totalRows = props.rows.length
   return Math.max(1, Math.ceil(totalRows / props.perPage))
+})
+
+// Auto-reset currentPage เมื่อข้อมูลลดลงจนหน้าปัจจุบันไม่มีอยู่จริง
+watch(totalPages, (newTotalPages) => {
+  if (currentPage.value > newTotalPages) {
+    currentPage.value = Math.max(1, newTotalPages)
+  }
+})
+
+// Reset pagination เมื่อข้อมูลเปลี่ยนแปลง (เช่น filter, search)
+watch(() => props.rows.length, () => {
+  if (currentPage.value > totalPages.value) {
+    currentPage.value = 1
+  }
 })
 
 const paginatedRows = computed(() => {
@@ -144,7 +158,7 @@ function getColumnWidth(columnIndex) {
 <template>
   <div class="relative overflow-x-auto">
     <div class="relative overflow-x-auto min-h-[200px] max-h-[600px]">
-      <table class="min-w-[640px] w-full text-xs sm:text-sm border-collapse table-fixed">
+      <table class="min-w-[640px] w-full text-xs sm:text-sm border-collapse">
         <thead class="bg-gray-100 border-b border-gray-300">
           <tr>
             <th
@@ -175,7 +189,7 @@ function getColumnWidth(columnIndex) {
               v-for="(cell, cellIndex) in item.row"
               :key="cellIndex"
               v-show="!hiddenColumns.includes(cellIndex)"
-              class="px-3 py-2 align-middle"
+              class="px-3 py-2 align-middle "
               :class="[
                 getAlignClass(cellIndex),
                 cellIndex === 0 ? 'whitespace-nowrap overflow-hidden' : 'whitespace-nowrap',

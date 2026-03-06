@@ -81,13 +81,6 @@ const props = defineProps({
   },
 })
 
-console.log('🎯 [TableActions] Props received:', {
-  rowId: props.rowId,
-  role: props.role,
-  assignedTech: props.assignedTech,
-  hasAssignedTech: !!props.assignedTech
-})
-
 const emit = defineEmits([
   'toggle-menu',
   'detail',

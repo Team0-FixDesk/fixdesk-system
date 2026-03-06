@@ -240,7 +240,7 @@ async function cancelRepairRequest() {
     confirmButtonText: 'ยกเลิกการแจ้งซ่อม',
     cancelButtonText: 'กลับไปแก้ไข',
     confirmButtonColor: '#dc2626',
-    cancelButtonColor: '#d4d4d4',
+    cancelButtonColor: '#a3a3a3',
   })
   if (confirmResult.isConfirmed) {
     router.push('/main/my-list')
@@ -513,7 +513,7 @@ async function cancelRepairRequest() {
             class="bg-blue-700 text-white px-6 py-2.5 sm:py-3 rounded-lg hover:bg-blue-800 transition disabled:opacity-50"
             @click="submitRepairRequest"
           >
-            ยืนยัน
+            ส่งแบบฟอร์มแจ้งซ่อม
           </button>
         </div>
       </form>
