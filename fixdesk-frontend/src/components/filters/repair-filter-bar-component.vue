@@ -74,7 +74,7 @@ const props = defineProps({
     default: true,
   },
 
-  /* 🔑 คุมว่าจะแสดง filter วันที่ไหม */
+  /* คุมว่าจะแสดง filter วันที่ไหม */
   showDate: {
     type: Boolean,
     default: true,
