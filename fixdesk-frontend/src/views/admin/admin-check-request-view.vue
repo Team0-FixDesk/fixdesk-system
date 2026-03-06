@@ -207,6 +207,9 @@ const filteredRows = computed(() => {
     const urgency = row[2]
     const status = row[3]
 
+    // Exclude status 'ดำเนินการเสร็จสิ้น'
+    if (status === 'done') return false
+
     const matchesSearch = row.join(' ').toLowerCase().includes(search)
 
     const matchesUrgency =
@@ -252,10 +255,11 @@ onMounted(() => {
 
 <template>
   <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-7xl">
-    <h1 class="text-xl font-bold text-black mb-6">รายการแจ้งซ่อมทั้งหมดในระบบ</h1>
+    <h1 class="text-xl font-bold text-black mb-6">รายการคำร้องแจ้งซ่อม</h1>
 
     <!-- ---------------- Filters ---------------- -->
     <RepairFilterBar
+      mode="admin"
       v-model:search="searchInput"
       v-model:urgencies="selectedUrgencies"
       v-model:statuses="selectedStatuses"
