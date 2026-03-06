@@ -1,3 +1,4 @@
+<script setup>
 /**
  * =====================================================================
  * @file            main-layout.view.vue
@@ -33,8 +34,6 @@
  *   - แก้ไข alert         [2026-03-06, เศรษฐพงศ์ หอมชื่น]
  * =====================================================================
  */
-
-<script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { jwtDecode } from 'jwt-decode'
@@ -199,6 +198,7 @@ function handleFirstLoginSuccess() {
       style="padding-left: 120px"
     >
       <RouterView />
+      <footer class="mt-8 text-center text-sm text-gray-400">Powered by 92 Tech co,.ltd</footer>
     </main>
 
     <!-- First Login Modal -->
