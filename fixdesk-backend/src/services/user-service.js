@@ -30,7 +30,7 @@
  *  - เพิ่มการ generate default password จาก FirstNameEn + Last4Phone + LastInitial
  *  - รองรับการ reset password โดยใช้รูปแบบ default password
  *  - ปรับปรุงการ import ผู้ใช้งานให้รองรับ default password
- *     
+ *
  *
  * =====================================================================
  */
@@ -86,6 +86,7 @@ module.exports = (db) => {
         LEFT JOIN role AS role ON user.us_role_id = role.role_id
         LEFT JOIN technician_type AS tech ON user.us_tt_id = tech.tt_id
         LEFT JOIN title_name AS title ON user.us_ttn_id = title.ttn_id
+        WHERE role.role_name <> 'Superadmin'
         ORDER BY user.us_id ASC
       `;
 
@@ -111,6 +112,7 @@ module.exports = (db) => {
         LEFT JOIN technician_type AS tech ON user.us_tt_id = tech.tt_id
         LEFT JOIN title_name AS title ON user.us_ttn_id = title.ttn_id
         WHERE user.us_id = ?
+        AND role.role_name <> 'Superadmin'
         LIMIT 1
       `;
       const [rows] = await db.promise().query(sql, [userId]);
@@ -128,8 +130,13 @@ module.exports = (db) => {
 
     // ดึงบทบาททั้งหมด
     async getAllRoles() {
-      const sql =
-        "SELECT role_id, role_name, role_name AS role_label_th FROM role ORDER BY role_id ASC";
+      const sql = `
+    SELECT role_id, role_name, role_name AS role_label_th
+    FROM role
+    WHERE role_name <> 'Superadmin'
+    ORDER BY role_id ASC
+  `;
+
       return new Promise((resolve, reject) => {
         db.query(sql, (err, res) => (err ? reject(err) : resolve(res)));
       });
@@ -139,6 +146,12 @@ module.exports = (db) => {
 
     // สร้างผู้ใช้ใหม่
     async createUser(userData) {
+      const [role] = await db
+        .promise()
+        .query("SELECT role_name FROM role WHERE role_id = ?", [
+          userData.roleId,
+        ]);
+
       const defaultPassword = generateDefaultPassword(userData);
       // เข้ารหัสรหัสผ่านก่อนลงฐานข้อมูล
       const hashedPassword = await bcrypt.hash(defaultPassword, 10);
@@ -178,6 +191,11 @@ module.exports = (db) => {
     },
 
     async resetPassword(userId) {
+      const targetUser = await this.getUserById(userId);
+
+      if (targetUser.role_name === "Superadmin") {
+        throw new Error("CANNOT_RESET_SUPERADMIN_PASSWORD");
+      }
       // ดึงข้อมูล user จาก database
       const sqlSelect = `
     SELECT 
@@ -227,6 +245,11 @@ module.exports = (db) => {
     },
     // แก้ไขข้อมูลผู้ใช้ (สำหรับ Admin)
     async updateUser(id, userData) {
+      const targetUser = await this.getUserById(id);
+
+      if (targetUser.role_name === "Superadmin") {
+        throw new Error("CANNOT_MODIFY_SUPERADMIN");
+      }
       // ตรวจสอบ Username ซ้ำ (ยกเว้นตัวเอง)
       if (userData.userName) {
         const [dup] = await db
@@ -279,7 +302,13 @@ module.exports = (db) => {
     },
 
     // แก้ไขข้อมูลส่วนตัว (สำหรับ User แก้เอง)
-    async updatePersonalProfile(id, userData, oldPassword, newPassword, isFirstLogin = false) {
+    async updatePersonalProfile(
+      id,
+      userData,
+      oldPassword,
+      newPassword,
+      isFirstLogin = false,
+    ) {
       // 1. เช็คว่า User มีอยู่จริงไหม
       const currentUser = await this.getUserById(id);
       if (!currentUser) throw new Error("USER_NOT_FOUND");
@@ -295,8 +324,11 @@ module.exports = (db) => {
 
       // 3. เตรียมรหัสผ่านใหม่ (ถ้ามี)
       let finalPassword = currentUser.us_user_pass;
-      let usActive = userData.usActive !== undefined ? userData.usActive : currentUser.us_active;
-      
+      let usActive =
+        userData.usActive !== undefined
+          ? userData.usActive
+          : currentUser.us_active;
+
       if (newPassword) {
         finalPassword = await bcrypt.hash(newPassword, 10);
         // ถ้ามีการเปลี่ยนรหัสผ่าน และ us_active=0 ให้ตั้งเป็น 1
@@ -365,6 +397,11 @@ module.exports = (db) => {
 
     // ลบผู้ใช้
     async deleteUser(id) {
+      const targetUser = await this.getUserById(id);
+
+      if (targetUser.role_name === "Superadmin") {
+        throw new Error("CANNOT_DELETE_SUPERADMIN");
+      }
       // เช็คก่อนว่า User นี้เคย แจ้งซ่อม หรือ รับงานซ่อม ไหม
       const checkSql = `
             SELECT (SELECT COUNT(*) FROM repair_form WHERE rf_us_id = ?) + 
@@ -393,6 +430,9 @@ module.exports = (db) => {
 
       for (const [index, user] of userList.entries()) {
         try {
+          if (user.role_name === "Superadmin") {
+            throw new Error("CANNOT_IMPORT_SUPERADMIN");
+          }
           // 1. ตรวจสอบข้อมูลเบื้องต้น
           if (
             !user.username ||

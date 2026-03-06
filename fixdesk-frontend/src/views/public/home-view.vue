@@ -220,9 +220,5 @@ const goToLogin = () => router.push('/login')
       </div>
     </div>
     <!-- ส่วนท้ายเพจ - ข้อมูลลิขสิทธิ์ -->
-
-    <footer class="mt-16 text-slate-400 text-sm pb-10">
-      92 Tech Co.,Ltd — FixDesk All rights reserved.
-    </footer>
   </div>
 </template>
