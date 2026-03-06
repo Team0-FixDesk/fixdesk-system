@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 
 const props = defineProps({
   columns: { type: Array, default: () => [] },
@@ -32,6 +32,20 @@ function getRowId(row) {
 const totalPages = computed(() => {
   const totalRows = props.rows.length
   return Math.max(1, Math.ceil(totalRows / props.perPage))
+})
+
+// Auto-reset currentPage เมื่อข้อมูลลดลงจนหน้าปัจจุบันไม่มีอยู่จริง
+watch(totalPages, (newTotalPages) => {
+  if (currentPage.value > newTotalPages) {
+    currentPage.value = Math.max(1, newTotalPages)
+  }
+})
+
+// Reset pagination เมื่อข้อมูลเปลี่ยนแปลง (เช่น filter, search)
+watch(() => props.rows.length, () => {
+  if (currentPage.value > totalPages.value) {
+    currentPage.value = 1
+  }
 })
 
 const paginatedRows = computed(() => {

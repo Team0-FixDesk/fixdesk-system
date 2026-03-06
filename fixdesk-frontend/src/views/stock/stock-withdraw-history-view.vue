@@ -139,6 +139,8 @@ async function loadStockForms() {
         title: 'หมดเวลาในการใช้งาน',
         text: 'คุณไม่ได้ใช้งานเป็นระยะเวลาหนึ่ง กรุณาลงชื่อเข้าสู่ระบบใหม่อีกครั้ง',
         icon: 'warning',
+        confirmButtonColor: '#0048EF', 
+        confirmButtonText: 'ตกลง'
       })
       router.push('/login')
     } else {

@@ -141,7 +141,6 @@ function buildRepairDetailHtml(repair) {
 }
 
 async function fetchAdminRepairs() {
-  console.log('🔄 [Admin] fetchAdminRepairs called')
   const token = getAuthToken()
   if (!token) {
     console.error('Token not found. User may not be logged in.')
@@ -165,10 +164,6 @@ async function fetchAdminRepairs() {
 
   // รองรับทั้งแบบเป็น array ตรง ๆ หรือห่อด้วย data
   const result = Array.isArray(payload) ? payload : (Array.isArray(payload?.data) ? payload.data : [])
-  console.log('🔍 [Admin] fetchAdminRepairs result count:', result.length)
-  if (result.length > 0) {
-    console.log('🔍 [Admin] First repair sample:', result[0])
-  }
   return result
 }
 
@@ -197,12 +192,7 @@ async function loadAdminRepairs() {
   try {
     const repairs = await fetchAdminRepairs()
     tableRowsList.value = repairs.map(mapRepairToTableRow)
-    console.log('📋 [Admin] tableRowsList updated, count:', tableRowsList.value.length)
-    if (tableRowsList.value.length > 0) {
-      console.log('📋 [Admin] First row meta:', tableRowsList.value[0].meta)
-    }
   } catch (error) {
-    console.error('Failed to load admin repairs:', error?.message || error)
   }
 }
 
