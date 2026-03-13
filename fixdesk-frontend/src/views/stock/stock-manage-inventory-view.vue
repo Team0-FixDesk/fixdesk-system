@@ -3,11 +3,11 @@
  * @file            stock-manage-inventory-view.vue
  * @module          มอดูลการจัดการคลัง - การจัดการสินค้าคงคลัง
  * @layer           View (Presentation Layer)
- * @version         1.0.1
+ * @version         1.0.2
  * @since           2025-10-21
  * @author          เศรษฐพงศ์ หอมชื่น
- * @lastModified    2026-02-27
- * @lastModifiedBy  เศรษฐพงศ์ หอมชื่น
+ * @lastModified    2026-03-06
+ * @lastModifiedBy  อาจอนนต์ ภคนันทานนท์
  * ---------------------------------------------------------------------
  * @description
  *  หน้าจอสำหรับจัดการข้อมูลสินค้าคงคลัง
@@ -16,6 +16,9 @@
  *    - เพิ่ม แก้ไข ลบสินค้า
  *    - นำเข้าข้อมูลสินค้าจากไฟล์ Excel
  *    - ตรวจสอบความถูกต้องของไฟล์ภาพ
+ *---------------------------------------------------------------------
+ * @changelog
+ *   - เพิ่ม validation border แดงในฟอร์มแก้ไขรายการ [2026-03-06, อาจอนนต์ ภคนันทานนท์]
  * =====================================================================
  */
 <script setup>
@@ -158,7 +161,13 @@ async function fetchAllStock() {
   try {
     const token = localStorage.getItem('token') || sessionStorage.getItem('token')
     if (!token) {
-      Swal.fire('หมดเวลาเข้าสู่ระบบ', 'กรุณาเข้าสู่ระบบใหม่', 'warning')
+      Sweetalert.fire({
+        title: 'หมดเวลาในการใช้งาน',
+        text: 'คุณไม่ได้ใช้งานเป็นระยะเวลาหนึ่ง กรุณาลงชื่อเข้าสู่ระบบใหม่',
+        icon: 'warning',
+        confirmButtonColor: '#0048EF', 
+        confirmButtonText: 'ตกลง'
+      })
       router.push('/login')
       return
     }
@@ -166,7 +175,13 @@ async function fetchAllStock() {
     const response = await fetch(`${API_BASE}/show-stock`, { headers: getAuthHeaders() })
 
     if (response.status === 401) {
-      Swal.fire('หมดเวลาเข้าสู่ระบบ', 'กรุณาเข้าสู่ระบบใหม่', 'warning')
+      Swal.fire({
+        title: 'หมดเวลาเข้าสู่ระบบ',
+        text: 'กรุณาเข้าสู่ระบบใหม่',
+        icon: 'warning',
+        confirmButtonColor: '#1d4ed8',
+        confirmButtonText: 'ตกลง'
+      })
       sessionStorage.removeItem('token')
       localStorage.removeItem('token')
       router.push('/login')
@@ -351,10 +366,10 @@ async function handleDeleteCategory(category) {
     text: `ต้องการลบหมวดหมู่ "${category.name}" หรือไม่?`,
     icon: 'warning',
     showCancelButton: true,
-    confirmButtonText: 'ลบ',
+    confirmButtonText: 'ยืนยันการลบ',
     cancelButtonText: 'ยกเลิก',
     confirmButtonColor: '#dc2626',
-    cancelButtonColor: '#d4d4d4',
+    cancelButtonColor: '#a3a3a3',
   })
   if (!result.isConfirmed) return
 
@@ -574,7 +589,7 @@ const handleDelete = async (productIdFromTable) => {
     icon: 'warning',
     showCancelButton: true,
     confirmButtonColor: '#dc2626',
-    cancelButtonColor: '#d4d4d4',
+    cancelButtonColor: '#a3a3a3',
     confirmButtonText: 'ยืนยันการลบ',
     cancelButtonText: 'ยกเลิก',
   }).then(async (result) => {
@@ -1165,9 +1180,10 @@ onBeforeUnmount(() => {
                 ชื่อรายการ <span class="text-red-500">*</span>
               </label>
               <span class="block mb-1 text-xs text-gray-400">กรอกชื่อรายการของที่ต้องการแก้ไข</span>
-              <input v-model="editForm.name" type="text"
-                class="w-full px-3 py-2 text-black placeholder-gray-400 transition-all border border-gray-300 rounded-md focus:outline-none focus:ring-1"
-                placeholder="กรุณากรอกชื่อรายการ" />
+              <input v-model="editForm.name" type="text" :class="[
+                'w-full px-3 py-2 text-black placeholder-gray-400 transition-all border rounded-md focus:outline-none focus:ring-1 focus:ring-orange-400',
+                editErrors.name ? 'border-red-500' : 'border-gray-300',
+              ]" placeholder="กรุณากรอกชื่อรายการ" />
               <p v-if="editErrors?.name" class="mt-1 text-sm text-red-500">{{ editErrors.name }}</p>
             </div>
 
@@ -1185,13 +1201,16 @@ onBeforeUnmount(() => {
                   หมวดหมู่ <span class="text-red-500">*</span>
                 </label>
                 <span class="block mb-1 text-xs text-gray-400">โปรดเลือกหมวดหมู่รายการ</span>
-                <select v-model="editForm.categoryId"
-                  class="text-black w-full px-3 py-2 border border-gray-300 focus:ring-1 rounded-md bg-white">
+                <select v-model="editForm.categoryId" :class="[
+                  'text-black w-full px-3 py-2 border focus:ring-1 focus:ring-orange-400 rounded-md bg-white transition-all',
+                  editErrors.type_id ? 'border-red-500' : 'border-gray-300',
+                ]">
                   <option value="" disabled>กรุณาเลือกหมวดหมู่</option>
                   <option v-for="option in typeOptionList" :key="option.value" :value="String(option.value)">
                     {{ option.label }}
                   </option>
                 </select>
+                <p v-if="editErrors.type_id" class="mt-1 text-sm text-red-500">{{ editErrors.type_id }}</p>
               </div>
             </div>
 
@@ -1201,17 +1220,22 @@ onBeforeUnmount(() => {
                   จำนวน <span class="text-red-500">*</span>
                 </label>
                 <input v-model="editForm.quantity" type="number" min="1" :disabled="!!editForm.assetCode" :class="[
-                  'w-full px-3 py-2 text-black placeholder-gray-400 transition-all border border-gray-300 rounded-md focus:outline-none focus:ring-1',
+                  'w-full px-3 py-2 text-black placeholder-gray-400 transition-all border rounded-md focus:outline-none focus:ring-1 focus:ring-orange-400',
+                  editErrors.quantity ? 'border-red-500' : 'border-gray-300',
                   editForm.assetCode ? 'bg-gray-100 cursor-not-allowed' : '' /* เพิ่ม class แต่งสีตอนปิด */
                 ]" />
+                <p v-if="editErrors.quantity" class="mt-1 text-sm text-red-500">{{ editErrors.quantity }}</p>
               </div>
 
               <div>
                 <label class="block mb-1 text-sm font-medium text-black">
                   หน่วยนับ <span class="text-red-500">*</span>
                 </label>
-                <input v-model="editForm.unit" type="text"
-                  class="w-full px-3 py-2 text-black placeholder-gray-400 transition-all border border-gray-300 rounded-md focus:outline-none focus:ring-1" />
+                <input v-model="editForm.unit" type="text" :class="[
+                  'w-full px-3 py-2 text-black placeholder-gray-400 transition-all border rounded-md focus:outline-none focus:ring-1 focus:ring-orange-400',
+                  editErrors.unit ? 'border-red-500' : 'border-gray-300',
+                ]" />
+                <p v-if="editErrors.unit" class="mt-1 text-sm text-red-500">{{ editErrors.unit }}</p>
               </div>
             </div>
 

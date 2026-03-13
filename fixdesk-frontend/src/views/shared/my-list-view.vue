@@ -127,14 +127,14 @@ async function handleDeleteRepair(repairCode) {
     icon: 'warning',
 
     showCancelButton: true,
-    // ❌ ไม่ใช้ reverseButtons → confirm จะอยู่ซ้าย
+    // ไม่ใช้ reverseButtons → confirm จะอยู่ซ้าย
 
     confirmButtonText: 'ยืนยันการลบ',
     cancelButtonText: 'ยกเลิก',
 
-    // 🔴 Destructive action
+    // Destructive action
     confirmButtonColor: '#DC2626', // red-600
-    cancelButtonColor: '#6B7280', // gray-500
+    cancelButtonColor: '#a3a3a3', // gray-500
   })
 
   if (!confirm.isConfirmed) return

@@ -79,8 +79,6 @@ const repairRequests = ref([])
 const loading = ref(false)
 const error = ref(null)
 
-// Filter to show only completed repairs
-const showOnlyCompleted = true
 
 /* =========================
   Helpers (date)
@@ -110,10 +108,6 @@ function toLocalYMD(date) {
 ========================= */
 function isCompletedStatus(status) {
   return status === STATUS.done || status === STATUS.completed
-}
-
-function isCancelledStatus(status) {
-  return status === STATUS.cancel || status === STATUS.cancelled
 }
 
 /* =========================
@@ -237,7 +231,7 @@ const rowsForDisplay = computed(() => filteredRequests.value.map((item) => item.
 const completedTasks = computed(() => filteredRequests.value.length)
 
 /* =========================
-  Actions 
+  Actions
 ========================= */
 function goToRepairDetail(ticketId) {
   router.push(`/main/repair-detail/${ticketId}`)
@@ -255,12 +249,12 @@ onMounted(() => {
 <template>
   <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-7xl">
     <!-- Header -->
-    <div class="flex justify-between items-start mb-6">
+    <div class="flex justify-between items-start mb-2">
       <div>
-        <h1 class="text-xl font-bold text-black mb-6">ประวัติการแจ้งซ่อมที่ดำเนินการเสร็จสิ้น</h1>
+        <h1 class="text-xl font-bold text-black">ประวัติการแจ้งซ่อมที่ดำเนินการเสร็จสิ้น</h1>
       </div>
 
-      <div class="flex flex-col gap-4 ml-auto">
+      <div class="flex flex-row gap-4 ml-auto">
         <div class="flex items-center gap-3 justify-end">
             <label class="text-sm font-medium text-gray-700">เลือกปี:</label>
             <select v-model.number="selectedYear" @change="refreshDashboard"
@@ -274,20 +268,13 @@ onMounted(() => {
         <div class="flex items-center gap-2 justify-end">
             <label class="text-sm font-medium text-gray-700">เลือกเดือน:</label>
             <select v-model.number="selectedMonthIndex" @change="refreshDashboard"
-              class="px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm text-sm">
+              class="px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-sm">
               <option v-for="(m, idx) in monthLabels" :key="m" :value="idx">
                 {{ m }}
               </option>
             </select>
           </div>
       </div>
-    </div>
-
-    <!-- Stats Text -->
-    <div class="mb-6">
-      <p class="text-sm text-gray-600">
-        จำนวนงานซ่อมที่เสร็จสิ้น: <span class="font-semibold text-green-600">{{ completedTasks }}</span> รายการ
-      </p>
     </div>
 
     <!-- Filters -->
@@ -297,10 +284,17 @@ onMounted(() => {
       v-model:statuses="selectedStatuses"
       v-model:date="selectedDate"
       v-model:urgencies="selectedUrgencies"
+      :show-date="false"
       :show-status="false"
       :show-urgencies="true"
       @reset="resetFilters"
     />
+
+    <div class="mb-2">
+      <p class="text-sm text-gray-600">
+        จำนวนงานซ่อมที่เสร็จสิ้น: <span class="font-semibold text-green-600">{{ completedTasks }}</span> รายการ
+      </p>
+    </div>
 
     <!-- Table -->
     <TableComponent

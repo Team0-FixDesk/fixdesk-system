@@ -1,22 +1,23 @@
+<script setup>
 /**
  * =====================================================================
  * @file            admin-home.view.vue
  * @module          -
  * @layer           View (Presentation Layer)
- * @version         1.0.2
+ * @version         1.0.3
  * @since           2025-10-21
  * @author          เศรษฐพงศ์ หอมชื่น
- * @contributors 
+ * @contributors
      - พชร ไพศรีสกุล
-     - นราธิป แสนทวีสุข 
+     - นราธิป แสนทวีสุข
      - ปฏิพัทธ์ จงนันทพันธ์กุล
      - พิมลพรรณ มามาก
- *     
- * @lastModified    2026-02-21
- * @lastModifiedBy  พิมลพรรณ มามาก
+ *
+ * @lastModified    2026-03-05
+ * @lastModifiedBy  เศรษฐพงศ์ หอมชื่น
  * ---------------------------------------------------------------------
  * @description
- *  หน้าจอหลักสำหรับผู้ดูแลระบบ 
+ *  หน้าจอหลักสำหรับผู้ดูแลระบบ
  *  ใช้สำหรับ:
  *   - แสดงสถิติของงานซ่อม (รายเดือน / วันนี้ / กำลังดำเนินการ / เสร็จสิ้น 7 วัน)
  *   - แสดงตารางรายการแจ้งซ่อมทั้งหมด
@@ -39,19 +40,18 @@
  *     [2026-02-17, ปฏิพัทธ์ จงนันทพันธ์กุล] V1.0.0
  *   - แก้ไขข้อความคำอธิบายสถานะ, แก้ไขการใช้สัญลักษณ์
  *     [2026-02-20, ปฏิพัทธ์ จงนันทพันธ์กุล] V1.0.1
- *   - ดึงข้อมูลชื่อผู้ใช้ : 
+ *   - ดึงข้อมูลชื่อผู้ใช้ :
  *     [2026-02-21, พิมลพรรณ มามาก] V1.0.2
+ *   - ลบคำว่า "ที่ผ่านมา" ออกจากการ์ด V1.0.3
+ *     [2026-03-05, เศรษฐพงศ์ หอมชื่น] V1.0.3
  * =====================================================================
  */
-
-<script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { getAdminRepairList } from '@/services/repair'
 
 import CardHomeComponent from '@/components/card-home-component.vue'
-import RepairButtonComponent from '@/components/button/repair-button-component.vue'
 import TableComponent from '@/components/table-component.vue'
 import InfoButtonComponent from '@/components/button/info-button-component.vue'
 
@@ -273,7 +273,7 @@ const statItems = computed(() => [
   },
   {
     value: completedTasks.value,
-    label: 'จำนวนงานซ่อมที่เสร็จสิ้นภายใน 7 วันที่ผ่านมา',
+    label: 'จำนวนงานซ่อมที่เสร็จสิ้นภายใน 7 วัน',
     colorClass: 'text-green-500',
     filterKey: 'completed_7days',
   },
@@ -287,7 +287,7 @@ function handleCardClick(item) {
 }
 
 function goToRepairDetail(ticketId) {
-  router.push(`/main/repair-detail/${ticketId}`)
+  router.push({ path: `/main/repair-detail/${ticketId}`, state: { fromAdmin: true } })
 }
 
 /* =========================
