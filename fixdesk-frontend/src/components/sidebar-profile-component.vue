@@ -342,7 +342,7 @@ async function executeSave(type = '') {
   // สำเร็จ: แสดงข้อความแจ้งเตือนตามประเภทการบันทึก
     Swal.fire({
       title: 'สำเร็จ',
-      text: type === 'password' ? 'เปลี่ยนรหัสผ่านเรียบร้อย' : 'อัปเดตข้อมูลเรียบร้อย',
+      text: type === 'password' ? 'เปลี่ยนรหัสผ่านเรียบร้อย' : 'แก้ไขเบอร์โทรศัพท์เรียบร้อย',
       icon: 'success',
       confirmButtonColor: '#1E48D1',
     })
