@@ -42,6 +42,8 @@
        [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล] V1.0.0
  *   - แก้ไขข้อความหัวตาราง และการใช้สัญลักษณ์ :  
        [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล] V1.0.0
+ *   - ดึงข้อมูลชื่อผู้ใช้ : 
+ *     [2026-02-21, พิมลพรรณ มามาก] V
  * =====================================================================
  */
 
@@ -63,7 +65,7 @@ import { useAuthToken } from '@/composables/useAuthToken'
 import { useUserProfile } from '@/composables/useUserProfile'
 
 const { token, userId, isAuthenticated, logout } = useAuthToken()
-const { displayName, displayDepartment} = useUserProfile()
+const { userDisplayName, userDepartmentName, fetchUserProfileData} = useUserProfile()
 
 // ตัวแปรสำหรับ Card สถิติ
 const statsItemsList = ref([
@@ -212,10 +214,11 @@ const onRowClick = (idOrItem) => {
     loadTimelineForCode(code) // โหลดข้อมูลทันที
   }
 }
-
+/* Reload */
 onMounted(() => {
   fetchRepairStats()
   fetchRecentRepairs()
+  fetchUserProfileData()
 })
 </script>
 
@@ -223,13 +226,8 @@ onMounted(() => {
   <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-8xl">
     <div class="flex justify-between items-center mb-6">
       <div>
-        <p class="text-2xl font-extrabold text-gray-900">
-          หน้าจอหลักของผู้ใช้งาน - สวัสดีคุณ {{ displayName }}
-        </p>
-        <h1 class="text-2xl font-bold text-gray-800">{{ displayDepartment }}</h1>
-        <p class="mt-1 text-sm text-gray-600">
-          ตรวจสอบความคืบหน้าของรายการแจ้งซ่อม
-        </p>
+        <h1 class="text-2xl font-extrabold text-gray-900">สวัสดีคุณ{{ userDisplayName }}</h1>
+        <p class="text-lg font-semibold text-gray-700">{{ userDepartmentName }}</p>
       </div>
       <RepairButton />
     </div>

@@ -1,16 +1,16 @@
 /**
  * =====================================================================
  * @file            manage-report-view.vue
- * @module          มอดูลส่งออกรายงาน และแดชบอร์ดสรุปผลการแจ้งซ่อม 
+ * @module          มอดูลส่งออกรายงาน และแดชบอร์ดสรุปผลการแจ้งซ่อม
                       - การส่งออกใบแจ้งซ่อมเป็นไฟล์ PDF
                       - การสร้างหนังสือบันทึกข้อความประจำเดือน
                       - การส่งออกรายงานแจ้งซ่อมประจำเดือน ในรูปแบบ CSV
  * @layer           View (Presentation Layer)
- * @version         1.0.1
+ * @version         1.1.0
  * @since           2025-01-15
  * @author          นราธิป แสนทวีสุข
- * @lastModified    2026-02-20
- * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
+ * @lastModified    2026-03-05
+ * @lastModifiedBy  นราธิป แสนทวีสุข
  * ---------------------------------------------------------------------
  * @description
  *  หน้าจอสำหรับผู้ดูแลระบบใช้ในการจัดการรายงานแจ้งซ่อม
@@ -31,19 +31,20 @@
  *
  * ---------------------------------------------------------------------
  * @changelog
- *  - แก้ไขคำในปุ่มให้ชัดเจนขึ้น
-      [2026-02-17, นราธิป แสนทวีสุข] V1.0.0
- *  - แก้ไข reporter และ assigner name ให้แสดงคำนำหน้าชื่อ 
-      [2026-02-17, นราธิป แสนทวีสุข] V1.0.0
- *  - แก้ไขปัญหาตัวอักษรตกบรรทัดในปุ่ม CSV (whitespace-nowrap)
-      [2026-02-17, นราธิป แสนทวีสุข] V1.0.0
- *  - ปรับ padding และขนาดตัวอักษรปุ่มให้ไม่ชิดขอบเกินไป (text-sm, p-3) 
-      [2026-02-17, นราธิป แสนทวีสุข] V1.0.0
- *  - แก้ไขข้อความคำอธิบาย 
-      [2026-02-20, ปฏิพัทธ์ จงนันทพันธ์กุล] V1.0.1
+ *  - แก้ไขคำในปุ่มให้ชัดเจนขึ้น                                  [2026-02-17, นราธิป แสนทวีสุข]
+ *  - แก้ไข reporter และ assigner name ให้แสดงคำนำหน้าชื่อ        [2026-02-17, นราธิป แสนทวีสุข]
+ *  - แก้ไขปัญหาตัวอักษรตกบรรทัดในปุ่ม CSV (whitespace-nowrap)  [2026-02-17, นราธิป แสนทวีสุข]
+ *  - ปรับ padding และขนาดตัวอักษรปุ่มให้ไม่ชิดขอบเกินไป (text-sm, p-3) [2026-02-17, นราธิป แสนทวีสุข]
+ *  - แก้ไขข้อความคำอธิบาย                                    [2026-02-20, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *  - เปลี่ยนจาก rf_is_outsourced เป็น rf_repair_method
+ *    และเพิ่มฟิลด์ rf_result_status ใน PDF                       [2026-02-22, นราธิป แสนทวีสุข]
+ *  - แก้ไขปัญหา PDF ถูกตัด และ checkbox ใน PDF: มีเครื่องหมายถูกกับไม่มีถูก
+ *    ความสูงไม่เท่ากัน และเครื่องหมายทะลุกรอบด้านล่าง
+ *    ใช้ inline-flex, bounding box คงที่, &nbsp; ในกล่องว่าง
+ *    และลดขนาดฟอนต์เครื่องหมายถูกเพื่อให้อยู่ภายในกรอบ       [2026-03-05, นราธิป แสนทวีสุข]
  * =====================================================================
  */
- 
+
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
@@ -110,7 +111,7 @@ const getRepairFormHTML = (item, isPdf = false) => {
   const department = item.reporter?.department || '..............................................';
   const phone = item.reporter?.phone || '............................';
   const issue = item.rf_problem || item.rf_issue || '...................................................................................................................';
-  const assetId = item.rf_prop_number || '.............................................................................';
+  const assetId = item.rf_prop_number || '';
   const building = item.building_name || item.rf_building || '..................';
   const floor = item.floor_name || item.rf_floor || '..................';
   const room = item.room_name || item.rf_room || '..................';
@@ -121,7 +122,12 @@ const getRepairFormHTML = (item, isPdf = false) => {
 
   const technician = item.main_technician || '...............................................................................................................';
   const techSummary = item.rf_tech_summary || '........................................................................................................................................................................................\n........................................................................................................................................................................................';
-  const isOutsourced = item.rf_is_outsourced || false;
+
+  // เปลี่ยนจาก rf_is_outsourced เป็น rf_repair_method (DB Schema v1.1.0)
+  const repairMethod = item.rf_repair_method || 'in_house';
+  const repairMethodRemark = item.rf_repair_method_remark || '';
+  const resultStatus = item.rf_result_status || '';
+  const resultRemark = item.rf_result_remark || '';
 
   // รวมคำนำหน้า + ชื่อเต็มสำหรับผู้รับแจ้ง (ใช้ข้อมูลจาก backend)
   const assignerTitle = item.assigner?.title || '';
@@ -135,24 +141,31 @@ const getRepairFormHTML = (item, isPdf = false) => {
   // ถ้าเป็น PDF: เพิ่ม padding-bottom และเส้นหนาขึ้น (แก้บั๊ก html2canvas)
   // ถ้าเป็น Preview: ใช้ค่าปกติ สวยงามบนจอ
   const valueStyle = isPdf
-    ? `border-bottom: 2px dotted #888; padding-bottom: 8px; line-height: 1.2; margin-bottom: 2px;`
+    ? `border-bottom: 2px dotted #888; padding-bottom: 5px; line-height: 1.2; margin-bottom: 2px;`
     : `border-bottom: 1px dotted #000; padding-bottom: 0px; line-height: 1.4; margin-bottom: 2px;`;
 
-  // Preview: top: 3px (สวยบนจอ)
-  // PDF: top: 5px (ดันลงมาอีกหน่อย เพราะ html2canvas ชอบดึงขึ้น)
-  const checkboxTop = isPdf ? '10px' : '1px';
-  const checkboxLineHeight = isPdf ? '5px' : '12px'; // ปรับตำแหน่งเครื่องหมายถูกในกล่องนิดหน่อย
+  // แยกค่าระหว่าง Preview และ PDF
+  // ใช้ inline-flex + align-items/justify-content พร้อมบังคับขนาดคงที่
+  // ใส่ &nbsp; ในกล่องว่างเพื่อให้มีความสูงเท่ากับกล่องที่มีเครื่องหมายเสมอ
+  // ลด font-size และใช้ padding-top เพื่อให้เครื่องหมายถูกอยู่ภายในกรอบ
+  const checkboxTop = isPdf ? '5px' : '-5px';
+  const checkboxFontSize = '16px'; // ลดขนาดเครื่องหมายเพื่อไม่ให้ทะลุกรอบ
 
-  const checkboxStyle = `width: 16px; height: 16px; border: 1px solid #000; display: inline-block; margin-right: 8px; position: relative; top: ${checkboxTop}; text-align: center; line-height: ${checkboxLineHeight}; font-size: 14px; font-weight: bold;`;
+  const checkboxStyle = `width: 16px; height: 16px; min-height: 16px; max-height: 16px; border: 1px solid #000; display: inline-flex; align-items: center; justify-content: center; margin-right: 8px; position: relative; top: ${checkboxTop}; font-size: ${checkboxFontSize}; font-weight: bold; box-sizing: border-box; flex-shrink: 0; line-height: 0; padding-bottom: 8px;`;
+
+  // Helper function: ถ้าค่าว่างให้ใส่ &nbsp; เพื่อให้มีความสูงแต่ไม่มีเนื้อหา (ให้ผู้ใช้เขียนด้วยปากกา)
+  const getValueOrSpace = (value) => {
+    return (value && value.trim() !== '') ? value : '&nbsp;';
+  };
   return `
-    <div style="width: 100%; height: 100%; padding: 40px; box-sizing: border-box; font-family: 'THSarabun', 'Sarabun', sans-serif !important; background: white; color: #000; position: relative;">
+    <div style="width: 100%; height: 100%; padding: ${isPdf ? '28px' : '40px'}; box-sizing: border-box; font-family: 'THSarabun', 'Sarabun', sans-serif !important; background: white; color: #000; position: relative;">
       <style>
         .form-content * { font-family: 'THSarabun', 'Sarabun', sans-serif !important; box-sizing: border-box; }
-        .form-content .title { font-size: 28px; font-weight: bold; margin-bottom: 4px; text-align: center; line-height: 1.2; }
-        .form-content .subtitle { font-size: 18px; text-align: center; margin-bottom: 24px; }
-        .form-content .row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 18px; line-height: 1.4; }
-        .form-content .box { border: 1px solid #888; border-radius: 4px; margin-bottom: 16px; padding: 16px; font-size: 18px; }
-        .form-content .flex-gap { display: flex; gap: 16px; align-items: flex-start; }
+        .form-content .title { font-size: ${isPdf ? '26px' : '28px'}; font-weight: bold; margin-bottom: 4px; text-align: center; line-height: 1.2; }
+        .form-content .subtitle { font-size: ${isPdf ? '17px' : '18px'}; text-align: center; margin-bottom: ${isPdf ? '16px' : '24px'}; }
+        .form-content .row { display: flex; justify-content: space-between; margin-bottom: ${isPdf ? '6px' : '8px'}; font-size: 18px; line-height: 1.4; }
+        .form-content .box { border: 1px solid #888; border-radius: 4px; margin-bottom: ${isPdf ? '12px' : '16px'}; padding: ${isPdf ? '13px' : '16px'}; font-size: 18px; }
+        .form-content .flex-gap { display: flex; gap: ${isPdf ? '12px' : '16px'}; align-items: flex-start; }
         .form-content .col { flex: 1; }
         .form-content .label { white-space: nowrap; }
 
@@ -167,8 +180,8 @@ const getRepairFormHTML = (item, isPdf = false) => {
         }
 
         .form-content .check-box { width: 16px; height: 16px; border: 1px solid #000; display: inline-block; margin-right: 8px; position: relative; top: 3px; text-align: center; line-height: 12px; font-size: 14px; font-weight: bold; }
-        .form-content .sign-area { display: flex; justify-content: space-between; margin-top: 24px; text-align: center; }
-        .form-content .divider { height: 1px; background: #ccc; margin: 16px 0; }
+        .form-content .sign-area { display: flex; justify-content: space-between; margin-top: ${isPdf ? '18px' : '24px'}; text-align: center; }
+        .form-content .divider { height: 1px; background: #ccc; margin: ${isPdf ? '12px 0' : '16px 0'}; }
         .text-blue { color: #2563eb; }
       </style>
 
@@ -176,7 +189,7 @@ const getRepairFormHTML = (item, isPdf = false) => {
         <div class="title">แบบฟอร์มแจ้งซ่อม</div>
         <div class="subtitle">สำนักปลัดเทศบาล งานอาคารและสถานที่ (ฝ่ายอำนวยการ)</div>
 
-        <div class="row" style="margin-bottom: 20px;">
+        <div class="row" style="margin-bottom: ${isPdf ? '14px' : '20px'};">
           <div>เลขที่ <span class="value text-blue" style="border: none;">${code}</span></div>
           <div>ลงวันที่ <span class="value" style="border: none;">${date}</span></div>
         </div>
@@ -190,14 +203,14 @@ const getRepairFormHTML = (item, isPdf = false) => {
                 <div class="col">เบอร์โทรศัพท์ติดต่อ <span class="value">${phone}</span></div>
               </div>
 
-              <div style="margin-top: 8px;">
+              <div style="margin-top: ${isPdf ? '6px' : '8px'};">
                 ขอความกรุณาตรวจสอบ/ซ่อมแซม <span class="value" style="width: 90%;">${issue}</span>
               </div>
-              <div style="margin-top: 4px;">
+              <div style="margin-top: ${isPdf ? '3px' : '4px'};">
                 หมายเลขครุภัณฑ์ <span class="value" style="width: 90%;">${assetId}</span>
               </div>
 
-              <div class="flex-gap" style="margin-top: 4px;">
+              <div class="flex-gap" style="margin-top: ${isPdf ? '3px' : '4px'};">
                 <span>อาคาร <span class="value">${building}</span></span>
                 <span>ชั้น <span class="value">${floor}</span></span>
                 <span>ห้อง <span class="value">${room}</span></span>
@@ -211,7 +224,7 @@ const getRepairFormHTML = (item, isPdf = false) => {
             <div style="min-width: 20px;">2.</div>
             <div style="flex: 1;">
               <div>สาเหตุ/อาการเสีย</div>
-              <div style="font-weight: bold; white-space: pre-wrap; margin-top: 4px; min-height: 40px; ">${detail}</div>
+              <div style="font-weight: bold; white-space: pre-wrap; margin-top: 4px; min-height: ${isPdf ? '32px' : '40px'}; ">${detail}</div>
             </div>
           </div>
 
@@ -228,20 +241,22 @@ const getRepairFormHTML = (item, isPdf = false) => {
         </div>
 
         <div class="box">
-          <div style="font-weight: bold; margin-bottom: 12px; text-decoration: underline;">สำหรับเจ้าหน้าที่ ตรวจสอบ/ซ่อม</div>
+          <div style="font-weight: bold; margin-bottom: ${isPdf ? '10px' : '12px'}; text-decoration: underline;">สำหรับเจ้าหน้าที่ ตรวจสอบ/ซ่อม</div>
 
-          <div><span style="${checkboxStyle}">${!isOutsourced ? '✓' : ''}</span> สามารถแก้ไข/ซ่อมบำรุงได้</div>
-          <div style="margin-top: 8px;"><span style="${checkboxStyle}">${isOutsourced ? '✓' : ''}</span> ต้องจ้างบริษัทฯมาดำเนินการ................................................................................................</div>
+          <div><span style="${checkboxStyle}">${repairMethod === 'in_house' ? '✓' : '&nbsp;'}</span> สามารถแก้ไข/ซ่อมบำรุงได้</div>
+          <div style="margin-top: ${isPdf ? '6px' : '8px'};"><span style="${checkboxStyle}">${repairMethod === 'outsource' ? '✓' : '&nbsp;'}</span> ต้องจ้างบริษัทฯมาดำเนินการ</div>
+          <div style="margin-top: ${isPdf ? '6px' : '8px'};"><span style="${checkboxStyle}">${repairMethod === 'other' ? '✓' : '&nbsp;'}</span> อื่นๆ <span class="value" style="width: 70%;">${getValueOrSpace(repairMethod === 'other' ? repairMethodRemark : '')}</span></div>
 
           <div class="divider"></div>
 
           <div>รายละเอียดการตรวจสอบ/ซ่อม</div>
-          <div style="font-weight: bold; white-space: pre-wrap; margin-top: 4px; min-height: 40px;">${techSummary}</div>
+          <div style="font-weight: bold; white-space: pre-wrap; margin-top: 4px; min-height: ${isPdf ? '32px' : '40px'};">${techSummary}</div>
 
-          <div style="margin-top: 16px;">
+          <div style="margin-top: ${isPdf ? '12px' : '16px'};">
             สรุปผล:
-            <span style="margin-left: 16px;"><span style="${checkboxStyle}"></span> เรียบร้อย</span>
-            <span style="margin-left: 16px;"><span style="${checkboxStyle}"></span> ไม่เรียบร้อย เพราะ .............................................................</span>
+            <span style="margin-left: 16px;"><span style="${checkboxStyle}">${resultStatus === 'completed' ? '✓' : '&nbsp;'}</span> เรียบร้อย</span>
+            <span style="margin-left: 16px;"><span style="${checkboxStyle}">${resultStatus === 'incomplete' ? '✓' : '&nbsp;'}</span> ไม่เรียบร้อย เพราะ <span class="value" style="width: 34%;">${getValueOrSpace(resultStatus === 'incomplete' ? resultRemark : '')}</span></span><br>
+            <span style="margin-left: 56px;"><span style="${checkboxStyle}">${resultStatus === 'other' ? '✓' : '&nbsp;'}</span> อื่นๆ <span class="value" style="width: 67%;">${getValueOrSpace(resultStatus === 'other' ? resultRemark : '')}</span></span>
           </div>
 
           <div class="divider"></div>
@@ -493,7 +508,7 @@ const generateSinglePDF = async (item) => {
   const a4WidthPx = 794
   const a4HeightPx = 1123
 
-  // เรียกใช้ฟังก์ชันเดียวกันกับ Preview
+  // เรียกใช้ฟังก์ชันเดียวกันกับ Preview แต่ส่ง true เพื่อใช้ค่า compact
   tempDiv.innerHTML = getRepairFormHTML(item, true);
 
   tempDiv.style.width = `${a4WidthPx}px`;
@@ -501,8 +516,12 @@ const generateSinglePDF = async (item) => {
   tempDiv.style.position = 'absolute';
   tempDiv.style.left = '-9999px';
   tempDiv.style.top = '0';
+  tempDiv.style.overflow = 'hidden';
 
   document.body.appendChild(tempDiv);
+
+  // รอให้ render เสร็จ
+  await new Promise(resolve => setTimeout(resolve, 150));
 
   try {
     const canvas = await html2canvas(tempDiv.firstElementChild, {
@@ -512,11 +531,15 @@ const generateSinglePDF = async (item) => {
       width: a4WidthPx,
       height: a4HeightPx,
       windowWidth: a4WidthPx,
-      windowHeight: a4HeightPx
+      windowHeight: a4HeightPx,
+      scrollY: 0,
+      scrollX: 0
     });
 
     document.body.removeChild(tempDiv);
-    return { img: canvas.toDataURL('image/png', 1.0), width: a4WidthPx, height: a4HeightPx }
+
+    // ส่งคืนขนาด A4 มาตรฐาน
+    return { img: canvas.toDataURL('image/png', 1.0), width: 210, height: 297 }
   } catch (error) {
     document.body.removeChild(tempDiv);
     console.error("Error creating canvas", error);
@@ -594,7 +617,7 @@ const downloadPDF = async () => {
       for (let i = 0; i < itemsToPrint.length; i++) {
         const { img, width, height } = await generateSinglePDF(itemsToPrint[i])
         if (i > 0) pdf.addPage()
-        pdf.addImage(img, 'PNG', 0, 0, 210, 297, undefined, 'FAST')
+        pdf.addImage(img, 'PNG', 0, 0, width, height, undefined, 'FAST')
       }
       pdf.save(`${pdfFileName}.pdf`)
     } else {
@@ -606,7 +629,7 @@ const downloadPDF = async () => {
           unit: 'mm',
           format: 'a4'
         })
-        pdf.addImage(img, 'PNG', 0, 0, 210, 297)
+        pdf.addImage(img, 'PNG', 0, 0, width, height)
         const pdfBlob = pdf.output('blob')
         zip.file(`ใบแจ้งซ่อม_${item.rf_code}.pdf`, pdfBlob)
       }
@@ -775,7 +798,7 @@ onMounted(() => {
       <div v-if="showPrintModal" class="fixed inset-0 z-50 flex items-center justify-center">
         <div class="absolute inset-0 bg-black/50" @click="closePrintModal"></div>
         <div
-          class="relative bg-white rounded-xl shadow-2xl w-[95%] max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+          class="relative bg-white rounded-xl shadow-2xl w-[95%] max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
           <div class="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50">
             <h2 class="text-lg font-semibold text-gray-800">
               เตรียมดาวน์โหลดแบบฟอร์ม ({{ printSelection.length }} รายการ)
@@ -817,7 +840,7 @@ onMounted(() => {
               <div class="flex-1 overflow-auto p-4">
                 <div v-if="previewItem" class="mx-auto">
                   <div ref="previewDocRef" class="bg-white border border-gray-300 shadow-lg mx-auto overflow-hidden"
-                    style="width: 595px; min-height: 842px;" v-html="previewHtmlContent">
+                    style="width: 774px; min-height: 1095px; transform-origin: top center;" v-html="previewHtmlContent">
                   </div>
                 </div>
                 <div v-else class="flex items-center justify-center h-full text-gray-400">

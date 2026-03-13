@@ -1,45 +1,54 @@
 /**
- * =====================================================================
- * @file            table-actions.component.vue
- * @layer           Component (Presentation Layer)
- * @version         1.0.0
- * @since           2025-12-22
- * @author          พชร ไพศรีสกุล
- * @lastModified    2026-02-18
- * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
- * ---------------------------------------------------------------------
- * @description
- *  คอมโพเนนต์ปุ่มเมนูย่อย (Kebab Menu) สำหรับแสดงตัวเลือกการจัดการข้อมูลในแต่ละแถวของตาราง
- *  โดยพฤติกรรมของเมนูจะแตกต่างกันตามบทบาท (Roles) หรือสถานะที่เกิดขึ้น
- *  รองรับบทบาท (role):
- *    - technician รับงาน / ปิดงาน / จ้างช่างภายนอก / เบิกวัสดุ
- *    - admin (จัดการผู้ใช้งาน) แก้ไข / ลบ
- *    - admin (จัดการสถานที่) แก้ไข / ลบ
- *    - admin (จัดการมอบหมายงาน) มอบหมายงานให้ช่าง
- *    - user แก้ไข / ลบ (เฉพาะสถานะ "รอดำเนินการ")
- *    - stock แก้ไข / ลบ
- *
- * @emits
- *  toggle-menu
- *  detail
- *  edit
- *  delete
- *  assign
- *  accept
- *  outsource
- *  close-job
- *  open-stock
- *
- * ---------------------------------------------------------------------
- * @changelog
- *  - ปรับปรุงคำอธิบายให้สอดคล้องกับการทำงานของ Component [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
- *  - แก้ไขสี และไอคอนการมอบหมายงานแล้วในเมนูย่อย        [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
- * =====================================================================
- */
+* =====================================================================
+* @file table-actions.component.vue
+* @layer Component (Presentation Layer)
+* @version 1.1.0
+* @since 2025-12-22
+* @author พชร ไพศรีสกุล
+* @lastModified 2026-02-26
+* @lastModifiedBy ธนภัทร จันทร์งาม
+* ---------------------------------------------------------------------
+* @description
+* คอมโพเนนต์ปุ่มเมนูย่อย (Kebab Menu) สำหรับแสดงตัวเลือกการจัดการข้อมูลในแต่ละแถวของตาราง
+* โดยพฤติกรรมของเมนูจะแตกต่างกันตามบทบาท (Roles) หรือสถานะที่เกิดขึ้น
+* รองรับบทบาท (role):
+* - technician รับงาน / ปิดงาน / จ้างช่างภายนอก / เบิกวัสดุ
+* - admin (จัดการผู้ใช้งาน) แก้ไข / ลบ
+* - admin (จัดการสถานที่) แก้ไข / ลบ
+* - admin (จัดการมอบหมายงาน) มอบหมายงานให้ช่าง
+* - user แก้ไข / ลบ (เฉพาะสถานะ "รอดำเนินการ")
+* - stock แก้ไข / ลบ
+*
+* @emits
+* toggle-menu
+* detail
+* edit
+* delete
+* assign
+* accept
+* outsource
+* close-job
+* open-stock
+*
+* ---------------------------------------------------------------------
+* @changelog
+* - ปรับปรุงคำอธิบายให้สอดคล้องกับการทำงานของ Component [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
+* - แก้ไขสี และไอคอนการมอบหมายงานแล้วในเมนูย่อย [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
+* - ปรับปรุงเงื่อนไขการแสดงเมนูมอบหมายงานให้ถูกต้อง
+*   โดยแยกสถานะงานที่ยังไม่มอบหมาย และงานที่มอบหมายแล้วอย่างชัดเจน [2026-02-26, ธนภัทร จันทร์งาม]
+* =====================================================================
+*/
 
 <script setup>
 import { computed, onMounted, onBeforeUnmount, ref, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
+
+
+// ✅ FIX: ตรวจว่างานถูกมอบหมายแล้วจริงหรือไม่
+const isAssigned = computed(() => {
+  return Number(props.assignedTech) > 0
+})
+
 
 const props = defineProps({
   rowId: {
@@ -70,13 +79,6 @@ const props = defineProps({
     type: [String, Number, null],
     default: null,
   },
-})
-
-console.log('🎯 [TableActions] Props received:', {
-  rowId: props.rowId,
-  role: props.role,
-  assignedTech: props.assignedTech,
-  hasAssignedTech: !!props.assignedTech
 })
 
 const emit = defineEmits([
@@ -291,22 +293,19 @@ onBeforeUnmount(() => {
         </template>
 
         <!-- Assign -->
-        <!-- Assign -->
         <template v-if="role === 'assign'">
-          <!-- ยังไม่มอบหมาย -->
-          <button v-if="!props.assignedTech" @click="emitAndClose('assign', row)"
+          <!-- ✅ ยังไม่มอบหมาย -->
+          <button v-if="!isAssigned" @click="emitAndClose('assign', row)"
             class="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2">
-            <Icon icon="fluent:arrow-right-12-regular" width="16" height="16" style="color: #ffffff"
-              class="bg-green-400 hover:bg-green-600 rounded-md p-1 h-6 w-6" />
+            <Icon icon="fluent:arrow-right-12-regular" width="16" height="16"
+              class="bg-green-400 hover:bg-green-600 rounded-md p-1 h-6 w-6 text-white" />
             มอบหมายงาน
           </button>
 
-          <!-- มอบหมายแล้ว -->
-          <div class="px-3 py-2 text-sm text-gray-500 leading-snug flex items-center gap-2">
+          <!-- ✅ มอบหมายแล้ว -->
+          <div v-else class="px-3 py-2 text-sm text-gray-500 leading-snug flex items-center gap-2">
             <Icon icon="icon-park-outline:check-correct" width="16" height="16" class="text-green-600 shrink-0" />
-            <span>
-              งานนี้ถูกมอบหมายแล้ว
-            </span>
+            <span>งานนี้ถูกมอบหมายแล้ว</span>
           </div>
         </template>
 

@@ -3,11 +3,16 @@
  * @file            sidebar-profile-component.vue
  * @module          มอดูลจัดการโปรไฟล์ - การแก้ไขข้อมูลบัญชี (แก้ไขรหัสผ่าน)
  * @layer           Component (Presentation Layer)
- * @version         1.0.0
- * @since           2025-12-06
- * @author          พชร ไพศรีสกุล
- * @lastModified    2026-02-20
- * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
+ * @version         1.10.0
+ * @since           2025-10-23
+ * @author          เศรษฐพงศ์ หอมชื่น
+ * @contributors
+ *   - เศรษฐพงศ์ หอมชื่น
+ *   - พชร ไพศรีสกุล
+ *   - ปฏิพัทธ์ จงนันทพันธ์กุล
+ *
+ * @lastModified    2026-02-22
+ * @lastModifiedBy  พชร ไพศรีสกุล
  * ---------------------------------------------------------------------
  * @description
  *  Component ส่วนท้ายของ Sidebar สำหรับแสดงข้อมูลผู้ใช้ และจัดการตั้งค่าบัญชีส่วนตัว
@@ -36,7 +41,37 @@
  *
  * ---------------------------------------------------------------------
  * @changelog
- *   - แก้ไขข้อความแจ้งเตือน  [2026-02-20, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - refactor(auth-backend): ปรับโครงสร้างฐานข้อมูลและปรับหน้าเข้าสู่ระบบและโปรไฟล์ให้รองรับโครงสร้างใหม่
+ *     [2025-10-23, พชร ไพศรีสกุล] V 1.0.0
+ *   - feat(profile): เพิ่ม popup สำหรับแก้ไขข้อมูลผู้ใช้
+ *     [2025-11-29, เศรษฐพงศ์ หอมชื่น] V 1.1.0
+ *   - feat(profile): เพิ่มการดึงข้อมูลผู้ใช้จากระบบ
+ *     [2025-11-29, เศรษฐพงศ์ หอมชื่น] V 1.2.0
+ *   - feat(profile): เพิ่ม validation และระบบแจ้งเตือน
+ *     [2025-11-30, เศรษฐพงศ์ หอมชื่น] V 1.3.0
+ *   - feat(profile): เพิ่มระบบ SweetAlert
+ *     [2025-11-30, เศรษฐพงศ์ หอมชื่น] V 1.4.0
+ *   - fix(profile): ปรับ responsive layout
+ *     [2025-11-30, เศรษฐพงศ์ หอมชื่น] V 1.4.1
+ *   - feat(profile): เพิ่มฟังก์ชันแก้ไขรหัสผ่าน
+ *     [2025-11-30, เศรษฐพงศ์ หอมชื่น] V 1.5.0
+ *   - feat(profile): รองรับการแก้ไขข้อมูลส่วนตัว
+ *     [2025-12-01, เศรษฐพงศ์ หอมชื่น] V 1.6.0
+ *   - refactor(profile): ปรับปรุงโครงสร้าง frontend ให้สอดคล้องกับ Coding Standard
+ *     [2026-01-15, พชร ไพศรีสกุล] V 1.8.0
+ *   - fix(profile): แก้ไข bug และปรับปรุงการแสดงผลเบอร์โทรศัพท์
+ *     [2025-12-28, พชร ไพศรีสกุล] V 1.7.1
+ *   - feat(profile): เปลี่ยนระบบ icon ใหม่
+ *     [2026-02-05, พชร ไพศรีสกุล] V 1.9.0
+ *   - fix(profile): ย้าย icon ไป assets และแก้ไข icon issues
+ *     [2026-02-06, พชร ไพศรีสกุล] V 1.9.2
+ *   - fix(profile): แก้ไข feature import location
+ *     [2026-02-09, พชร ไพศรีสกุล] V 1.9.3
+ *   - style(profile): ปรับปรุงข้อความและ UI แจ้งเตือน
+ *     [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล] V 1.9.4
+ *   - ปรับปรุง Sidebar และประสบการณ์ใช้งาน (UX)
+ *     [2026-02-22, พชร ไพศรีสกุล] V 1.10.0
+ *
  * =====================================================================
  */
 
@@ -51,6 +86,9 @@ import ChevronUpIcon from '@/assets/icons/sidebar/chevron-up-icon.svg'
 import LogoutIcon from '@/assets/icons/sidebar/logout-icon.svg'
 import PersonIcon from '@/assets/icons/sidebar/person-icon.svg'
 import SettingIcon from '@/assets/icons/sidebar/settings-icon.svg'
+
+
+
 
 defineExpose({ forceClose })
 
@@ -140,15 +178,19 @@ function logout(e) {
   window.location.href = '/login'
 }
 
-// รีเซ็ตฟอร์มและ errors
+// รีเซ็ตฟอร์มและข้อความข้อผิดพลาด
 function resetProfileForm() {
   editForm.value.us_phone = ''
+  tempOldPassword.value = ''
   errors.value.us_phone = ''
+  errors.value.tempOldPassword = ''
 }
 
 function resetPasswordForm() {
   editForm.value.password = ''
   editForm.value.confirmPassword = ''
+  tempOldPassword.value = ''
+  errors.value.tempOldPassword = ''
   errors.value.password = ''
   errors.value.confirmPassword = ''
 }
@@ -156,25 +198,21 @@ function resetPasswordForm() {
 function validateProfileForm() {
   let valid = true
   errors.value.us_phone = ''
+  errors.value.tempOldPassword = ''
+
+  // ตรวจสอบรหัสผ่านปัจจุบัน
+  if (!tempOldPassword.value) {
+    errors.value.tempOldPassword = 'กรุณากรอกรหัสผ่านปัจจุบัน'
+    valid = false
+    return valid
+  }
 
   if (!editForm.value.us_phone) {
     errors.value.us_phone = 'กรุณากรอกเบอร์โทรศัพท์'
     valid = false
-    Swal.fire({
-      title: 'กรุณากรอกข้อมูลให้ครบ',
-      text: errors.value.us_phone,
-      icon: 'warning',
-      confirmButtonColor: '#f59e0b',
-    })
   } else if (!/^\d{9,10}$/.test(toRaw(editForm.value.us_phone))) {
     errors.value.us_phone = 'เบอร์โทรศัพท์ต้องมี 9 หรือ 10 หลัก'
     valid = false
-    Swal.fire({
-      title: 'กรุณากรอกข้อมูลให้ถูกต้อง',
-      text: errors.value.us_phone,
-      icon: 'warning',
-      confirmButtonColor: '#f59e0b', // สีส้ม Warning
-    })
   }
 
   return valid
@@ -185,15 +223,21 @@ function validatePasswordForm() {
   errors.value.password = ''
   errors.value.confirmPassword = ''
 
+  // ตรวจรหัสผ่านปัจจุบัน (ไม่ล้างข้อความผิดพลาดที่มาจากฝั่งเซิร์ฟเวอร์)
+  if (!tempOldPassword.value) {
+    errors.value.tempOldPassword = 'กรุณากรอกรหัสผ่านปัจจุบัน'
+    valid = false
+  }
+
   // ตรวจ password ใหม่
   if (!editForm.value.password) {
-    errors.value.password = 'ยังไม่ได้กรอกรหัสผ่านใหม่'
+    errors.value.password = 'กรุณากรอกรหัสผ่านใหม่'
     valid = false
   }
 
   // ตรวจ confirm password
   if (!editForm.value.confirmPassword) {
-    errors.value.confirmPassword = 'ยังไม่ได้ยืนยันรหัสผ่าน'
+    errors.value.confirmPassword = 'กรุณากรอกยืนยันรหัสผ่าน'
     valid = false
   }
 
@@ -205,31 +249,6 @@ function validatePasswordForm() {
   ) {
     errors.value.confirmPassword = 'รหัสผ่านใหม่ไม่ตรงกัน'
     valid = false
-    // แสดง SweetAlert สำหรับรหัสผ่านไม่ตรงกัน
-    Swal.fire({
-      icon: 'warning',
-      title: 'รหัสผ่านไม่ตรงกัน',
-      text: errors.value.confirmPassword,
-      confirmButtonColor: '#f59e0b', //orange
-    })
-    return false // ไม่ต้องแสดง alert อื่น ๆ
-  }
-
-  // แสดง SweetAlert ถ้ามี field ว่าง
-  if (!valid) {
-    let messages = []
-    if (errors.value.password) messages.push(errors.value.password)
-    if (errors.value.confirmPassword && editForm.value.password === editForm.value.confirmPassword)
-      messages.push(errors.value.confirmPassword)
-
-    if (messages.length > 0) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'กรุณาตรวจสอบรหัสผ่านอีกครั้ง',
-        html: messages.join('<br/>'),
-        confirmButtonColor: '#f59e0b', //orange
-      })
-    }
   }
 
   return valid
@@ -239,15 +258,12 @@ async function saveProfile(type = 'profile') {
   const userId = tokenData.value?.us_id
   if (!userId) return
 
-  // 1. ตรวจสอบความถูกต้องของฟอร์ม (Validate)
+  // 1. ตรวจสอบความถูกต้องของฟอร์ม (ตรวจสอบข้อมูลก่อนส่ง)
   let valid = type === 'profile' ? validateProfileForm() : validatePasswordForm()
   if (!valid) return
 
-  // 2. เตรียมข้อมูลและเปิด Popup ยืนยันรหัสผ่านปัจจุบัน
-  pendingSaveType.value = type // จำสถานะไว้ว่าเรากำลังจะบันทึกอะไร
-  tempOldPassword.value = '' // ล้างค่ารหัสผ่านปัจจุบัน
-  errors.value.tempOldPassword = '' // ล้างค่า error
-  showPopupConfirm.value = true // เปิด Popup
+  // 2. บันทึกข้อมูล
+  await executeSave(type)
 }
 
 async function loadUserData() {
@@ -260,7 +276,7 @@ async function loadUserData() {
 
     const data = await res.json()
 
-    // อัปเดตข้อมูลใน popup
+    // อัปเดตข้อมูลในหน้าต่างป๊อปอัป
     editForm.value.us_ttn_id = data.us_ttn_id
     editForm.value.us_department = data.us_department
     editForm.value.us_phone = toDisplay(data.us_phone)
@@ -274,17 +290,11 @@ async function loadUserData() {
   }
 }
 
-async function executeSave() {
-  // 1. ตรวจสอบว่ากรอกรหัสผ่านปัจจุบันหรือยัง
-  if (!tempOldPassword.value) {
-    errors.value.tempOldPassword = 'กรุณากรอกรหัสผ่านปัจจุบัน'
-    return
-  }
-
+async function executeSave(type = '') {
   const userId = tokenData.value?.us_id
-  const type = pendingSaveType.value
+  const token = localStorage.getItem('token') || sessionStorage.getItem('token')
 
-  // 2. เตรียม Payload (ดึงค่าจาก tempOldPassword มาใช้)
+  // เตรียมข้อมูลสำหรับส่งไปยังเซิร์ฟเวอร์
   const payload = {
     us_ttn_id: editForm.value.us_ttn_id,
     us_department: editForm.value.us_department,
@@ -294,7 +304,7 @@ async function executeSave() {
     us_first_name_en: firstNameEN.value,
     us_last_name_en: lastNameEN.value,
     us_user_name: username.value,
-    oldPassword: tempOldPassword.value, // <--- ใช้ตัวแปรใหม่ตรงนี้
+    oldPassword: tempOldPassword.value,
     password: type === 'password' ? editForm.value.password.trim() : null,
   }
 
@@ -303,7 +313,7 @@ async function executeSave() {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${localStorage.getItem('token')}`,
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(payload),
     })
@@ -311,29 +321,23 @@ async function executeSave() {
     const data = await res.json()
 
     if (!res.ok) {
-      // เช็ค error จาก Backend
-      if (data.message.includes('รหัสผ่านปัจจุบันไม่ถูกต้อง')) {
-        // แจ้งเตือน error ที่ input และไม่ต้องปิด popup
+      console.log('Response data:', data)
+      // ตรวจสอบว่าเป็นกรณีกรอกรหัสผ่านปัจจุบันไม่ถูกต้องหรือไม่
+      if (data.message && (data.message.includes('รหัสผ่านเดิมไม่ถูกต้อง') || data.message.includes('รหัสผ่านปัจจุบันไม่ถูกต้อง'))) {
         errors.value.tempOldPassword = 'รหัสผ่านปัจจุบันไม่ถูกต้อง'
-        Swal.fire({
-          title: 'ผิดพลาด',
-          text: 'รหัสผ่านปัจจุบันไม่ถูกต้อง',
-          icon: 'error',
-          confirmButtonColor: '#e53e3e', // สีแดง Error
-        })
       } else {
+        // แสดง SweetAlert เฉพาะกรณีข้อผิดพลาดอื่น ๆ ที่ไม่ใช่รหัสผ่านผิด
         Swal.fire({
           title: 'ผิดพลาด',
           text: data.message || 'เกิดข้อผิดพลาด',
           icon: 'error',
-          confirmButtonColor: '#1E48D1', // สีแดง Error
+          confirmButtonColor: '#1E48D1',
         })
-        showPopupConfirm.value = false // error อื่นๆ ปิด popup ไปเลย
       }
       return
     }
 
-    // 3. สำเร็จ
+  // สำเร็จ: แสดงข้อความแจ้งเตือนตามประเภทการบันทึก
     Swal.fire({
       title: 'สำเร็จ',
       text: type === 'password' ? 'เปลี่ยนรหัสผ่านเรียบร้อย' : 'อัปเดตข้อมูลเรียบร้อย',
@@ -341,7 +345,7 @@ async function executeSave() {
       confirmButtonColor: '#1E48D1',
     })
 
-    // Reset ค่าต่างๆ
+    // รีเซ็ตค่าฟิลด์ที่เกี่ยวข้องหลังจากบันทึกสำเร็จ
     editForm.value.password = ''
     editForm.value.confirmPassword = ''
     tempOldPassword.value = ''
@@ -349,8 +353,15 @@ async function executeSave() {
     closeAllPopup() // ปิดทุก Popup
   } catch (err) {
     console.error(err)
-    Swal.fire('ผิดพลาด', 'เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์', 'error')
-    showPopupConfirm.value = false
+    Swal.fire({
+      title: 'เกิดข้อผิดพลาด',
+      text:
+        (err && err.response && err.response.data && err.response.data.message) ||
+        (err && err.message) ||
+        'ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง',
+      icon: 'error',
+      confirmButtonColor: '#1E48D1',
+    })
   }
 }
 
@@ -378,31 +389,42 @@ const getFullNameEN = () => {
   return `${title}${firstNameEN.value} ${lastNameEN.value}`.trim()
 }
 
-function openProfilePopup() {
+// เปิดหน้าต่างแก้ไขข้อมูลส่วนตัวและโหลดข้อมูลล่าสุดของผู้ใช้
+async function openProfilePopup() {
   resetProfileForm()
-  loadUserData()
+  // โหลดข้อมูลล่าสุดจากเซิร์ฟเวอร์ทุกครั้งที่เปิดหน้าต่าง
+  await loadUserData()
   showPopupProfile.value = true
 }
 
-function openPasswordPopup() {
+// เปิดหน้าต่างสำหรับเปลี่ยนรหัสผ่านและตั้งค่าชื่อผู้ใช้จาก Token
+async function openPasswordPopup() {
   resetPasswordForm()
+  // โหลดข้อมูลล่าสุดจากเซิร์ฟเวอร์เพื่อให้ payload มีข้อมูลครบ (เช่น us_phone)
+  await loadUserData()
   username.value = tokenData.value?.us_user_name || ''
-  loadUserData()
   showPopupPassword.value = true
 }
 
 function closeAllPopup() {
   showPopupProfile.value = false
   showPopupPassword.value = false
-  showPopupConfirm.value = false
 }
+
+watch(
+  () => tempOldPassword.value,
+  () => {
+    // เคลียร์ข้อความข้อผิดพลาดจากฝั่งเซิร์ฟเวอร์เมื่อผู้ใช้แก้ไขช่องรหัสผ่านปัจจุบัน
+    errors.value.tempOldPassword = ''
+  },
+)
 
 watch(
   () => props.expanded,
   (newVal) => {
     if (!newVal) {
       showDropdown.value = false
-      closeAllPopup()
+      // อย่าปิดหน้าต่างป๊อปอัปเมื่อ Sidebar พับ เก็บเฉพาะเมนูดรอปดาวน์เท่านั้น
     }
   },
 )
@@ -465,15 +487,13 @@ watch(
     </div>
   </footer>
 
-  <!-- Popup Profile -->
+  <!-- หน้าต่างตั้งค่าบัญชี (แก้ไขข้อมูลส่วนตัว) -->
   <div
     v-if="showPopupProfile"
     class="fixed inset-0 z-50 bg-black/50 overflow-y-auto"
-    @click.self="closeAllPopup"
   >
     <div
       class="flex min-h-full items-center justify-center p-4 text-center sm:p-0"
-      @click.self="closeAllPopup"
     >
       <div
         class="relative bg-white w-full max-w-2xl rounded-lg shadow-xl text-left overflow-hidden sm:my-8 transform transition-all"
@@ -553,6 +573,28 @@ watch(
                 </p>
               </div>
             </div>
+
+            <div>
+              <label class="block text-sm sm:text-base font-medium mb-1 text-black"
+                >รหัสผ่านปัจจุบัน <span class="text-red-500">*</span></label
+              >
+              <div class="relative">
+                <input
+                  v-model="tempOldPassword"
+                  type="password"
+                  :class="[
+                    'w-full pl-3 pr-3 py-2 border rounded-lg text-black text-sm sm:text-base focus:ring-0 focus:outline-none transition-colors',
+                    errors.tempOldPassword
+                      ? 'border-red-500 focus:border-red-500'
+                      : 'border-gray-300 focus:border-black',
+                  ]"
+                  placeholder="กรอกรหัสผ่านปัจจุบัน"
+                />
+              </div>
+              <p v-if="errors.tempOldPassword" class="text-red-500 text-xs sm:text-sm mt-1">
+                {{ errors.tempOldPassword }}
+              </p>
+            </div>
           </div>
 
           <div
@@ -568,7 +610,13 @@ watch(
             <button
               type="button"
               @click="saveProfile('profile')"
-              class="w-full sm:w-auto px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold text-sm sm:text-base"
+
+              :class="[
+                'w-full sm:w-auto px-6 py-2.5 rounded-lg font-semibold text-sm sm:text-base transition',
+                errors.tempOldPassword
+                  ? 'bg-blue-600 text-white hover:bg-blue-700'
+                  : 'bg-blue-600 text-white hover:bg-blue-700',
+              ]"
             >
               ยืนยัน
             </button>
@@ -578,14 +626,13 @@ watch(
     </div>
   </div>
 
+  <!-- หน้าต่างตั้งค่ารหัสผ่าน -->
   <div
     v-if="showPopupPassword"
     class="fixed inset-0 z-50 bg-black/50 overflow-y-auto"
-    @click.self="closeAllPopup"
   >
     <div
       class="flex min-h-full items-center justify-center p-4 text-center sm:p-0"
-      @click.self="closeAllPopup"
     >
       <div
         class="relative bg-white w-full max-w-2xl rounded-lg shadow-xl text-left overflow-hidden sm:my-8 transform transition-all"
@@ -618,13 +665,40 @@ watch(
 
             <div>
               <label class="block text-sm sm:text-base font-medium mb-1 text-black"
+                >รหัสผ่านปัจจุบัน <span class="text-red-500">*</span></label
+              >
+              <div class="relative">
+                <input
+                  v-model="tempOldPassword"
+                  type="password"
+                  :class="[
+                    'w-full pl-3 pr-3 py-2 border rounded-lg text-black text-sm sm:text-base focus:ring-0 focus:outline-none transition-colors',
+                    errors.tempOldPassword
+                      ? 'border-red-500 focus:border-red-500'
+                      : 'border-gray-300 focus:border-black',
+                  ]"
+                  placeholder="กรอกรหัสผ่านปัจจุบัน"
+                />
+              </div>
+              <p v-if="errors.tempOldPassword" class="text-red-500 text-xs sm:text-sm mt-1">
+                {{ errors.tempOldPassword }}
+              </p>
+            </div>
+
+            <div>
+              <label class="block text-sm sm:text-base font-medium mb-1 text-black"
                 >รหัสผ่านใหม่ <span class="text-red-500">*</span></label
               >
               <div class="relative">
                 <input
                   v-model="editForm.password"
                   type="password"
-                  class="w-full pl-3 pr-3 py-2 border border-gray-300 rounded-lg text-black text-sm sm:text-base focus:border-black focus:ring-0 focus:outline-none transition-colors"
+                  :class="[
+                    'w-full pl-3 pr-3 py-2 border rounded-lg text-black text-sm sm:text-base focus:ring-0 focus:outline-none transition-colors',
+                    errors.password
+                      ? 'border-red-500 focus:border-red-500'
+                      : 'border-gray-300 focus:border-black',
+                  ]"
                   placeholder="กรอกรหัสผ่านใหม่"
                 />
               </div>
@@ -641,7 +715,12 @@ watch(
                 <input
                   v-model="editForm.confirmPassword"
                   type="password"
-                  class="w-full pl-3 pr-3 py-2 border border-gray-300 rounded-lg text-black text-sm sm:text-base focus:border-black focus:ring-0 focus:outline-none transition-colors"
+                  :class="[
+                    'w-full pl-3 pr-3 py-2 border rounded-lg text-black text-sm sm:text-base focus:ring-0 focus:outline-none transition-colors',
+                    errors.confirmPassword
+                      ? 'border-red-500 focus:border-red-500'
+                      : 'border-gray-300 focus:border-black',
+                  ]"
                   placeholder="กรอกยืนยันรหัสผ่านใหม่"
                 />
               </div>
@@ -674,67 +753,5 @@ watch(
     </div>
   </div>
 
-  <div
-    v-if="showPopupConfirm"
-    class="fixed inset-0 z-50 bg-black/50 overflow-y-auto"
-    @click.self="showPopupConfirm = false"
-  >
-    <div
-      class="flex min-h-full items-center justify-center p-4 text-center sm:p-0"
-      @click.self="showPopupConfirm = false"
-    >
-      <div
-        class="relative bg-white w-full max-w-xl rounded-lg shadow-xl text-left overflow-hidden sm:my-8 transform transition-all"
-      >
-        <div class="p-6 sm:p-8">
-          <div class="flex items-center gap-3 mb-4 sm:mb-6 border-b border-gray-100 pb-4">
-            <h2 class="text-black text-xl sm:text-2xl font-bold">ยืนยันตัวตน</h2>
-          </div>
 
-          <div class="space-y-4">
-            <p class="text-gray-600 text-sm sm:text-base">
-              กรุณากรอกรหัสผ่านปัจจุบันเพื่อยืนยันการทำรายการ
-            </p>
-
-            <div>
-              <label class="block text-sm sm:text-base font-medium mb-1 text-black"
-                >รหัสผ่านปัจจุบัน <span class="text-red-500">*</span></label
-              >
-              <div class="relative">
-                <input
-                  v-model="tempOldPassword"
-                  type="password"
-                  class="w-full pl-3 pr-3 py-2 border border-gray-300 rounded-lg text-black text-sm sm:text-base focus:border-black focus:ring-0 focus:outline-none transition-colors"
-                  placeholder="รหัสผ่านปัจจุบัน"
-                  @keyup.enter="executeSave"
-                />
-              </div>
-              <p v-if="errors.tempOldPassword" class="text-red-500 text-xs sm:text-sm mt-1">
-                {{ errors.tempOldPassword }}
-              </p>
-            </div>
-          </div>
-
-          <div
-            class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 mt-6 pt-4 border-t border-gray-200"
-          >
-            <button
-              type="button"
-              @click="showPopupConfirm = false"
-              class="w-full sm:w-auto px-6 py-2.5 border border-gray-300 rounded-lg text-black hover:bg-gray-100 transition text-sm sm:text-base"
-            >
-              ยกเลิก
-            </button>
-            <button
-              type="button"
-              @click="executeSave"
-              class="w-full sm:w-auto px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold text-sm sm:text-base"
-            >
-              ยืนยัน
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
 </template>

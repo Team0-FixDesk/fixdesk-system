@@ -3,11 +3,11 @@
  * @file            technician-repair-list.view.vue
  * @module          มอดูลการจัดการงานของช่าง - การรับงาน และเปลี่ยนแปลงสถานะงานซ่อม
  * @layer           View (Presentation Layer)
- * @version         1.0.0
+ * @version         1.0.1
  * @since           2025-10-21
  * @author          เศรษฐพงศ์ หอมชื่น
- * @lastModified    2026-02-21
- * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
+ * @lastModified    2026-02-27
+ * @lastModifiedBy  เศรษฐพงศ์ หอมชื่น
  * ---------------------------------------------------------------------
  * @description
  *  หน้าจอรายการงานซ่อมของช่างซ่อม
@@ -32,8 +32,11 @@
  *
  * ---------------------------------------------------------------------
  * @changelog
- *   - แก้ไขชื่อหน้าจอ                [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล]
- *   - แก้ไขข้อความหัวตาราง          [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - แก้ไขชื่อหน้าจอ                                    [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - แก้ไขข้อความหัวตาราง                              [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - เพิ่มฟิลด์รองรับ repair_method และ result_status  [2026-02-22, นราธิป แสนทวีสุข]
+ *   - ปรับ Modal ปิดงานให้มีตัวเลือกครบถ้วน             [2026-02-22, นราธิป แสนทวีสุข]
+ *   - แก้ไขสีปุ่ม                                    [2026-02-27, เศรษฐพงศ์ หอมชื่น]
  * =====================================================================
  */
 
@@ -67,6 +70,12 @@ const currentAcceptCode = ref(null)
 const showTechSummaryModal = ref(false)
 const currentCloseJobCode = ref(null)
 const techSummary = ref('')
+
+// ตัวแปรสำหรับฟิลด์ใหม่ในการปิดงาน (DB Schema v1.1.0)
+const repairMethod = ref('in_house') // in_house, outsource, other
+const repairMethodRemark = ref('')
+const resultStatus = ref('completed') // completed, incomplete, other
+const resultRemark = ref('')
 
 /**
  * จัดรูปแบบข้อมูลแถวให้สอดคล้องกับ TableComponent
@@ -118,11 +127,30 @@ function handleOpenStock(code) {
 
 /**
  * เปิด modal สำหรับปิดงานซ่อม
- * @param {string} code
+ *
+ * @author เศรษฐพงศ์ หอมชื่น
+ * @since 2025-10-21
+ * @lastModified 2026-02-22
+ * @lastModifiedBy นราธิป แสนทวีสุข
+ * @contributors
+ *  - เศรษฐพงศ์ หอมชื่น
+ *  - นราธิป แสนทวีสุข
+ *
+ * @param {string} code - รหัสใบแจ้งซ่อม
  */
 function handleCloseJob(code) {
   currentCloseJobCode.value = code
+
+  // ตรวจสอบว่างานนี้เคยจ้างช่างภายนอกหรือไม่
+  const repairItem = repairList.value.find(r => r[0] === code)
+  const isOutsourced = repairItem && repairItem[2] === 'outsource'
+
+  // Reset ค่าทั้งหมดเป็น default
   techSummary.value = ''
+  repairMethod.value = isOutsourced ? 'outsource' : 'in_house'
+  repairMethodRemark.value = ''
+  resultStatus.value = 'completed'
+  resultRemark.value = ''
   showTechSummaryModal.value = true
 }
 
@@ -139,6 +167,7 @@ async function handleOutsource(code) {
     confirmButtonText: 'ใช่, ส่งงาน',
     cancelButtonText: 'ยกเลิก',
     confirmButtonColor: '#f59e0b',
+    cancelButtonColor: '#d4d4d4',
   })
 
   if (!result.isConfirmed) return
@@ -179,8 +208,19 @@ async function handleOutsource(code) {
 
 /**
  * ปิดงานซ่อม (Close Job) หลังจากกรอก summary
+ *
+ * @author เศรษฐพงศ์ หอมชื่น
+ * @since 2025-10-21
+ * @lastModified 2026-02-22
+ * @lastModifiedBy นราธิป แสนทวีสุข
+ * @contributors
+ *  - เศรษฐพงศ์ หอมชื่น
+ *  - นราธิป แสนทวีสุข
+ *
+ * @description ปิดงานพร้อมส่งข้อมูล repair_method, result_status และหมายเหตุต่างๆ
  */
 async function confirmCloseJob() {
+
   try {
     const res = await fetch(`${API_BASE}/technician/close-job/${currentCloseJobCode.value}`, {
       method: 'PUT',
@@ -191,7 +231,11 @@ async function confirmCloseJob() {
       body: JSON.stringify({
         status: 'done',
         tech_summary: techSummary.value || 'ดำเนินการเสร็จสิ้น',
-        tech_remark: '',
+        rf_tech_image_after: null,
+        repair_method: repairMethod.value,
+        repair_method_remark: repairMethodRemark.value,
+        result_status: resultStatus.value,
+        result_remark: resultRemark.value
       }),
     })
 
@@ -259,18 +303,54 @@ onMounted(() => {
 
     <!-- Modal สำหรับกรอกรายละเอียดการตรวจสอบ/ซ่อม -->
     <div v-if="showTechSummaryModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-60 backdrop-blur-sm" @click.self="showTechSummaryModal = false">
-      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
-        <div class="p-6 text-center border-b border-gray-100">
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden animate-in fade-in zoom-in duration-200">
+        <div class="p-5 text-center border-b border-gray-100">
           <h3 class="text-xl font-bold text-gray-800">รายละเอียดการดำเนินการ</h3>
-          <p class="text-gray-500 text-sm mt-1">กรุณากรอกรายละเอียดการตรวจสอบ/ซ่อม</p>
         </div>
-        <div class="p-6 space-y-4">
-          <textarea v-model="techSummary" placeholder="กรอกรายละเอียดการตรวจสอบ/ซ่อม..." class="w-full h-32 p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" maxlength="500"></textarea>
-          <div class="text-right text-xs text-gray-400">{{ techSummary.length }}/500</div>
+
+        <div class="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
+          <!-- 1. วิธีการซ่อม (ซ่อนถ้าเป็น outsource อยู่แล้ว) -->
+          <div v-if="repairMethod !== 'outsource'">
+            <label class="block text-sm font-semibold text-gray-700 mb-2">1. สำหรับเจ้าหน้าที่ ตรวจสอบ/ซ่อม</label>
+            <div class="space-y-2">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="radio" v-model="repairMethod" value="in_house" class="text-blue-600 focus:ring-blue-500"> สามารถแก้ไข/ซ่อมบำรุงได้
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="radio" v-model="repairMethod" value="other" class="text-blue-600 focus:ring-blue-500"> อื่นๆ
+              </label>
+              <input v-if="repairMethod === 'other'" v-model="repairMethodRemark" type="text" placeholder="ระบุเหตุผลอื่นๆ..." class="mt-2 w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
+            </div>
+          </div>
+
+          <!-- 2. รายละเอียดการทำงาน -->
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">{{ repairMethod === 'outsource' ? '1' : '2' }}. รายละเอียดการตรวจสอบ/ซ่อม</label>
+            <textarea v-model="techSummary" placeholder="กรอกรายละเอียด..." class="w-full h-24 p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500" maxlength="500"></textarea>
+            <div class="text-right text-xs text-gray-400 mt-1">{{ techSummary.length }}/500</div>
+          </div>
+
+          <!-- 3. สรุปผล -->
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">{{ repairMethod === 'outsource' ? '2' : '3' }}. สรุปผล</label>
+            <div class="flex gap-4 mb-2">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="radio" v-model="resultStatus" value="completed" class="text-green-600 focus:ring-green-500"> เรียบร้อย
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="radio" v-model="resultStatus" value="incomplete" class="text-red-600 focus:ring-red-500"> ไม่เรียบร้อย
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="radio" v-model="resultStatus" value="other" class="text-amber-600 focus:ring-amber-500"> อื่นๆ
+              </label>
+            </div>
+            <input v-if="resultStatus === 'incomplete' || resultStatus === 'other'" v-model="resultRemark" type="text" :placeholder="resultStatus === 'incomplete' ? 'ระบุสาเหตุที่ไม่เรียบร้อย...' : 'ระบุอื่นๆ...'" class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
+          </div>
         </div>
-        <div class="p-6 pt-0 flex gap-3">
+
+        <div class="p-5 border-t border-gray-100 flex gap-3">
           <button @click="showTechSummaryModal = false" class="flex-1 py-3 px-6 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl font-medium transition-colors">ยกเลิก</button>
-          <button @click="confirmCloseJob" :disabled="!techSummary.trim()" :class="['flex-1 py-3 px-6 rounded-xl font-medium transition-colors', techSummary.trim() ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-gray-300 text-gray-500 cursor-not-allowed']">ยืนยันปิดงาน</button>
+          <button @click="confirmCloseJob" :disabled="!techSummary.trim()" :class="['flex-1 py-3 px-6 rounded-xl font-medium transition-colors text-white', techSummary.trim() ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-300 cursor-not-allowed']">ยืนยันปิดงาน</button>
         </div>
       </div>
     </div>

@@ -2,7 +2,7 @@
  * =====================================================================
  * @file            stock-controller.js
  * @layer           Controller (Presentation Layer)
- * @version         1.2.1
+ * @version         1.3.0
  * @since           2026-02-10
  * @author          พชร ไพศรีสกุล
  * @contributors
@@ -10,8 +10,8 @@
  *   - นราธิป แสนทวีสุข
  *   - ปฏิพัทธ์ จงนันทพันธ์กุล
  *
- * @lastModified    2026-02-21
- * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
+ * @lastModified    2026-02-23
+ * @lastModifiedBy  พชร ไพศรีสกุล
  * ---------------------------------------------------------------------
  * @description
  *  Controller สำหรับจัดการระบบคลังวัสดุ/อุปกรณ์ (Stock Management)
@@ -32,6 +32,16 @@
  *
  * ---------------------------------------------------------------------
  * @changelog
+ *  - เพิ่ม logging และ userId parameter ให้ทุก action
+ *    - addProduct: ส่ง userId จาก req.user.us_id
+ *    - updateProduct: ส่ง userId สำหรับบันทึก transaction
+ *    - deleteProduct: ส่ง userId สำหรับบันทึก transaction OUT
+ *    - updateItemStatus: ส่ง userId สำหรับบันทึก transaction
+ *    - updateMultipleItemsStatus: ส่ง userId สำหรับ batch update
+ *    - importStock: ส่ง userId สำหรับบันทึก IN transaction
+ *    - withdraw: เพิ่ม logging เพื่อ debug
+ *    [2026-02-20, นราธิป แสนทวีสุข]
+ *  - เพิ่มระบบคืนสินค้า (returnItem)   [2026-02-17, นายพชร ไพศรีสกุล]
  *   - Refactor โครงสร้างตาม Coding Standard V1.7.2
  *     [2026-02-10, พชร ไพศรีสกุล] V1.0.0
  *   - Allow approving and rejecting items in same requisition
@@ -40,6 +50,8 @@
  *     [2026-02-17, พชร ไพศรีสกุล] V1.2.0
  *   - แก้ไขข้อความแจ้งเตือน  
  *     [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล] V1.2.1
+ *   - รองรับการคืนอุปกรณ์แบบบางส่วน (Partial Return)ปรับปรุง logic การคืนและการคำนวณ stock ให้รองรับการคืนหลายครั้ง
+ *     [2026-02-23, พชร ไพศรีสกุล] V1.3.0
  *
  * =====================================================================
  */
@@ -73,6 +85,21 @@ module.exports = (stockService) => {
       }
     },
 
+    /* --- Stock Transactions --- */
+    async getAllTransactions(req, res) {
+      try {
+        const transactions = await stockService.getAllTransactions();
+        res.json(transactions);
+      } catch (err) {
+        res
+          .status(500)
+          .json({
+            message: "ดึงข้อมูล transactions ไม่สำเร็จ",
+            error: err.message,
+          });
+      }
+    },
+
     /**
      * เพิ่มสินค้าใหม่
      *
@@ -97,22 +124,36 @@ module.exports = (stockService) => {
           pd_unit_id,
         } = req.body;
 
+        console.log("📥 [addProduct] Received data:", {
+          pd_asset_code,
+          pd_name,
+          pd_category_id,
+          pd_quantity,
+          pd_unit_id,
+          file: req.file,
+          user: req.user,
+        });
+
         if (!pd_name || !pd_category_id || !pd_quantity || !pd_unit_id) {
           return res.status(400).json({ message: "กรุณากรอกข้อมูลให้ครบถ้วน" });
         }
 
         const data = {
-          assetCode: pd_asset_code,
+          assetCode: pd_asset_code || null,
           name: pd_name,
           categoryId: pd_category_id,
-          quantity: pd_quantity,
+          quantity: parseInt(pd_quantity, 10) || 0, // แปลงเป็น number
           unitName: pd_unit_id, // Frontend ส่งมาเป็น Text ชื่อ unit
         };
         const filename = req.file ? req.file.filename : null;
+        const userId = req.user?.us_id || null; // ✅ ใช้ us_id แทน user_id
 
-        const newId = await stockService.addProduct(data, filename);
+        console.log("🔍 [addProduct] Before service call:", { data, filename, userId });
+        const newId = await stockService.addProduct(data, filename, userId);
+        console.log("✅ [addProduct] Product added with ID:", newId);
         res.status(201).json({ message: "เพิ่มสินค้าสำเร็จ", id: newId });
       } catch (err) {
+        console.error("❌ [addProduct] Error:", err);
         res
           .status(500)
           .json({ message: "เพิ่มสินค้าไม่สำเร็จ", error: err.message });
@@ -154,8 +195,9 @@ module.exports = (stockService) => {
           unitName: pd_unit_id,
         };
         const newFilename = req.file ? req.file.filename : null;
+        const userId = req.user?.us_id || null; // ✅ ดึง userId
 
-        await stockService.updateProduct(id, data, newFilename);
+        await stockService.updateProduct(id, data, newFilename, userId);
         res.json({ message: "แก้ไขสินค้าสำเร็จ" });
       } catch (err) {
         if (err.message === "NOT_FOUND")
@@ -180,7 +222,8 @@ module.exports = (stockService) => {
      */
     async deleteProduct(req, res) {
       try {
-        await stockService.deleteProduct(req.params.id);
+        const userId = req.user?.us_id || null; // ✅ ดึง userId
+        await stockService.deleteProduct(req.params.id, userId);
         res.json({ message: "ลบสินค้าสำเร็จ" });
       } catch (err) {
         if (err.message === "PRODUCT_NOT_FOUND")
@@ -420,6 +463,9 @@ module.exports = (stockService) => {
           return res.status(400).json({ message: "ไม่มีรายการวัสดุ/อุปกรณ์" });
 
         const userId = req.user.us_id || req.user.id;
+        
+        console.log("🛒 [withdraw] Starting withdrawal:", { userId, repair_code, itemCount: items.length });
+        
         const sfCode = await stockService.createWithdraw(
           userId,
           repair_code,
@@ -429,9 +475,13 @@ module.exports = (stockService) => {
         res.json({ message: "ส่งคำขอเบิกเรียบร้อย", sf_code: sfCode });
       } catch (err) {
         if (err.message === "REPAIR_NOT_FOUND")
-          return res.status(404).json({ message: "ไม่พบรายการแจ้งซ่อมที่ต้องการ" });
+          return res
+            .status(404)
+            .json({ message: "ไม่พบรายการแจ้งซ่อมที่ต้องการ" });
         if (err.message.includes("INSUFFICIENT_STOCK"))
-          return res.status(400).json({ message: "จำนวนวัสดุ/อุปกรณ์ที่ต้องการเบิกไม่เพียงพอ" });
+          return res
+            .status(400)
+            .json({ message: "จำนวนวัสดุ/อุปกรณ์ที่ต้องการเบิกไม่เพียงพอ" });
         res
           .status(500)
           .json({ message: "ส่งคำขอเบิกไม่สำเร็จ", error: err.message });
@@ -457,10 +507,12 @@ module.exports = (stockService) => {
           return res.status(400).json({ message: "ข้อมูลไม่ถูกต้อง" });
         }
 
+        const userId = req.user?.us_id || null;
         const result = await stockService.updateItemStatus(
           sf_code,
           pd_id,
           status,
+          userId
         );
         res.json({ message: "บันทึกผลการพิจารณาสำเร็จ", ...result });
       } catch (err) {
@@ -494,9 +546,11 @@ module.exports = (stockService) => {
           return res.status(400).json({ message: "ข้อมูลไม่ถูกต้อง" });
         }
 
+        const userId = req.user?.us_id || null;
         const result = await stockService.updateMultipleItemsStatus(
           sf_code,
           items,
+          userId
         );
         res.json({ message: "บันทึกผลการพิจารณาสำเร็จ", ...result });
       } catch (err) {
@@ -557,7 +611,12 @@ module.exports = (stockService) => {
           return res.status(400).json({ message: "ไม่มีข้อมูลสำหรับ Import" });
         }
 
-        const result = await stockService.importStock(items);
+        const userId = req.user?.us_id || null;
+        console.log("📦 [importStock] Starting import with:", { itemCount: items.length, userId });
+        
+        const result = await stockService.importStock(items, userId);
+        
+        console.log("✅ [importStock] Import completed:", result);
         res.json(result);
       } catch (err) {
         res.status(500).json({ message: "Import ล้มเหลว", error: err.message });
@@ -578,11 +637,16 @@ module.exports = (stockService) => {
      */
     async returnItem(req, res) {
       try {
-        const { sf_code, pd_id } = req.body;
+        const { sf_code, pd_id, quantity } = req.body;
 
         const userId = req.user.us_id;
 
-        await stockService.returnItem(sf_code, pd_id, userId);
+        if (!quantity || quantity <= 0)
+          return res.status(400).json({
+            message: "จำนวนไม่ถูกต้อง",
+          });
+
+        await stockService.returnItem(sf_code, pd_id, quantity, userId);
 
         res.json({
           message: "คืนอุปกรณ์สำเร็จ",

@@ -73,6 +73,12 @@ const props = defineProps({
     type: Boolean,
     default: true,
   },
+
+  /* คุมว่าจะแสดง filter วันที่ไหม */
+  showDate: {
+    type: Boolean,
+    default: true,
+  },
 })
 
 const emit = defineEmits([
@@ -90,6 +96,7 @@ const isUrgencyOpen = ref(false)
 /* ==================== Mode ==================== */
 const isRepair = computed(() => props.mode === 'repair')
 const isStock = computed(() => props.mode === 'stock')
+const isAdmin = computed(() => props.mode === 'admin')
 
 /* ==================== UI Config ==================== */
 const searchPlaceholder = computed(() =>
@@ -102,6 +109,12 @@ const statusOptions = computed(() => {
     return [
       { value: 'approved', label: 'อนุมัติแล้ว' },
       { value: 'rejected', label: 'ไม่อนุมัติ' },
+    ]
+  }else if (isAdmin.value) {
+    return [
+      { value: 'pending', label: 'รอดำเนินการ' },
+      { value: 'in_progress', label: 'กำลังดำเนินการ' },
+
     ]
   }
 
@@ -146,6 +159,7 @@ function toggleValue(list, value, emitName) {
 
         <!-- Date -->
         <input
+        v-if="showDate"
           type="date"
           :value="date"
           @input="emit('update:date', $event.target.value)"

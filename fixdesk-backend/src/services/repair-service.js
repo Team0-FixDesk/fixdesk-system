@@ -1,15 +1,20 @@
 /**
  * =====================================================================
- * @file            : repair-service.js
- * @module          : Business Logic สำหรับระบบแจ้งซ่อม
- * @layer           : Service Layer (Business Logic Layer)
- * @version         : 1.0.0
- * @since           : 2026-02-17
- * @lastModified    : 2026-02-17
+ * @file            repair-service.js
+ * @layer           Service Layer (Business Logic Layer)
+ * @version         1.6.0
+ * @since           2026-02-10
+ * @author          พชร ไพศรีสกุล
+ * @contributors
+ *   - พชร ไพศรีสกุล
+ *   - นราธิป แสนทวีสุข
+ *   - เศรษฐพงศ์ หอมชื่น
+ *
+ * @lastModified    2026-03-03
  * @lastModifiedBy  นราธิป แสนทวีสุข
  * ---------------------------------------------------------------------
  * @description
- *  Service Layer สำหรับจัดการตรรกะการทำงานหลักของระบบแจ้งซ่อม
+ *  Service Layer สำหรับจัดการตรรกะการทำานหลักของระบบแจ้งซ่อม
  *  โดยทำหน้าที่เชื่อมต่อกับฐานข้อมูล และดำเนินการ business logic
  *  ที่เกี่ยวข้องกับ lifecycle ของใบแจ้งซ่อม การมอบหมายงาน และการติดตามสถานะ
  *
@@ -23,7 +28,7 @@
  *    - รับงานซ่อม (acceptJob)
  *    - เปลี่ยนสถานะงานซ่อม (pending, in_progress, done)
  *    - ดึงข้อมูลวัสดุ/อุปกรณ์ที่เบิกจากระบบ stock
- *    - ส่ง LINE Notification เมื่อมีการมอบหมายงาน หรือรับงาน
+ *    - ส่ง LINE Notification เมื่อมีงานแจ้งซ่อมใหม่, การมอบหมายงาน, และการรับงาน
  *
  *  ใช้ Transaction ในกรณี:
  *    - assignTeam (ป้องกัน assignment ไม่สมบูรณ์)
@@ -58,16 +63,27 @@
  *   - เชื่อมต่อกับระบบ stock
  *   - เชื่อมต่อกับ LINE Notification Service
  *
- * @author
- *   - นายพชร ไพศรีสกุล
- *
  * ---------------------------------------------------------------------
  * @changelog
- *   - เพิ่มการดึงข้อมูล stock_items ใน getRepairDetail
- *   - เพิ่มการเชื่อมโยงกับ stock_form และ stock_form_detail
- *     [2026-02-17, นายพชร ไพศรีสกุล]
- *   - แก้ไข getRepairDetail ให้ส่ง assigner fields แยก (title, first_name, last_name) [2026-02-17, นราธิป แสนทวีสุข]
- *   - เพิ่ม JOIN title_name tn_assigner สำหรับ assigner                             [2026-02-17, นราธิป แสนทวีสุข]
+ *   - Initial implementation Public Service ตาม Layered Architecture
+ *     [2026-02-10, พชร ไพศรีสกุล] V 1.0.0
+ *   - feat(line): เพิ่มระบบแจงเตอน LINE แบบ Flex Message และแกไขการรบงานเปนทม
+ *     [2026-02-11, นราธิป แสนทวีสุข] V 1.1.0
+ *   - feat(frontend backend): เพิ่มระบบการคืนอุปกรณ์
+ *     [2026-02-17, พชร ไพศรีสกุล] V 1.2.0
+ *   - fix(report): แก้ไขคำนำหน้าชื่อใน PDF และ UI ปุ่มดาวน์โหลด
+ *     [2026-02-17, นราธิป แสนทวีสุข] V 1.2.1
+ *   - fix(frontend): แก้เงื่อนไขการแสดงกราฟ
+ *     [2026-02-21, เศรษฐพงศ์ หอมชื่น] V 1.2.2
+ *   - feat(repair): เปลี่ยนโครงสร้างการบันทึกวิธีการซ่อมและผลการซ่อม
+ *     [2026-02-22, นราธิป แสนทวีสุข] V 1.3.0
+ *   - รองรับการคืนอุปกรณ์แบบบางส่วน (Partial Return)ปรับปรุง logic การคืนและการคำนวณ stock ให้รองรับการคืนหลายครั้ง
+ *     [2026-02-23, พชร ไพศรีสกุล] V1.4.0
+ *   - feat(line): เพิ่มการแจ้งเตือน LINE เมื่อมีงานแจ้งซ่อมใหม่เข้ามา
+ *     [2026-02-25, นราธิป แสนทวีสุข] V 1.5.0
+ *   - refactor(location): ใช้ Location Snapshot แทน Real-time JOIN เพื่อรักษาความถูกต้องของข้อมูลประวัติ
+ *     [2026-03-03, นราธิป แสนทวีสุข] V 1.6.0
+ *
  * =====================================================================
  */
 
@@ -101,13 +117,31 @@ module.exports = (db) => {
           ? JSON.stringify(data.filePaths)
           : null;
 
-      // 3. บันทึกข้อมูล
+      // 3. ดึงชื่อสถานที่เพื่อบันทึกเป็น snapshot (Historical Data Integrity)
+      const locationSql = `
+        SELECT 
+          b.bd_name AS building_name,
+          f.fl_name AS floor_name,
+          r.room_name AS room_name
+        FROM room r
+        LEFT JOIN floor f ON r.room_fl_id = f.fl_id
+        LEFT JOIN building b ON f.fl_bd_id = b.bd_id
+        WHERE r.room_id = ?
+      `;
+      const [locationData] = await db.promise().query(locationSql, [data.roomId]);
+      
+      const buildingSnapshot = locationData[0]?.building_name || null;
+      const floorSnapshot = locationData[0]?.floor_name || null;
+      const roomSnapshot = locationData[0]?.room_name || null;
+
+      // 4. บันทึกข้อมูล (รวม snapshot)
       const sql = `
         INSERT INTO repair_form
           (rf_code, rf_us_id, rf_tt_id, rf_room_id, rf_prop_number,
           rf_problem, rf_detail, rf_phone, rf_urgency, rf_image,
+          rf_building_snapshot, rf_floor_snapshot, rf_room_snapshot,
           rf_user_status, rf_create_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())
       `;
 
       const params = [
@@ -121,9 +155,48 @@ module.exports = (db) => {
         data.phoneNumber,
         data.urgency,
         imageData,
+        buildingSnapshot,
+        floorSnapshot,
+        roomSnapshot,
       ];
 
       const [result] = await db.promise().query(sql, params);
+
+      // 5. ส่งการแจ้งเตือนไปยัง LINE Group
+      try {
+        const notifSql = `
+          SELECT
+            rf.rf_code,
+            CONCAT(u.us_first_name_th, ' ', u.us_last_name_th) AS user_name,
+            rf.rf_problem,
+            CONCAT(rf.rf_building_snapshot, ' ', rf.rf_floor_snapshot, ' ', rf.rf_room_snapshot) AS location,
+            tt.tt_name AS repair_type,
+            rf.rf_urgency,
+            rf.rf_phone
+          FROM repair_form rf
+          LEFT JOIN user u ON rf.rf_us_id = u.us_id
+          LEFT JOIN technician_type tt ON rf.rf_tt_id = tt.tt_id
+          WHERE rf.rf_id = ?
+        `;
+
+        const [notifData] = await db.promise().query(notifSql, [result.insertId]);
+
+        if (notifData.length > 0) {
+          await lineNotification.notifyNewRepair({
+            rf_code: notifData[0].rf_code,
+            user_name: notifData[0].user_name,
+            repair_title: notifData[0].rf_problem,
+            location: notifData[0].location,
+            repair_type: notifData[0].repair_type,
+            urgency: notifData[0].rf_urgency || 'medium',
+            phone: notifData[0].rf_phone
+          });
+        }
+      } catch (lineError) {
+        console.error('LINE notification failed:', lineError.message);
+        // ไม่ throw error เพื่อไม่ให้กระทบการสร้างใบแจ้งซ่อม
+      }
+
       return { insertId: result.insertId, rfCode };
     },
 
@@ -131,8 +204,10 @@ module.exports = (db) => {
     async getAdminRepairs() {
       const sql = `
         SELECT
-          rf.rf_id, rf.rf_code, rf.rf_problem, rf.rf_create_at, rf.rf_update_at, rf.rf_in_process_at, rf.rf_done_at, rf.rf_user_status, rf.rf_is_outsourced,
-          b.bd_name, f.fl_name, r.room_name,
+          rf.rf_id, rf.rf_code, rf.rf_problem, rf.rf_create_at, rf.rf_update_at, rf.rf_in_process_at, rf.rf_done_at, rf.rf_user_status, rf.rf_repair_method, rf.rf_repair_method_remark,
+          rf.rf_building_snapshot AS bd_name, 
+          rf.rf_floor_snapshot AS fl_name, 
+          rf.rf_room_snapshot AS room_name,
           COALESCE(rf.rf_urgency, 'medium') AS rf_urgency,
           u.us_first_name_th AS us_first_name, u.us_last_name_th AS us_last_name,
           u.us_department AS department_name,
@@ -142,9 +217,6 @@ module.exports = (db) => {
         FROM repair_form rf
         LEFT JOIN user u ON rf.rf_us_id = u.us_id
         LEFT JOIN technician_type tt ON rf.rf_tt_id = tt.tt_id
-        LEFT JOIN room r ON rf.rf_room_id = r.room_id
-        LEFT JOIN floor f ON r.room_fl_id = f.fl_id
-        LEFT JOIN building b ON f.fl_bd_id = b.bd_id
         LEFT JOIN repair_assignment ra ON rf.rf_id = ra.ra_rf_id AND ra.ra_is_lead = 1
         LEFT JOIN user tech ON ra.ra_us_id = tech.us_id
         ORDER BY rf.rf_create_at DESC
@@ -159,13 +231,12 @@ module.exports = (db) => {
         SELECT
           rf.rf_id, rf.rf_code, rf.rf_prop_number, rf.rf_problem,
           rf.rf_urgency, rf.rf_user_status, rf.rf_create_at,
-          b.bd_name, f.fl_name, r.room_name,
+          rf.rf_building_snapshot AS bd_name, 
+          rf.rf_floor_snapshot AS fl_name, 
+          rf.rf_room_snapshot AS room_name,
           u.us_department AS department_name, tt.tt_name AS tt_name
         FROM repair_form rf
         LEFT JOIN technician_type tt ON rf.rf_tt_id = tt.tt_id
-        LEFT JOIN room r ON rf.rf_room_id = r.room_id
-        LEFT JOIN floor f ON r.room_fl_id = f.fl_id
-        LEFT JOIN building b ON f.fl_bd_id = b.bd_id
         LEFT JOIN user u ON rf.rf_us_id = u.us_id
         WHERE rf.rf_us_id = ?
         ORDER BY rf.rf_create_at DESC
@@ -181,11 +252,14 @@ module.exports = (db) => {
           rf.rf_id, rf.rf_code, rf.rf_problem, rf.rf_detail, rf.rf_urgency,
           rf.rf_phone, rf.rf_create_at, rf.rf_in_process_at, rf.rf_done_at,
           rf.rf_user_status, rf.rf_prop_number, rf.rf_image, rf.rf_tech_summary,
-          rf.rf_is_outsourced,
+          rf.rf_repair_method, rf.rf_repair_method_remark, rf.rf_result_status, rf.rf_result_remark,
           t.tt_id AS repair_type_id, t.tt_name AS repair_type_name,
-          b.bd_id AS building_id, b.bd_name AS building_name,
-          f.fl_id AS floor_id, f.fl_name AS floor_name,
-          r.room_id AS room_id, r.room_name AS room_name,
+          r.room_id AS room_id, 
+          f.fl_id AS floor_id, 
+          b.bd_id AS building_id,
+          rf.rf_building_snapshot AS building_name,
+          rf.rf_floor_snapshot AS floor_name,
+          rf.rf_room_snapshot AS room_name,
           CONCAT(tn.ttn_title_th, u.us_first_name_th, ' ', u.us_last_name_th) AS reporter_name,
           u.us_phone AS reporter_phone, u.us_department AS reporter_department,
           tech.us_id AS main_technician_id,
@@ -237,11 +311,59 @@ module.exports = (db) => {
 
       // ดึง Stock Items (ของที่เบิก)
       const stockSql = `
-        SELECT pd.pd_id, pd.pd_name, sf.sf_code,  pd.pd_asset_code, pd.pd_upload_image, sfd.sfd_qty, sfd.sfd_status
-        FROM stock_form sf
-        LEFT JOIN stock_form_detail sfd ON sfd.sfd_sf_id = sf.sf_id
-        LEFT JOIN products pd ON pd.pd_id = sfd.sfd_pd_id
-        WHERE sf.sf_rf_id = ?
+        SELECT
+  pd.pd_id,
+  pd.pd_name,
+  sf.sf_code,
+  pd.pd_asset_code,
+  pd.pd_upload_image,
+
+  -- คำนวณ qty สำหรับแต่ละ type
+  CASE
+
+    -- withdraw → เหลือเท่าไร
+    WHEN sfd.sfd_type = 'withdraw'
+    THEN
+      (
+        sfd.sfd_qty
+        -
+        COALESCE((
+          SELECT SUM(r.sfd_qty)
+          FROM stock_form_detail r
+          WHERE r.sfd_sf_id = sfd.sfd_sf_id
+          AND r.sfd_pd_id = sfd.sfd_pd_id
+          AND r.sfd_type = 'return'
+        ), 0)
+      )
+
+    -- return → จำนวนที่คืน
+    WHEN sfd.sfd_type = 'return'
+    THEN sfd.sfd_qty
+
+    -- waiting, rejected
+    ELSE sfd.sfd_qty
+
+  END AS sfd_qty,
+
+  -- status logic
+  CASE
+
+    WHEN sfd.sfd_type = 'return'
+    THEN 'returned'
+
+    ELSE sfd.sfd_status
+
+  END AS sfd_status
+
+FROM stock_form sf
+
+LEFT JOIN stock_form_detail sfd
+  ON sfd.sfd_sf_id = sf.sf_id
+
+LEFT JOIN products pd
+  ON pd.pd_id = sfd.sfd_pd_id
+
+WHERE sf.sf_rf_id = ?
       `;
       const [stockRows] = await db.promise().query(stockSql, [r.rf_id]);
       result.stock_items = stockRows.map((i) => ({
@@ -362,20 +484,17 @@ module.exports = (db) => {
       try {
         const [notifData] = await db.promise().query(
           `
-          SELECT 
+          SELECT
             rf.rf_code, rf.rf_problem, rf.rf_urgency,
             CONCAT(tn_tech.ttn_title_th, tech.us_first_name_th, ' ', tech.us_last_name_th) AS technician_name,
             CONCAT(tn_assign.ttn_title_th, assigner.us_first_name_th, ' ', assigner.us_last_name_th) AS assigned_by_name,
-            CONCAT(b.bd_name, ' ', f.fl_name, ' ', r.room_name) AS location,
+            CONCAT(rf.rf_building_snapshot, ' ', rf.rf_floor_snapshot, ' ', rf.rf_room_snapshot) AS location,
             tt.tt_name AS technician_type
           FROM repair_form rf
           LEFT JOIN user tech ON tech.us_id = ?
           LEFT JOIN title_name tn_tech ON tech.us_ttn_id = tn_tech.ttn_id
           LEFT JOIN user assigner ON assigner.us_id = ?
           LEFT JOIN title_name tn_assign ON assigner.us_ttn_id = tn_assign.ttn_id
-          LEFT JOIN room r ON rf.rf_room_id = r.room_id
-          LEFT JOIN floor f ON r.room_fl_id = f.fl_id
-          LEFT JOIN building b ON f.fl_bd_id = b.bd_id
           LEFT JOIN technician_type tt ON rf.rf_tt_id = tt.tt_id
           WHERE rf.rf_id = ?
         `,
@@ -469,18 +588,15 @@ module.exports = (db) => {
         try {
           const [notifData] = await db.promise().query(
             `
-            SELECT 
+            SELECT
               rf.rf_code, rf.rf_problem, rf.rf_urgency,
               GROUP_CONCAT(CONCAT(tn.ttn_title_th, u.us_first_name_th, ' ', u.us_last_name_th) SEPARATOR ', ') AS technician_names,
-              CONCAT(b.bd_name, ' ', f.fl_name, ' ', r.room_name) AS location,
+              CONCAT(rf.rf_building_snapshot, ' ', rf.rf_floor_snapshot, ' ', rf.rf_room_snapshot) AS location,
               tt.tt_name AS technician_type
             FROM repair_form rf
             LEFT JOIN repair_assignment ra ON rf.rf_id = ra.ra_rf_id
             LEFT JOIN user u ON ra.ra_us_id = u.us_id
             LEFT JOIN title_name tn ON u.us_ttn_id = tn.ttn_id
-            LEFT JOIN room r ON rf.rf_room_id = r.room_id
-            LEFT JOIN floor f ON r.room_fl_id = f.fl_id
-            LEFT JOIN building b ON f.fl_bd_id = b.bd_id
             LEFT JOIN technician_type tt ON rf.rf_tt_id = tt.tt_id
             WHERE rf.rf_id = ?
             GROUP BY rf.rf_id
@@ -531,7 +647,7 @@ module.exports = (db) => {
       const sql = `
         UPDATE repair_form rf
         JOIN repair_assignment ra ON rf.rf_id = ra.ra_rf_id
-        SET 
+        SET
           rf.rf_user_status = 'in_progress', rf.rf_in_process_at = NOW(), rf.rf_update_at = NOW(),
           ra.ra_is_lead = 1, ra.ra_accepted_at = NOW()
         WHERE rf.rf_code = ? AND ra.ra_us_id = ? AND rf.rf_user_status = 'pending'
@@ -543,18 +659,15 @@ module.exports = (db) => {
         try {
           const [notifData] = await db.promise().query(
             `
-            SELECT 
+            SELECT
               rf.rf_code, rf.rf_problem, rf.rf_urgency,
               CONCAT(tn.ttn_title_th, u.us_first_name_th, ' ', u.us_last_name_th) AS technician_name,
-              CONCAT(b.bd_name, ' ', f.fl_name, ' ', r.room_name) AS location,
+              CONCAT(rf.rf_building_snapshot, ' ', rf.rf_floor_snapshot, ' ', rf.rf_room_snapshot) AS location,
               tt.tt_name AS technician_type
             FROM repair_form rf
             LEFT JOIN repair_assignment ra ON rf.rf_id = ra.ra_rf_id AND ra.ra_us_id = ?
             LEFT JOIN user u ON ra.ra_us_id = u.us_id
             LEFT JOIN title_name tn ON u.us_ttn_id = tn.ttn_id
-            LEFT JOIN room r ON rf.rf_room_id = r.room_id
-            LEFT JOIN floor f ON r.room_fl_id = f.fl_id
-            LEFT JOIN building b ON f.fl_bd_id = b.bd_id
             LEFT JOIN technician_type tt ON rf.rf_tt_id = tt.tt_id
             WHERE rf.rf_code = ?
           `,
@@ -585,15 +698,15 @@ module.exports = (db) => {
           rf.rf_id, rf.rf_code, rf.rf_create_at, rf.rf_user_status, rf.rf_problem,
           COALESCE(rf.rf_urgency, 'medium') AS rf_urgency,
           u.us_first_name_th AS us_first_name, u.us_last_name_th AS us_last_name, u.us_department AS department_name,
-          tt.tt_name, r.room_name, f.fl_name, b.bd_name,
+          tt.tt_name, 
+          rf.rf_building_snapshot AS bd_name,
+          rf.rf_floor_snapshot AS fl_name,
+          rf.rf_room_snapshot AS room_name,
           ra.ra_id, ra.ra_is_lead, ra.ra_assigned_at, ra.ra_accepted_at
         FROM repair_form rf
         INNER JOIN repair_assignment ra ON rf.rf_id = ra.ra_rf_id
         LEFT JOIN user u ON rf.rf_us_id = u.us_id
         LEFT JOIN technician_type tt ON rf.rf_tt_id = tt.tt_id
-        LEFT JOIN room r ON rf.rf_room_id = r.room_id
-        LEFT JOIN floor f ON r.room_fl_id = f.fl_id
-        LEFT JOIN building b ON f.fl_bd_id = b.bd_id
         WHERE ra.ra_us_id = ?
         ORDER BY rf.rf_create_at DESC
       `;
@@ -603,7 +716,7 @@ module.exports = (db) => {
 
     async getStats(userId) {
       const sql = `
-        SELECT 
+        SELECT
           COUNT(*) AS total,
           COALESCE(SUM(CASE WHEN rf_user_status = 'pending' THEN 1 ELSE 0 END), 0) AS pending,
           COALESCE(SUM(CASE WHEN rf_user_status = 'in_progress' THEN 1 ELSE 0 END), 0) AS in_progress,

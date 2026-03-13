@@ -2,11 +2,11 @@
  * =====================================================================
  * @file            useTechnicianRepairList.js
  * @layer           Composable (Business Logic Layer)
- * @version         1.0.0
+ * @version         1.0.1
  * @since           2026-02-09
  * @author          พชร ไพศรีสกุล
  * @lastModified    2026-02-21
- * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
+ * @lastModifiedBy  เศรษฐพงศ์ หอมชื่น
  * ---------------------------------------------------------------------
  * @description
  *  Composable สำหรับโหลดและจัดการรายการงานซ่อมของช่างเทคนิค
@@ -25,6 +25,7 @@
  * ---------------------------------------------------------------------
  * @changelog
  *   - แก้ไขการใช้สัญลักษณ์ : ในตาราง  [2026-02-20, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - แก้ไข alert                  [2026-03-06, เศรษฐพงศ์ หอมชื่น]
  * =====================================================================
  */
 
@@ -65,7 +66,13 @@ export function useTechnicianRepairList(API_BASE, token, isAuthenticated, logout
       })
 
       if (res.status === 401) {
-        Swal.fire('หมดเวลาเข้าสู่ระบบ', 'กรุณาเข้าสู่ระบบใหม่', 'warning')
+        Sweetalert.fire({
+        title: 'หมดเวลาในการใช้งาน',
+        text: 'คุณไม่ได้ใช้งานเป็นระยะเวลาหนึ่ง กรุณาลงชื่อเข้าสู่ระบบใหม่',
+        icon: 'warning',
+        confirmButtonColor: '#0048EF', 
+        confirmButtonText: 'ตกลง'
+      })
         logout()
         return
       }

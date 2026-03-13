@@ -1,4 +1,56 @@
+/**
+ * =====================================================================
+ * @file            user.route.js
+ * @layer           Route Layer (Routing Layer)
+ * @version         1.1.0
+ * @since           2026-02-10
+ * @author          พชร ไพศรีสกุล
+ * @contributors
+ *   - พชร ไพศรีสกุล
+ *
+ * @lastModified    2026-02-25
+ * @lastModifiedBy  พชร ไพศรีสกุล
+ * ---------------------------------------------------------------------
+ * @description
+ *  Route สำหรับจัดการระบบผู้ใช้งาน (User Management)
+ *  ทำหน้าที่กำหนด endpoint และเชื่อมต่อ Controller กับ Service Layer
+ *
+ *  รองรับการทำงาน:
+ *    - ดึงข้อมูล Titles และ Roles
+ *    - จัดการผู้ใช้งาน (Create, Read, Update, Delete)
+ *    - จัดการข้อมูลส่วนตัว (Personal Profile)
+ *    - Reset รหัสผ่านผู้ใช้งาน
+ *    - Import ผู้ใช้งานจากไฟล์ Excel
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *  [2026-02-10, พชร ไพศรีสกุล] V 1.0.0
+ *  - Initial implementation User Route ตาม Layered Architecture
+ *  [2026-02-25, พชร ไพศรีสกุล] V 1.1.0
+ *  - เพิ่มการ generate default password จาก FirstNameEn + Last4Phone + LastInitial
+ *  - รองรับการ reset password โดยใช้รูปแบบ default password
+ *  - ปรับปรุงการ import ผู้ใช้งานให้รองรับ default password
+ *
+ *
+ * =====================================================================
+ */
+
 const bcrypt = require("bcrypt");
+
+function generateDefaultPassword(userData) {
+  const firstName = (userData.firstNameEn || "").trim();
+  const lastName = (userData.lastNameEn || "").trim();
+  const phone = (userData.phone || "").trim();
+
+  if (!firstName || !lastName || phone.length < 4) {
+    throw new Error("INVALID_DATA_FOR_PASSWORD_GENERATION");
+  }
+
+  const last4Phone = phone.slice(-4);
+  const lastInitial = lastName[0].toUpperCase();
+
+  return `${firstName}@${last4Phone}${lastInitial}`;
+}
 
 module.exports = (db) => {
   return {
@@ -16,6 +68,7 @@ module.exports = (db) => {
           user.us_phone, user.us_department,
           user.us_role_id, role.role_name,
           user.us_tt_id, user.us_job_title,
+          user.us_active,
           tech.tt_name AS technician_type,
           CONCAT(title.ttn_title_th, '', user.us_first_name_th, ' ', user.us_last_name_th) AS full_name,
           
@@ -33,6 +86,7 @@ module.exports = (db) => {
         LEFT JOIN role AS role ON user.us_role_id = role.role_id
         LEFT JOIN technician_type AS tech ON user.us_tt_id = tech.tt_id
         LEFT JOIN title_name AS title ON user.us_ttn_id = title.ttn_id
+        WHERE role.role_name <> 'Superadmin'
         ORDER BY user.us_id ASC
       `;
 
@@ -50,6 +104,7 @@ module.exports = (db) => {
           user.us_first_name_en, user.us_last_name_en,
           user.us_phone, user.us_department,
           user.us_role_id, user.us_tt_id, user.us_job_title,
+          user.us_active,
           role.role_name, tech.tt_name AS technician_type,
           title.ttn_title_th AS title_name
         FROM user AS user
@@ -57,6 +112,7 @@ module.exports = (db) => {
         LEFT JOIN technician_type AS tech ON user.us_tt_id = tech.tt_id
         LEFT JOIN title_name AS title ON user.us_ttn_id = title.ttn_id
         WHERE user.us_id = ?
+        AND role.role_name <> 'Superadmin'
         LIMIT 1
       `;
       const [rows] = await db.promise().query(sql, [userId]);
@@ -74,8 +130,13 @@ module.exports = (db) => {
 
     // ดึงบทบาททั้งหมด
     async getAllRoles() {
-      const sql =
-        "SELECT role_id, role_name, role_name AS role_label_th FROM role ORDER BY role_id ASC";
+      const sql = `
+    SELECT role_id, role_name, role_name AS role_label_th
+    FROM role
+    WHERE role_name <> 'Superadmin'
+    ORDER BY role_id ASC
+  `;
+
       return new Promise((resolve, reject) => {
         db.query(sql, (err, res) => (err ? reject(err) : resolve(res)));
       });
@@ -85,8 +146,15 @@ module.exports = (db) => {
 
     // สร้างผู้ใช้ใหม่
     async createUser(userData) {
+      const [role] = await db
+        .promise()
+        .query("SELECT role_name FROM role WHERE role_id = ?", [
+          userData.roleId,
+        ]);
+
+      const defaultPassword = generateDefaultPassword(userData);
       // เข้ารหัสรหัสผ่านก่อนลงฐานข้อมูล
-      const hashedPassword = await bcrypt.hash(userData.password, 10);
+      const hashedPassword = await bcrypt.hash(defaultPassword, 10);
 
       const sql = `
         INSERT INTO user (
@@ -122,8 +190,66 @@ module.exports = (db) => {
       }
     },
 
+    async resetPassword(userId) {
+      const targetUser = await this.getUserById(userId);
+
+      if (targetUser.role_name === "Superadmin") {
+        throw new Error("CANNOT_RESET_SUPERADMIN_PASSWORD");
+      }
+      // ดึงข้อมูล user จาก database
+      const sqlSelect = `
+    SELECT 
+      us_id,
+      us_first_name_en,
+      us_last_name_en,
+      us_phone
+    FROM user
+    WHERE us_id = ?
+    LIMIT 1
+  `;
+
+      const [rows] = await db.promise().query(sqlSelect, [userId]);
+
+      if (!rows.length) {
+        throw new Error("USER_NOT_FOUND");
+      }
+
+      const user = rows[0];
+
+      // generate password ใหม่
+      const defaultPassword = generateDefaultPassword({
+        firstNameEn: user.us_first_name_en,
+        lastNameEn: user.us_last_name_en,
+        phone: user.us_phone,
+      });
+
+      // hash password
+      const hashedPassword = await bcrypt.hash(defaultPassword, 10);
+
+      // update password ใน database
+      const sqlUpdate = `
+    UPDATE user
+    SET us_user_pass = ?
+    WHERE us_id = ?
+  `;
+
+      const [result] = await db
+        .promise()
+        .query(sqlUpdate, [hashedPassword, userId]);
+
+      if (result.affectedRows === 0) {
+        throw new Error("USER_NOT_FOUND");
+      }
+
+      return true;
+    },
     // แก้ไขข้อมูลผู้ใช้ (สำหรับ Admin)
     async updateUser(id, userData) {
+      const targetUser = await this.getUserById(id);
+
+      if (targetUser.role_name === "Superadmin") {
+        throw new Error("CANNOT_MODIFY_SUPERADMIN");
+      }
       // ตรวจสอบ Username ซ้ำ (ยกเว้นตัวเอง)
       if (userData.userName) {
         const [dup] = await db
@@ -176,52 +302,106 @@ module.exports = (db) => {
     },
 
     // แก้ไขข้อมูลส่วนตัว (สำหรับ User แก้เอง)
-    async updatePersonalProfile(id, userData, oldPassword, newPassword) {
-      // 1. เช็คว่า User มีอยู่จริงไหม และดึงรหัสผ่านเก่ามาเทียบ
+    async updatePersonalProfile(
+      id,
+      userData,
+      oldPassword,
+      newPassword,
+      isFirstLogin = false,
+    ) {
+      // 1. เช็คว่า User มีอยู่จริงไหม
       const currentUser = await this.getUserById(id);
       if (!currentUser) throw new Error("USER_NOT_FOUND");
 
-      // 2. ตรวจสอบรหัสผ่านเดิม (Required)
-      const isMatch = await bcrypt.compare(
-        oldPassword,
-        currentUser.us_user_pass,
-      );
-      if (!isMatch) throw new Error("INVALID_OLD_PASSWORD");
+      // 2. ตรวจสอบรหัสผ่านเดิม (ข้ามถ้าเป็นครั้งแรก-first login)
+      if (!isFirstLogin) {
+        const isMatch = await bcrypt.compare(
+          oldPassword,
+          currentUser.us_user_pass,
+        );
+        if (!isMatch) throw new Error("INVALID_OLD_PASSWORD");
+      }
 
       // 3. เตรียมรหัสผ่านใหม่ (ถ้ามี)
       let finalPassword = currentUser.us_user_pass;
+      let usActive =
+        userData.usActive !== undefined
+          ? userData.usActive
+          : currentUser.us_active;
+
       if (newPassword) {
         finalPassword = await bcrypt.hash(newPassword, 10);
+        // ถ้ามีการเปลี่ยนรหัสผ่าน และ us_active=0 ให้ตั้งเป็น 1
+        if (currentUser.us_active === 0) {
+          usActive = 1;
+        }
       }
 
-      // 4. อัปเดตข้อมูล
-      const sql = `
-        UPDATE user SET 
-            us_ttn_id = ?, us_department = ?, us_phone = ?,
-            us_first_name_th = ?, us_last_name_th = ?,
-            us_first_name_en = ?, us_last_name_en = ?,
-            us_user_name = ?, us_user_pass = ?
-        WHERE us_id = ?
-      `;
-      const params = [
-        userData.titleId,
-        userData.department,
-        userData.phone,
-        userData.firstNameTh,
-        userData.lastNameTh,
-        userData.firstNameEn,
-        userData.lastNameEn,
-        userData.userName,
-        finalPassword,
-        id,
-      ];
+      // 4. อัปเดตข้อมูล (มีเงื่อนไขว่าจะอัปเดตเฉพาะฟิลด์ที่มีข้อมูล)
+      // สำหรับ first-login อาจมีฟิลด์บางฟิลด์เป็น null
+      let updateFields = ["us_user_pass = ?"];
+      let params = [finalPassword];
 
+      // ถ้า titleId มีค่า ให้อัปเดต
+      if (userData.titleId !== undefined && userData.titleId !== null) {
+        updateFields.push("us_ttn_id = ?");
+        params.push(userData.titleId);
+      }
+
+      if (userData.department !== undefined && userData.department !== null) {
+        updateFields.push("us_department = ?");
+        params.push(userData.department);
+      }
+
+      if (userData.phone !== undefined && userData.phone !== null) {
+        updateFields.push("us_phone = ?");
+        params.push(userData.phone);
+      }
+
+      if (userData.firstNameTh !== undefined && userData.firstNameTh !== null) {
+        updateFields.push("us_first_name_th = ?");
+        params.push(userData.firstNameTh);
+      }
+
+      if (userData.lastNameTh !== undefined && userData.lastNameTh !== null) {
+        updateFields.push("us_last_name_th = ?");
+        params.push(userData.lastNameTh);
+      }
+
+      if (userData.firstNameEn !== undefined && userData.firstNameEn !== null) {
+        updateFields.push("us_first_name_en = ?");
+        params.push(userData.firstNameEn);
+      }
+
+      if (userData.lastNameEn !== undefined && userData.lastNameEn !== null) {
+        updateFields.push("us_last_name_en = ?");
+        params.push(userData.lastNameEn);
+      }
+
+      if (userData.userName !== undefined && userData.userName !== null) {
+        updateFields.push("us_user_name = ?");
+        params.push(userData.userName);
+      }
+
+      // ทำการ update us_active เสมอ
+      updateFields.push("us_active = ?");
+      params.push(usActive);
+
+      // เพิ่ม ID ที่สุดท้าย
+      params.push(id);
+
+      const sql = `UPDATE user SET ${updateFields.join(", ")} WHERE us_id = ?`;
       const [result] = await db.promise().query(sql, params);
       return result.affectedRows;
     },
 
     // ลบผู้ใช้
     async deleteUser(id) {
+      const targetUser = await this.getUserById(id);
+
+      if (targetUser.role_name === "Superadmin") {
+        throw new Error("CANNOT_DELETE_SUPERADMIN");
+      }
       // เช็คก่อนว่า User นี้เคย แจ้งซ่อม หรือ รับงานซ่อม ไหม
       const checkSql = `
             SELECT (SELECT COUNT(*) FROM repair_form WHERE rf_us_id = ?) + 
@@ -250,19 +430,29 @@ module.exports = (db) => {
 
       for (const [index, user] of userList.entries()) {
         try {
+          if (user.role_name === "Superadmin") {
+            throw new Error("CANNOT_IMPORT_SUPERADMIN");
+          }
           // 1. ตรวจสอบข้อมูลเบื้องต้น
           if (
             !user.username ||
-            !user.password ||
             !user.first_name_th ||
+            !user.first_name_en ||
+            !user.last_name_en ||
+            !user.phone ||
             !user.role_name
           ) {
             throw new Error("ข้อมูลไม่ครบถ้วน");
           }
 
           // 2. เตรียมข้อมูล (Hash Pass, Map Position)
-          const hashedPassword = await bcrypt.hash(user.password, 10);
+          const defaultPassword = generateDefaultPassword({
+            firstNameEn: user.first_name_en,
+            lastNameEn: user.last_name_en,
+            phone: user.phone,
+          });
 
+          const hashedPassword = await bcrypt.hash(defaultPassword, 10);
           // 3. หา Role ID
           const [roles] = await db
             .promise()

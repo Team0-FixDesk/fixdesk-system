@@ -1,3 +1,48 @@
+/**
+ * =====================================================================
+ * @file            : technician-service.js
+ * @module          : Business Logic สำหรับระบบช่างและงานซ่อม
+ * @layer           : Service Layer (Business Logic Layer)
+ * @version         : 1.0.0
+ * @since           : 2026-02-17
+ * @lastModified    : 2026-02-20
+ * @lastModifiedBy  : นราธิป แสนทวีสุข
+ * ---------------------------------------------------------------------
+ * @description
+ *  Service Layer สำหรับจัดการตรรกะการทำงานหลักของระบบช่าง
+ *  และงานซ่อมที่เกี่ยวข้อง โดยทำงานร่วมกับฐานข้อมูลโดยตรง
+ *
+ *  รองรับการทำงาน:
+ *    - จัดการข้อมูลช่าง
+ *    - จัดการประเภทงานช่าง
+ *    - ดูงานซ่อมของช่าง (getMyRepairs)
+ *    - เบิกของสำหรับงานซ่อม (withdrawStock)
+ *    - ปิดงานซ่อม (closeJob)
+ *
+ * @requires
+ *   - mysql2 (Database connection ผ่าน db instance)
+ *
+ * @databaseTables
+ *   - user
+ *   - technician_type
+ *   - repair_form
+ *   - stock_form
+ *   - stock_form_detail
+ *   - products
+ *
+ * @author
+ *   - นราธิป แสนทวีสุข
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *  - ปรับ withdrawStock: ไม่ตัด stock ทันที รอ Stock อนุมัติก่อน
+ *    เปลี่ยนจากตัด stock ทันที → สร้างใบเบิก (waiting) เท่านั้น
+ *    Stock จะถูกตัดเมื่อ Stock อนุมัติในฟังก์ชัน updateItemStatus
+ *    [2026-02-20, นราธิป แสนทวีสุข]
+ *  - เพิ่มฟังก์ชัน closeJob สำหรับช่างปิดงาน [2026-02-17, พชร]
+ * =====================================================================
+ */
+
 module.exports = (db) => {
   return {
     /* ================== TECHNICIAN MANAGEMENT ================== */
@@ -178,8 +223,29 @@ module.exports = (db) => {
       return rows;
     },
 
-    // ปิดงาน / ส่ง Outsource
-    async closeJob(techId, rfCode, status, summary, imageAfter) {
+    /**
+     * ปิดงาน / ส่ง Outsource / อื่นๆ
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-22
+     * @lastModifiedBy นราธิป แสนทวีสุข
+     * @contributors
+     *  - พชร ไพศรีสกุล
+     *  - นราธิป แสนทวีสุข
+     *
+     * @param {Number} techId - รหัสช่าง
+     * @param {String} rfCode - รหัสใบแจ้งซ่อม
+     * @param {String} status - สถานะการปิดงาน (done/outsource/other)
+     * @param {String} summary - สรุปผลการซ่อม
+     * @param {String} imageAfter - รูปภาพหลังซ่อม
+     * @param {String} repairMethod - วิธีการซ่อม (in_house/outsource/other)
+     * @param {String} repairMethodRemark - หมายเหตุวิธีการซ่อม (กรณีเลือก other)
+     * @param {String} resultStatus - สรุปผลงาน (completed/incomplete/other)
+     * @param {String} resultRemark - หมายเหตุสรุปผล
+     * @returns {Promise<Boolean>}
+     */
+    async closeJob(techId, rfCode, status, summary, imageAfter, repairMethod, repairMethodRemark, resultStatus, resultRemark) {
       // ⭐ ตรวจว่ามีใบเบิกค้างอยู่ไหม
       const [pendingStock] = await db.promise().query(
         `
@@ -199,26 +265,63 @@ module.exports = (db) => {
       }
 
       // =========================
-      // Logic เดิมของคุณ
+      // Logic ปิดงาน
       // =========================
 
       let updateFields = "";
       let params = [];
 
       if (status === "done") {
+        // ปิดงานสำเร็จ
         updateFields = `
       rf.rf_user_status = 'done',
       rf.rf_done_at = NOW(),
       rf.rf_tech_summary = ?,
-      rf.rf_tech_image_after = ?
+      rf.rf_tech_image_after = ?,
+      rf.rf_repair_method = ?,
+      rf.rf_repair_method_remark = ?,
+      rf.rf_result_status = ?,
+      rf.rf_result_remark = ?
     `;
-        params = [summary, imageAfter, rfCode, techId];
+        params = [
+          summary,
+          imageAfter,
+          repairMethod || 'in_house',
+          repairMethodRemark || null,
+          resultStatus || 'completed',
+          resultRemark || null,
+          rfCode,
+          techId
+        ];
       } else if (status === "outsource") {
+        // ส่งจ้างนอก
         updateFields = `
       rf.rf_user_status = 'outsource',
-      rf.rf_is_outsourced = 1
+      rf.rf_repair_method = 'outsource',
+      rf.rf_repair_method_remark = ?
     `;
-        params = [rfCode, techId];
+        params = [repairMethodRemark || null, rfCode, techId];
+      } else if (status === "other") {
+        // วิธีอื่นๆ
+        updateFields = `
+      rf.rf_user_status = 'done',
+      rf.rf_done_at = NOW(),
+      rf.rf_tech_summary = ?,
+      rf.rf_tech_image_after = ?,
+      rf.rf_repair_method = 'other',
+      rf.rf_repair_method_remark = ?,
+      rf.rf_result_status = ?,
+      rf.rf_result_remark = ?
+    `;
+        params = [
+          summary,
+          imageAfter,
+          repairMethodRemark || null,
+          resultStatus || 'completed',
+          resultRemark || null,
+          rfCode,
+          techId
+        ];
       } else {
         throw new Error("INVALID_STATUS");
       }
@@ -275,33 +378,33 @@ module.exports = (db) => {
         );
         const sfId = sfRes.insertId;
 
-        // 3. Loop ตัดสต๊อก
+        // 3. Loop สร้างรายการเบิก (ไม่ตัด stock ยัง - รอ Stock อนุมัติก่อน)
         for (const item of items) {
-          // Check Stock & Lock Row
+          // Check ว่าสินค้ามีจริง
           const [pd] = await connection.query(
-            "SELECT pd_quantity, pd_name FROM products WHERE pd_id = ? FOR UPDATE",
+            "SELECT pd_quantity, pd_name FROM products WHERE pd_id = ?",
             [item.id],
           );
           if (pd.length === 0) throw new Error(`PRODUCT_NOT_FOUND:${item.id}`);
 
+          // เช็คว่า stock พอไหม (แต่ยังไม่ตัด)
           if (pd[0].pd_quantity < item.qty) {
             throw new Error(`INSUFFICIENT_STOCK:${pd[0].pd_name}`);
           }
 
-          // Decrement
-          await connection.query(
-            "UPDATE products SET pd_quantity = pd_quantity - ? WHERE pd_id = ?",
-            [item.qty, item.id],
-          );
+          console.log(`📝 [Technician withdrawStock] Creating withdraw request: productId=${item.id}, qty=${item.qty}, current_stock=${pd[0].pd_quantity}`);
 
-          // Insert Detail
+          // Insert Detail (สถานะ waiting - รอ Stock อนุมัติ)
           await connection.query(
             "INSERT INTO stock_form_detail (sfd_sf_id, sfd_pd_id, sfd_qty, sfd_status) VALUES (?, ?, ?, 'waiting')",
             [sfId, item.id, item.qty],
           );
+          
+          console.log(`✅ [Technician withdrawStock] Withdraw request created for product ${item.id} (stock will be deducted after approval)`);
         }
 
         await connection.commit();
+        console.log(`✅ [Technician withdrawStock] Completed: sfCode=${sfCode}, sfId=${sfId}`);
         return { sfId, sfCode };
       } catch (error) {
         await connection.rollback();

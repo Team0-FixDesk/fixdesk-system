@@ -3,9 +3,9 @@
  * @file            : stock-service.js
  * @module          : Business Logic สำหรับระบบคลังวัสดุ/อุปกรณ์
  * @layer           : Service Layer (Business Logic Layer)
- * @version         : 1.0.0
+ * @version         : 1.3.0
  * @since           : 2026-02-17
- * @lastModified    : 2026-02-17
+ * @lastModified    : 2026-02-23
  * @lastModifiedBy  : นายพชร ไพศรีสกุล
  * ---------------------------------------------------------------------
  * @description
@@ -51,12 +51,21 @@
  *
  * ---------------------------------------------------------------------
  * @changelog
+ *  - ปรับ Business Logic: เบิกของไม่ตัด stock ทันที รออนุมัติก่อน
+ *    - createWithdraw: เปลี่ยนสถานะเป็น 'waiting' ไม่ตัด stock
+ *    - updateItemStatus: อนุมัติ → ตัด stock + บันทึก OUT transaction
+ *    - updateMultipleItemsStatus: อนุมัติ → ตัด stock + บันทึก OUT transaction
+ *    - addProduct: บันทึก IN transaction เมื่อเพิ่มสินค้า
+ *    - updateProduct: บันทึก IN/OUT transaction ตามการเปลี่ยนแปลงจำนวน
+ *    - importStock: บันทึก IN transaction เมื่อ import
+ *    [2026-02-20, นราธิป แสนทวีสุข]
  *  - เพิ่มระบบคืนสินค้า (returnItem)
  *    และเพิ่ม transaction สำหรับคืนสินค้า
  *    [2026-02-17, นายพชร ไพศรีสกุล]
+ *  - รองรับการคืนอุปกรณ์แบบบางส่วน (Partial Return)ปรับปรุง logic การคืนและการคำนวณ stock ให้รองรับการคืนหลายครั้ง
+ *    [2026-02-23, พชร ไพศรีสกุล] V1.3.0
  * =====================================================================
  */
-
 
 /**
  * =====================================================================
@@ -107,8 +116,6 @@
  * =====================================================================
  */
 
-
-
 const fs = require("fs");
 const path = require("path");
 
@@ -130,6 +137,31 @@ module.exports = (db) => {
       });
     },
 
+    /* ================== STOCK TRANSACTIONS (บันทึกการเคลื่อนไหว) ================== */
+
+    async getAllTransactions() {
+      const sql = `
+        SELECT 
+          stt.stt_id,
+          stt.stt_product_id,
+          stt.stt_type,
+          stt.stt_quantity,
+          stt.stt_created_at,
+          stt.stt_ref_sf_id,
+          stt.stt_user_id,
+          pd.pd_name,
+          pd.pd_asset_code,
+          CONCAT(u.us_first_name_th, ' ', u.us_last_name_th) AS user_name
+        FROM stock_transactions stt
+        LEFT JOIN products pd ON stt.stt_product_id = pd.pd_id
+        LEFT JOIN user u ON stt.stt_user_id = u.us_id
+        ORDER BY stt.stt_created_at DESC
+      `;
+      return new Promise((resolve, reject) => {
+        db.query(sql, (err, res) => (err ? reject(err) : resolve(res)));
+      });
+    },
+
     // ฟังก์ชันช่วย: หาหรือสร้าง Unit ID (ใช้ใน add/update product)
     async getOrCreateUnitId(unitName) {
       if (!unitName) throw new Error("Unit name is required");
@@ -145,7 +177,7 @@ module.exports = (db) => {
       return res.insertId;
     },
 
-    async addProduct(data, filename) {
+    async addProduct(data, filename, userId = null) {
       // 1. จัดการ Unit
       const unitId = await this.getOrCreateUnitId(data.unitName);
 
@@ -165,14 +197,44 @@ module.exports = (db) => {
       ];
 
       const [result] = await db.promise().query(sql, params);
-      return result.insertId;
+      const productId = result.insertId;
+
+      console.log("📝 [addProduct Service] Product inserted:", { productId, quantity: data.quantity, userId });
+
+      // 3. บันทึก transaction IN (ระบุชื่อ column ชัดเจน)
+      if (data.quantity > 0) {
+        console.log("💰 [addProduct Service] Recording transaction...", {
+          productId,
+          userId,
+          quantity: data.quantity,
+          type: 'IN'
+        });
+        
+        await db.promise().query(
+          "INSERT INTO stock_transactions (stt_product_id, stt_user_id, stt_type, stt_quantity, stt_created_at) VALUES (?, ?, 'IN', ?, NOW())",
+          [productId, userId, data.quantity],
+        );
+        
+        console.log("✅ [addProduct Service] Transaction recorded successfully");
+      } else {
+        console.log("⚠️ [addProduct Service] Skipping transaction - quantity is:", data.quantity);
+      }
+
+      return productId;
     },
 
-    async updateProduct(id, data, newFilename) {
-      // 1. จัดการ Unit
+    async updateProduct(id, data, newFilename, userId = null) {
+      // 1. ดึงข้อมูลเดิม
+      const [oldProduct] = await db
+        .promise()
+        .query("SELECT pd_quantity FROM products WHERE pd_id = ?", [id]);
+      if (!oldProduct.length) throw new Error("PRODUCT_NOT_FOUND");
+      const oldQuantity = oldProduct[0].pd_quantity;
+
+      // 2. จัดการ Unit
       const unitId = await this.getOrCreateUnitId(data.unitName);
 
-      // 2. เตรียม SQL
+      // 3. เตรียม SQL
       let sql = `
         UPDATE products SET
           pd_asset_code=?, pd_name=?, pd_detail=?, pd_category_id=?,
@@ -197,22 +259,49 @@ module.exports = (db) => {
       params.push(id);
 
       const [result] = await db.promise().query(sql, params);
+
+      // 4. บันทึก transaction เมื่อจำนวนเปลี่ยนแปลง (ระบุชื่อ column ชัดเจน + userId)
+      const quantityDiff = data.quantity - oldQuantity;
+      if (quantityDiff > 0) {
+        // 🆕 จำนวนเพิ่มขึ้น → บันทึก IN
+        await db.promise().query(
+          "INSERT INTO stock_transactions (stt_product_id, stt_user_id, stt_type, stt_quantity, stt_created_at) VALUES (?, ?, 'IN', ?, NOW())",
+          [id, userId, quantityDiff],
+        );
+      } else if (quantityDiff < 0) {
+        // 🆕 จำนวนลดลง → บันทึก OUT (ปรับสต๊อกลด)
+        await db.promise().query(
+          "INSERT INTO stock_transactions (stt_product_id, stt_user_id, stt_type, stt_quantity, stt_created_at) VALUES (?, ?, 'OUT', ?, NOW())",
+          [id, userId, Math.abs(quantityDiff)],
+        );
+      }
+
       return result.affectedRows;
     },
 
-    async deleteProduct(id) {
-      // 1. หารูปภาพเพื่อลบไฟล์
+    async deleteProduct(id, userId = null) {
+      // 1. หาข้อมูลสินค้าก่อนลบ
       const [rows] = await db
         .promise()
-        .query("SELECT pd_upload_image FROM products WHERE pd_id = ?", [id]);
+        .query("SELECT pd_upload_image, pd_quantity, pd_name FROM products WHERE pd_id = ?", [id]);
       if (rows.length === 0) throw new Error("PRODUCT_NOT_FOUND");
 
       const imageName = rows[0].pd_upload_image;
+      const quantity = rows[0].pd_quantity;
+      const productName = rows[0].pd_name;
 
-      // 2. ลบ DB
+      // 2. 🆕 บันทึก transaction OUT ก่อนลบ (ถ้ายังมีสินค้าคงเหลือ) - ระบุชื่อ column ชัดเจน + userId
+      if (quantity > 0) {
+        await db.promise().query(
+          "INSERT INTO stock_transactions (stt_product_id, stt_user_id, stt_type, stt_quantity, stt_created_at) VALUES (?, ?, 'OUT', ?, NOW())",
+          [id, userId, quantity],
+        );
+      }
+
+      // 3. ลบ DB
       await db.promise().query("DELETE FROM products WHERE pd_id = ?", [id]);
 
-      // 3. ลบไฟล์ (ถ้ามี)
+      // 4. ลบไฟล์ (ถ้ามี)
       if (imageName) {
         const imagePath = path.join(__dirname, "../../uploads", imageName);
         if (fs.existsSync(imagePath)) fs.unlinkSync(imagePath);
@@ -390,42 +479,46 @@ module.exports = (db) => {
         if (!rf.length) throw new Error("REPAIR_NOT_FOUND");
         const rfId = rf[0].rf_id;
 
-        // 2. สร้าง Stock Form
+        // 2. สร้าง Header (Stock Form) - สถานะ waiting รออนุมัติ
         const sfCode = "SF" + Date.now();
         const [sfRes] = await connection.query(
-          `INSERT INTO stock_form
-       (sf_code, sf_status, sf_create_at, sf_us_id, sf_rf_id)
-       VALUES (?, 'approved', NOW(), ?, ?)`,
+          "INSERT INTO stock_form (sf_code, sf_status, sf_create_at, sf_us_id, sf_rf_id) VALUES (?, 'waiting', NOW(), ?, ?)",
           [sfCode, userId, rfId],
         );
         const sfId = sfRes.insertId;
 
-        // ===============================
-        // ✅ STEP 2: ใช้ mergedItems
-        // ===============================
-        for (const item of mergedItems) {
-          // Insert detail
+        // 3. Loop สร้างรายการเบิก (ไม่ตัด stock ยัง - รอ Stock อนุมัติก่อน)
+        for (const item of items) {
+          // เช็คว่าสินค้ามีจริง
+          const [pd] = await connection.query(
+            "SELECT pd_quantity, pd_name FROM products WHERE pd_id = ?",
+            [item.id],
+          );
+          
+          if (pd.length === 0) {
+            throw new Error(`PRODUCT_NOT_FOUND:${item.id}`);
+          }
+
+          // เช็คว่า stock พอไหม (แต่ยังไม่ตัด)
+          if (pd[0].pd_quantity < item.qty) {
+            throw new Error(`INSUFFICIENT_STOCK_FOR_ITEM_${item.id}`);
+          }
+
+          console.log(`📝 [createWithdraw] Creating withdraw request: productId=${item.id}, qty=${item.qty}, current_stock=${pd[0].pd_quantity}`);
+
+          // Insert Detail (สถานะ waiting - รอ Stock อนุมัติ)
           await connection.query(
             `INSERT INTO stock_form_detail
          (sfd_sf_id, sfd_pd_id, sfd_qty, sfd_status)
          VALUES (?, ?, ?, 'waiting')`,
             [sfId, item.id, item.qty],
           );
-
-          // ตัด stock
-          const [upRes] = await connection.query(
-            `UPDATE products
-         SET pd_quantity = pd_quantity - ?
-         WHERE pd_id = ? AND pd_quantity >= ?`,
-            [item.qty, item.id, item.qty],
-          );
-
-          if (upRes.affectedRows === 0) {
-            throw new Error(`INSUFFICIENT_STOCK_FOR_ITEM_${item.id}`);
-          }
+          
+          console.log(`✅ [createWithdraw] Withdraw request created for product ${item.id} (stock will be deducted after approval)`);
         }
 
         await connection.commit();
+        console.log(`✅ [createWithdraw] Withdraw completed: sfCode=${sfCode}, sfId=${sfId}`);
         return sfCode;
       } catch (error) {
         await connection.rollback();
@@ -435,9 +528,8 @@ module.exports = (db) => {
       }
     },
 
-
     // อนุมัติ/ไม่อนุมัติ รายชิ้น (Complex Logic)
-    async updateItemStatus(sfCode, pdId, status) {
+    async updateItemStatus(sfCode, pdId, status, userId = null) {
       // 1. หา ID
       const [sf] = await db
         .promise()
@@ -464,17 +556,37 @@ module.exports = (db) => {
           [status, sfId, pdId],
         );
 
-      // 4. ถ้า Reject ต้องคืนของเข้า Stock
-      if (status === "rejected") {
+      // 4. ถ้า Approved → ตัด stock + บันทึก OUT transaction
+      if (status === "approved") {
+        console.log(`✅ [updateItemStatus] Approving item: productId=${pdId}, qty=${item[0].sfd_qty}`);
+        
+        // ตัด stock
         await db
           .promise()
           .query(
-            "UPDATE products SET pd_quantity = pd_quantity + ? WHERE pd_id = ?",
+            "UPDATE products SET pd_quantity = pd_quantity - ? WHERE pd_id = ?",
             [item[0].sfd_qty, pdId],
           );
+        
+        console.log(`💰 [updateItemStatus] Recording OUT transaction: productId=${pdId}, qty=${item[0].sfd_qty}, userId=${userId}`);
+        
+        // บันทึก transaction OUT (อนุมัติแล้ว - ตัด stock)
+        await db
+          .promise()
+          .query(
+            "INSERT INTO stock_transactions (stt_product_id, stt_user_id, stt_type, stt_quantity, stt_created_at, stt_ref_sf_id) VALUES (?, ?, 'OUT', ?, NOW(), ?)",
+            [pdId, userId, item[0].sfd_qty, sfId],
+          );
+        
+        console.log(`✅ [updateItemStatus] OUT transaction recorded for product ${pdId}`);
       }
 
-      // 5. คำนวณสถานะรวมของใบเบิกใหม่ (Recalculate)
+      // 5. ถ้า Rejected → ไม่ทำอะไร (เพราะยังไม่ได้ตัด stock)
+      if (status === "rejected") {
+        console.log(`❌ [updateItemStatus] Rejecting item: productId=${pdId}, qty=${item[0].sfd_qty} (no stock changes needed)`);
+      }
+
+      // 6. คำนวณสถานะรวมของใบเบิกใหม่ (Recalculate)
       const [stats] = await db.promise().query(
         `
             SELECT
@@ -506,7 +618,7 @@ module.exports = (db) => {
     },
 
     // อนุมัติ/ไม่อนุมัติ หลายรายการพร้อมกัน (Batch Update)
-    async updateMultipleItemsStatus(sfCode, items) {
+    async updateMultipleItemsStatus(sfCode, items, userId = null) {
       const promisePool = db.promise();
       const connection = await promisePool.getConnection();
 
@@ -563,13 +675,28 @@ module.exports = (db) => {
           );
           console.log("Updated item status to:", status);
 
-          // ถ้า reject ต้องคืนของ
-          if (status === "rejected") {
+          // ถ้า approved → ตัด stock + บันทึก OUT transaction
+          if (status === "approved") {
+            console.log(`✅ [updateMultipleItemsStatus] Approving item: pd_id=${pd_id}, qty=${current[0].sfd_qty}`);
+            
+            // ตัด stock
             await connection.query(
-              "UPDATE products SET pd_quantity = pd_quantity + ? WHERE pd_id = ?",
+              "UPDATE products SET pd_quantity = pd_quantity - ? WHERE pd_id = ?",
               [current[0].sfd_qty, pd_id],
             );
-            console.log("Returned quantity:", current[0].sfd_qty);
+            console.log("Deducted quantity:", current[0].sfd_qty);
+            
+            // บันทึก transaction OUT (อนุมัติแล้ว - ตัด stock)
+            await connection.query(
+              "INSERT INTO stock_transactions (stt_product_id, stt_user_id, stt_type, stt_quantity, stt_created_at, stt_ref_sf_id) VALUES (?, ?, 'OUT', ?, NOW(), ?)",
+              [pd_id, userId, current[0].sfd_qty, sfId],
+            );
+            console.log("Logged transaction OUT (approved):", current[0].sfd_qty);
+          }
+
+          // ถ้า rejected → ไม่ทำอะไร (เพราะยังไม่ได้ตัด stock)
+          if (status === "rejected") {
+            console.log(`❌ [updateMultipleItemsStatus] Rejecting item: pd_id=${pd_id}, qty=${current[0].sfd_qty} (no stock changes needed)`);
           }
         }
 
@@ -633,7 +760,7 @@ module.exports = (db) => {
 
     /* ================== IMPORT ================== */
 
-    async importStock(items) {
+    async importStock(items, userId = null) {
       const results = [];
       const errors = [];
 
@@ -710,24 +837,27 @@ module.exports = (db) => {
             categoryId = ct[0].ct_id;
           }
 
-          await db.promise().query(
-            `INSERT INTO products
-         (pd_asset_code, pd_name, pd_category_id, pd_quantity, pd_unit_id, pd_updated_at)
-         VALUES (?, ?, ?, ?, ?, NOW())`,
-            [
-              item.pd_asset_code || null,
-              item.pd_name,
-              categoryId,
-              qty,
-              unitId,
-            ],
+          // Insert
+          const [insertResult] = await db.promise().query(
+            `INSERT INTO products (pd_asset_code, pd_name, pd_category_id, pd_quantity, pd_unit_id, pd_updated_at)
+                     VALUES (?, ?, ?, ?, ?, NOW())`,
+            [item.pd_asset_code || null, item.pd_name, categoryId, qty, unitId],
           );
 
-          results.push({
-            index: i,
-            name: item.pd_name,
-            action: "inserted",
-          });
+          const productId = insertResult.insertId;
+          console.log(`📝 [importStock] Product inserted: ID=${productId}, name=${item.pd_name}, qty=${qty}, userId=${userId}`);
+
+          // บันทึก transaction IN - ระบุชื่อ column ชัดเจน + userId
+          console.log(`💰 [importStock] Recording transaction for product ${productId}...`);
+          
+          await db.promise().query(
+            "INSERT INTO stock_transactions (stt_product_id, stt_user_id, stt_type, stt_quantity, stt_created_at) VALUES (?, ?, 'IN', ?, NOW())",
+            [productId, userId, qty],
+          );
+          
+          console.log(`✅ [importStock] Transaction recorded successfully for product ${productId}`);
+
+          results.push({ index: i, name: item.pd_name });
         } catch (err) {
           errors.push({
             index: i,
@@ -745,15 +875,15 @@ module.exports = (db) => {
       };
     },
 
-    async returnItem(sfCode, pdId, userId) {
+    async returnItem(sfCode, pdId, returnQty, userId) {
       const connection = await db.promise().getConnection();
 
       try {
         await connection.beginTransaction();
 
-        // หา sf_id
+        // 1. หา sf_id
         const [sf] = await connection.query(
-          "SELECT sf_id FROM stock_form WHERE sf_code = ?",
+          `SELECT sf_id FROM stock_form WHERE sf_code = ?`,
           [sfCode],
         );
 
@@ -761,33 +891,57 @@ module.exports = (db) => {
 
         const sfId = sf[0].sf_id;
 
-        // หา item
-        const [item] = await connection.query(
-          `SELECT sfd_qty, sfd_status
+        // 2. คำนวณจำนวน withdraw ทั้งหมด
+        const [withdrawRows] = await connection.query(
+          `SELECT COALESCE(SUM(sfd_qty),0) total
        FROM stock_form_detail
-       WHERE sfd_sf_id = ? AND sfd_pd_id = ?`,
+       WHERE sfd_sf_id = ?
+       AND sfd_pd_id = ?
+       AND sfd_type = 'withdraw'
+       AND sfd_status = 'approved'`,
           [sfId, pdId],
         );
 
-        if (!item.length) throw new Error("ITEM_NOT_FOUND");
+        const totalWithdraw = withdrawRows[0].total;
 
-        if (item[0].sfd_status !== "approved")
-          throw new Error("ITEM_NOT_APPROVED");
+        // 3. คำนวณจำนวน return แล้ว
+        const [returnRows] = await connection.query(
+          `SELECT COALESCE(SUM(sfd_qty),0) total
+       FROM stock_form_detail
+       WHERE sfd_sf_id = ?
+       AND sfd_pd_id = ?
+       AND sfd_type = 'return'`,
+          [sfId, pdId],
+        );
 
-        // update status → returned
+        const totalReturned = returnRows[0].total;
+
+        const remaining = totalWithdraw - totalReturned;
+
+        if (remaining <= 0) throw new Error("NOTHING_TO_RETURN");
+
+        if (returnQty > remaining) throw new Error("RETURN_EXCEEDS_AVAILABLE");
+
+        // 4. insert return record
         await connection.query(
-          `UPDATE stock_form_detail
-       SET sfd_status = 'returned'
-       WHERE sfd_sf_id = ? AND sfd_pd_id = ?`,
-          [sfId, pdId],
+          `INSERT INTO stock_form_detail
+      (sfd_sf_id, sfd_pd_id, sfd_qty, sfd_type, sfd_status)
+      VALUES (?, ?, ?, 'return', 'returned')`,
+          [sfId, pdId, returnQty],
         );
 
-        // คืน stock
+        // 5. update stock
         await connection.query(
           `UPDATE products
        SET pd_quantity = pd_quantity + ?
        WHERE pd_id = ?`,
-          [item[0].sfd_qty, pdId],
+          [returnQty, pdId],
+        );
+
+        // บันทึก transaction IN (คืนของ) - ระบุชื่อ column ชัดเจน + userId
+        await connection.query(
+          "INSERT INTO stock_transactions (stt_product_id, stt_user_id, stt_type, stt_quantity, stt_created_at, stt_ref_sf_id) VALUES (?, ?, 'IN', ?, NOW(), ?)",
+          [pdId, userId, returnQty, sfId],
         );
 
         await connection.commit();
