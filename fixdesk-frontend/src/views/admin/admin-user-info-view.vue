@@ -1,13 +1,19 @@
+<script setup>
 /**
  * =====================================================================
  * @file            admin-user-info-view.vue
  * @module          มอดูลการจัดการผู้ใช้ - การจัดการข้อมูลผู้ใข้งาน
  * @layer           View (Presentation Layer)
- * @version         1.0.3
+ * @version         1.0.6
  * @since           2025-10-21
- * @author          เศรษฐพงศ์ หอมชื่น
- * @lastModified    2026-03-06
- * @lastModifiedBy  เศรษฐพงศ์ หอมชื่น
+ * @author          พชร ไพศรีสกุล
+ * @contributors
+ *  - เศรษฐพงศ์ หอมชื่น
+ *  - ปฏิพัทธ์ จงนันทพันธ์กุล
+ *  - พชร ไพศรีสกุล
+ *
+ * @lastModified    2026-03-16
+ * @lastModifiedBy  พชร ไพศรีสกุล
  * ---------------------------------------------------------------------
  * @description
  *  หน้าจอสำหรับใช้จัดการข้อมูลผู้ใช้งานในระบบของผู้ดูแลระบบ
@@ -40,17 +46,24 @@
  *
  * ---------------------------------------------------------------------
  * @changelog
- *   - ปรับปรุงข้อความที่ใช้ให้เหมาะสม                  [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
- *   - แก้ไขตำแหน่งของปุ่มยืินยันการแก้ไข/ลบ             [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
- *   - แก้ไขข้อความคำอธิบายรายละเอียดผู้ใช้/แก้ไขข้อมูลผู้ใช้ [2026-02-20, ปฏิพัทธ์ จงนันทพันธกุล]
- *   - แก้ไขชื่อบทบาท "ผู้ใช้งาน"                      [2026-02-20, ปฏิพัทธ์ จงนันทพันธ์กุล]
- *   - แก้ไขการสร้างบัญชีผู้ใช้ และ import จากไฟล์ ให้รองรับการสร้าง default รหัสผ่าน                      [2026-02-25, พชร ไพศรีสกุล]
- *   - แก้ไขสีปุ่ม                          [2026-02-27, เศรษฐพงศ์ หอมชื่น]
- *   - แก้ไข alert                          [2026-03-06, เศรษฐพงศ์ หอมชื่น]
+ *  [2025-10-21, พชร ไพศรีสกุล] V 1.0.0
+ *   - สร้างไฟล์และโครงสร้างหลักของ View
+ *  [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล] V 1.0.1
+ *   - ปรับปรุงข้อความที่ใช้ให้เหมาะสม
+ *  [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล] V 1.0.2
+ *   - แก้ไขตำแหน่งของปุ่มยืินยันการแก้ไข/ลบ
+ *  [2026-02-20, ปฏิพัทธ์ จงนันทพันธกุล] V 1.0.3
+ *   - แก้ไขข้อความคำอธิบายรายละเอียดผู้ใช้/แก้ไขข้อมูลผู้ใช้
+ *   - แก้ไขชื่อบทบาท "ผู้ใช้งาน"
+ *  [2026-02-25, พชร ไพศรีสกุล] V 1.0.4
+ *   - แก้ไขการสร้างบัญชีผู้ใช้ และ import จากไฟล์ ให้รองรับการสร้าง default รหัสผ่าน
+ *  [2026-02-27, เศรษฐพงศ์ หอมชื่น] V 1.0.5
+ *   - แก้ไขสีปุ่ม
+ *  [2026-03-06, เศรษฐพงศ์ หอมชื่น] V 1.0.6
+ *   - แก้ไข alert
  * =====================================================================
  */
 
-<script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import TableComponent from '@/components/table-component.vue'
 import TableActions from '@/components/table-actions-component.vue'
@@ -251,6 +264,8 @@ function renderThaiRole(role) {
       return 'ผู้ดูแลระบบ'
     case 'Technician':
       return 'ช่างซ่อม'
+    case 'TechnicianLead':
+      return 'หัวหน้าช่างซ่อม'
     case 'Manager':
       return 'ผู้บริหาร'
     case 'User':
@@ -697,7 +712,10 @@ async function fetchMasterData() {
       label: role.role_label_th || role.role_name,
     }))
 
-    technicianOptions.value = techData.map((tech) => ({ value: String(tech.tt_id), label: tech.tt_name }))
+    technicianOptions.value = techData.map((tech) => ({
+      value: String(tech.tt_id),
+      label: tech.tt_name,
+    }))
     technicianFilterOptions.value = techData.map((tech) => tech.tt_name)
     manageTechList.value = techData.map((t) => ({ id: t.tt_id, name: t.tt_name }))
   } catch (err) {
@@ -1394,13 +1412,14 @@ async function handleResetPassword(userId) {
                     : 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200',
                 ]"
               >
-                <option value="" v-if="userModalForm.us_role_id !== '2' && userModalForm.us_role_id !== 2">
+                <option
+                  value=""
+                  v-if="userModalForm.us_role_id !== '2' && userModalForm.us_role_id !== 2"
+                >
                   ไม่ระบุ
                 </option>
 
-                <option value="" disabled v-else>
-                  เลือกตำแหน่ง
-                </option>
+                <option value="" disabled v-else>เลือกตำแหน่ง</option>
 
                 <option v-for="opt in technicianOptions" :key="opt.value" :value="opt.value">
                   {{ opt.label }}
@@ -1433,7 +1452,9 @@ async function handleResetPassword(userId) {
                 type="submit"
                 :class="[
                   'px-4 py-2 text-white rounded-lg',
-                  isAddMode ? 'bg-green-500 hover:bg-green-600' : 'bg-orange-400 hover:bg-orange-500',
+                  isAddMode
+                    ? 'bg-green-500 hover:bg-green-600'
+                    : 'bg-orange-400 hover:bg-orange-500',
                 ]"
               >
                 {{ isAddMode ? 'เพิ่มผู้ใช้งาน' : 'บันทึกการแก้ไข' }}
