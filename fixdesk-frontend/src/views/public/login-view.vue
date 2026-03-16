@@ -25,8 +25,10 @@
  * @changelog
  * - แก้ไขข้อความคำอธิบาย "จำฉันไว้"   [2026-02-17, ปฏิพัทธ์ จงนันทพันธ์กุล]
  * - แก้ไขข้อความปุ่มลงชื่อเข้าใช้        [2026-02-19, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ * - เพิ่มการกดดูรหัสผ่าน              [2026-03-16, พชร  ไพศรีสกุล]
  * =====================================================================
  */
+import { ref } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useLogin } from '@/composables/useLogin'
 
@@ -42,6 +44,12 @@ const {
   isRememberMe, // สถานะการบันทึกการเข้าสู่ระบบ
   handleLogin, // ฟังก์ชันสำหรับการเข้าสู่ระบบ
 } = useLogin()
+
+const showPassword = ref(false)
+
+const togglePassword = () => {
+  showPassword.value = !showPassword.value
+}
 </script>
 
 <template>
@@ -73,13 +81,25 @@ const {
             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 text-base placeholder-gray-400"
           />
 
-          <input
-            v-model="password"
-            type="password"
-            aria-label="รหัสผ่าน"
-            placeholder="รหัสผ่าน"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 text-base placeholder-gray-400"
-          />
+          <div class="relative w-full">
+            <input
+              v-model="password"
+              autocomplete="current-password"
+              :type="showPassword ? 'text' : 'password'"
+              aria-label="รหัสผ่าน"
+              placeholder="รหัสผ่าน"
+              class="w-full px-3 py-2 pr-11 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 text-base placeholder-gray-400 transition"
+            />
+
+            <button
+              type="button"
+              aria-label="แสดงหรือซ่อนรหัสผ่าน"
+              @click="togglePassword"
+              class="absolute right-2 top-1/2 -translate-y-1/2 flex items-center justify-center w-8 h-8 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition"
+            >
+              <Icon :icon="showPassword ? 'mdi:eye-off-outline' : 'mdi:eye-outline'" width="20" />
+            </button>
+          </div>
 
           <label class="flex items-center gap-2 text-sm text-gray-700 relative">
             <input
