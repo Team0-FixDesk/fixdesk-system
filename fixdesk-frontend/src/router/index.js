@@ -1,3 +1,37 @@
+/**
+ * =====================================================================
+ * @file            router/index.js
+ * @layer           Router
+ * @version         1.0.0
+ * @since           2026-03-16 ยังไม่แน่ใจว่าใช้วันไหนเป็นวันแรกของการสร้างไฟล์นี้
+ * @author          พชร ไพศรีสกุล
+ * @contributors
+ *   - พชร ไพศรีสกุล
+ *
+ * @lastModified    2026-03-16
+ * @lastModifiedBy  พชร ไพศรีสกุล
+ * ---------------------------------------------------------------------
+ * @description
+ *  Router Configuration for the Application
+ *
+ *  ทำหน้าที่:
+ *    - กำหนดเส้นทางของแอปพลิเคชัน
+ *    - จัดการการเปลี่ยนหน้าอย่างมีประสิทธิภาพ
+ *    - ตรวจสอบสิทธิ์การเข้าถึงตามบทบาทผู้ใช้
+ *
+ * @usedBy
+ *   - main-layout.view.vue (สำหรับการแสดงผลหน้าเพจต่าง ๆ ภายในระบบ)
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *  [2026-03-16, พชร ไพศรีสกุล] V 1.0.0  วันที่ยังไม่แน่ใจว่าใช้วันไหนเป็นวันแรกของการสร้างไฟล์นี้
+ *   - สร้างไฟล์ใหม่สำหรับการตั้งค่าเส้นทางของระบบ
+ *  [2026-03-16, พชร ไพศรีสกุล] V 1.0.1
+ *  - แก้ไขเส้นทางสำหรับหน้ารายละเอียดและแก้ไขการแจ้งซ่อม ให้รองรับบทบาท Technician Lead ด้วย
+ *
+ * =====================================================================
+ */
+
 import { createRouter, createWebHashHistory } from 'vue-router'
 import { jwtDecode } from 'jwt-decode'
 
@@ -25,6 +59,9 @@ import AdminReportHistoryView from '../views/admin/admin-report-history-view.vue
 // MANAGER
 import ManagerHomeView from '../views/manager/manager-home-view.vue'
 import ManagerSummaryView from '../views/manager/manager-summary-view.vue'
+
+// TECHNICIAN LEAD
+import TechnicianLeadHomeView from '../views/technicianlead/technician-lead-home-view.vue'
 
 //TECHNICIAN
 import TechnicianHomeView from '../views/technician/technician-home-view.vue'
@@ -60,67 +97,85 @@ const router = createRouter({
           meta: { roles: ['Admin'] },
         },
         { path: 'admin-user-info', component: AdminUserInfoView, meta: { roles: ['Admin'] } },
-        { path: 'admin-manage-location', component: AdminManageLocationView, meta: { roles: ['Admin'] } },
+        {
+          path: 'admin-manage-location',
+          component: AdminManageLocationView,
+          meta: { roles: ['Admin'] },
+        },
         {
           path: 'admin-history',
           component: AdminReportHistoryView,
           meta: { roles: ['Admin'] },
         },
         { path: 'dashboard', component: ManagerHomeView, meta: { roles: ['Manager', 'Admin'] } },
-        { path: 'information-summary', component: ManagerSummaryView, meta: { roles: ['Manager', 'Admin'] } },
+        {
+          path: 'information-summary',
+          component: ManagerSummaryView,
+          meta: { roles: ['Manager', 'Admin'] },
+        },
 
-        { path: 'technician-home', component: TechnicianHomeView, meta: { roles: ['Technician'] } },
+        {
+          path: 'technicianlead-home',
+          component: TechnicianLeadHomeView,
+          meta: { roles: ['TechnicianLead'] },
+        },
+
+        {
+          path: 'technician-home',
+          component: TechnicianHomeView,
+          meta: { roles: ['Technician', 'TechnicianLead'] },
+        },
         {
           path: 'technician-repair-list',
           component: TechnicianRepairListView,
-          meta: { roles: ['Technician'] },
+          meta: { roles: ['Technician', 'TechnicianLead'] },
         },
         {
           path: 'technician-history',
           component: TechnicianHistoryView,
-          meta: { roles: ['Technician'] },
+          meta: { roles: ['Technician', 'TechnicianLead'] },
         },
         {
           path: 'technician-stock-list',
           component: TechnicianStockListView,
-          meta: { roles: ['Technician'] },
+          meta: { roles: ['Technician', 'TechnicianLead'] },
         },
         {
           path: 'technician-requisition-list',
           component: TechnicianRequisitionListView,
           name: 'technician-requisition-list',
-          meta: { roles: ['Technician'] },
+          meta: { roles: ['Technician', 'TechnicianLead'] },
         },
         { path: 'stock-home', component: StockHomeView, meta: { roles: ['Stock'] } },
         {
           path: 'stock-withdraw-list',
           component: StockWithdrawListView,
-          meta: { roles: ['Stock', 'Admin'] },
+          meta: { roles: ['Stock', 'Admin', 'TechnicianLead'] },
         },
         {
           path: 'stock-withdraw-history',
           component: StockWithdrawHistoryView,
-          meta: { roles: ['Stock', 'Admin'] },
+          meta: { roles: ['Stock', 'Admin', 'TechnicianLead'] },
         },
         {
           path: 'stock-manage-inventory',
           component: StockManageInventoryView,
-          meta: { roles: ['Stock', 'Admin'] },
+          meta: { roles: ['Stock', 'Admin', 'TechnicianLead'] },
         },
         {
           path: 'stock-requisition/:code',
           component: StockRequisitionApproval,
-          meta: { roles: ['Stock', 'Admin'] },
+          meta: { roles: ['Stock', 'Admin', 'TechnicianLead'] },
         },
         {
           path: 'repair-request',
           component: RepairRequestView,
-          meta: { roles: ['User', 'Admin', 'Technician', 'Manager', 'Stock'] },
+          meta: { roles: ['User', 'Admin', 'Technician', 'Manager', 'Stock', 'TechnicianLead'] },
         },
         {
           path: 'my-list',
           component: MyListView,
-          meta: { roles: ['User', 'Admin', 'Technician', 'Manager', 'Stock'] },
+          meta: { roles: ['User', 'Admin', 'Technician', 'Manager', 'Stock', 'TechnicianLead'] },
         },
         {
           path: 'manage-report',
@@ -136,13 +191,13 @@ const router = createRouter({
           path: 'repair-detail/:code',
           name: 'RepairDetail',
           component: () => import('@/views/shared/repair-detail-view.vue'),
-          meta: { roles: ['User', 'Admin', 'Technician', 'Manager', 'Stock'] },
+          meta: { roles: ['User', 'Admin', 'Technician', 'Manager', 'Stock', 'TechnicianLead'] },
         },
         {
           path: 'repair-edit/:code',
           name: 'RepairEdit',
           component: () => import('@/views/shared/repair-edit-view.vue'),
-          meta: { roles: ['User', 'Admin', 'Technician', 'Manager', 'Stock'] },
+          meta: { roles: ['User', 'Admin', 'Technician', 'Manager', 'Stock', 'TechnicianLead'] },
         },
       ],
     },
