@@ -78,8 +78,8 @@ function clearAuthAndGoLogin(showAlert = false) {
   if (showAlert) {
     Swal.fire({
       icon: 'warning',
-      title: 'หมดเวลาในการใช้งาน',
-      text: 'คุณไม่ได้ใช้งานเป็นระยะเวลาหนึ่ง กรุณาลงชื่อเข้าสู่ระบบใหม่',
+      title: 'หมดเวลาเข้าสู่ระบบ',
+      text: 'กรุณาเข้าสู่ระบบใหม่',
       confirmButtonColor: '#0048EF',
       confirmButtonText: 'ตกลง',
       allowOutsideClick: false,
