@@ -8,8 +8,8 @@
  * @contributors
  *   - พชร ไพศรีสกุล
  *
- * @lastModified    2026-02-10
- * @lastModifiedBy  พชร ไพศรีสกุล
+ * @lastModified    2026-03-17
+ * @lastModifiedBy  นราธิป แสนทวีสุข
  * ---------------------------------------------------------------------
  * @description
  *  Route สำหรับจัดการระบบช่าง (Technician Management)
@@ -23,15 +23,25 @@
  *    - ดึงใบเบิกสินค้าของช่าง
  *    - ปิดงานซ่อม
  *    - เบิกสินค้าโดยช่าง
+ *    - อัปโหลดรูปภาพหลังซ่อม
  *
  * ---------------------------------------------------------------------
  * @changelog
  *   - Initial implementation Technician Route ตาม Layered Architecture
  *     [2026-02-10, พชร ไพศรีสกุล] V 1.0.0
+ *   - เพิ่มระบบอัปโหลดรูปภาพหลังซ่อม (after-repair image upload)
+ *     - เพิ่ม Multer middleware สำหรับการจัดการไฟล์
+ *     - กำหนด diskStorage ที่ /uploads/repair/
+ *     - ชื่อไฟล์: RF_AFTER_YYYYMMDDHHMMSS_RANDOM.ext
+ *     - Validation: image/* มีข้อจำกัดไฟล์ 50MB เท่านั้น
+ *     [2026-03-17, นราธิป แสนทวีสุข]
  *
  * =====================================================================
  */
 const express = require("express");
+const multer = require("multer");
+const path = require("path");
+const fs = require("fs");
 const authMiddleware = require("../middlewares/auth-middleware");
 
 /**
@@ -47,6 +57,43 @@ module.exports = (db) => {
   const techController = require("../controllers/technician-controller")(
     techService,
   );
+
+  const repairUploadPath = path.join(__dirname, "../../uploads/repair");
+  if (!fs.existsSync(repairUploadPath)) {
+    fs.mkdirSync(repairUploadPath, { recursive: true });
+  }
+
+  const closeJobStorage = multer.diskStorage({
+    destination: (req, file, cb) => cb(null, repairUploadPath),
+    filename: (req, file, cb) => {
+      const dateTimeStamp = new Date()
+        .toISOString()
+        .replace(/[:.-]/g, "")
+        .slice(0, 15);
+      const randomSuffix = Math.floor(Math.random() * 1000)
+        .toString()
+        .padStart(3, "0");
+      const ext = path.extname(file.originalname);
+      cb(null, `RF_AFTER_${dateTimeStamp}_${randomSuffix}${ext}`);
+    },
+  });
+
+  const closeJobFileFilter = (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|gif|webp/;
+    if (
+      allowedTypes.test(path.extname(file.originalname).toLowerCase()) &&
+      allowedTypes.test(file.mimetype)
+    ) {
+      return cb(null, true);
+    }
+    cb(new Error("รองรับเฉพาะไฟล์รูปภาพเท่านั้น"));
+  };
+
+  const closeJobUpload = multer({
+    storage: closeJobStorage,
+    limits: { fileSize: 50 * 1024 * 1024, files: 1 },
+    fileFilter: closeJobFileFilter,
+  });
 
   // --- TECHNICIAN MANAGEMENT ROUTES ---
   /**
@@ -129,6 +176,7 @@ module.exports = (db) => {
   router.put(
     "/technician/close-job/:rf_code",
     authMiddleware,
+    closeJobUpload.single("tech_image_after"),
     techController.closeJob,
   );
 

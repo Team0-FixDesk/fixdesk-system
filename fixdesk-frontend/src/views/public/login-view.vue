@@ -1,3 +1,4 @@
+<script setup>
 /**
  * =====================================================================
  * @file            login.view.vue
@@ -24,10 +25,10 @@
  * @changelog
  * - แก้ไขข้อความคำอธิบาย "จำฉันไว้"   [2026-02-17, ปฏิพัทธ์ จงนันทพันธ์กุล]
  * - แก้ไขข้อความปุ่มลงชื่อเข้าใช้        [2026-02-19, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ * - เพิ่มการกดดูรหัสผ่าน              [2026-03-16, พชร  ไพศรีสกุล]
  * =====================================================================
  */
-
-<script setup>
+import { ref } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useLogin } from '@/composables/useLogin'
 
@@ -36,23 +37,35 @@ import Logo92Tech from '@/assets/icons/92Tech-logo.png'
 
 // ดึงข้อมูลและฟังก์ชันจาก composable
 const {
-  username,  // ชื่อผู้ใช้ที่ป้อนเข้า
-  password,  // รหัสผ่านที่ป้อนเข้า
-  errorMessage,  // ข้อความข้อผิดพลาดจากการเข้าสู่ระบบ (หากมี)
-  isLoading,  // สถานะการโหลด (จริง = กำลังประมวลผล, เท็จ = เสร็จสิ้น)
-  isRememberMe,  // สถานะการบันทึกการเข้าสู่ระบบ
-  handleLogin  // ฟังก์ชันสำหรับการเข้าสู่ระบบ
+  username, // ชื่อผู้ใช้ที่ป้อนเข้า
+  password, // รหัสผ่านที่ป้อนเข้า
+  errorMessage, // ข้อความข้อผิดพลาดจากการเข้าสู่ระบบ (หากมี)
+  isLoading, // สถานะการโหลด (จริง = กำลังประมวลผล, เท็จ = เสร็จสิ้น)
+  isRememberMe, // สถานะการบันทึกการเข้าสู่ระบบ
+  handleLogin, // ฟังก์ชันสำหรับการเข้าสู่ระบบ
 } = useLogin()
 
+const showPassword = ref(false)
+
+const togglePassword = () => {
+  showPassword.value = !showPassword.value
+}
 </script>
 
 <template>
   <!-- หัวข้อหลัก - พื้นหลังและการจัดเรียง -->
-  <div class="min-h-screen flex items-center justify-center bg-gradient-to-b from-blue-50 to-blue-200 bg-center px-4">
+  <div
+    class="min-h-screen flex items-center justify-center bg-gradient-to-b from-blue-50 to-blue-200 bg-center px-4"
+  >
     <div
-      class="relative overflow-visible bg-white/95 rounded-xl shadow-xl w-full max-w-md sm:max-w-xl lg:max-w-3xl flex flex-col lg:flex-row items-center gap-8 p-10">
+      class="relative overflow-visible bg-white/95 rounded-xl shadow-xl w-full max-w-md sm:max-w-xl lg:max-w-3xl flex flex-col lg:flex-row items-center gap-8 p-10"
+    >
       <div class="flex flex-col items-center justify-center flex-1">
-        <img :src="Logo92Tech" alt="92 Tech logo" class="hidden md:block absolute top-4 left-4 w-10" />
+        <img
+          :src="Logo92Tech"
+          alt="92 Tech logo"
+          class="hidden md:block absolute top-4 left-4 w-10"
+        />
         <img :src="LogoFIXDESK" alt="FixDesk logo" class="w-48 h-auto" />
       </div>
 
@@ -60,35 +73,69 @@ const {
       <div class="flex-1 flex flex-col items-center">
         <h1 class="text-3xl font-bold text-[#1E48D1] mb-6">เข้าสู่ระบบ</h1>
         <form class="flex flex-col gap-4 w-full max-w-sm" @submit.prevent="handleLogin">
-          <input v-model="username" type="text" aria-label="ชื่อผู้ใช้" placeholder="ชื่อผู้ใช้"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 text-base placeholder-gray-400" />
+          <input
+            v-model="username"
+            type="text"
+            aria-label="ชื่อผู้ใช้"
+            placeholder="ชื่อผู้ใช้"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 text-base placeholder-gray-400"
+          />
 
-          <input v-model="password" type="password" aria-label="รหัสผ่าน" placeholder="รหัสผ่าน"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 text-base placeholder-gray-400" />
+          <div class="relative w-full">
+            <input
+              v-model="password"
+              autocomplete="current-password"
+              :type="showPassword ? 'text' : 'password'"
+              aria-label="รหัสผ่าน"
+              placeholder="รหัสผ่าน"
+              class="w-full px-3 py-2 pr-11 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 text-base placeholder-gray-400 transition"
+            />
+
+            <button
+              type="button"
+              aria-label="แสดงหรือซ่อนรหัสผ่าน"
+              @click="togglePassword"
+              class="absolute right-2 top-1/2 -translate-y-1/2 flex items-center justify-center w-8 h-8 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition"
+            >
+              <Icon :icon="showPassword ? 'mdi:eye-off-outline' : 'mdi:eye-outline'" width="20" />
+            </button>
+          </div>
 
           <label class="flex items-center gap-2 text-sm text-gray-700 relative">
-            <input v-model="isRememberMe" type="checkbox"
-              class="h-4 w-4 rounded border-gray-300 text-[#1E48D1] focus:ring-[#1E48D1]" />
+            <input
+              v-model="isRememberMe"
+              type="checkbox"
+              class="h-4 w-4 rounded border-gray-300 text-[#1E48D1] focus:ring-[#1E48D1]"
+            />
             <span>จำฉันไว้</span>
 
             <span
               class="group relative inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full text-gray-400 cursor-pointer select-none hover:text-gray-600 transition"
-              aria-label="คำอธิบายการจำฉันไว้" tabindex="0">
+              aria-label="คำอธิบายการจำฉันไว้"
+              tabindex="0"
+            >
               <Icon icon="fluent:info-16-filled" width="16" height="16" style="color: #8e8e8e" />
               <div
-                class="absolute z-50 bottom-full left-0 mt-2 w-[330px] p-3 text-xs text-white bg-gray-800 rounded-lg opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity pointer-events-none text-left">
+                class="absolute z-50 bottom-full left-0 mt-2 w-[330px] p-3 text-xs text-white bg-gray-800 rounded-lg opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity pointer-events-none text-left"
+              >
                 <p class="mb-1">หากเลือก ระบบจะบันทึกข้อมูลการเข้าสู่ระบบไว้ในอุปกรณ์นี้</p>
                 <ul class="list-disc list-outside pl-5 space-y-1 text-gray-200">
                   <li>สามารถเข้าสู่ระบบได้โดยไม่ต้องกรอกชื่อผู้ใช้ และรหัสผ่านใหม่</li>
                   <li>หากไม่มีการใช้งาน บัญชีจะออกจากระบบเองโดยอัตโนมัติเมื่อถึงเวลาที่กำหนด</li>
                 </ul>
-                <p class="text-red-500">คำเตือน! <span class="text-yellow-200">แนะนำให้ใช้ฟังก์ชันนี้บนอุปกรณ์ส่วนตัว</span></p>
+                <p class="text-red-500">
+                  คำเตือน!
+                  <span class="text-yellow-200">แนะนำให้ใช้ฟังก์ชันนี้บนอุปกรณ์ส่วนตัว</span>
+                </p>
               </div>
             </span>
           </label>
 
-          <button type="submit" :disabled="isLoading"
-            class="w-full py-2 rounded-md bg-[#1E48D1] text-white font-medium text-base hover:bg-blue-700 transition-colors disabled:opacity-60">
+          <button
+            type="submit"
+            :disabled="isLoading"
+            class="w-full py-2 rounded-md bg-[#1E48D1] text-white font-medium text-base hover:bg-blue-700 transition-colors disabled:opacity-60"
+          >
             {{ isLoading ? 'กำลังเข้าสู่ระบบ...' : 'ลงชื่อเข้าใช้' }}
           </button>
         </form>
@@ -102,6 +149,9 @@ const {
           </p>
         </div>
       </div>
+      <span class="absolute bottom-4 left-6 text-xs text-gray-400">
+        Powered by 92 Tech co,.ltd
+      </span>
     </div>
   </div>
 </template>

@@ -44,7 +44,6 @@ export function useLogin() {
       // นำทางไปยังหน้าเฉพาะตามบทบาท
       router.push(getRoutePathByUserRole(user.role))
     } catch (error) {
-      console.error('Login failed:', error.message)
 
       if (error.message.includes('ชื่อผู้ใช้')) {
         errorMessage.value = 'ไม่พบชื่อผู้ใช้นี้ในระบบ'

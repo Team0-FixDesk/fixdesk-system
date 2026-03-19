@@ -34,7 +34,7 @@ const jwt = require("jsonwebtoken");
 /**
  * Authentication Service Module
  * จัดการ Business Logic ที่เกี่ยวข้องกับการเข้าสู่ระบบ
- * 
+ *
  * @param {Object} db - Database connection instance
  * @returns {Object} Authentication Service Functions
  */
@@ -59,7 +59,7 @@ module.exports = (db) => {
      * @throws {Error} INVALID_PASSWORD
      *
      * @returns {Promise<string>} JWT Token
-    */
+     */
     async authenticateUser(userName, password) {
       // คำสั่ง SQL (เปลี่ยนชื่อย่อ u, t, r เป็นชื่อเต็มให้อ่านง่าย)
       const sqlStatement = `
@@ -101,6 +101,12 @@ module.exports = (db) => {
         throw new Error("INVALID_PASSWORD");
       }
 
+      let roleName = currentUser.role_name || "";
+
+      if (roleName.toLowerCase() === "superadmin") {
+        roleName = "Admin";
+      }
+
       // เตรียมข้อมูลใส่ใน Token (Payload)
       const tokenPayload = {
         us_id: currentUser.us_id,
@@ -114,7 +120,7 @@ module.exports = (db) => {
         us_department: currentUser.us_department || "",
         us_job_title: currentUser.us_job_title || "",
         us_active: currentUser.us_active || 0,
-        role_name: currentUser.role_name || "",
+        role_name: roleName,
       };
 
       // สร้าง Token (อายุ 8 ชั่วโมง)

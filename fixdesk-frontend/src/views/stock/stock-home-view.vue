@@ -337,8 +337,6 @@ const requestSeries = computed(() => {
     { name: 'อนุมัติแล้ว', data: approved },
     { name: 'ไม่อนุมัติ', data: rejected },
   ]
-
-  console.log('📊 REQUEST SERIES DATA:', result)
   return result
 })
 
@@ -560,11 +558,6 @@ const chartOptions = computed(() => ({
 watch(
   [products, stockForms, transactions, last7Days, chartMode],
   () => {
-    console.log('🔍 === GRAPH DEBUG INFO ===')
-    console.log('📅 Last 7 Days:', last7Days.value.map((d) => d.toLocaleDateString('th-TH')))
-    console.log('📦 Total Products:', products.value.length)
-    console.log('📝 Total Stock Forms:', stockForms.value.length)
-    console.log('📦 Total Transactions:', transactions.value.length)
 
     // แสดงยอดรวม quantity
     const totalInQty = transactions.value
@@ -573,12 +566,6 @@ watch(
     const totalOutQty = transactions.value
       .filter((t) => t.stt_type === 'OUT')
       .reduce((sum, t) => sum + (Number(t.stt_quantity) || 0), 0)
-
-    console.log('📥 IN Transactions:', transactions.value.filter((t) => t.stt_type === 'IN').length, 'รายการ', `(${totalInQty} ชิ้น)`)
-    console.log('📤 OUT Transactions:', transactions.value.filter((t) => t.stt_type === 'OUT').length, 'รายการ', `(${totalOutQty} ชิ้น)`)
-    console.log('🎯 Current Chart Mode:', chartMode.value)
-    console.log('📊 Current Series:', chartMode.value === 'request' ? requestSeries.value : stockSeries.value)
-    console.log('🔍 === END DEBUG INFO ===')
   },
   { deep: true }
 )

@@ -284,6 +284,7 @@ onMounted(() => {
       v-model:statuses="selectedStatuses"
       v-model:date="selectedDate"
       v-model:urgencies="selectedUrgencies"
+      :show-date="false"
       :show-status="false"
       :show-urgencies="true"
       @reset="resetFilters"

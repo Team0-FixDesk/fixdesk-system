@@ -5,13 +5,12 @@
  * @version         1.2.0
  * @since           2025-01-15
  * @author          นราธิป แสนทวีสุข
- * @lastModified    2026-03-05
+ * @lastModified    2026-03-17
  * @lastModifiedBy  นราธิป แสนทวีสุข
  * ---------------------------------------------------------------------
  * @description
  *  Service สำหรับส่งการแจ้งเตือนไปยัง LINE Group ผ่าน LINE Bot SDK
  *  ใช้สำหรับ:
- *    - แจ้งเตือนเมื่อมีงานแจ้งซ่อมใหม่เข้ามา
  *    - แจ้งเตือนการมอบหมายงานช่าง (แบบเดี่ยวและทีม)
  *    - แจ้งเตือนเมื่อช่างรับงาน
  *    - แจ้งเตือนเมื่อมีงานแจ้งซ่อมใหม่
@@ -30,7 +29,6 @@
  *   - FRONTEND_URL: URL ของ frontend สำหรับปุ่มลิงก์
  *
  * @exports
- *   - notifyNewRepair(newRepairData): ส่งการแจ้งเตือนงานแจ้งซ่อมใหม่
  *   - notifyJobAssignment(assignmentData): ส่งการแจ้งเตือนการมอบหมายงาน
  *   - notifyJobAccepted(acceptData): ส่งการแจ้งเตือนการรับงาน
  *   - testNotification(): ทดสอบการส่งข้อความ
@@ -40,7 +38,7 @@
  *  - เพิ่มการรองรับ Retry-After header และเพิ่ม delay เป็น 2s, 5s, 15s, 30s, 60s  [2026-03-05, นราธิป แสนทวีสุข]
  *  - เพิ่ม RATE_LIMIT_DELAY เป็น 2 วินาที และเพิ่ม MAX_RETRIES เป็น 4 ครั้ง       [2026-03-05, นราธิป แสนทวีสุข]
  *  - เพิ่ม Message Queue และ Rate Limiting เพื่อป้องกัน 429 Error                [2026-03-05, นราธิป แสนทวีสุข]
- *  - เพิ่ม Exponential Backoff Retry mechanism (2s, 5s, 10s)                     [2026-03-05, นราธิป แสนทวีสุข]
+ *  - เพิ่ม Exponential Backoff Retry mechanism (0.5s, 0.5s, 0.5s)                     [2026-03-05, นราธิป แสนทวีสุข]
  *  - เพิ่มการจัดการ Rate Limit 1 วินาที ระหว่างการส่งข้อความ                     [2026-03-05, นราธิป แสนทวีสุข]
  *  - เปลี่ยน GROUP_ID จาก hardcode เป็น environment variable (LINE_GROUP_ID)   [2026-02-17, นราธิป แสนทวีสุข]
  *  - เพิ่มการตรวจสอบและ warning เมื่อไม่มี GROUP_ID                               [2026-02-17, นราธิป แสนทวีสุข]
@@ -68,9 +66,9 @@ let client = null;
 // Queue และ Rate Limiting
 const messageQueue = [];
 let isProcessingQueue = false;
-const RATE_LIMIT_DELAY = 2000; // 2 วินาที ระหว่างการส่งแต่ละข้อความ (เพิ่มจาก 1 วินาที)
-const MAX_RETRIES = 4; // เพิ่มจาก 3 เป็น 4 ครั้ง
-const RETRY_DELAYS = [5000, 15000, 30000, 60000]; // 5, 15, 30, 60 วินาที (เพิ่มความล่าช้า)
+const RATE_LIMIT_DELAY = 1000; // 1 วินาที ระหว่างการส่งแต่ละข้อความ
+const MAX_RETRIES = 3; // จำนวนครั้งที่ retry ได้
+const RETRY_DELAYS = [500, 500, 500]; // 0.5, 0.5, 0.5 วินาที (เพิ่มความล่าช้า)
 
 // สร้าง LINE client เมื่อมี credentials
 if (config.channelAccessToken && config.channelSecret) {
@@ -417,7 +415,7 @@ async function notifyJobAssignment(assignmentData) {
               action: {
                 type: 'uri',
                 label: 'ดูรายละเอียดบนเว็บไซต์',
-                uri: process.env.FRONTEND_URL || 'http://dekdee2.informatics.buu.ac.th:8057/#/home'
+                uri: process.env.FRONTEND_URL || 'https://fixdesk.zeenontakorn-demo.xyz/login#/login'
               },
               style: 'primary',
               color: '#0367D1'
@@ -684,7 +682,7 @@ async function notifyJobAccepted(acceptData) {
               action: {
                 type: 'uri',
                 label: 'ดูรายละเอียดบนเว็บไซต์',
-                uri: process.env.FRONTEND_URL || 'http://dekdee2.informatics.buu.ac.th:8057/#/home'
+                uri: process.env.FRONTEND_URL || 'https://fixdesk.zeenontakorn-demo.xyz/login#/login'
               },
               style: 'primary',
               color: '#10B981'
@@ -703,6 +701,7 @@ async function notifyJobAccepted(acceptData) {
     return { success: false, message: error.message };
   }
 }
+
 
 /**
  * ส่งข้อความแจ้งเตือนเมื่อมีงานแจ้งซ่อมใหม่เข้ามา
@@ -981,7 +980,7 @@ async function notifyNewRepair(newRepairData) {
               action: {
                 type: 'uri',
                 label: 'มอบหมายช่างเลย',
-                uri: process.env.FRONTEND_URL || 'http://dekdee2.informatics.buu.ac.th:8057/#/home'
+                uri: process.env.FRONTEND_URL || 'https://fixdesk.zeenontakorn-demo.xyz/login#/login'
               },
               style: 'primary',
               color: '#F97316'
