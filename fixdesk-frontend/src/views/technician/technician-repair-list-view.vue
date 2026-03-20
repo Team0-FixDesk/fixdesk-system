@@ -6,8 +6,8 @@
  * @version         1.0.1
  * @since           2025-10-21
  * @author          เศรษฐพงศ์ หอมชื่น
- * @lastModified    2026-02-27
- * @lastModifiedBy  เศรษฐพงศ์ หอมชื่น
+ * @lastModified    2026-03-17
+ * @lastModifiedBy  นราธิป แสนทวีสุข
  * ---------------------------------------------------------------------
  * @description
  *  หน้าจอรายการงานซ่อมของช่างซ่อม
@@ -37,6 +37,12 @@
  *   - เพิ่มฟิลด์รองรับ repair_method และ result_status  [2026-02-22, นราธิป แสนทวีสุข]
  *   - ปรับ Modal ปิดงานให้มีตัวเลือกครบถ้วน             [2026-02-22, นราธิป แสนทวีสุข]
  *   - แก้ไขสีปุ่ม                                    [2026-02-27, เศรษฐพงศ์ หอมชื่น]
+ *   - เพิ่มระบบอัปโหลดรูปภาพหลังซ่อม (after-repair image upload)
+ *     - เพิ่ม drag & drop upload area ใน modal ปิดงาน
+ *     - สนับสนุน FormData submission พร้อมไฟล์และข้อมูลอื่น
+ *     - แสดง preview รูปภาพพร้อมชื่อไฟล์และขนาดไฟล์
+ *     - Validation: ตรวจสอบประเภทไฟล์ (image/* เท่านั้น)
+ *     [2026-03-17, นราธิป แสนทวีสุข]
  * =====================================================================
  */
 
@@ -70,12 +76,74 @@ const currentAcceptCode = ref(null)
 const showTechSummaryModal = ref(false)
 const currentCloseJobCode = ref(null)
 const techSummary = ref('')
+const techImageAfterFile = ref(null)
+const techImageAfterPreview = ref('')
+const isEditDragOverTech = ref(false) // สถานะ drag over สำหรับรูปหลังซ่อม
+const techImageFileInput = ref(null) // Template ref สำหรับ input element
 
 // ตัวแปรสำหรับฟิลด์ใหม่ในการปิดงาน (DB Schema v1.1.0)
 const repairMethod = ref('in_house') // in_house, outsource, other
 const repairMethodRemark = ref('')
 const resultStatus = ref('completed') // completed, incomplete, other
 const resultRemark = ref('')
+
+function onTechImageAfterChange(event) {
+  const [file] = event.target.files || []
+  if (!file) return
+
+  if (!file.type.startsWith('image/')) {
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: 'error',
+      title: 'รองรับเฉพาะไฟล์รูปภาพ',
+      showConfirmButton: false,
+      timer: 2500,
+    })
+    event.target.value = ''
+    return
+  }
+
+  clearTechImageAfter()
+  techImageAfterFile.value = file
+  techImageAfterPreview.value = URL.createObjectURL(file)
+}
+
+function clearTechImageAfter() {
+  if (techImageAfterPreview.value) {
+    URL.revokeObjectURL(techImageAfterPreview.value)
+  }
+  techImageAfterFile.value = null
+  techImageAfterPreview.value = ''
+}
+
+function handleTechImageDragOver() {
+  isEditDragOverTech.value = true
+}
+
+function handleTechImageDragLeave() {
+  isEditDragOverTech.value = false
+}
+
+function handleTechImageDrop(e) {
+  isEditDragOverTech.value = false
+  const files = e.dataTransfer.files
+  if (files && files.length > 0) {
+    const file = files[0]
+    if (file.type.startsWith('image/')) {
+      onTechImageAfterChange({ target: { files: [file] } })
+    } else {
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'error',
+        title: 'รองรับเฉพาะไฟล์รูปภาพ',
+        showConfirmButton: false,
+        timer: 2500,
+      })
+    }
+  }
+}
 
 /**
  * จัดรูปแบบข้อมูลแถวให้สอดคล้องกับ TableComponent
@@ -151,6 +219,7 @@ function handleCloseJob(code) {
   repairMethodRemark.value = ''
   resultStatus.value = 'completed'
   resultRemark.value = ''
+  clearTechImageAfter()
   showTechSummaryModal.value = true
 }
 
@@ -222,21 +291,23 @@ async function handleOutsource(code) {
 async function confirmCloseJob() {
 
   try {
+    const formData = new FormData()
+    formData.append('status', 'done')
+    formData.append('tech_summary', techSummary.value || 'ดำเนินการเสร็จสิ้น')
+    formData.append('repair_method', repairMethod.value)
+    formData.append('repair_method_remark', repairMethodRemark.value)
+    formData.append('result_status', resultStatus.value)
+    formData.append('result_remark', resultRemark.value)
+    if (techImageAfterFile.value) {
+      formData.append('tech_image_after', techImageAfterFile.value)
+    }
+
     const res = await fetch(`${API_BASE}/technician/close-job/${currentCloseJobCode.value}`, {
       method: 'PUT',
       headers: {
         Authorization: `Bearer ${token.value}`,
-        'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        status: 'done',
-        tech_summary: techSummary.value || 'ดำเนินการเสร็จสิ้น',
-        rf_tech_image_after: null,
-        repair_method: repairMethod.value,
-        repair_method_remark: repairMethodRemark.value,
-        result_status: resultStatus.value,
-        result_remark: resultRemark.value
-      }),
+      body: formData,
     })
 
     const data = await res.json()
@@ -251,6 +322,7 @@ async function confirmCloseJob() {
       timer: 2000,
     })
     showTechSummaryModal.value = false
+    clearTechImageAfter()
     fetchRepairList()
   } catch (err) {
     Swal.fire({
@@ -345,6 +417,61 @@ onMounted(() => {
               </label>
             </div>
             <input v-if="resultStatus === 'incomplete' || resultStatus === 'other'" v-model="resultRemark" type="text" :placeholder="resultStatus === 'incomplete' ? 'ระบุสาเหตุที่ไม่เรียบร้อย...' : 'ระบุอื่นๆ...'" class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
+          </div>
+
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">{{ repairMethod === 'outsource' ? '3' : '4' }}. รูปภาพหลังซ่อม (ถ้ามี)</label>
+
+            <div
+              v-if="!techImageAfterPreview"
+              class="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors"
+              :class="isEditDragOverTech ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:bg-gray-50'"
+              @click="techImageFileInput?.click()"
+              @dragover.prevent="handleTechImageDragOver"
+              @dragleave.prevent="handleTechImageDragLeave"
+              @drop.prevent="handleTechImageDrop"
+            >
+              <svg class="mx-auto mb-3 w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <p class="text-base font-medium text-gray-800 mb-1">คลิกเพื่อเลือกรูปภาพ</p>
+              <p class="text-xs text-gray-500 mb-3">รองรับรูปภาพเฉพาะ (สูงสุด 1 รู) สามารถแนบรูปแบบประกอบได้</p>
+              <div class="flex gap-2 justify-center">
+                <span class="inline-block px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded">JPG</span>
+                <span class="inline-block px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded">PNG</span>
+                <span class="inline-block px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded">WEBP</span>
+              </div>
+              <input
+                ref="techImageFileInput"
+                type="file"
+                accept="image/*"
+                class="hidden"
+                @change="onTechImageAfterChange"
+              />
+            </div>
+
+            <div v-else class="mt-3 border border-gray-200 rounded-lg p-4 bg-gray-50">
+              <div class="flex items-start gap-4">
+                <div class="flex-shrink-0">
+                  <img :src="techImageAfterPreview" alt="preview" class="w-20 h-20 object-cover rounded-lg">
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-medium text-gray-800 truncate">{{ techImageAfterFile?.name }}</p>
+                  <p class="text-xs text-gray-500 mt-1">ขนาด: {{ (techImageAfterFile?.size / 1024 / 1024).toFixed(2) }} MB</p>
+                  <p class="text-xs text-green-600 font-medium mt-2">✓ อัปโหลดพร้อมบันทึก</p>
+                </div>
+                <button
+                  type="button"
+                  class="flex-shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-full bg-gray-300 hover:bg-gray-400 text-gray-700 transition-colors"
+                  @click="clearTechImageAfter"
+                  title="ลบรูป"
+                >
+                  <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                  </svg>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
