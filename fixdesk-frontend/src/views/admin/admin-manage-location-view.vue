@@ -340,7 +340,7 @@ async function fetchAllDataAlternative() {
       title: 'เกิดข้อผิดพลาด',
       text: 'ไม่สามารถโหลดข้อมูลสถานที่ได้',
       icon: 'error',
-      background: '#fee2e2',
+      background: '#FFFFFF',
       color: '#dc2626',
     })
   }
@@ -853,7 +853,7 @@ async function confirmDelete(username) {
       title: 'สำเร็จ!',
       text: `ลบ${typeText}เรียบร้อยแล้ว`,
       icon: 'success',
-      background: '#f0f9ff',
+      background: '#FFFFFF',
       color: '#1e3a8a',
     })
 
@@ -872,6 +872,8 @@ async function confirmDelete(username) {
       title: 'เกิดข้อผิดพลาด',
       text: err.message || 'เกิดข้อผิดพลาดในการลบข้อมูล',
       icon: 'error',
+      background: '#FFFFFF',
+      color: '#dc2626',
     })
   }
 }
@@ -976,6 +978,8 @@ async function saveSingleLocation() {
     await Toast.fire({
       icon: 'success',
       title: 'เพิ่มข้อมูลเรียบร้อยแล้ว',
+      background: '#FFFFFF',
+      color: '#1e3a8a',
     })
 
     await refreshData()
@@ -1091,6 +1095,8 @@ async function bulkCreateLocation() {
     await Toast.fire({
       icon: 'success',
       title: 'สร้างสถานที่เรียบร้อยแล้ว',
+      background: '#FFFFFF',
+      color: '#1e3a8a',
 
     })
 
@@ -1285,7 +1291,7 @@ async function saveEditLocation() {
       icon: 'success',
       title: 'สำเร็จ!',
       text: `แก้ไข${successMessages.join(', ')}เรียบร้อยแล้ว`,
-      background: '#f0f9ff',
+      background: '#FFFFFF',
       color: '#1e3a8a',
     })
 
@@ -1371,19 +1377,30 @@ async function handleBulkBuildingChange() {
 async function refreshData() {
   await fetchAllData()
 }
+const toast = Swal.mixin({
+  toast: true,
+  position: 'top-end',
+  showConfirmButton: false,
+  timer: 3000,
+  timerProgressBar: true,
+})
 
 function handleImportSuccess() {
-  Swal.fire({
+  toast.fire({
     icon: 'success',
     title: 'นำเข้าสถานที่เรียบร้อยแล้ว',
+    background: '#FFFFFF',
+    color: '#1e3a8a',
   })
   showImportModal.value = false
 }
 
 function handleImportError(message) {
-  Swal.fire({
+  toast.fire({
     icon: 'error',
     title: message || 'นำเข้าสถานที่ไม่สำเร็จ',
+    background: '#FFFFFF',
+    color: '#dc2626',
   })
 }
 

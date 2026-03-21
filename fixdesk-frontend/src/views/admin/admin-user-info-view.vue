@@ -204,7 +204,7 @@ async function fetchUsers() {
       title: 'ผิดพลาด',
       text: 'ไม่สามารถโหลดข้อมูลผู้ใช้ได้',
       icon: 'error',
-      background: '#fee2e2',
+      background: '#FFFFFF',
       color: '#dc2626',
     })
   }
@@ -361,7 +361,7 @@ function openEditModal(username) {
       title: 'ผิดพลาด',
       text: err.message,
       icon: 'error',
-      background: '#fee2e2',
+      background: '#FFFFFF',
       color: '#dc2626',
     })
   }
@@ -389,7 +389,7 @@ function openViewModal(username) {
       title: 'ผิดพลาด',
       text: err.message,
       icon: 'error',
-      background: '#fee2e2',
+      background: '#FFFFFF',
       color: '#dc2626',
     })
   }
@@ -449,7 +449,7 @@ async function confirmAddUser() {
     toast.fire({
       icon: 'success',
       title: 'เพิ่มผู้ใช้เรียบร้อยแล้ว',
-      background: '#f0f9ff',
+      background: '#FFFFFF',
       color: '#1e3a8a',
     })
     showUserModal.value = false
@@ -458,7 +458,7 @@ async function confirmAddUser() {
     toast.fire({
       icon: 'error',
       title: err.message || 'ไม่สามารถเพิ่มผู้ใช้ได้',
-      background: '#fee2e2',
+      background: '#FFFFFF',
       color: '#dc2626',
     })
   }
@@ -504,7 +504,7 @@ async function confirmEditUser() {
     toast.fire({
       icon: 'success',
       title: 'แก้ไขข้อมูลผู้ใช้เรียบร้อยแล้ว',
-      background: '#f0f9ff',
+      background: '#FFFFFF',
       color: '#1e3a8a',
     })
     showUserModal.value = false
@@ -513,7 +513,7 @@ async function confirmEditUser() {
     toast.fire({
       icon: 'error',
       title: err.message || 'ไม่สามารถแก้ไขข้อมูลผู้ใช้ได้',
-      background: '#fee2e2',
+      background: '#FFFFFF',
       color: '#dc2626',
     })
   }
@@ -567,7 +567,7 @@ async function confirmDelete(username) {
     toast.fire({
       icon: 'success',
       title: 'ลบผู้ใช้เรียบร้อยแล้ว',
-      background: '#f0f9ff',
+      background: '#FFFFFF',
       color: '#1e3a8a',
     })
     await fetchUsers()
@@ -575,7 +575,7 @@ async function confirmDelete(username) {
     toast.fire({
       icon: 'error',
       title: err.message || 'ไม่สามารถลบผู้ใช้ได้',
-      background: '#fee2e2',
+      background: '#FFFFFF',
       color: '#dc2626',
     })
   }
@@ -728,7 +728,7 @@ async function fetchMasterData() {
       title: 'ผิดพลาด',
       text: 'ไม่สามารถโหลดข้อมูลคำนำหน้า/บทบาท/ประเภทช่างได้',
       icon: 'error',
-      background: '#fee2e2',
+      background: '#FFFFFF',
       color: '#dc2626',
     })
   }
@@ -775,7 +775,7 @@ async function handleAddTechType() {
     toast.fire({
       icon: 'success',
       title: 'เพิ่มตำแหน่งช่างเรียบร้อยแล้ว',
-      background: '#f0f9ff',
+      background: '#FFFFFF',
       color: '#1e3a8a',
     })
     await fetchMasterData()
@@ -785,7 +785,7 @@ async function handleAddTechType() {
       title: 'ผิดพลาด',
       text: err.message || 'ไม่สามารถเพิ่มตำแหน่งช่างได้',
       icon: 'error',
-      background: '#fee2e2',
+      background: '#FFFFFF',
       color: '#dc2626',
     })
   }
@@ -822,7 +822,7 @@ async function handleEditTechType(item) {
     toast.fire({
       icon: 'success',
       title: 'แก้ไขตำแหน่งช่างเรียบร้อยแล้ว',
-      background: '#f0f9ff',
+      background: '#FFFFFF',
       color: '#1e3a8a',
     })
     await fetchMasterData()
@@ -832,7 +832,7 @@ async function handleEditTechType(item) {
       title: 'ผิดพลาด',
       text: err.message || 'ไม่สามารถแก้ไขตำแหน่งช่างได้',
       icon: 'error',
-      background: '#fee2e2',
+      background: '#FFFFFF',
       color: '#dc2626',
     })
   }
@@ -862,7 +862,7 @@ async function handleDeleteTechType(item) {
     toast.fire({
       icon: 'success',
       title: 'ลบตำแหน่งช่างเรียบร้อยแล้ว',
-      background: '#f0f9ff',
+      background: '#FFFFFF',
       color: '#1e3a8a',
     })
     await fetchMasterData()
@@ -872,7 +872,7 @@ async function handleDeleteTechType(item) {
       title: 'ผิดพลาด',
       text: err.message || 'ไม่สามารถลบตำแหน่งช่างได้',
       icon: 'error',
-      background: '#fee2e2',
+      background: '#FFFFFF',
       color: '#dc2626',
     })
   }
@@ -882,7 +882,7 @@ function handleImportSuccess() {
   toast.fire({
     icon: 'success',
     title: 'นำเข้าผู้ใช้งานเรียบร้อยแล้ว',
-    background: '#f0f9ff',
+    background: '#FFFFFF',
     color: '#1e3a8a',
   })
   showImportModal.value = false
@@ -892,7 +892,7 @@ function handleImportError(message) {
   toast.fire({
     icon: 'error',
     title: message || 'นำเข้าผู้ใช้งานไม่สำเร็จ',
-    background: '#fee2e2',
+    background: '#FFFFFF',
     color: '#dc2626',
   })
 }
@@ -925,11 +925,16 @@ async function handleResetPassword(userId) {
     toast.fire({
       icon: 'success',
       title: 'รีเซ็ตรหัสผ่านเรียบร้อย',
+      background: '#ffffff',
+      color: '#1e3a8a',
+
     })
   } catch (err) {
     toast.fire({
       icon: 'error',
       title: err.message,
+      background: '#fee2e2',
+      color: '#dc2626',
     })
   }
 }
