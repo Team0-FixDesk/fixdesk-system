@@ -15,7 +15,6 @@
  * @description
  *  Route สำหรับจัดการใบแจ้งซ่อม (Repair Request Management)
  *  ทำหน้าที่กำหนด endpoint และเชื่อมต่อ Repair Controller กับ Service
- *
  *  รองรับการทำงาน:
  *    - Upload และลบไฟล์แนบใบแจ้งซ่อม
  *    - สร้างและแก้ไขใบแจ้งซ่อม (พร้อมไฟล์ หรือ JSON)
@@ -27,6 +26,11 @@
  *  ใช้ multer สำหรับจัดการ upload ไฟล์
  *  และ authMiddleware สำหรับ endpoint ที่ต้องมีการยืนยันตัวตน
  *
+ * @usedBy
+ * - app.js (หรือ server.js) เพื่อเชื่อมต่อ Route นี้เข้ากับ Express Application
+ * - repair-controller.js เพื่อเชื่อมต่อ Controller กับ Service
+ * - repair-service.js เพื่อเชื่อมต่อกับ Service Layer ในการจัดการ Repair Requests
+ *  
  * ---------------------------------------------------------------------
  * @changelog
  *   - Initial implementation Repair Route ตาม Layered Architecture

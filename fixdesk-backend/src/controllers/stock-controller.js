@@ -28,10 +28,13 @@
  *    - คืนสินค้า (Return Item)
  *
  * @usedBy
- *   - stock.route.js
+ *   - stock-route.js
  *
  * ---------------------------------------------------------------------
  * @changelog
+ *  [2026-02-10, พชร ไพศรีสกุล] V 1.0.0
+ *  - Initial implementation Stock Controller ตาม Layered Architecture
+ *  [2026-02-20, นราธิป แสนทวีสุข] V 1.1.0
  *  - เพิ่ม logging และ userId parameter ให้ทุก action
  *    - addProduct: ส่ง userId จาก req.user.us_id
  *    - updateProduct: ส่ง userId สำหรับบันทึก transaction
@@ -39,19 +42,13 @@
  *    - updateItemStatus: ส่ง userId สำหรับบันทึก transaction
  *    - updateMultipleItemsStatus: ส่ง userId สำหรับ batch update
  *    - importStock: ส่ง userId สำหรับบันทึก IN transaction
- *    - withdraw: เพิ่ม logging เพื่อ debug
- *    [2026-02-20, นราธิป แสนทวีสุข]
- *  - เพิ่มระบบคืนสินค้า (returnItem)   [2026-02-17, นายพชร ไพศรีสกุล]
- *   - Refactor โครงสร้างตาม Coding Standard V1.7.2
- *     [2026-02-10, พชร ไพศรีสกุล] V1.0.0
- *   - Allow approving and rejecting items in same requisition
- *     [2026-02-14, นราธิป แสนทวีสุข] V1.1.0
- *   - เพิ่มระบบการคืนอุปกรณ์ (Return Item)
- *     [2026-02-17, พชร ไพศรีสกุล] V1.2.0
- *   - แก้ไขข้อความแจ้งเตือน  
- *     [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล] V1.2.1
- *   - รองรับการคืนอุปกรณ์แบบบางส่วน (Partial Return)ปรับปรุง logic การคืนและการคำนวณ stock ให้รองรับการคืนหลายครั้ง
- *     [2026-02-23, พชร ไพศรีสกุล] V1.3.0
+ *    - withdraw: เพิ่ม logging เพื่อ debug ข้อมูลการเบิกสินค้า 
+ *  [2026-02-17, นายพชร ไพศรีสกุล] V 1.2.0
+ *  - เพิ่มระบบคืนสินค้า (returnItem)   
+ *  [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล] V1.2.1
+ *  - แก้ไขข้อความแจ้งเตือน 
+ *  [2026-02-23, พชร ไพศรีสกุล] V1.3.0
+ *  - รองรับการคืนอุปกรณ์แบบบางส่วน (Partial Return)ปรับปรุง logic การคืนและการคำนวณ stock ให้รองรับการคืนหลายครั้ง
  *
  * =====================================================================
  */
@@ -612,11 +609,11 @@ module.exports = (stockService) => {
         }
 
         const userId = req.user?.us_id || null;
-        console.log("📦 [importStock] Starting import with:", { itemCount: items.length, userId });
+        console.log("[importStock] Starting import with:", { itemCount: items.length, userId });
         
         const result = await stockService.importStock(items, userId);
         
-        console.log("✅ [importStock] Import completed:", result);
+        console.log("[importStock] Import completed:", result);
         res.json(result);
       } catch (err) {
         res.status(500).json({ message: "Import ล้มเหลว", error: err.message });

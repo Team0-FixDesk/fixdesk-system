@@ -12,16 +12,27 @@
  * @lastModifiedBy  พชร ไพศรีสกุล
  * ---------------------------------------------------------------------
  * @description
- *  Route สำหรับ Public API
- *  ใช้สำหรับ endpoint ที่ไม่ต้องมีการยืนยันตัวตน (Public Access)
- *
- *  รองรับการทำงาน:
- *    - ค้นหาใบแจ้งซ่อม (Public Search)
- *
+ *  Route สำหรับ Public Module ในระบบ FixDesk
+ *  ทำหน้าที่:
+ * - กำหนดเส้นทาง (Endpoints) สำหรับ Public API
+ * - เชื่อมต่อกับ Controller เพื่อจัดการคำขอที่เกี่ยวข้องกับ Public API
+ * - โครงสร้างเป็นแบบ Layered Architecture เพื่อแยกความรับผิดชอบอย่างชัดเจน
+ * - รองรับการค้นหาใบแจ้งซ่อมแบบ Public โดยไม่ต้อง Login
+ * 
+ * @usedBy
+ * - app.js (หรือ server.js) เพื่อเชื่อมต่อ Route นี้เข้ากับ Express Application
+ * - public-controller.js เพื่อเชื่อมต่อ Controller กับ Service
+ * - public-service.js เพื่อเชื่อมต่อกับ Service Layer ในการจัดการ Public API
+ * - location-route.js เพื่อเชื่อมต่อกับ Route ที่เกี่ยวข้องกับการค้นหาข้อมูลสถานที่แบบ Public
+ * - repair-route.js เพื่อเชื่อมต่อกับ Route ที่เกี่ยวข้องกับการค้นหาใบแจ้งซ่อมแบบ Public
+ * - stock-route.js เพื่อเชื่อมต่อกับ Route ที่เกี่ยวข้องกับการค้นหาข้อมูลสต็อกแบบ Public
+ * - user-route.js เพื่อเชื่อมต่อกับ Route ที่เกี่ยวข้องกับการค้นหาข้อมูลผู้ใช้งานแบบ Public
+ * - tech-route.js เพื่อเชื่อมต่อกับ Route ที่เกี่ยวข้องกับการค้นหาข้อมูลช่างแบบ Public
+ * 
  * ---------------------------------------------------------------------
  * @changelog
+ *  [2026-02-10, พชร ไพศรีสกุล] V 1.0.0
  *   - Initial implementation Public Route ตาม Layered Architecture
- *     [2026-02-10, พชร ไพศรีสกุล] V 1.0.0
  *
  * =====================================================================
  */

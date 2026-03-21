@@ -2,7 +2,7 @@
  * =====================================================================
  * @file            server.js
  * @layer           Application Layer (Entry Point)
- * @version         1.0.0
+ * @version         1.0.1
  * @since           2026-02-10
  * @author          พชร ไพศรีสกุล
  * @contributors
@@ -21,13 +21,19 @@
  *    - เปิดใช้งาน HTTP Server
  *
  *  โครงสร้างเป็นแบบ Layered Architecture
+ * 
+ * @useby
+ *  - เป็นจุดเริ่มต้นของแอปพลิเคชัน ใช้สำหรับรันเซิร์ฟเวอร์และจัดการการเชื่อมต่อกับฐานข้อมูล รวมถึงการลงทะเบียน Route Modules ต่างๆ ที่จะให้บริการ API สำหรับระบบ FixDesk
  *
  * ---------------------------------------------------------------------
  * @changelog
+ *  [2026-02-18, พชร ไพศรีสกุล] V 1.0.0
  *   - Initial implementation Application Entry Point
  *     [2026-02-18, พชร ไพศรีสกุล] V 1.0.0
  *   - เพิ่ม Global Error Handler ช่วยดักจับและแสดงข้อผิดพลาดจาก Multer
  *     [2026-03-21, นราธิป แสนทวีสุข]
+ *  [2026-03-21, พชร ไพศรีสกุล] V 1.0.1
+ *   - เพิ่ม templateRoutes และเชื่อมต่อกับ databaseConnection
  *
  * =====================================================================
  */
@@ -75,6 +81,9 @@ const repairFormRoutes = require("./src/routes/repair-routes")(
 );
 const stockRoutes = require("./src/routes/stock-routes")(databaseConnection);
 
+const templateRoutes = require("./src/routes/template-routes")(
+  databaseConnection,
+);
 // --- Register Routes (เปิดใช้งานเส้นทาง | ลงทะเบียน Route กับ Express Application) ---
 app.use(authRoutes);
 app.use("/public", publicRoutes);
@@ -83,6 +92,7 @@ app.use(technicianRoutes);
 app.use(locationRoutes);
 app.use(repairFormRoutes);
 app.use(stockRoutes);
+app.use(templateRoutes);
 
 // --- System Health Check (เช็คสถานะเซิร์ฟเวอร์) ---
 /**
