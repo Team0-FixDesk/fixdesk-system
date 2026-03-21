@@ -174,7 +174,7 @@ async function confirmAccept() {
           title: 'เกิดข้อผิดพลาด',
           text: payload.message || 'ไม่สามารถรับงานได้',
           icon: 'error',
-          background: '#fee2e2',
+          background: '#FFFFFF',
           color: '#dc2626',
         })
         return
@@ -203,7 +203,7 @@ async function confirmAccept() {
         title: 'เกิดข้อผิดพลาด',
         text: 'ขณะรับงาน',
         icon: 'error',
-        background: '#fee2e2',
+        background: '#FFFFFF',
         color: '#dc2626',
       })
     }
@@ -224,7 +224,7 @@ async function confirmAccept() {
       Toast.fire({
         title: 'โปรดเลือกช่างอย่างน้อย 1 คน',
         icon: 'warning',
-        background: '#fef3c7',
+        background: '#FFFFFF',
         color: '#d97706',
       })
       return
@@ -255,7 +255,7 @@ async function confirmAccept() {
           title: 'เกิดข้อผิดพลาด',
           text: payload.message || 'มอบหมายทีมไม่สำเร็จ',
           icon: 'error',
-          background: '#fee2e2',
+          background: '#FFFFFF',
           color: '#dc2626',
         })
         return
@@ -280,7 +280,7 @@ async function confirmAccept() {
           title: 'เกิดข้อผิดพลาด',
           text: p2.message || 'รับงานหลังมอบหมายทีมไม่สำเร็จ',
           icon: 'error',
-          background: '#fee2e2',
+          background: '#FFFFFF',
           color: '#dc2626',
         })
         return
@@ -302,7 +302,7 @@ async function confirmAccept() {
         title: 'เกิดข้อผิดพลาด',
         text: 'ขณะมอบหมายทีม/รับงาน',
         icon: 'error',
-        background: '#fee2e2',
+        background: '#FFFFFF',
         color: '#dc2626',
       })
     }
