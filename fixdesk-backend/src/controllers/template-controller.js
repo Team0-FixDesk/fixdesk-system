@@ -20,6 +20,9 @@
  *  - รองรับการดาวน์โหลด Template สำหรับ Users, Locations และ Stocks
  *  - โครงสร้างเป็นแบบ Layered Architecture
  *
+ * @usedBy
+ *  - template-route.js
+ *
  * ---------------------------------------------------------------------
  * @changelog
  *  [2026-03-21, พชร ไพศรีสกุล] V 1.0.0
@@ -30,7 +33,17 @@
  */
 
 const templateService = require("../services/template-service");
-
+/**
+ * Controller function สำหรับดาวน์โหลดไฟล์ Template Excel ตามประเภทที่ร้องขอ
+ * รองรับการดาวน์โหลด Template สำหรับ Users, Locations และ Stocks
+ * @author พชร ไพศรีสกุล
+ * @since 2026-03-21
+ * @lastModified 2026-03-21
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Object} db - Database connection object
+ * @returns {Promise<void>}
+ */
 exports.downloadTemplate = async (req, res, db) => {
   try {
     const type = req.params.type; // รับค่า type มาจาก URL (เช่น users, stocks)

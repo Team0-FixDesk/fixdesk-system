@@ -18,6 +18,9 @@
  *  - รับคำขอจาก Client และส่งต่อไปยัง Controller ที่เกี่ยวข้อง
  *  - รองรับการดาวน์โหลด Template สำหรับ Users, Locations และ Stocks
  *  - โครงสร้างเป็นแบบ Layered Architecture
+ * 
+ * @useby 
+ * - Frontend Application ที่ต้องการดาวน์โหลด Template Excel
  *
  * ---------------------------------------------------------------------
  * @changelog

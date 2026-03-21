@@ -7,29 +7,34 @@
  * @author          พชร ไพศรีสกุล
  * @contributors
  *   - พชร ไพศรีสกุล
+ *   - นราธิป แสนทวีสุข
  *
  * @lastModified    2026-03-03
  * @lastModifiedBy  นราธิป แสนทวีสุข
  * ---------------------------------------------------------------------
  * @description
- *  Route สำหรับจัดการข้อมูลสถานที่ (Location Management)
- *  ทำหน้าที่กำหนด endpoint และเชื่อมต่อ Location Controller กับ Service
- *
- *  รองรับการทำงาน:
- *    - จัดการอาคาร (Buildings)
- *    - จัดการชั้น (Floors)
- *    - จัดการห้อง (Rooms)
- *    - Import ข้อมูล Location
- *
- *  ใช้ authMiddleware สำหรับ endpoint ที่ต้องมีการยืนยันตัวตน
+ *  Route สำหรับ Location Module ในระบบ FixDesk
+ *  ทำหน้าที่:
+ *  - กำหนดเส้นทาง (Endpoints) สำหรับการจัดการสถานที่ เช่น อาคาร ชั้น และห้อง
+ *  - เชื่อมต่อกับ Controller เพื่อจัดการคำขอที่เกี่ยวข้องกับ Location
+ *  - โครงสร้างเป็นแบบ Layered Architecture เพื่อแยกความรับผิดชอบอย่างชัดเจน
+ *  - รองรับการทำงาน:
+ *    - CRUD สำหรับ Buildings, Floors และ Rooms
+ *    - Import ข้อมูลสถานที่แบบ Bulk
+ *    - ตรวจสอบการใช้งานสถานที่ในใบแจ้งซ่อมก่อนแก้ไข/ลบ
+ * 
+ * @usedBy
+ *  - app.js (หรือ server.js) เพื่อเชื่อมต่อ Route นี้เข้ากับ Express Application
+ *  - location-controller.js เพื่อเชื่อมต่อ Controller กับ Service
+ *  - location-service.js เพื่อเชื่อมต่อกับ Service Layer ในการจัดการ Location
  *
  * ---------------------------------------------------------------------
  * @changelog
- *   - [2026-03-03, นราธิป แสนทวีสุข] V 1.1.0
- *     เพิ่ม endpoint GET /locations/check-usage/:type/:id
- *     เพื่อตรวจสอบการใช้งานสถานที่ในใบแจ้งซ่อมก่อนแก้ไข/ลบ
- *   - Initial implementation Location Route ตาม Layered Architecture
- *     [2026-02-18, พชร ไพศรีสกุล] V 1.0.0
+ *  [2026-02-18, พชร ไพศรีสกุล] V 1.0.0
+ *  - Initial implementation Location Route ตาม Layered Architecture 
+ *  [2026-03-03, นราธิป แสนทวีสุข] V 1.1.0
+ *  - เพิ่ม endpoint GET /locations/check-usage/:type/:id
+ *  - เพื่อตรวจสอบการใช้งานสถานที่ในใบแจ้งซ่อมก่อนแก้ไข/ลบ
  *
  * =====================================================================
  */
