@@ -9,8 +9,8 @@
  *   - พชร ไพศรีสกุล
  *   - ปฏิพัทธ์ จงนันทพันธ์กุล
  *
- * @lastModified    2026-02-21
- * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
+ * @lastModified    2026-03-17
+ * @lastModifiedBy  นราธิป แสนทวีสุข
  * ---------------------------------------------------------------------
  * @description
  *  Controller สำหรับจัดการข้อมูลและการทำงานของช่าง (Technician Management)
@@ -25,19 +25,24 @@
  *    - ดึงข้อมูลใบเบิกของช่าง
  *
  * @usedBy
- *   - tech.route.js
+ *   - technician-route.js
  *
  * ---------------------------------------------------------------------
  * @changelog
+ *  [2026-02-10, พชร ไพศรีสกุล] V1.0.0
  *   - Initial implementation Technician Controller ตาม Layered Architecture
- *     [2026-02-10, พชร ไพศรีสกุล] V1.0.0
+ *  [2026-02-12, พชร ไพศรีสกุล] V1.1.0
  *   - แก้ไขเรื่องประเภทงานซ่อม
- *     [2026-02-12, พชร ไพศรีสกุล] V1.1.0
- *   - เพิ่ม logging ใน withdrawStock เพื่อติดตาม transaction
- *    แสดงข้อมูล techId, repair_code, itemCount เมื่อเบิกของ
- *    [2026-02-20, นราธิป แสนทวีสุข]
+ *  [2026-02-20, นราธิป แสนทวีสุข] V1.1.1
+ *   - เพิ่ม logging ใน withdrawStock เพื่อติดตาม transactionแสดงข้อมูล techId, repair_code, itemCount เมื่อเบิกของ
+ *  [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล] V1.1.2  
  *   - แก้ไขข้อความแจ้งเตือน  
- *     [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล] V1.1.1
+ *  [2026-03-17, นราธิป แสนทวีสุข] V1.1.3
+ *   - เพิ่มระบบอัปโหลดรูปภาพหลังซ่อม (after-repair image upload)
+ *     - แก้ไข closeJob() รองรับการส่ง FormData พร้อมไฟล์
+ *     - Extract file path จาก multer req.file
+ *     - Fallback: ใช้ tech_image_after จาก body ถ้าไม่มี file upload
+ *     
  * =====================================================================
  */
 
@@ -279,11 +284,16 @@ module.exports = (techService) => {
           status, 
           tech_summary, 
           tech_image_after,
+          rf_tech_image_after,
           repair_method,
           repair_method_remark,
           result_status,
           result_remark
         } = req.body;
+
+        const techImageAfterPath = req.file
+          ? `/uploads/repair/${req.file.filename}`
+          : (tech_image_after || rf_tech_image_after || null);
 
         // Default status = done
         const targetStatus = status || "done";
@@ -293,7 +303,7 @@ module.exports = (techService) => {
           rf_code,
           targetStatus,
           tech_summary,
-          tech_image_after,
+          techImageAfterPath,
           repair_method,
           repair_method_remark,
           result_status,

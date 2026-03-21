@@ -106,7 +106,7 @@ async function confirmAssign() {
   console.log('🔵 [Assign Modal] confirmAssign called')
   console.log('🔵 [Assign Modal] repairId:', props.repairId)
   console.log('🔵 [Assign Modal] selectedTechnician:', selectedTechnician.value)
-  
+
   if (!selectedTechnician.value) {
     const Toast = Swal.mixin({
       toast: true,
@@ -168,7 +168,7 @@ async function confirmAssign() {
         title: 'แจ้งเตือน',
         text: msg,
         icon: 'info',
-        background: '#e0f2fe',
+        background: '#FFFFFF',
         color: '#0277bd',
       })
       console.log('🟡 [Assign Modal] Already assigned - emitting completed & close')
@@ -196,7 +196,7 @@ async function confirmAssign() {
     Toast.fire({
       title: 'มอบหมายงานเรียบร้อยแล้ว',
       icon: 'success',
-      background: '#f0f9ff',
+      background: '#FFFFFF',
       color: '#1e3a8a',
     })
     console.log('✅ [Assign Modal] Success - emitting completed & close')

@@ -4,7 +4,7 @@
  * @file            admin-user-info-view.vue
  * @module          มอดูลการจัดการผู้ใช้ - การจัดการข้อมูลผู้ใข้งาน
  * @layer           View (Presentation Layer)
- * @version         1.0.6
+ * @version         1.0.7
  * @since           2025-10-21
  * @author          พชร ไพศรีสกุล
  * @contributors
@@ -12,7 +12,7 @@
  *  - ปฏิพัทธ์ จงนันทพันธ์กุล
  *  - พชร ไพศรีสกุล
  *
- * @lastModified    2026-03-16
+ * @lastModified    2026-03-21
  * @lastModifiedBy  พชร ไพศรีสกุล
  * ---------------------------------------------------------------------
  * @description
@@ -61,15 +61,19 @@
  *   - แก้ไขสีปุ่ม
  *  [2026-03-06, เศรษฐพงศ์ หอมชื่น] V 1.0.6
  *   - แก้ไข alert
+ *  [2026-03-21, พชร ไพศรีสกุล] V 1.0.7
+ *   - ปรับปรุงโครงสร้างข้อมูลและการจัดการ State ใน View ให้รองรับการแสดงข้อมูลที่ถูกต้องตามโครงสร้างใหม่ของ API
+ *   - ปรับปรุงการ import และการดาวน์โหลด Template Excel ให้รองรับประเภท Locations โดยใช้ Universal Import Modal และ Download Template Button Component ใหม่ที่รองรับหลายประเภท
+ *
  * =====================================================================
  */
 
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import TableComponent from '@/components/table-component.vue'
 import TableActions from '@/components/table-actions-component.vue'
-import ImportUserModal from '@/components/modal/import-user-excel-component.vue'
 import ImportButtonComponent from '@/components/button/import-button-component.vue'
 import BaseButtonComponent from '@/components/button/base/base-button-component.vue'
+import UniversalImportModal from '@/components/modal/universal-import-modal.vue'
 
 import { Icon } from '@iconify/vue'
 import BaseButton from '@/components/button/base/base-button-component.vue'
@@ -200,7 +204,7 @@ async function fetchUsers() {
       title: 'ผิดพลาด',
       text: 'ไม่สามารถโหลดข้อมูลผู้ใช้ได้',
       icon: 'error',
-      background: '#fee2e2',
+      background: '#FFFFFF',
       color: '#dc2626',
     })
   }
@@ -357,7 +361,7 @@ function openEditModal(username) {
       title: 'ผิดพลาด',
       text: err.message,
       icon: 'error',
-      background: '#fee2e2',
+      background: '#FFFFFF',
       color: '#dc2626',
     })
   }
@@ -385,7 +389,7 @@ function openViewModal(username) {
       title: 'ผิดพลาด',
       text: err.message,
       icon: 'error',
-      background: '#fee2e2',
+      background: '#FFFFFF',
       color: '#dc2626',
     })
   }
@@ -445,7 +449,7 @@ async function confirmAddUser() {
     toast.fire({
       icon: 'success',
       title: 'เพิ่มผู้ใช้เรียบร้อยแล้ว',
-      background: '#f0f9ff',
+      background: '#FFFFFF',
       color: '#1e3a8a',
     })
     showUserModal.value = false
@@ -454,7 +458,7 @@ async function confirmAddUser() {
     toast.fire({
       icon: 'error',
       title: err.message || 'ไม่สามารถเพิ่มผู้ใช้ได้',
-      background: '#fee2e2',
+      background: '#FFFFFF',
       color: '#dc2626',
     })
   }
@@ -500,7 +504,7 @@ async function confirmEditUser() {
     toast.fire({
       icon: 'success',
       title: 'แก้ไขข้อมูลผู้ใช้เรียบร้อยแล้ว',
-      background: '#f0f9ff',
+      background: '#FFFFFF',
       color: '#1e3a8a',
     })
     showUserModal.value = false
@@ -509,7 +513,7 @@ async function confirmEditUser() {
     toast.fire({
       icon: 'error',
       title: err.message || 'ไม่สามารถแก้ไขข้อมูลผู้ใช้ได้',
-      background: '#fee2e2',
+      background: '#FFFFFF',
       color: '#dc2626',
     })
   }
@@ -563,7 +567,7 @@ async function confirmDelete(username) {
     toast.fire({
       icon: 'success',
       title: 'ลบผู้ใช้เรียบร้อยแล้ว',
-      background: '#f0f9ff',
+      background: '#FFFFFF',
       color: '#1e3a8a',
     })
     await fetchUsers()
@@ -571,7 +575,7 @@ async function confirmDelete(username) {
     toast.fire({
       icon: 'error',
       title: err.message || 'ไม่สามารถลบผู้ใช้ได้',
-      background: '#fee2e2',
+      background: '#FFFFFF',
       color: '#dc2626',
     })
   }
@@ -724,7 +728,7 @@ async function fetchMasterData() {
       title: 'ผิดพลาด',
       text: 'ไม่สามารถโหลดข้อมูลคำนำหน้า/บทบาท/ประเภทช่างได้',
       icon: 'error',
-      background: '#fee2e2',
+      background: '#FFFFFF',
       color: '#dc2626',
     })
   }
@@ -771,7 +775,7 @@ async function handleAddTechType() {
     toast.fire({
       icon: 'success',
       title: 'เพิ่มตำแหน่งช่างเรียบร้อยแล้ว',
-      background: '#f0f9ff',
+      background: '#FFFFFF',
       color: '#1e3a8a',
     })
     await fetchMasterData()
@@ -781,7 +785,7 @@ async function handleAddTechType() {
       title: 'ผิดพลาด',
       text: err.message || 'ไม่สามารถเพิ่มตำแหน่งช่างได้',
       icon: 'error',
-      background: '#fee2e2',
+      background: '#FFFFFF',
       color: '#dc2626',
     })
   }
@@ -818,7 +822,7 @@ async function handleEditTechType(item) {
     toast.fire({
       icon: 'success',
       title: 'แก้ไขตำแหน่งช่างเรียบร้อยแล้ว',
-      background: '#f0f9ff',
+      background: '#FFFFFF',
       color: '#1e3a8a',
     })
     await fetchMasterData()
@@ -828,7 +832,7 @@ async function handleEditTechType(item) {
       title: 'ผิดพลาด',
       text: err.message || 'ไม่สามารถแก้ไขตำแหน่งช่างได้',
       icon: 'error',
-      background: '#fee2e2',
+      background: '#FFFFFF',
       color: '#dc2626',
     })
   }
@@ -858,7 +862,7 @@ async function handleDeleteTechType(item) {
     toast.fire({
       icon: 'success',
       title: 'ลบตำแหน่งช่างเรียบร้อยแล้ว',
-      background: '#f0f9ff',
+      background: '#FFFFFF',
       color: '#1e3a8a',
     })
     await fetchMasterData()
@@ -868,7 +872,7 @@ async function handleDeleteTechType(item) {
       title: 'ผิดพลาด',
       text: err.message || 'ไม่สามารถลบตำแหน่งช่างได้',
       icon: 'error',
-      background: '#fee2e2',
+      background: '#FFFFFF',
       color: '#dc2626',
     })
   }
@@ -878,7 +882,7 @@ function handleImportSuccess() {
   toast.fire({
     icon: 'success',
     title: 'นำเข้าผู้ใช้งานเรียบร้อยแล้ว',
-    background: '#f0f9ff',
+    background: '#FFFFFF',
     color: '#1e3a8a',
   })
   showImportModal.value = false
@@ -888,7 +892,7 @@ function handleImportError(message) {
   toast.fire({
     icon: 'error',
     title: message || 'นำเข้าผู้ใช้งานไม่สำเร็จ',
-    background: '#fee2e2',
+    background: '#FFFFFF',
     color: '#dc2626',
   })
 }
@@ -921,11 +925,16 @@ async function handleResetPassword(userId) {
     toast.fire({
       icon: 'success',
       title: 'รีเซ็ตรหัสผ่านเรียบร้อย',
+      background: '#ffffff',
+      color: '#1e3a8a',
+
     })
   } catch (err) {
     toast.fire({
       icon: 'error',
       title: err.message,
+      background: '#fee2e2',
+      color: '#dc2626',
     })
   }
 }
@@ -1531,8 +1540,11 @@ async function handleResetPassword(userId) {
       </div>
     </div>
   </div>
-  <ImportUserModal
+  <UniversalImportModal
     v-if="showImportModal"
+    type="users"
+    title="ผู้ใช้งาน"
+    templateFileName="Template_Users_Import.xlsx"
     @close="showImportModal = false"
     @refresh="fetchUsers()"
     @success="handleImportSuccess"

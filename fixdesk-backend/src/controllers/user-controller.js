@@ -23,7 +23,7 @@
  *    - Import ผู้ใช้งานจากไฟล์ Excel
  *
  * @usedBy
- *   - user.route.js
+ *   - user-route.js
  *
  * ---------------------------------------------------------------------
  * @changelog
@@ -206,7 +206,7 @@ module.exports = (userService) => {
         res.status(201).json({ created: 1, us_id: newId });
       } catch (error) {
         if (error.message === "DUPLICATE_USERNAME")
-          return res.status(409).json({ message: "ชื่อผู้ใช้ซ้ำในระบบ" });
+          return res.status(409).json({ message: "พบชื่อผู้ใช้ซ้ำ กรุณากรอกข้อมูล\nผู้ใช้งานใหม่อีกครั้ง" });
         res
           .status(500)
           .json({ message: "เพิ่มผู้ใช้ไม่สำเร็จ", error: error.message });
@@ -299,7 +299,7 @@ module.exports = (userService) => {
         res.json({ message: "อัปเดตข้อมูลสำเร็จ" });
       } catch (error) {
         if (error.message === "DUPLICATE_USERNAME")
-          return res.status(409).json({ message: "ชื่อผู้ใช้ซ้ำในระบบ" });
+          return res.status(409).json({ message: "พบชื่อผู้ใช้ซ้ำ กรุณากรอกข้อมูล\nผู้ใช้งานใหม่อีกครั้ง" });
         res
           .status(500)
           .json({ message: "อัปเดตไม่สำเร็จ", error: error.message });
