@@ -7,6 +7,7 @@
  * @author          พชร ไพศรีสกุล
  * @contributors
  *   - พชร ไพศรีสกุล
+ *   - นราธิป แสนทวีสุข
  *
  * @lastModified    2026-03-17
  * @lastModifiedBy  นราธิป แสนทวีสุข
@@ -24,17 +25,24 @@
  *    - ปิดงานซ่อม
  *    - เบิกสินค้าโดยช่าง
  *    - อัปโหลดรูปภาพหลังซ่อม
+ * 
+ *  ใช้ multer สำหรับจัดการ upload ไฟล์รูปภาพหลังซ่อม (after-repair image upload)
+ * 
+ * @usedBy
+ *  - app.js (หรือ server.js) เพื่อเชื่อมต่อ Route นี้เข้ากับ Express Application
+ *  - technician-controller.js เพื่อเชื่อมต่อ Controller กับ Service
+ *  - technician-service.js เพื่อเชื่อมต่อกับ Service Layer ในการจัดการ Technician
  *
  * ---------------------------------------------------------------------
  * @changelog
+ *  [2026-02-10, พชร ไพศรีสกุล] V 1.0.0
  *   - Initial implementation Technician Route ตาม Layered Architecture
- *     [2026-02-10, พชร ไพศรีสกุล] V 1.0.0
+ *  [2026-03-17, นราธิป แสนทวีสุข]
  *   - เพิ่มระบบอัปโหลดรูปภาพหลังซ่อม (after-repair image upload)
  *     - เพิ่ม Multer middleware สำหรับการจัดการไฟล์
  *     - กำหนด diskStorage ที่ /uploads/repair/
  *     - ชื่อไฟล์: RF_AFTER_YYYYMMDDHHMMSS_RANDOM.ext
  *     - Validation: image/* มีข้อจำกัดไฟล์ 50MB เท่านั้น
- *     [2026-03-17, นราธิป แสนทวีสุข]
  *
  * =====================================================================
  */
