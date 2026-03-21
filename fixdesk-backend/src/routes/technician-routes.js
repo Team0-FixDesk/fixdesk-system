@@ -8,7 +8,7 @@
  * @contributors
  *   - พชร ไพศรีสกุล
  *
- * @lastModified    2026-03-17
+ * @lastModified    2026-03-21
  * @lastModifiedBy  นราธิป แสนทวีสุข
  * ---------------------------------------------------------------------
  * @description
@@ -35,6 +35,8 @@
  *     - ชื่อไฟล์: RF_AFTER_YYYYMMDDHHMMSS_RANDOM.ext
  *     - Validation: image/* มีข้อจำกัดไฟล์ 50MB เท่านั้น
  *     [2026-03-17, นราธิป แสนทวีสุข]
+ *   - ขยายเพดาน Middleware ของ Multer ให้รองรับไฟล์ภาพ 10 ไฟล์ได้โดยไม่ Error
+ *     [2026-03-21, นราธิป แสนทวีสุข]
  *
  * =====================================================================
  */
@@ -91,7 +93,7 @@ module.exports = (db) => {
 
   const closeJobUpload = multer({
     storage: closeJobStorage,
-    limits: { fileSize: 50 * 1024 * 1024, files: 1 },
+    limits: { fileSize: 50 * 1024 * 1024, files: 10 },
     fileFilter: closeJobFileFilter,
   });
 
@@ -176,7 +178,7 @@ module.exports = (db) => {
   router.put(
     "/technician/close-job/:rf_code",
     authMiddleware,
-    closeJobUpload.single("tech_image_after"),
+    closeJobUpload.array("tech_image_after", 10),
     techController.closeJob,
   );
 

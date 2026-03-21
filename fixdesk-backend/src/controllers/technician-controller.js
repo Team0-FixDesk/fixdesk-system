@@ -9,7 +9,7 @@
  *   - พชร ไพศรีสกุล
  *   - ปฏิพัทธ์ จงนันทพันธ์กุล
  *
- * @lastModified    2026-03-17
+ * @lastModified    2026-03-21
  * @lastModifiedBy  นราธิป แสนทวีสุข
  * ---------------------------------------------------------------------
  * @description
@@ -43,6 +43,8 @@
  *     - Extract file path จาก multer req.file
  *     - Fallback: ใช้ tech_image_after จาก body ถ้าไม่มี file upload
  *     [2026-03-17, นราธิป แสนทวีสุข]
+ *   - ปรับปรุงการ Logging แจ้งเตือน Error กรณีปิดงานในฐานข้อมูลไม่สำเร็จ
+ *     [2026-03-21, นราธิป แสนทวีสุข]
  * =====================================================================
  */
 
@@ -291,9 +293,11 @@ module.exports = (techService) => {
           result_remark
         } = req.body;
 
-        const techImageAfterPath = req.file
-          ? `/uploads/repair/${req.file.filename}`
-          : (tech_image_after || rf_tech_image_after || null);
+        let techImageAfterPath = tech_image_after || rf_tech_image_after || null;
+        if (req.files && req.files.length > 0) {
+          const paths = req.files.map((f) => `/uploads/repair/${f.filename}`);
+          techImageAfterPath = JSON.stringify(paths);
+        }
 
         // Default status = done
         const targetStatus = status || "done";
@@ -329,11 +333,9 @@ module.exports = (techService) => {
           return res
             .status(400)
             .json({ message: "ไม่พบงานซ่อม หรือสถานะไม่ถูกต้อง" });
-        res.status(500).json({ message: "ดำเนินการไม่สำเร็จ" });
-      }
-    },
-
-    /**
+          
+          console.error("Close job error:", err);
+          res.status(500).json({ message: "ดำเนินการไม่สำเร็จ", error: err.message });
      * เบิกสินค้าโดยช่าง
      *
      * @author พชร ไพศรีสกุล

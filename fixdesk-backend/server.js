@@ -8,8 +8,8 @@
  * @contributors
  *   - พชร ไพศรีสกุล
  *
- * @lastModified    2026-02-10
- * @lastModifiedBy  พชร ไพศรีสกุล
+ * @lastModified    2026-03-21
+ * @lastModifiedBy  นราธิป แสนทวีสุข
  * ---------------------------------------------------------------------
  * @description
  *  ไฟล์หลักสำหรับเริ่มต้นระบบ FixDesk Backend
@@ -26,6 +26,8 @@
  * @changelog
  *   - Initial implementation Application Entry Point
  *     [2026-02-18, พชร ไพศรีสกุล] V 1.0.0
+ *   - เพิ่ม Global Error Handler ช่วยดักจับและแสดงข้อผิดพลาดจาก Multer
+ *     [2026-03-21, นราธิป แสนทวีสุข]
  *
  * =====================================================================
  */
@@ -95,6 +97,17 @@ app.get("/health", (req, res) => {
     uptime: process.uptime(),
     environment: process.env.NODE_ENV || "development",
   });
+});
+
+app.use((err, req, res, next) => {
+  console.error("Global Error:", err);
+  if (err.code === "LIMIT_FILE_SIZE") {
+    return res.status(413).json({ message: "File too large. Max 50MB." });
+  }
+  if (err instanceof require("multer").MulterError) {
+    return res.status(400).json({ message: `Multer Error: ${err.message}` });
+  }
+  return res.status(500).json({ message: "Internal Server Error", error: err.message });
 });
 
 // --- SERVER INITIALIZATION ---
