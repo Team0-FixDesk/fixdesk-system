@@ -1,3 +1,4 @@
+<script setup>
 /**
  * =====================================================================
  * @file            stock-manage-inventory-view.vue
@@ -6,8 +7,14 @@
  * @version         1.0.2
  * @since           2025-10-21
  * @author          เศรษฐพงศ์ หอมชื่น
- * @lastModified    2026-03-13
- * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
+ * @contributors
+ * - เศรษฐพงศ์ หอมชื่น
+ * - ปฏิพัทธ์ จงนันทพันธ์กุล
+ * - อาจอนนต์ ภคนันทานนท์
+ * - พชร ไพศรีสกุล
+ *
+ * @lastModified    2026-03-21
+ * @lastModifiedBy  พชร ไพศรีสกุล
  * ---------------------------------------------------------------------
  * @description
  *  หน้าจอสำหรับจัดการข้อมูลสินค้าคงคลัง
@@ -18,19 +25,26 @@
  *    - ตรวจสอบความถูกต้องของไฟล์ภาพ
  *---------------------------------------------------------------------
  * @changelog
- *   - เพิ่ม validation border แดงในฟอร์มแก้ไขรายการ [2026-03-06, อาจอนนต์ ภคนันทานนท์]
- *   - แก้ไขคำ alert  [2026-03-13, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *  [2025-10-21, เศรษฐพงศ์ หอมชื่น] V 1.0.0
+ *  - Initial implementation Stock Manage Inventory View
+ *  [2026-03-06, อาจอนนต์ ภคนันทานนท์] V 1.0.1
+ *   - เพิ่ม validation border แดงในฟอร์มแก้ไขรายการ
+ *  [2026-03-13, ปฏิพัทธ์ จงนันทพันธ์กุล] V 1.0.2
+ *   - แก้ไขคำ alert
+ *  [2026-03-21, พชร ไพศรีสกุล] V 1.0.3
+ *  - ปรับปรุงโครงสร้างข้อมูลและการจัดการ State ใน View ให้รองรับการแสดงข้อมูลที่ถูกต้องตามโครงสร้างใหม่ของ API
+ *  - ปรับปรุงการ import และการดาวน์โหลด Template Excel ให้รองรับประเภท Locations โดยใช้ Universal Import Modal และ Download Template Button Component ใหม่ที่รองรับหลายประเภท
+ *
  * =====================================================================
  */
-<script setup>
 import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
-import ImportStockModal from '@/components/modal/import-excel-stock-component.vue'
 import TableComponent from '@/components/table-component.vue'
 import TableActions from '@/components/table-actions-component.vue'
 import CardSummaryComponent from '@/components/card-home-component.vue'
 import ImportButtonComponent from '@/components/button/import-button-component.vue'
+import UniversalImportModal from '@/components/modal/universal-import-modal.vue'
 import { Icon } from '@iconify/vue'
 
 const showImportModal = ref(false)
@@ -166,7 +180,7 @@ async function fetchAllStock() {
         title: 'หมดเวลาเข้าสู่ระบบ',
         text: 'กรุณาเข้าสู่ระบบใหม่',
         icon: 'warning',
-        confirmButtonColor: '#0048EF', 
+        confirmButtonColor: '#0048EF',
         confirmButtonText: 'ตกลง'
       })
       router.push('/login')
@@ -1401,7 +1415,14 @@ onBeforeUnmount(() => {
       </div>
     </div>
   </div>
-  <ImportStockModal v-if="showImportModal" @close="showImportModal = false" @refresh="fetchAllStock" />
+  <UniversalImportModal
+  v-if="showImportModal"
+  type="stocks"
+  title="พัสดุ"
+  templateFileName="Template_Stock_Import.xlsx"
+  @close="showImportModal = false"
+  @refresh="fetchAllStock()"
+/>
 </template>
 
 <style scoped>
