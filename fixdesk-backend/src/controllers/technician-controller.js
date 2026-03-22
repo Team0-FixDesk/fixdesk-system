@@ -282,9 +282,9 @@ module.exports = (techService) => {
       try {
         const techId = req.user.us_id;
         const { rf_code } = req.params;
-        const { 
-          status, 
-          tech_summary, 
+        const {
+          status,
+          tech_summary,
           tech_image_after,
           rf_tech_image_after,
           repair_method,
@@ -334,9 +334,11 @@ module.exports = (techService) => {
             .status(400)
             .json({ message: "ไม่พบงานซ่อม หรือสถานะไม่ถูกต้อง" });
           
-          console.error("Close job error:", err);
-          res.status(500).json({ message: "ดำเนินการไม่สำเร็จ", error: err.message });
-     * เบิกสินค้าโดยช่าง
+        console.error("Close job error:", err);
+        res.status(500).json({ message: "ดำเนินการไม่สำเร็จ", error: err.message });
+      }
+    },
+     /* เบิกสินค้าโดยช่าง
      *
      * @author พชร ไพศรีสกุล
      * @since 2026-02-10
