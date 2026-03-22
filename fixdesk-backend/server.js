@@ -2,7 +2,7 @@
  * =====================================================================
  * @file            server.js
  * @layer           Application Layer (Entry Point)
- * @version         1.0.1
+ * @version         1.1.0
  * @since           2026-02-10
  * @author          พชร ไพศรีสกุล
  * @contributors
@@ -28,12 +28,11 @@
  * ---------------------------------------------------------------------
  * @changelog
  *  [2026-02-18, พชร ไพศรีสกุล] V 1.0.0
- *   - Initial implementation Application Entry Point
- *     [2026-02-18, พชร ไพศรีสกุล] V 1.0.0
- *   - เพิ่ม Global Error Handler ช่วยดักจับและแสดงข้อผิดพลาดจาก Multer
- *     [2026-03-21, นราธิป แสนทวีสุข]
+ *   - Initial implementation Application Entry Point    
  *  [2026-03-21, พชร ไพศรีสกุล] V 1.0.1
  *   - เพิ่ม templateRoutes และเชื่อมต่อกับ databaseConnection
+ *  [2026-03-21, นราธิป แสนทวีสุข] V 1.1.0
+ *   - เพิ่ม Global Error Handler ช่วยดักจับและแสดงข้อผิดพลาดจาก Multer
  *
  * =====================================================================
  */

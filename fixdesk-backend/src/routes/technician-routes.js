@@ -2,7 +2,7 @@
  * =====================================================================
  * @file            technician.route.js
  * @layer           Route Layer (Routing Layer)
- * @version         1.0.0
+ * @version         1.1.1
  * @since           2026-02-10
  * @author          พชร ไพศรีสกุล
  * @contributors
@@ -37,15 +37,14 @@
  * @changelog
  *  [2026-02-10, พชร ไพศรีสกุล] V 1.0.0
  *   - Initial implementation Technician Route ตาม Layered Architecture
- *  [2026-03-17, นราธิป แสนทวีสุข]
+ *  [2026-03-17, นราธิป แสนทวีสุข] V 1.1.0
  *   - เพิ่มระบบอัปโหลดรูปภาพหลังซ่อม (after-repair image upload)
  *     - เพิ่ม Multer middleware สำหรับการจัดการไฟล์
  *     - กำหนด diskStorage ที่ /uploads/repair/
  *     - ชื่อไฟล์: RF_AFTER_YYYYMMDDHHMMSS_RANDOM.ext
  *     - Validation: image/* มีข้อจำกัดไฟล์ 50MB เท่านั้น
- *     [2026-03-17, นราธิป แสนทวีสุข]
+ *     [2026-03-17, นราธิป แสนทวีสุข] V 1.1.1
  *   - ขยายเพดาน Middleware ของ Multer ให้รองรับไฟล์ภาพ 10 ไฟล์ได้โดยไม่ Error
- *     [2026-03-21, นราธิป แสนทวีสุข]
  *
  * =====================================================================
  */
