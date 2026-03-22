@@ -2,14 +2,14 @@
  * =====================================================================
  * @file            tech.controller.js
  * @layer           Controller Layer (Presentation Layer)
- * @version         1.1.1
+ * @version         1.1.4
  * @since           2026-02-10
  * @author          พชร ไพศรีสกุล
  * @contributors
  *   - พชร ไพศรีสกุล
  *   - ปฏิพัทธ์ จงนันทพันธ์กุล
  *
- * @lastModified    2026-03-17
+ * @lastModified    2026-03-21
  * @lastModifiedBy  นราธิป แสนทวีสุข
  * ---------------------------------------------------------------------
  * @description
@@ -42,6 +42,8 @@
  *     - แก้ไข closeJob() รองรับการส่ง FormData พร้อมไฟล์
  *     - Extract file path จาก multer req.file
  *     - Fallback: ใช้ tech_image_after จาก body ถ้าไม่มี file upload
+ *     [2026-03-21, นราธิป แสนทวีสุข] V1.1.4
+ *   - ปรับปรุงการ Logging แจ้งเตือน Error กรณีปิดงานในฐานข้อมูลไม่สำเร็จ
  *     
  * =====================================================================
  */
@@ -291,9 +293,11 @@ module.exports = (techService) => {
           result_remark
         } = req.body;
 
-        const techImageAfterPath = req.file
-          ? `/uploads/repair/${req.file.filename}`
-          : (tech_image_after || rf_tech_image_after || null);
+        let techImageAfterPath = tech_image_after || rf_tech_image_after || null;
+        if (req.files && req.files.length > 0) {
+          const paths = req.files.map((f) => `/uploads/repair/${f.filename}`);
+          techImageAfterPath = JSON.stringify(paths);
+        }
 
         // Default status = done
         const targetStatus = status || "done";
@@ -329,11 +333,9 @@ module.exports = (techService) => {
           return res
             .status(400)
             .json({ message: "ไม่พบงานซ่อม หรือสถานะไม่ถูกต้อง" });
-        res.status(500).json({ message: "ดำเนินการไม่สำเร็จ" });
-      }
-    },
-
-    /**
+          
+          console.error("Close job error:", err);
+          res.status(500).json({ message: "ดำเนินการไม่สำเร็จ", error: err.message });
      * เบิกสินค้าโดยช่าง
      *
      * @author พชร ไพศรีสกุล
