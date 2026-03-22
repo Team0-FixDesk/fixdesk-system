@@ -174,7 +174,7 @@ async function confirmAccept() {
           title: 'เกิดข้อผิดพลาด',
           text: payload.message || 'ไม่สามารถรับงานได้',
           icon: 'error',
-          background: '#fee2e2',
+          background: '#FFFFFF',
           color: '#dc2626',
         })
         return
@@ -203,7 +203,7 @@ async function confirmAccept() {
         title: 'เกิดข้อผิดพลาด',
         text: 'ขณะรับงาน',
         icon: 'error',
-        background: '#fee2e2',
+        background: '#FFFFFF',
         color: '#dc2626',
       })
     }
@@ -224,7 +224,7 @@ async function confirmAccept() {
       Toast.fire({
         title: 'โปรดเลือกช่างอย่างน้อย 1 คน',
         icon: 'warning',
-        background: '#fef3c7',
+        background: '#FFFFFF',
         color: '#d97706',
       })
       return
@@ -255,7 +255,7 @@ async function confirmAccept() {
           title: 'เกิดข้อผิดพลาด',
           text: payload.message || 'มอบหมายทีมไม่สำเร็จ',
           icon: 'error',
-          background: '#fee2e2',
+          background: '#FFFFFF',
           color: '#dc2626',
         })
         return
@@ -280,7 +280,7 @@ async function confirmAccept() {
           title: 'เกิดข้อผิดพลาด',
           text: p2.message || 'รับงานหลังมอบหมายทีมไม่สำเร็จ',
           icon: 'error',
-          background: '#fee2e2',
+          background: '#FFFFFF',
           color: '#dc2626',
         })
         return
@@ -302,7 +302,7 @@ async function confirmAccept() {
         title: 'เกิดข้อผิดพลาด',
         text: 'ขณะมอบหมายทีม/รับงาน',
         icon: 'error',
-        background: '#fee2e2',
+        background: '#FFFFFF',
         color: '#dc2626',
       })
     }
@@ -334,12 +334,12 @@ onBeforeUnmount(() => {
 
       <div class="mb-4 flex gap-6">
         <label class="flex items-center gap-2 cursor-pointer">
-          <input type="radio" value="alone" v-model="acceptMode" class="accent-[#1E48D1]" />
+          <input type="radio" value="alone" v-model="acceptMode" class="w-4 h-4 text-blue-600 border-gray-300 cursor-pointer" />
           ทำงานคนเดียว
         </label>
 
         <label class="flex items-center gap-2 cursor-pointer">
-          <input type="radio" value="team" v-model="acceptMode" class="accent-[#1E48D1]" />
+          <input type="radio" value="team" v-model="acceptMode" class="w-4 h-4 text-blue-600 border-gray-300 cursor-pointer" />
           ทำงานเป็นทีม
         </label>
       </div>
@@ -413,7 +413,7 @@ onBeforeUnmount(() => {
               type="checkbox"
               :value="tech.us_id"
               v-model="selectedTeam"
-              class="w-5 h-5 mt-5 cursor-pointer border-2 border-[#1E48D1] accent-[#1E48D1]"
+              class="w-4 h-4 mt-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
             />
           </div>
 
@@ -426,13 +426,13 @@ onBeforeUnmount(() => {
       <div class="flex justify-end gap-3 mt-6">
         <button
           @click="$emit('close')"
-          class="px-5 py-2 font-medium text-gray-700 transition bg-gray-200 rounded-md hover:bg-gray-300"
+          class="px-5 py-2 font-medium text-white transition bg-neutral-300 rounded-md hover:bg-neutral-400"
         >
           ยกเลิก
         </button>
         <button
           @click="confirmAccept"
-          class="px-5 py-2 font-medium text-white transition bg-[#1E48D1] rounded-md hover:bg-blue-900"
+          class="px-5 py-2 font-medium text-white transition bg-blue-700 rounded-md hover:bg-blue-800"
         >
           ยืนยัน
         </button>

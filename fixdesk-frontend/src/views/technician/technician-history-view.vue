@@ -1,3 +1,36 @@
+/**
+ * =====================================================================
+ * @file            technician-repair-history.view.vue
+ * @module          -
+ * @layer           View (Presentation Layer)
+ * @version         1.0.0
+ * @since           2025-10-21
+ * @author          เศรษฐพงศ์ หอมชื่น
+ * @lastModified    2026-02-21
+ * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
+ * ---------------------------------------------------------------------
+ * @description
+ *  หน้าจอประวัติการแจ้งซ่อมของช่างซ่อม
+ *   - เรียก API เพื่อโหลดประวัติงานซ่อม (/technician/history)
+ *   - แสดงเฉพาะงานที่มีสถานะเสร็จสิ้น (done)
+ *   - ค้นหาข้อมูลตามหมายเลขแจ้งซ่อม หรือข้อความรายละเอียด
+ *   - เปิดดูรายละเอียดใบแจ้งซ่อม
+ *   - แสดงผลข้อมูลในรูปแบบตารางผ่าน TableComponent
+ *
+ * @requires
+ *  - vue
+ *  - vue-router
+ *  - @/components/table-component.vue
+ *  - @/components/button/info-button-component.vue
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *   - แก้ไขชื่อหน้าจอ           [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - แก้ไขข้อความหัวตาราง     [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - แก้ไขข้อความในช่องค้นหา   [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ * =====================================================================
+ */
+
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
@@ -9,7 +42,7 @@ const router = useRouter()
 const API_BASE = import.meta.env.VITE_API_BASE
 
 // Columns ของตาราง
-const tableColumnsList = ['หมายเลขแจ้งซ่อม', 'รายละเอียด', 'สถานะ', 'การดำเนินการ']
+const tableColumnsList = ['หมายเลขแจ้งซ่อม', 'รายละเอียดโดยย่อ', 'สถานะงานซ่อม', 'ตัวดำเนินการ']
 
 const tableRowsList = ref([])
 const searchInput = ref('')
@@ -31,19 +64,19 @@ async function loadRepairHistory() {
 
       return [
         item.rf_code, // 1 หมายเลขแจ้งซ่อม
-        'วันที่แจ้ง: ' +
+        'วันที่แจ้งซ่อม : ' +
           new Date(item.rf_create_at).toLocaleDateString('th-TH') +
           '<br />' +
-          'ชื่อผู้แจ้ง: ' +
+          'ชื่อผู้แจ้ง : ' +
           fullName +
           '<br />' +
-          'หน่วยงาน: ' +
+          'หน่วยงาน : ' +
           item.department_name +
           '<br />' +
-          'เรื่องที่แจ้ง: ' +
+          'เรื่องที่แจ้ง : ' +
           item.rf_problem +
           '<br />' +
-          'สถานที่: ' +
+          'สถานที่ : ' +
           `${item.building_name} ${item.floor_name} ${item.room_name}`.trim(),
         item.rf_user_status,
         '', // 7 actions
@@ -80,14 +113,14 @@ onMounted(() => {
 
 <template>
   <div class="p-8 mx-auto bg-white shadow-md rounded-xl max-w-7xl">
-    <h1 class="mb-6 text-xl font-bold text-black">ประวัติการแจ้งซ่อมของช่าง</h1>
+    <h1 class="mb-6 text-xl font-bold text-black">ประวัติการซ่อมของฉัน</h1>
 
     <!-- Search -->
     <div class="flex flex-wrap gap-3 mb-6">
       <input
         v-model="searchInput"
         type="text"
-        placeholder="ค้นหา: หมายเลข / ผู้แจ้ง / หน่วยงาน / อาการเสีย"
+        placeholder="ค้นหารายการงานซ่อม"
         class="w-[260px] h-10 px-4 rounded-lg border border-gray-300 focus:ring-blue-500"
       />
     </div>

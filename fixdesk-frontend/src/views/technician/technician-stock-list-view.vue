@@ -1,3 +1,57 @@
+/**
+ * =====================================================================
+ * @file            technician-stock-list.view.vue
+ * @module          มอดูลการจัดการงานของช่าง - การเบิกของ และดูรายละเอียดการเบิก
+ * @layer           View (Presentation Layer)
+ * @version         1.0.2
+ * @since           2025-10-21
+ * @author          เศรษฐพงศ์ หอมชื่น
+ * @contributor
+ *   - เศรษฐพงศ์ หอมชื่น
+ *   - ธนภันทร จันทร์งาม
+ *   - ปฏิพัทธ์ จงนันทพันธ์กุล
+ *
+ * @lastModified    2026-03-03
+ * @lastModifiedBy  พชร ไพศรีสกุล
+ * ---------------------------------------------------------------------
+ * @description
+ *  หน้าจอรายการคลังสินค้าสำหรับช่างซ่อม
+ *   - แสดงรายการสินค้าทั้งหมดจากคลัง (/show-stock)
+ *   - ค้นหาสินค้าตามชื่อ หรือรหัสครุภัณฑ์
+ *   - กรองตามหมวดหมู่สินค้า
+ *   - กรองตามสถานะสินค้า (พร้อมใช้งาน / ใกล้หมด / สินค้าหมด)
+ *   - เรียงลำดับตามจำนวนคงเหลือ (มาก → น้อย / น้อย → มาก)
+ *   - แสดงสินค้าในรูปแบบการ์ดผ่าน ProductCardComponent
+ *   - จัดการตะกร้าสินค้า (เพิ่ม / ลด / ลบ)
+ *   - ผูกรายการแจ้งซ่อมกับการเบิกสินค้า
+ *   - ยืนยันการเบิกสินค้า และส่งข้อมูลไปยัง API (/withdraw)
+ *   - โหลดหมวดหมู่สินค้า (/category)
+ *   - โหลดรายการแจ้งซ่อมของช่าง (/technician/repairs)
+ *
+ * @requires
+ *  - vue
+ *  - vue-router
+ *  - sweetalert2
+ *  - @iconify/vue
+ *  - @/components/product-card-component.vue
+ *  - @/components/modal/confirm-withdraw-component.vue
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *   - แก้ไขขนาดช่องของสินค้า
+ *      [2569-02-17, ธนภัทร จันทร์งาม] V1.0.0
+ *   - แก้ไขชื่อหน้าจอ
+ *      [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล] V1.0.1
+ *     - เพิ่มการแจ้งเตือน (Toast) หลังยืนยันการเบิกสินค้าเรียบร้อย
+ *     [2026-02-21, ธนภัทร จันทร์งาม]
+ *      [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล] V1.0.1
+ *   - แก้ไขสีปุ่ม
+ *      [2026-02-27, เศรษฐพงศ์ หอมชื่น] V1.0.2
+ *   - แก้ไขการแสดงรายการแจ้งซ่อม
+ *      [2026-03-03, พชร ไพศรีสกุล] V1.0.3
+ * =====================================================================
+ */
+
 <script setup>
 defineOptions({ name: 'TechnicianStockListView' }) //
 
@@ -51,17 +105,6 @@ const repairJobList = ref([]) //
 const selectedRepairCode = ref(null)
 
 /**
- * จำกัดจำนวนตัวอักษรเพื่อการแสดงผล
- */
-const limitWords = (text, maxChars = 20) => {
-  if (!text) {
-    return ''
-  }
-
-  return text.length > maxChars ? text.slice(0, maxChars) + '...' : text
-}
-
-/**
  * ดึงรายการใบแจ้งซ่อมจาก API
  */
 const fetchRepairJobList = async () => {
@@ -71,7 +114,7 @@ const fetchRepairJobList = async () => {
     })
 
     if (!response.ok) {
-      throw new Error('โหลดรายการใบแจ้งซ่อมล้มเหลว')
+      throw new Error('โหลดรายการแจ้งซ่อมไม่สำเร็จ')
     }
 
     const data = await response.json()
@@ -336,7 +379,10 @@ const confirmWithdraw = async (formData) => {
       throw new Error(responseBody.message)
     }
 
-    Swal.fire('สำเร็จ', 'เบิกสินค้าเรียบร้อย', 'success')
+    sessionStorage.setItem(
+  'withdrawSuccessToast',
+  'ส่งแบบฟอร์มขอเบิกสำเร็จ'
+)
 
     cartItemList.value = []
     isCartOpen.value = false
@@ -385,7 +431,7 @@ onBeforeUnmount(() => {
     class="bg-white rounded-xl shadow-md p-12 mx-auto max-w-8xl container px-5 py-6 min-h-screen"
   >
     <div class="flex justify-between items-center mb-6">
-      <h1 class="text-2xl font-bold text-black">รายการคลังสินค้า</h1>
+      <h1 class="text-2xl font-bold text-black">รายการในคลัง</h1>
 
       <button
         @click="fetchStockItemList"
@@ -415,7 +461,7 @@ onBeforeUnmount(() => {
           <input
             v-model="searchKeyword"
             type="text"
-            placeholder="ค้นหารายการของ (ชื่อ, รหัส)"
+            placeholder="ค้นหารายการวัสดุ/อุปกรณ์"
             class="text-gray-700 w-full md:w-[400px] h-10 px-4 rounded-lg border border-gray-300 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
           />
 
@@ -573,9 +619,9 @@ onBeforeUnmount(() => {
                 cartStep = 'list'
               }
             "
-            class="inline-flex items-center h-10 px-4 bg-blue-600 text-white rounded-lg"
+            class="inline-flex items-center gap-2 h-10 px-4 bg-blue-700 hover:bg-blue-800 text-white rounded-lg"
           >
-            <Icon icon="typcn:shopping-cart" width="24" height="24" style="color: #ffffff" /> ตะกร้า
+            <Icon icon="akar-icons:basket" width="24" height="24" style="color: #ffffff" />ตะกร้า
             {{ totalInCart }}
           </button>
         </div>
@@ -585,7 +631,7 @@ onBeforeUnmount(() => {
     <div v-if="isLoading" class="text-center py-20 text-gray-500">กำลังโหลดข้อมูล...</div>
 
     <div v-else>
-      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <ProductCardComponent
           v-for="item in filteredStockItemList"
           :key="item.id"
@@ -630,8 +676,8 @@ onBeforeUnmount(() => {
       <div class="absolute right-0 top-0 h-full w-auto bg-white shadow-2xl flex flex-col">
         <div class="px-5 py-4 border-b flex items-center justify-between">
           <h2 class="text-lg font-semibold">
-            <span v-if="cartStep === 'list'">ตะกร้าสินค้า</span>
-            <span v-else>ตรวจสอบการเบิก</span>
+            <span v-if="cartStep === 'list'">รายการวัสดุ/อุปกรณ์ในตะกร้า</span>
+            <span v-else>ตรวจสอบรายละเอียดการเบิก</span>
           </h2>
 
           <button
@@ -649,26 +695,9 @@ onBeforeUnmount(() => {
 
         <div class="flex-1 overflow-y-auto px-5 py-4">
           <div v-if="cartStep === 'list'">
-            <div class="mb-5">
-              <label class="text-sm text-gray-700 mb-1 block">ใบแจ้งซ่อม *</label>
 
-              <select
-                v-model="selectedRepairCode"
-                class="w-full h-10 px-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
-              >
-                <option disabled value="">กรุณาเลือกใบแจ้งซ่อม</option>
-                <option
-                  v-for="job in repairJobList"
-                  :key="job.rf_code"
-                  :value="job.rf_code"
-                  :title="job.rf_title"
-                >
-                  {{ job.rf_code }} — {{ limitWords(job.rf_title) }}
-                </option>
-              </select>
-            </div>
             <div v-if="cartItemList.length === 0" class="text-gray-400 text-center mt-20">
-              ไม่มีสินค้าในตะกร้า
+              ไม่มีวัสดุ/อุปกรณ์ในตะกร้า
             </div>
 
             <div
@@ -776,7 +805,7 @@ onBeforeUnmount(() => {
       </svg>
 
       <div>
-        กำลังเบิกของสำหรับใบแจ้งซ่อม:
+        กำลังเบิกวัสดุ/อุปกรณ์สำหรับรายการแจ้งซ่อม :
         <strong>{{ selectedRepairCode }}</strong>
       </div>
     </div>

@@ -1,3 +1,41 @@
+/**
+* =====================================================================
+* @file            home-view.vue
+* @module          มอดูลแจ้งซ่อม - การติดตามสถานะ และดูรายละเอียดคำร้องแจ้งซ่อม
+* @layer           View (Presentation Layer)
+* @version         1.0.2
+* @since           2025-02-04
+* @author          พชร ไพศรีสกุล
+* @contributors
+*   - ปฏิพัทธ์ จงนันทพันธ์กุล
+*   - พชร ไพศรีสกุล
+*
+* @lastModified    2026-03-04
+* @lastModifiedBy  พชร ไพศรีสกุล
+* ---------------------------------------------------------------------
+* @description
+*  หน้าจอสำหรับผู้ใช้งานภายนอกใช้ค้นหา และตรวจสอบสถานะงานซ่อม
+*  รองรับการค้นหาด้วย:
+*    - หมายเลขแจ้งซ่อม (rf_code)
+*    - ชื่อผู้แจ้ง        (reporter)
+*    - หน่วยงาน       (department)
+*
+* @usedBy
+*   - main-layout.view.vue
+*
+* ---------------------------------------------------------------------
+* @changelog
+*  [2569-02-17, ปฏิพัทธ์ จงนันทพันธ์กุล] V 1.0.0
+*  - ปรับปรุงข้อความที่ใช้ให้เหมาะสม
+*  - แก้ไขแถบสถานะความคืบหน้าของงานซ่อม
+*  [2569-02-19, ปฏิพัทธ์ จงนันทพันธ์กุล] V 1.0.1
+*  - ปรับปรุงข้อความอธิบายหน้าจอ
+*  [2569-03-04, พชร ไพศรีสกุล] V 1.0.2
+*  - แก้ไขขนาดและความมนของกรอบ
+*
+* =====================================================================
+*/
+
 <script setup>
 
 import { useRouter } from 'vue-router'
@@ -15,6 +53,7 @@ const {
   searched,  // สถานะการค้นหา (จริง = ค้นหาแล้ว, เท็จ = ยังไม่ค้นหา)
   results,  // รายการผลลัพธ์การค้นหา
   currentPage,  // หน้าปัจจุบันของการแบ่งหน้า
+  totalResultCount, // จำนวนรายการค้นหาที่พบ
   totalPages,  // จำนวนหน้าทั้งหมด
   handleSearch,  // ฟังก์ชันสำหรับการค้นหา
   goPrevPage,  // ฟังก์ชันสำหรับไปหน้าก่อนหน้า
@@ -43,14 +82,14 @@ const goToLogin = () => router.push('/login')
     <section class="mt-6 mb-12 text-center">
       <h1 class="text-3xl font-bold text-slate-800 tracking-tight">ตรวจสอบสถานะงานซ่อม</h1>
       <p class="text-lg text-slate-500 mt-2">
-        ค้นหารายการแจ้งซ่อม ติดตามสถานะแบบเรียลไทม์ สะดวก รวดเร็ว
+        ค้นหารายการแจ้งซ่อม และติดตามสถานะงานซ่อมได้อย่างสะดวกรวดเร็ว
       </p>
     </section>
 
     <div class="w-full max-w-4xl bg-white p-8 shadow-md rounded-3xl border border-slate-200 mb-7">
       <!-- ป้ายกำกับสำหรับกล่องค้นหา -->
       <label class="text-slate-600 font-medium">
-        ค้นหางานซ่อมด้วยหมายเลขแจ้งซ่อม / ชื่อผู้แจ้ง / หน่วยงาน (ระบุอย่างใดอย่างหนึ่ง)
+        ค้นหารายการแจ้งซ่อมด้วยหมายเลขแจ้งซ่อม หรือชื่อผู้แจ้งซ่อม (ระบุอย่างใดอย่างหนึ่ง)
       </label>
 
       <div class="flex gap-3 mt-3">
@@ -71,7 +110,7 @@ const goToLogin = () => router.push('/login')
       </div>
 
       <div class="mt-3 text-sm text-slate-400">
-        ตัวอย่างการค้นหา: RFXXXXXXXXXXX, สมชาย ใจดี, แผนก IT
+        ตัวอย่างการค้นหา : RF20250217001, สมชาย ใจดี
       </div>
     </div>
 
@@ -98,7 +137,7 @@ const goToLogin = () => router.push('/login')
 
       <!-- แสดงจำนวนรายการที่พบ -->
       <p v-if="results.length > 0" class="text-slate-500 mb-3 text-md">
-        พบ {{ totalItems }} รายการ
+        พบ {{ totalResultCount }} รายการ
       </p>
 
       <!-- แสดงแต่ละรายการการซ่อม -->
@@ -110,11 +149,11 @@ const goToLogin = () => router.push('/login')
         <!-- แถวบนของการ์ด: หมายเลขแจ้งซ่อมและสถานะ -->
         <div class="flex justify-between items-start">
           <!-- หมายเลขแจ้งซ่อม -->
-          <p class="text-md font-semibold text-slate-700">เลขแจ้งซ่อม: {{ item.rf_code }}</p>
+          <p class="text-md font-semibold text-slate-700">หมายเลขแจ้งซ่อม : {{ item.rf_code }}</p>
 
           <!-- สถานะการซ่อม -->
           <span
-            class="px-3 py-1 text-sm rounded-full"
+            class="px-3 py-1 text-sm rounded-lg w-[125px] text-center"
             :class="getRepairStatusColorClass(item.rf_user_status)"
           >
             {{ getRepairStatusLabel(item.rf_user_status) }}
@@ -122,36 +161,37 @@ const goToLogin = () => router.push('/login')
         </div>
 
         <!-- ข้อมูลรายละเอียดการซ่อม -->
-        <div class="mt-2 space-y-1 text-slate-700">
+        <div class="mt-2 space-y-1 text-slate-800">
           <!-- ชื่อผู้แจ้ง -->
           <p>
-            <strong class="text-slate-800">ผู้แจ้ง:</strong>
+            <strong>ผู้แจ้งซ่อม :</strong>
             {{ item.reporter_firstname }} {{ item.reporter_lastname }}
           </p>
           <!-- หน่วยงานของผู้แจ้ง -->
           <p>
-            <strong class="text-slate-800">หน่วยงาน:</strong>
+            <strong>หน่วยงาน :</strong>
             {{ item.reporter_department }}
           </p>
           <!-- รายละเอียดปัญหา -->
-          <p><strong class="text-slate-800">ปัญหา:</strong> {{ item.rf_problem }}</p>
+          <p>
+            <strong>เรื่องที่แจ้ง :</strong> {{ item.rf_problem }}
+          </p>
           <!-- สถานที่ (สัญลักษณ์สถาปัตยกรรม) -->
-          <p class="text-slate-500">
-            <strong class="text-slate-700">สถานที่:</strong>
-            {{ item.building_name }} {{ item.floor_name }} {{ item.room_name }}
+          <p>
+            <strong>สถานที่ :</strong>
+            {{ item.building_name }} ชั้น {{ item.floor_name }} {{ item.room_name }}
           </p>
         </div>
 
         <!-- แถบความคืบหน้า - แสดงขั้นตอนของการซ่อม -->
         <div class="mt-6 flex items-center gap-3 text-sm font-medium">
-          <!-- ขั้นตอน 1: รอดำเนินการ -->
-          <span :class="getProgressBarColor(item.step, 1)">● รอดำเนินการ</span>
-          <span class="text-slate-400">→</span>
-          <!-- ขั้นตอน 2: กำลังดำเนินการ -->
-          <span :class="getProgressBarColor(item.step, 2)">● กำลังดำเนินการ</span>
-          <span class="text-slate-400">→</span>
-          <!-- ขั้นตอน 3: ดำเนินการเสร็จสิ้น -->
-          <span :class="getProgressBarColor(item.step, 3)">● ดำเนินการเสร็จสิ้น</span>
+          <span :class="getProgressBarColor(item.rf_user_status, 1)">● รอดำเนินการ</span>
+          <span class="text-slate-300">→</span>
+
+          <span :class="getProgressBarColor(item.rf_user_status, 2)">● กำลังดำเนินการ</span>
+          <span class="text-slate-300">→</span>
+
+          <span :class="getProgressBarColor(item.rf_user_status, 3)">● ดำเนินการเสร็จสิ้น</span>
         </div>
       </div>
       <!-- ส่วนแบ่งหน้า - ปุ่มไปหน้าก่อนหน้าและถัดไป -->
@@ -180,9 +220,8 @@ const goToLogin = () => router.push('/login')
       </div>
     </div>
     <!-- ส่วนท้ายเพจ - ข้อมูลลิขสิทธิ์ -->
-
     <footer class="mt-16 text-slate-400 text-sm pb-10">
-      92 Tech Co.,Ltd — 2025 FixDesk All rights reserved.
+      92 Tech Co.,Ltd — FixDesk All rights reserved.
     </footer>
   </div>
 </template>

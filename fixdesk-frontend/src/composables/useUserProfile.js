@@ -13,6 +13,7 @@ export function useUserProfile() {
 
   const userDisplayName = ref('ผู้ใช้งาน') // ชื่อที่จะแสดงบนหน้าจอ
   const userDepartmentName = ref('หน่วยงาน') // ชื่อหน่วยงาน
+  const userRoleName = ref('') // ชื่อบทบาท
   const isProfileLoading = ref(false) // สถานะ "กำลังโหลด" (True/False)
   const fetchProfileError = ref(null) // เก็บข้อความ Error (ถ้ามี)
 
@@ -48,9 +49,10 @@ export function useUserProfile() {
       if (userData.us_first_name_th) {
         // เอาชื่อจริง + นามสกุล มาต่อกัน (ใช้ trim() ตัดช่องว่างหัวท้ายออก)
         userDisplayName.value = `${userData.us_first_name_th} ${userData.us_last_name_th || ''}`.trim()
-
         // อัปเดตชื่อหน่วยงาน
         userDepartmentName.value = userData.us_department
+        // อัปเดตบทบาท
+        userRoleName.value = userData.role_name || ''
       }
     } catch (errorObject) {
       // กรณีเกิดข้อผิดพลาด (เน็ตหลุด, Server พัง)
@@ -66,6 +68,7 @@ export function useUserProfile() {
   return {
     userDisplayName, // ชื่อผู้ใช้
     userDepartmentName, // หน่วยงาน
+    userRoleName, // บทบาท
     isProfileLoading, // สถานะโหลด
     fetchProfileError, // ข้อความ error
     fetchUserProfileData, // ฟังก์ชันสั่งโหลดข้อมูล

@@ -1,12 +1,50 @@
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
+/**
+ * =====================================================================
+ * @file            stock-manage-inventory-view.vue
+ * @module          มอดูลการจัดการคลัง - การจัดการสินค้าคงคลัง
+ * @layer           View (Presentation Layer)
+ * @version         1.0.2
+ * @since           2025-10-21
+ * @author          เศรษฐพงศ์ หอมชื่น
+ * @contributors
+ * - เศรษฐพงศ์ หอมชื่น
+ * - ปฏิพัทธ์ จงนันทพันธ์กุล
+ * - อาจอนนต์ ภคนันทานนท์
+ * - พชร ไพศรีสกุล
+ *
+ * @lastModified    2026-03-21
+ * @lastModifiedBy  พชร ไพศรีสกุล
+ * ---------------------------------------------------------------------
+ * @description
+ *  หน้าจอสำหรับจัดการข้อมูลสินค้าคงคลัง
+ *  รองรับฟีเจอร์:
+ *    - แสดงรายการสินค้าทั้งหมด
+ *    - เพิ่ม แก้ไข ลบสินค้า
+ *    - นำเข้าข้อมูลสินค้าจากไฟล์ Excel
+ *    - ตรวจสอบความถูกต้องของไฟล์ภาพ
+ *---------------------------------------------------------------------
+ * @changelog
+ *  [2025-10-21, เศรษฐพงศ์ หอมชื่น] V 1.0.0
+ *  - Initial implementation Stock Manage Inventory View
+ *  [2026-03-06, อาจอนนต์ ภคนันทานนท์] V 1.0.1
+ *   - เพิ่ม validation border แดงในฟอร์มแก้ไขรายการ
+ *  [2026-03-13, ปฏิพัทธ์ จงนันทพันธ์กุล] V 1.0.2
+ *   - แก้ไขคำ alert
+ *  [2026-03-21, พชร ไพศรีสกุล] V 1.0.3
+ *  - ปรับปรุงโครงสร้างข้อมูลและการจัดการ State ใน View ให้รองรับการแสดงข้อมูลที่ถูกต้องตามโครงสร้างใหม่ของ API
+ *  - ปรับปรุงการ import และการดาวน์โหลด Template Excel ให้รองรับประเภท Locations โดยใช้ Universal Import Modal และ Download Template Button Component ใหม่ที่รองรับหลายประเภท
+ *
+ * =====================================================================
+ */
+import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
-import ImportStockModal from '@/components/modal/import-excel-stock-component.vue'
 import TableComponent from '@/components/table-component.vue'
 import TableActions from '@/components/table-actions-component.vue'
 import CardSummaryComponent from '@/components/card-home-component.vue'
 import ImportButtonComponent from '@/components/button/import-button-component.vue'
+import UniversalImportModal from '@/components/modal/universal-import-modal.vue'
 import { Icon } from '@iconify/vue'
 
 const showImportModal = ref(false)
@@ -26,9 +64,9 @@ const API_BASE = import.meta.env.VITE_API_BASE
 
 const columnList = [
   'ID',
-  'หมายเลขอุปกรณ์',
   'ชื่อรายการ',
   'หมวดหมู่',
+  'หมายเลขครุภัณฑ์',
   'จำนวน',
   'หน่วยนับ',
   'สถานะ',
@@ -138,7 +176,13 @@ async function fetchAllStock() {
   try {
     const token = localStorage.getItem('token') || sessionStorage.getItem('token')
     if (!token) {
-      Swal.fire('หมดเวลาเข้าสู่ระบบ', 'กรุณาเข้าสู่ระบบใหม่', 'warning')
+      Sweetalert.fire({
+        title: 'หมดเวลาเข้าสู่ระบบ',
+        text: 'กรุณาเข้าสู่ระบบใหม่',
+        icon: 'warning',
+        confirmButtonColor: '#0048EF',
+        confirmButtonText: 'ตกลง',
+      })
       router.push('/login')
       return
     }
@@ -146,7 +190,13 @@ async function fetchAllStock() {
     const response = await fetch(`${API_BASE}/show-stock`, { headers: getAuthHeaders() })
 
     if (response.status === 401) {
-      Swal.fire('หมดเวลาเข้าสู่ระบบ', 'กรุณาเข้าสู่ระบบใหม่', 'warning')
+      Swal.fire({
+        title: 'หมดเวลาเข้าสู่ระบบ',
+        text: 'กรุณาเข้าสู่ระบบใหม่',
+        icon: 'warning',
+        confirmButtonColor: '#1d4ed8',
+        confirmButtonText: 'ตกลง',
+      })
       sessionStorage.removeItem('token')
       localStorage.removeItem('token')
       router.push('/login')
@@ -189,12 +239,12 @@ async function fetchAllStock() {
 
       return [
         productId, // 0
-        assetCode, // 1
-        item.pd_name ?? '-', // 2
-        item.ct_name ?? '-', // 3
+        item.pd_name ?? '-', // 1
+        item.ct_name ?? '-', // 2
+        item.pd_asset_code ? `${item.pd_asset_code}` : '-', // 3
         quantity, // 4
         item.units_name ?? '-', // 5
-        stockStatus, // 6 (Used for status color logic in TableComponent if needed)
+        stockStatus, // 6
         'actions', // 7
       ]
     })
@@ -204,7 +254,6 @@ async function fetchAllStock() {
     itemRequestDeclined.value = Object.values(stockStatusMap.value).filter(
       (s) => s === 'low_stock' || s === 'out_of_stock',
     ).length
-    // Note: itemsNew, itemRequestWaiting, itemNewToday logic would need backend support or filtering logic
   } catch (error) {
     console.error('Error fetching stock data:', error)
     Swal.fire('ผิดพลาด', error.message || 'ไม่สามารถดึงข้อมูลสินค้าได้', 'error')
@@ -220,18 +269,25 @@ function openManageCategoryModal() {
   showManageCategoryModal.value = true
   showTypeFilter.value = false
 }
-function closeManageCategoryModal() { showManageCategoryModal.value = false }
+
+function closeManageCategoryModal() {
+  showManageCategoryModal.value = false
+}
 
 async function handleAddCategory() {
   const { value: name } = await Swal.fire({
     title: 'เพิ่มหมวดหมู่ใหม่',
     input: 'text',
     inputLabel: 'ชื่อหมวดหมู่',
+    inputPlaceholder: 'เช่น อุปกรณ์ไฟฟ้า',
     showCancelButton: true,
     confirmButtonText: 'บันทึก',
     cancelButtonText: 'ยกเลิก',
     confirmButtonColor: '#2563eb',
-    inputValidator: (value) => !value?.trim() ? 'กรุณากรอกชื่อหมวดหมู่' : null
+    inputValidator: (value) => {
+      if (!value || !value.trim()) return 'กรุณากรอกชื่อหมวดหมู่'
+      return null
+    },
   })
   if (!name) return
 
@@ -247,6 +303,7 @@ async function handleAddCategory() {
     const data = await response.json()
     if (!response.ok) throw new Error(data.message || 'เพิ่มหมวดหมู่ไม่สำเร็จ')
 
+    // รีโหลดข้อมูล
     categoriesLoaded.value = false
     await fetchCategories()
     manageCategoryList.value = typeOptionList.value.map((option) => ({
@@ -275,8 +332,12 @@ async function handleEditCategory(category) {
     inputValue: category.name,
     showCancelButton: true,
     confirmButtonText: 'บันทึก',
+    cancelButtonText: 'ยกเลิก',
     confirmButtonColor: '#2563eb',
-    inputValidator: (value) => !value?.trim() ? 'กรุณากรอกชื่อหมวดหมู่' : null
+    inputValidator: (value) => {
+      if (!value || !value.trim()) return 'กรุณากรอกชื่อหมวดหมู่'
+      return null
+    },
   })
   if (!name || name.trim() === category.name) return
 
@@ -292,6 +353,7 @@ async function handleEditCategory(category) {
     const data = await response.json()
     if (!response.ok) throw new Error(data.message || 'แก้ไขหมวดหมู่ไม่สำเร็จ')
 
+    // รีโหลดข้อมูล
     categoriesLoaded.value = false
     await fetchCategories()
     await fetchAllStock()
@@ -319,9 +381,10 @@ async function handleDeleteCategory(category) {
     text: `ต้องการลบหมวดหมู่ "${category.name}" หรือไม่?`,
     icon: 'warning',
     showCancelButton: true,
-    confirmButtonText: 'ลบ',
+    confirmButtonText: 'ยืนยันการลบ',
     cancelButtonText: 'ยกเลิก',
     confirmButtonColor: '#dc2626',
+    cancelButtonColor: '#a3a3a3',
   })
   if (!result.isConfirmed) return
 
@@ -333,6 +396,7 @@ async function handleDeleteCategory(category) {
     const data = await response.json()
     if (!response.ok) throw new Error(data.message || 'ลบหมวดหมู่ไม่สำเร็จ')
 
+    // รีโหลดข้อมูล
     categoriesLoaded.value = false
     await fetchCategories()
     manageCategoryList.value = typeOptionList.value.map((option) => ({
@@ -476,7 +540,7 @@ const confirmAddItem = async () => {
       throw new Error('Server error - received HTML response')
     }
 
-    if (!response.ok) throw new Error(responseData.message || 'บันทึกข้อมูลไม่สำเร็จ')
+    if (!response.ok) throw new Error(responseData.message || 'บันทึกรายการสำเร็จ!')
 
     const Toast = Swal.mixin({
       toast: true,
@@ -494,7 +558,7 @@ const confirmAddItem = async () => {
       title: 'สำเร็จ!',
       text: 'บันทึกรายการสำเร็จ!',
       icon: 'success',
-      background: '#f0f9ff',
+      background: '#ffffff',
       color: '#1e3a8a',
     })
 
@@ -540,8 +604,8 @@ const handleDelete = async (productIdFromTable) => {
     icon: 'warning',
     showCancelButton: true,
     confirmButtonColor: '#dc2626',
-    cancelButtonColor: '#6b7280',
-    confirmButtonText: 'ลบ',
+    cancelButtonColor: '#a3a3a3',
+    confirmButtonText: 'ยืนยันการลบ',
     cancelButtonText: 'ยกเลิก',
   }).then(async (result) => {
     if (!result.isConfirmed) return
@@ -617,6 +681,7 @@ const confirmEditItem = async () => {
 
     editErrors.value = {}
     if (!editForm.value.name) editErrors.value.name = 'กรุณากรอกชื่อรายการ'
+    if (!editForm.value.categoryId) editErrors.value.type_id = 'กรุณาเลือกหมวดหมู่'
     if (!editForm.value.quantity) editErrors.value.quantity = 'กรุณากรอกจำนวน'
     if (!editForm.value.unit) editErrors.value.unit = 'กรุณากรอกหน่วยนับ'
 
@@ -709,6 +774,33 @@ const removeEditFile = () => {
   editFilePreviewList.value = []
 }
 
+const toast = Swal.mixin({
+  toast: true,
+  position: 'top-end',
+  showConfirmButton: false,
+  timer: 3000,
+  timerProgressBar: true,
+})
+
+function handleImportSuccess() {
+  toast.fire({
+    icon: 'success',
+    title: 'นำเข้ารายการเรียบร้อยแล้ว',
+    background: '#FFFFFF',
+    color: '#1e3a8a',
+  })
+  showImportModal.value = false
+}
+
+function handleImportError(message) {
+  toast.fire({
+    icon: 'error',
+    title: message || 'นำเข้ารายการไม่สำเร็จ',
+    background: '#FFFFFF',
+    color: '#dc2626',
+  })
+}
+
 const openEditModal = async (productIdFromTable) => {
   await fetchCategories()
   await nextTick()
@@ -723,8 +815,9 @@ const openEditModal = async (productIdFromTable) => {
 
   // category
   let categoryId = productIdToCategoryIdMap.value[productId]
+
   if (categoryId == null) {
-    const categoryName = row[3]
+    const categoryName = row[2]
     const found = typeOptionList.value.find((o) => o.label === categoryName)
     categoryId = found ? found.value : null
   }
@@ -733,12 +826,12 @@ const openEditModal = async (productIdFromTable) => {
   const oldImage = productIdToImageMap.value[productId] ?? null
 
   editForm.value = {
-    name: row[2],
-    assetCode: row[1] === '-' ? '' : row[1],
+    name: row[1],
+    assetCode: row[3] !== '-' ? row[3] : '',
     categoryId: categoryId != null ? String(categoryId) : '',
     quantity: row[4],
     unit: row[5],
-    status: row[6] === 'พร้อมใช้งาน' ? 'active' : 'inactive',
+    status: row[6] === 'active' ? 'active' : 'inactive',
     uploadImage: oldImage,
   }
 
@@ -770,6 +863,22 @@ const statItems = computed(() => [
   },
 ])
 
+watch(
+  () => formData.value.assetCode,
+  (newVal) => {
+    if (newVal && newVal.trim() !== '') {
+      formData.value.quantity = 1
+    }
+  },
+)
+watch(
+  () => editForm.value.assetCode,
+  (newVal) => {
+    if (newVal && newVal.trim() !== '') {
+      editForm.value.quantity = 1
+    }
+  },
+)
 // 1.1.7. lifecycle hooks หรือ logic ขั้นตอนสุดท้าย [cite: 520]
 onMounted(() => {
   fetchCategories()
@@ -791,7 +900,7 @@ onBeforeUnmount(() => {
 
         <button
           @click="showAddModal = true"
-          class="flex items-center px-4 py-2 text-white transition-colors bg-blue-700 rounded-md shadow-sm hover:bg-blue-800"
+          class="flex items-center px-4 py-2 text-white transition-colors bg-blue-700 rounded-lg shadow-sm hover:bg-blue-800"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -874,6 +983,7 @@ onBeforeUnmount(() => {
                 <span class="ml-2">สินค้าหมด</span>
               </label>
             </div>
+          </div>
 
           <div class="relative">
             <button
@@ -931,6 +1041,7 @@ onBeforeUnmount(() => {
                 <span class="ml-2">{{ category.label }}</span>
               </label>
             </div>
+          </div>
 
           <transition name="fade">
             <button
@@ -950,9 +1061,9 @@ onBeforeUnmount(() => {
         :rows="filteredRowList"
         :perPage="10"
         :idColumnIndex="1"
-        :hiddenColumns="[0]"
+        :hiddenColumns="[0, 3]"
         :statusStockinventoryColumn="6"
-        :columnAlign="['left', 'left', 'left', 'center', 'center']"
+        :columnAlign="['left', 'left', 'center', 'center']"
       >
         <template #cell-7="{ row }">
           <TableActions
@@ -960,7 +1071,7 @@ onBeforeUnmount(() => {
             :open-menu-id="openMenuId"
             role="stock"
             :row="row"
-            :status="row[6]"
+            :status="row[5]"
             @toggle-menu="openMenuId = $event"
             @detail="goToDetail(row[0])"
             @edit="openEditModal(row[0])"
@@ -992,7 +1103,7 @@ onBeforeUnmount(() => {
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
               </svg>
             </div>
-            <h2 class="text-lg font-bold text-black">{{ isEditMode ? 'แก้ไขรายการของ' : 'เพิ่มรายการของ' }}</h2>
+            <h2 class="text-lg font-bold text-black">เพิ่มรายการของ</h2>
           </div>
           <button
             @click="closeAddModal"
@@ -1016,7 +1127,7 @@ onBeforeUnmount(() => {
         </div>
 
         <div class="p-6">
-          <form @submit.prevent="submitItemForm">
+          <form @submit.prevent="confirmAddItem">
             <div class="mb-4">
               <label class="block mb-1 text-sm font-medium text-black">
                 ชื่อรายการ <span class="text-red-500">*</span>
@@ -1025,7 +1136,10 @@ onBeforeUnmount(() => {
               <input
                 v-model="formData.name"
                 type="text"
-                :class="['text-black placeholder-gray-400 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-700 transition-all', formErrors.name ? 'border-red-500' : 'border-gray-300']"
+                :class="[
+                  'text-black placeholder-gray-400 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-700 transition-all]',
+                  addErrors.name ? 'border-red-500' : 'border-gray-300',
+                ]"
                 placeholder="กรุณากรอกชื่อรายการ"
               />
               <p v-if="addErrors.name" class="mt-1 text-sm text-red-500">{{ addErrors.name }}</p>
@@ -1042,6 +1156,7 @@ onBeforeUnmount(() => {
                   placeholder="กรุณากรอกเลขครุภัณฑ์"
                 />
               </div>
+
               <div>
                 <label class="block text-sm font-medium text-black">
                   หมวดหมู่ <span class="text-red-500">*</span>
@@ -1078,13 +1193,21 @@ onBeforeUnmount(() => {
                   v-model="formData.quantity"
                   type="number"
                   min="1"
-                  :class="['text-black placeholder-gray-400 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all', formErrors.quantity ? 'border-red-500' : 'border-gray-300']"
+                  :disabled="!!formData.assetCode"
+                  :class="[
+                    'text-black placeholder-gray-400 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all',
+                    addErrors.quantity ? 'border-red-500' : 'border-gray-300',
+                    formData.assetCode
+                      ? 'bg-gray-100 cursor-not-allowed'
+                      : '' /* เพิ่ม class แต่งสีตอนปิด */,
+                  ]"
                   placeholder="กรุณากรอกจำนวน"
                 />
                 <p v-if="addErrors.quantity" class="mt-1 text-sm text-red-500">
                   {{ addErrors.quantity }}
                 </p>
               </div>
+
               <div>
                 <label class="block mb-1 text-sm font-medium text-black">
                   หน่วยนับ <span class="text-red-500">*</span>
@@ -1092,7 +1215,10 @@ onBeforeUnmount(() => {
                 <input
                   v-model="formData.unit"
                   type="text"
-                  :class="['text-black placeholder-gray-400 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all', formErrors.unit ? 'border-red-500' : 'border-gray-300']"
+                  :class="[
+                    'text-black placeholder-gray-400 placeholder-gray-400 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all',
+                    addErrors.unit ? 'border-red-500' : 'border-gray-300',
+                  ]"
                   placeholder="กรุณากรอกหน่วยนับ"
                 />
                 <p v-if="addErrors.unit" class="mt-1 text-sm text-red-500">{{ addErrors.unit }}</p>
@@ -1119,7 +1245,12 @@ onBeforeUnmount(() => {
               <label
                 v-if="filePreviewList.length === 0"
                 for="dropzone-file"
-                :class="['flex flex-col items-center justify-center w-full border-2 border-dashed rounded-lg cursor-pointer transition flex-1 min-h-[220px] sm:min-h-[280px] mb-4', isDragOver ? 'border-blue-400 bg-blue-50 scale-105' : 'border-gray-300 bg-gray-50 hover:bg-gray-100']"
+                :class="[
+                  'flex flex-col items-center justify-center w-full border-2 border-dashed rounded-lg cursor-pointer transition flex-1 min-h-[220px] sm:min-h-[280px] mb-4',
+                  isDragOver
+                    ? 'border-blue-400 bg-blue-50 scale-105'
+                    : 'border-gray-300 bg-gray-50 hover:bg-gray-100',
+                ]"
                 @dragover.prevent="handleDragOver"
                 @dragleave.prevent="handleDragLeave"
                 @drop.prevent="handleDrop"
@@ -1128,8 +1259,16 @@ onBeforeUnmount(() => {
                   <div :class="['transition-all duration-200', isDragOver ? 'scale-110' : '']">
                     <Icon icon="ri:image-upload-line" width="60" height="60" style="color: gray" />
                   </div>
-                  <p :class="['text-sm mb-1', isDragOver ? 'text-blue-600 font-semibold' : 'text-gray-500']">
-                    <span class="font-semibold">{{ isDragOver ? 'วางรูปภาพที่นี่' : 'คลิกเพื่อเลือกรูปภาพ' }}</span>
+
+                  <p
+                    :class="[
+                      'text-sm mb-1',
+                      isDragOver ? 'text-blue-600 font-semibold' : 'text-gray-500',
+                    ]"
+                  >
+                    <span class="font-semibold">
+                      {{ isDragOver ? 'วางรูปภาพที่นี่' : 'คลิกเพื่อเลือกรูปภาพ' }}
+                    </span>
                   </p>
 
                   <p class="mt-1 text-xs text-gray-400">รองรับรูปภาพเท่านั้น (สูงสุด 1 รูป)</p>
@@ -1141,7 +1280,14 @@ onBeforeUnmount(() => {
                     <span class="px-2 py-1 text-xs text-green-700 bg-green-100 rounded">WEBP</span>
                   </div>
                 </div>
-                <input id="dropzone-file" type="file" accept="image/*" class="hidden" @change="handleFileUpload" />
+
+                <input
+                  id="dropzone-file"
+                  type="file"
+                  accept="image/*"
+                  class="hidden"
+                  @change="handleFileUpload"
+                />
               </label>
 
               <div v-else class="relative w-full p-4 mb-4 border rounded-lg bg-gray-50">
@@ -1155,6 +1301,7 @@ onBeforeUnmount(() => {
                       class="w-full h-full object-cover"
                     />
                   </div>
+
                   <div class="flex-1 min-w-0 pt-1">
                     <p class="text-sm font-semibold text-gray-900 truncate">
                       {{ filePreviewList[0].name }}
@@ -1205,7 +1352,7 @@ onBeforeUnmount(() => {
               <button
                 type="button"
                 @click="closeAddModal"
-                class="px-8 py-2 text-sm font-medium text-gray-700 transition-colors bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50"
+                class="px-8 py-2 text-sm font-medium text-white transition-colors bg-neutral-300 border border-gray-300 rounded-lg shadow-sm hover:bg-neutral-400"
               >
                 ยกเลิก
               </button>
@@ -1213,7 +1360,7 @@ onBeforeUnmount(() => {
               <button
                 type="button"
                 @click="confirmAddItem"
-                class="px-8 py-2 text-sm font-medium text-white transition-colors bg-blue-700 rounded-md shadow-sm hover:bg-blue-800"
+                class="px-8 py-2 text-sm font-medium text-white transition-colors bg-blue-700 rounded-lg shadow-sm hover:bg-blue-800"
               >
                 บันทึก
               </button>
@@ -1282,7 +1429,10 @@ onBeforeUnmount(() => {
               <input
                 v-model="editForm.name"
                 type="text"
-                class="w-full px-3 py-2 text-black placeholder-gray-400 transition-all border border-gray-300 rounded-md focus:outline-none focus:ring-1"
+                :class="[
+                  'w-full px-3 py-2 text-black placeholder-gray-400 transition-all border rounded-md focus:outline-none focus:ring-1 focus:ring-orange-400',
+                  editErrors.name ? 'border-red-500' : 'border-gray-300',
+                ]"
                 placeholder="กรุณากรอกชื่อรายการ"
               />
               <p v-if="editErrors?.name" class="mt-1 text-sm text-red-500">{{ editErrors.name }}</p>
@@ -1307,7 +1457,10 @@ onBeforeUnmount(() => {
                 <span class="block mb-1 text-xs text-gray-400">โปรดเลือกหมวดหมู่รายการ</span>
                 <select
                   v-model="editForm.categoryId"
-                  class="text-black w-full px-3 py-2 border border-gray-300 focus:ring-1 rounded-md bg-white"
+                  :class="[
+                    'text-black w-full px-3 py-2 border focus:ring-1 focus:ring-orange-400 rounded-md bg-white transition-all',
+                    editErrors.type_id ? 'border-red-500' : 'border-gray-300',
+                  ]"
                 >
                   <option value="" disabled>กรุณาเลือกหมวดหมู่</option>
                   <option
@@ -1318,6 +1471,9 @@ onBeforeUnmount(() => {
                     {{ option.label }}
                   </option>
                 </select>
+                <p v-if="editErrors.type_id" class="mt-1 text-sm text-red-500">
+                  {{ editErrors.type_id }}
+                </p>
               </div>
             </div>
 
@@ -1330,8 +1486,18 @@ onBeforeUnmount(() => {
                   v-model="editForm.quantity"
                   type="number"
                   min="1"
-                  class="w-full px-3 py-2 text-black placeholder-gray-400 transition-all border border-gray-300 rounded-md focus:outline-none focus:ring-1"
+                  :disabled="!!editForm.assetCode"
+                  :class="[
+                    'w-full px-3 py-2 text-black placeholder-gray-400 transition-all border rounded-md focus:outline-none focus:ring-1 focus:ring-orange-400',
+                    editErrors.quantity ? 'border-red-500' : 'border-gray-300',
+                    editForm.assetCode
+                      ? 'bg-gray-100 cursor-not-allowed'
+                      : '' /* เพิ่ม class แต่งสีตอนปิด */,
+                  ]"
                 />
+                <p v-if="editErrors.quantity" class="mt-1 text-sm text-red-500">
+                  {{ editErrors.quantity }}
+                </p>
               </div>
 
               <div>
@@ -1341,8 +1507,14 @@ onBeforeUnmount(() => {
                 <input
                   v-model="editForm.unit"
                   type="text"
-                  class="w-full px-3 py-2 text-black placeholder-gray-400 transition-all border border-gray-300 rounded-md focus:outline-none focus:ring-1"
+                  :class="[
+                    'w-full px-3 py-2 text-black placeholder-gray-400 transition-all border rounded-md focus:outline-none focus:ring-1 focus:ring-orange-400',
+                    editErrors.unit ? 'border-red-500' : 'border-gray-300',
+                  ]"
                 />
+                <p v-if="editErrors.unit" class="mt-1 text-sm text-red-500">
+                  {{ editErrors.unit }}
+                </p>
               </div>
             </div>
 
@@ -1481,15 +1653,16 @@ onBeforeUnmount(() => {
               <button
                 type="button"
                 @click="closeEditModal"
-                class="px-8 py-2 text-sm font-medium text-gray-700 transition-colors bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50"
+                class="px-8 py-2 text-sm font-medium text-white transition-colors bg-neutral-300 border border-gray-300 rounded-lg shadow-sm hover:bg-neutral-400"
               >
                 ยกเลิก
               </button>
+
               <button
                 type="submit"
-                class="px-8 py-2 text-sm font-medium text-white transition-colors bg-orange-500 rounded-md shadow-sm hover:bg-orange-600"
+                class="px-8 py-2 text-sm font-medium text-white transition-colors bg-orange-400 rounded-lg shadow-sm hover:bg-orange-500"
               >
-                {{ isEditMode ? 'บันทึกการแก้ไข' : 'บันทึก' }}
+                บันทึกการแก้ไข
               </button>
             </div>
           </form>
@@ -1612,10 +1785,15 @@ onBeforeUnmount(() => {
       </div>
     </div>
   </div>
-  <ImportStockModal
+  <UniversalImportModal
     v-if="showImportModal"
+    type="stocks"
+    title="พัสดุ"
+    templateFileName="Template_Stock_Import.xlsx"
     @close="showImportModal = false"
-    @refresh="fetchAllStock"
+    @refresh="fetchAllStock()"
+    @success="handleImportSuccess"
+    @error="handleImportError"
   />
 </template>
 
@@ -1624,6 +1802,7 @@ onBeforeUnmount(() => {
 .fade-leave-active {
   transition: opacity 0.25s ease;
 }
+
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;

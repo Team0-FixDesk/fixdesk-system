@@ -1,3 +1,22 @@
+/**
+ * =====================================================================
+ * @file            assign-job-modal-component.vue
+ * @module          มอดูลจัดการงานซ่อม - มอบหมายงานให้ช่าง
+ * @layer           Component (Presentation Layer)
+ * @version         1.0.1
+ * @since           2025-10-21
+ * @author          เศรษฐพงศ์ หอมชื่น
+ * @lastModified    2026-02-27
+ * @lastModifiedBy  เศรษฐพงศ์ หอมชื่น
+ * ---------------------------------------------------------------------
+ * @description
+ *  Component สำหรับเลือกช่างและมอบหมายงานซ่อม
+ *  รองรับฟีเจอร์:
+ *    - แสดงรายการช่างว่าง
+ *    - เลือกช่างเพื่อมอบหมายงาน
+ *    - แสดงประเภทช่างและความพร้อม
+ * =====================================================================
+ */
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import Swal from 'sweetalert2'
@@ -8,7 +27,7 @@ const props = defineProps({
 })
 
 // ส่ง Event กลับไปหาแม่
-const emit = defineEmits(['close', 'success'])
+const emit = defineEmits(['close', 'completed'])
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
 
@@ -50,7 +69,7 @@ async function fetchTechnicians() {
       title: 'เกิดข้อผิดพลาด',
       text: 'ไม่สามารถโหลดรายชื่อช่างได้',
       icon: 'error',
-      background: '#fee2e2',
+      background: '#FFFFFF',
       color: '#dc2626',
     })
   }
@@ -84,6 +103,10 @@ function closeDropdown(e) {
 }
 
 async function confirmAssign() {
+  console.log('🔵 [Assign Modal] confirmAssign called')
+  console.log('🔵 [Assign Modal] repairId:', props.repairId)
+  console.log('🔵 [Assign Modal] selectedTechnician:', selectedTechnician.value)
+
   if (!selectedTechnician.value) {
     const Toast = Swal.mixin({
       toast: true,
@@ -96,7 +119,7 @@ async function confirmAssign() {
     Toast.fire({
       title: 'กรุณาเลือกช่างผู้รับผิดชอบ',
       icon: 'warning',
-      background: '#fef3c7',
+      background: '#FFFFFF',
       color: '#d97706',
     })
     return
@@ -122,35 +145,40 @@ async function confirmAssign() {
       body: JSON.stringify({
         rf_code: props.repairId,
         technician_id: selectedTechnician.value,
+        is_lead: true, // มอบหมายเป็นผู้รับผิดชอบหลัก
         ra_assigned_by: assignedBy, // ส่ง id ผู้มอบหมายไปด้วย
       }),
     })
 
     const resBody = await res.json()
+    console.log('🟢 [Assign Modal] API Response:', { ok: res.ok, status: res.status, body: resBody })
+
+    // เช็คกรณี "มอบหมายแล้ว" แม้ว่า res.ok = true
+    const msg = resBody.message || ''
+    if (msg.includes('มอบหมายแล้ว') || msg.includes('ถูกมอบหมายแล้ว')) {
+      const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        animation: false,
+        showConfirmButton: false,
+        timer: 2500,
+        timerProgressBar: true,
+      })
+      Toast.fire({
+        title: 'แจ้งเตือน',
+        text: msg,
+        icon: 'info',
+        background: '#FFFFFF',
+        color: '#0277bd',
+      })
+      console.log('🟡 [Assign Modal] Already assigned - emitting completed & close')
+      emit('completed')
+      emit('close')
+      return
+    }
 
     if (!res.ok) {
-      const msg = resBody.message || 'มอบหมายงานไม่สำเร็จ'
-      if (msg.includes('มอบหมายแล้ว') || msg.includes('ถูกมอบหมายแล้ว')) {
-        const Toast = Swal.mixin({
-          toast: true,
-          position: 'top-end',
-          animation: false,
-          showConfirmButton: false,
-          timer: 2500,
-          timerProgressBar: true,
-        })
-        Toast.fire({
-          title: 'แจ้งเตือน',
-          text: msg,
-          icon: 'info',
-          background: '#e0f2fe',
-          color: '#0277bd',
-        })
-        emit('success')
-        emit('close')
-        return
-      }
-      throw new Error(msg)
+      throw new Error(msg || 'มอบหมายงานไม่สำเร็จ')
     }
 
     const Toast = Swal.mixin({
@@ -168,12 +196,14 @@ async function confirmAssign() {
     Toast.fire({
       title: 'มอบหมายงานเรียบร้อยแล้ว',
       icon: 'success',
-      background: '#f0f9ff',
+      background: '#FFFFFF',
       color: '#1e3a8a',
     })
-    emit('success')
+    console.log('✅ [Assign Modal] Success - emitting completed & close')
+    emit('completed')
     emit('close')
   } catch (err) {
+    console.error('❌ [Assign Modal] Error:', err)
     const Toast = Swal.mixin({
       toast: true,
       position: 'top-end',
@@ -186,7 +216,7 @@ async function confirmAssign() {
       title: 'เกิดข้อผิดพลาด',
       text: err.message,
       icon: 'error',
-      background: '#fee2e2',
+      background: '#FFFFFF',
       color: '#dc2626',
     })
   } finally {
@@ -295,14 +325,14 @@ onBeforeUnmount(() => {
       <div class="flex justify-end gap-3 mt-6">
         <button
           @click="$emit('close')"
-          class="px-5 py-2 font-medium text-gray-700 transition bg-gray-200 rounded-md hover:bg-gray-300"
+          class="px-5 py-2 font-medium text-white transition bg-neutral-300 rounded-md hover:bg-neutral-400"
         >
           ยกเลิก
         </button>
         <button
           @click="confirmAssign"
           :disabled="!selectedTechnician || loadingAssign"
-          class="px-5 py-2 font-medium text-white transition bg-[#1E48D1] rounded-md hover:bg-blue-900 disabled:opacity-50"
+          class="px-5 py-2 font-medium text-white transition bg-blue-700 rounded-md hover:bg-blue-800 disabled:opacity-50"
         >
           {{ loadingAssign ? 'กำลังมอบหมาย...' : 'ยืนยัน' }}
         </button>

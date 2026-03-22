@@ -1,5 +1,50 @@
+/**
+ * =====================================================================
+ * @file my-repair-list.view.vue
+ * @module มอดูลแจ้งซ่อม - การติดตามสถานะ และดูรายละเอียดคำร้องแจ้งซ่อม
+ * @layer View (Presentation Layer)
+ * @version 1.0.1
+ * @since 2026-02-04
+ * @author พชร ไพศรีสกุล
+ * @lastModified 2026-03-03
+ * @lastModifiedBy พชร ไพศรีสกุล
+ * ---------------------------------------------------------------------
+ * @description
+ * หน้าจอสำหรับแสดงรายการแจ้งซ่อมของผู้ใช้งานปัจจุบัน
+ * ผู้ใช้งานสามารถ:
+ * - ดูรายการแจ้งซ่อมทั้งหมดของตนเอง
+ * - ค้นหา และกรองข้อมูลตามสถานะ ความเร่งด่วน และวันที่
+ * - ดูรายละเอียดงานซ่อม
+ * - แก้ไขรายละเอียดงานซ่อม
+ * - ลบรายการแจ้งซ่อม
+ *
+ * @requires
+ * - vue
+ * - vue-router
+ * - sweetalert2
+ * - @/composables/useMyRepairs
+ * - @/components/table-component.vue
+ * - @/components/table-actions-component.vue
+ * - @/components/button/repair-button-component.vue
+ * - @/components/filters/repair-filter-bar-component.vue
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ * - แก้ไขข้อความหัวตาราง
+ *   [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ * - แก้ไขข้อความแจ้งเตือน
+ *   [2026-02-20, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ * - ปรับปรุงข้อความ Confirm และ Toast ในการลบรายการ
+ *   พร้อมกำหนดสีปุ่มยืนยัน/ยกเลิกให้ชัดเจนขึ้น
+ *   [2026-02-21, ธนภัทร จันทร์งาม]
+ *   แก้ไขการ filter Date
+ *   [2026-03-03, พชร ไพศรีสกุล]
+ * =====================================================================
+ */
+
 <script setup>
-defineOptions({ name: 'MyListView' })  // กำหนดชื่อของ component สำหรับการ debug
+
+defineOptions({ name: 'MyListView' }) // กำหนดชื่อของ component สำหรับการ debug
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import Sweetalert from 'sweetalert2'
@@ -7,10 +52,10 @@ import { useMyRepairs } from '@/composables/useMyRepairs'
 
 // utils and HTML generation moved into composable; no local import needed
 
-import TableComponent from '@/components/table-component.vue'  // คอมโพเนนต์ตาราง
-import TableActions from '@/components/table-actions-component.vue'  // คอมโพเนนต์ปุ่มการกระทำของแถว
-import RepairButton from '@/components/button/repair-button-component.vue'  // ปุ่มสำหรับเพิ่มการซ่อมใหม่
-import RepairFilterBar from '@/components/filters/repair-filter-bar-component.vue'  // แถบกรองสำหรับการซ่อม
+import TableComponent from '@/components/table-component.vue' // คอมโพเนนต์ตาราง
+import TableActions from '@/components/table-actions-component.vue' // คอมโพเนนต์ปุ่มการกระทำของแถว
+import RepairButton from '@/components/button/repair-button-component.vue' // ปุ่มสำหรับเพิ่มการซ่อมใหม่
+import RepairFilterBar from '@/components/filters/repair-filter-bar-component.vue' // แถบกรองสำหรับการซ่อม
 
 // auth handled inside composable
 
@@ -21,7 +66,7 @@ const route = useRoute()
 const tableColumnList = [
   'หมายเลขแจ้งซ่อม',
   'ประเภทงาน',
-  'รายละเอียด',
+  'รายละเอียดโดยย่อ',
   'ความเร่งด่วน',
   'สถานะงาน',
   'ตัวดำเนินการ',
@@ -32,9 +77,6 @@ const openMenuId = ref(null)
 
 // use composable to centralize data and actions
 const {
-  tableRows,
-  isLoading,
-  errorMessage,
   search,
   selectedStatuses,
   selectedUrgencies,
@@ -50,7 +92,6 @@ const {
 const searchInput = search
 const selectedStatuseList = selectedStatuses
 const selectedUrgencieLsit = selectedUrgencies
-const selectedDateLocal = selectedDate
 
 // ฟังก์ชันโหลดข้อมูล
 /**
@@ -81,21 +122,44 @@ const openEdit = (code) => router.push(`/main/repair-edit/${code}`)
 // show confirm dialog and call composable delete
 async function handleDeleteRepair(repairCode) {
   const confirm = await Sweetalert.fire({
-    title: 'ลบรายการนี้?',
-    text: `คุณต้องการลบใบแจ้งซ่อมหมายเลข ${repairCode} หรือไม่?`,
+    title: 'ยืนยันลบรายการนี้?',
+    text: `คุณต้องการลบรายการแจ้งซ่อมหมายเลข ${repairCode} หรือไม่?`,
     icon: 'warning',
+
     showCancelButton: true,
-    confirmButtonText: 'ลบเลย',
+    // ไม่ใช้ reverseButtons → confirm จะอยู่ซ้าย
+
+    confirmButtonText: 'ยืนยันการลบ',
     cancelButtonText: 'ยกเลิก',
-    confirmButtonColor: '#e53e3e',
+
+    // Destructive action
+    confirmButtonColor: '#DC2626', // red-600
+    cancelButtonColor: '#a3a3a3', // gray-500
   })
+
   if (!confirm.isConfirmed) return
 
   const result = await deleteRepair(repairCode)
+
   if (result.ok) {
-    Sweetalert.fire({ toast: true, position: 'top-end', title: 'ลบสำเร็จ', text: `ลบ ${repairCode}`, icon: 'success', timer: 2000, showConfirmButton: false })
+    Sweetalert.fire({
+      toast: true,
+      position: 'top-end',
+      icon: 'success',
+      title: `ลบรายการแจ้งซ่อม ${repairCode} เรียบร้อยแล้ว`,
+      timer: 2500,
+      showConfirmButton: false,
+    })
   } else {
-    Sweetalert.fire({ toast: true, position: 'top-end', title: 'เกิดข้อผิดพลาด', text: result.message || 'DELETE_FAILED', icon: 'error', timer: 2500, showConfirmButton: false })
+    Sweetalert.fire({
+      toast: true,
+      position: 'top-end',
+      icon: 'error',
+      title: 'เกิดข้อผิดพลาด',
+      text: result.message || 'DELETE_FAILED',
+      timer: 2500,
+      showConfirmButton: false,
+    })
   }
 }
 
@@ -110,7 +174,7 @@ onMounted(() => {
 
 <template>
   <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-7xl">
-    <h1 class="text-xl font-bold text-black mb-6">รายการของฉัน</h1>
+    <h1 class="text-xl font-bold text-black mb-6">รายการแจ้งซ่อมของฉัน</h1>
 
     <!-- แถบตัวกรอง - ค้นหา, กรองสถานะ, ความเร่งด่วน, วันที่ -->
     <RepairFilterBar

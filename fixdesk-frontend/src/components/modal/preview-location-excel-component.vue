@@ -67,7 +67,19 @@ async function importSelected(){
     <div class="flex items-center justify-between mb-3">
       <label class="flex items-center gap-2 cursor-pointer">
         <input type="checkbox" v-model="allSelected" class="hidden peer"/>
-        <div class="w-4 h-4 border border-gray-400 peer-checked:bg-blue-600"></div>
+        <div class="flex items-center justify-center w-4 h-4 border border-gray-400 peer-checked:bg-blue-600 peer-checked:border-blue-600">
+          <svg
+            v-if="allSelected"
+            xmlns="http://www.w3.org/2000/svg"
+            class="w-3 h-3 text-white"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="3"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
         <span>เลือกทั้งหมด</span>
       </label>
 
@@ -94,7 +106,22 @@ async function importSelected(){
             :class="!l.isValid ? 'bg-red-50' : 'hover:bg-gray-50'"
           >
             <td class="p-2">
-              <input type="checkbox" v-model="l.selected" :disabled="!l.isValid"/>
+              <label class="inline-flex items-center cursor-pointer">
+                <input type="checkbox" v-model="l.selected" :disabled="!l.isValid" class="hidden peer"/>
+                <div class="flex items-center justify-center w-4 h-4 border border-gray-400 peer-checked:bg-blue-600 peer-checked:border-blue-600 peer-disabled:opacity-40">
+                  <svg
+                    v-if="l.selected"
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="w-3 h-3 text-white"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="3"
+                  >
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+              </label>
             </td>
             <td class="p-2">{{ l.building_name }}</td>
             <td class="p-2">{{ l.floor_name }}</td>

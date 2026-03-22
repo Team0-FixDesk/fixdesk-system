@@ -1,3 +1,44 @@
+/**
+ * =====================================================================
+ * @file            repair-edit.view.vue
+ * @module          มอดูลแจ้งซ่อม - การแก้ไข หรือยกเลิกคำร้องแจ้งซ่อม
+ * @layer           View (Presentation Layer)
+ * @version         1.0.1
+ * @since           2026-02-04
+ * @author          พชร ไพศรีสกุล
+ * @lastModified    2026-02-27
+ * @lastModifiedBy  เศรษฐพงศ์ หอมชื่น
+ * ---------------------------------------------------------------------
+ * @description
+ *  หน้าจอสำหรับแก้ไขข้อมูลรายการแจ้งซ่อมที่มีอยู่แล้ว
+ *   - ดึงข้อมูลรายการแจ้งซ่อมจาก repairCode (route params)
+ *   - แสดงข้อมูลเดิมในฟอร์มเพื่อให้ผู้ใช้งานแก้ไข
+ *   - ตรวจสอบความถูกต้องของข้อมูลก่อนบันทึก (Form Validation)
+ *   - อัปโหลดไฟล์แนบเพิ่มเติม และจัดการไฟล์เดิม
+ *   - แสดง Preview รูปภาพ / วิดีโอใน Modal
+ *   - บันทึกการแก้ไขผ่าน updateRepair()
+ *   - แสดง SweetAlert2 สำหรับแจ้งเตือนสถานะการทำงาน
+ *   - Redirect กลับหน้า /main/my-list หลังบันทึกสำเร็จหรือยกเลิก
+ *
+ * @requires
+ *   - vue
+ *   - vue-router
+ *   - sweetalert2
+ *   - @iconify/vue
+ *   - @/composables/usePhoneFormat
+ *   - @/composables/location/useRepairLocationData
+ *   - @/composables/useFileUpload
+ *   - @/composables/repair/useRepairFormValidation
+ *   - @/composables/repair/useRepairService
+ *   - @/utils/jwt.util
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *   - แก้ไขข้อความแจ้งเตือน  [2026-02-20, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - แก้ไขคำ และสีของปุ่ม   [2026-02-27, เศรษฐพงศ์ หอมชื่น]
+ * =====================================================================
+ */
+
 <script setup>
 defineOptions({ name: 'RepairEditView' })
 import { ref, onMounted } from 'vue'
@@ -147,10 +188,15 @@ async function submitRepairEdit() {
   }
 
   const confirm = await Swal.fire({
-    title: 'ยืนยันการบันทึกข้อมูล?',
+    title: 'ยืนยันการแก้ไขข้อมูล?',
+    text: 'คุณต้องการบันทึกการแก้ไขแบบฟอร์มแจ้งซ่อมหรือไม่?',
     icon: 'question',
     showCancelButton: true,
-    confirmButtonText: 'ยืนยัน'
+    reverseButtons: true,
+    confirmButtonText: 'ยืนยัน',
+    cancelButtonText: 'ยกเลิก',
+    confirmButtonColor: '#fb923c',
+    cancelButtonColor: '#d4d4d4', 
   })
 
   if (!confirm.isConfirmed) return
@@ -175,7 +221,8 @@ async function submitRepairEdit() {
       position: 'top-end',
       timer: 2500,
       icon: 'success',
-      title: 'บันทึกสำเร็จ'
+      title: 'บันทึกการแก้ไขสำเร็จ',
+      showConfirmButton: false
     })
 
     router.push('/main/my-list')
@@ -200,12 +247,13 @@ async function submitRepairEdit() {
 async function cancelRepairEdit() {
   const confirm = await Swal.fire({
     title: 'ยกเลิกการแก้ไขข้อมูล?',
-    text: 'ข้อมูลที่กรอกจะไม่ถูกบันทึก',
+    text: 'ข้อมูลแบบฟอร์มแจ้งซ่อมที่แก้ไขอยู่จะไม่ถูกบันทึก',
     icon: 'warning',
     showCancelButton: true,
     confirmButtonText: 'ยกเลิกการแก้ไข',
-    cancelButtonText: 'กลับไปแก้ไข',
-    confirmButtonColor: '#e53e3e',
+    cancelButtonText: 'กลับไปแก้ไขต่อ',
+    confirmButtonColor: '#dc2626',
+    cancelButtonColor: '#a3a3a3',
   })
   if (confirm.isConfirmed) {
     router.push('/main/my-list')
@@ -566,16 +614,16 @@ onMounted(async () => {
           <button
             type="button"
             :disabled="isSubmitting"
-            class="bg-gray-400 text-white px-6 py-2.5 sm:py-3 rounded-lg hover:bg-gray-500 transition disabled:opacity-50 mr-4"
+            class="bg-neutral-300 text-white px-6 py-2.5 sm:py-3 rounded-lg hover:bg-neutral-400 transition disabled:opacity-50 mr-4"
             @click="cancelRepairEdit"
           >
-            ยกเลิกการแก้ไข
+            ยกเลิก
           </button>
 
           <button
             type="button"
             :disabled="isSubmitting"
-            class="bg-[#1E48D1] text-white px-6 py-2.5 sm:py-3 rounded-lg hover:bg-sky-700 transition disabled:opacity-50"
+            class="bg-orange-400 text-white px-6 py-2.5 sm:py-3 rounded-lg hover:bg-orange-500 transition disabled:opacity-50"
             @click="submitRepairEdit"
           >
             บันทึกการแก้ไข

@@ -1,3 +1,39 @@
+/**
+ * =====================================================================
+ * @file            admin-repair-list.view.vue
+ * @module          มอดูลผู้ดูแลระบบ - การมอบหมายงานให้ช่างผู้รับผิดชอบหลัก
+ * @layer           View (Presentation Layer)
+ * @version         1.0.0
+ * @since           2025-10-21
+ * @author          พชร ไพศรีสกุล
+ * @lastModified    2026-02-20
+ * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
+ * ---------------------------------------------------------------------
+ * @description
+ *  หน้าจอสำหรับมอบหมายงานซ่อมของผู้ดูแลระบบ
+ *  แสดงรายการแจ้งซ่อมทั้งหมดในระบบ
+ *  ผู้ดูแลระบบสามารถ:
+ *   - ดูรายการแจ้งซ่อมทั้งหมด
+ *   - ค้นหา และกรองข้อมูลตามสถานะ ความเร่งด่วน และวันที่
+ *   - ดูรายละเอียดงานซ่อม
+ *   - มอบหมายงานซ่อมให้ช่างซ่อมผู้รับผิดชอบหลัก
+ *
+ * @requires
+ *   - vue
+ *   - vue-router
+ *   - @/components/table-component.vue
+ *   - @/components/table-actions-component.vue
+ *   - @/components/modal/assign-job-modal-component.vue
+ *   - @/components/filters/repair-filter-bar-component.vue
+ *   - @/composables/useTruncateText
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *   - แก้ไขข้อความหัวตาราง         [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - แก้ไขการใช้สัญลักษณ์ : ในตาราง [2026-02-20, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ * =====================================================================
+ */
+
 <script setup>
 /* =========================
   Imports (external)
@@ -26,7 +62,7 @@ const STORAGE_KEYS = {
   token: 'token',
 }
 
-const TABLE_COLUMNS = ['หมายเลขแจ้งซ่อม', 'รายละเอียด', 'ความเร่งด่วน', 'สถานะงาน', 'การดำเนินการ']
+const TABLE_COLUMNS = ['หมายเลขแจ้งซ่อม', 'รายละเอียดโดยย่อ', 'ความเร่งด่วน', 'สถานะงาน', 'ตัวดำเนินการ']
 
 const TH_LOCALE = 'th-TH'
 
@@ -82,24 +118,24 @@ function buildRepairDetailHtml(repair) {
 
   // NOTE: TableComponent น่าจะ render เป็น HTML (จึงคง </br> ตามของเดิมเพื่อไม่กระทบ UI)
   return (
-    'วันที่แจ้ง: ' +
+    'วันที่แจ้งซ่อม : ' +
     formatThaiDate(repair.rf_create_at) +
     '</br>' +
-    'ชื่อผู้แจ้ง: ' +
+    'ชื่อผู้แจ้ง : ' +
     reporterName +
     '</br>' +
-    'หน่วยงาน: ' +
+    'หน่วยงาน : ' +
     (repair.department_name ?? '-') +
     '</br>' +
-    'ประเภทแจ้งซ่อม : ' +
+    'ประเภทงานซ่อม : ' +
     (repair.tt_name ?? '-') +
     '</br>' +
-    'รายละเอียด: ' +
+    'เรื่องที่แจ้ง : ' +
     truncateSentences(repair.rf_problem, 2) +
     '</br>' +
-    'สถานที่: ' +
+    'สถานที่ : ' +
     (repair.bd_name ?? '-') + ' ' +
-    (repair.fl_name ?? '-') + ' ' +
+    'ชั้น ' + (repair.fl_name ?? '-') + ' ' +
     (repair.room_name ?? '-')
   )
 }
@@ -127,10 +163,8 @@ async function fetchAdminRepairs() {
   }
 
   // รองรับทั้งแบบเป็น array ตรง ๆ หรือห่อด้วย data
-  if (Array.isArray(payload)) return payload
-  if (Array.isArray(payload?.data)) return payload.data
-
-  return []
+  const result = Array.isArray(payload) ? payload : (Array.isArray(payload?.data) ? payload.data : [])
+  return result
 }
 
 function mapRepairToTableRow(repair) {
@@ -159,7 +193,6 @@ async function loadAdminRepairs() {
     const repairs = await fetchAdminRepairs()
     tableRowsList.value = repairs.map(mapRepairToTableRow)
   } catch (error) {
-    console.error('Failed to load admin repairs:', error?.message || error)
   }
 }
 
@@ -173,6 +206,9 @@ const filteredRows = computed(() => {
     const row = item.row
     const urgency = row[2]
     const status = row[3]
+
+    // Exclude status 'ดำเนินการเสร็จสิ้น'
+    if (status === 'done') return false
 
     const matchesSearch = row.join(' ').toLowerCase().includes(search)
 
@@ -201,7 +237,7 @@ const resetFilters = () => {
 }
 
 const openDetail = (code) => {
-  router.push(`/main/repair-detail/${code}`)
+  router.push({ path: `/main/repair-detail/${code}`, state: { fromAdmin: true } })
 }
 
 const openAssignModal = (row) => {
@@ -219,10 +255,11 @@ onMounted(() => {
 
 <template>
   <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-7xl">
-    <h1 class="text-xl font-bold text-black mb-6">รายการแจ้งซ่อมทั้งหมด</h1>
+    <h1 class="text-xl font-bold text-black mb-6">รายการคำร้องแจ้งซ่อม</h1>
 
     <!-- ---------------- Filters ---------------- -->
     <RepairFilterBar
+      mode="admin"
       v-model:search="searchInput"
       v-model:urgencies="selectedUrgencies"
       v-model:statuses="selectedStatuses"
@@ -242,7 +279,7 @@ onMounted(() => {
       :id-column-as-link="true"
       @detail="openDetail"
     >
-      <!-- คอลัมน์ Action (index 7) -->
+      <!-- คอลัมน์ Action (index 4) -->
       <template #cell-4="{ row, rowIndex }">
         <TableActions
           :row-id="row[0]"

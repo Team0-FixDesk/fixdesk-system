@@ -1,10 +1,79 @@
 <script setup>
+/**
+ * =====================================================================
+ * @file            admin-user-info-view.vue
+ * @module          มอดูลการจัดการผู้ใช้ - การจัดการข้อมูลผู้ใข้งาน
+ * @layer           View (Presentation Layer)
+ * @version         1.0.7
+ * @since           2025-10-21
+ * @author          พชร ไพศรีสกุล
+ * @contributors
+ *  - เศรษฐพงศ์ หอมชื่น
+ *  - ปฏิพัทธ์ จงนันทพันธ์กุล
+ *  - พชร ไพศรีสกุล
+ *
+ * @lastModified    2026-03-21
+ * @lastModifiedBy  พชร ไพศรีสกุล
+ * ---------------------------------------------------------------------
+ * @description
+ *  หน้าจอสำหรับใช้จัดการข้อมูลผู้ใช้งานในระบบของผู้ดูแลระบบ
+ *  แสดงรายการของผู้ใช้งานระบบทั้งหมด
+ *   รองรับการค้นหาด้วย
+ *    - ชื่อ-นามสกุล (ภาษาไทย / ภาษาอังกฤษ)
+ *    - ชื่อผู้ใช้ (Username)
+ *    - หน่วยงาน
+ *    - กรองตาม:
+ *      - บทบาท (Role)
+ *      - ตำแหน่งช่าง (Technician Type)
+ *   - เพิ่มผู้ใช้งานใหม่
+ *   - แก้ไขข้อมูลผู้ใช้งาน
+ *   - ดูรายละเอียดของผู้ใช้งาน
+ *   - ลบผู้ใช้งาน
+ *   - นำเข้าข้อมูลผู้ใช้งานจากไฟล์ Excel
+ *   - จัดการตำแหน่งช่าง (เพิ่ม / แก้ไข / ลบ)
+ *
+ * @requires
+ *   - vue
+ *   - vue-router
+ *   - sweetalert2
+ *   - @iconify/vue
+ *   - @/components/table-component.vue
+ *   - @/components/table-actions-component.vue
+ *   - @/components/modal/import-user-excel-component.vue
+ *   - @/components/button/import-button-component.vue
+ *   - @/components/button/base/base-button-component.vue
+ *   - @/composables/usePhoneFormat
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *  [2025-10-21, พชร ไพศรีสกุล] V 1.0.0
+ *   - สร้างไฟล์และโครงสร้างหลักของ View
+ *  [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล] V 1.0.1
+ *   - ปรับปรุงข้อความที่ใช้ให้เหมาะสม
+ *  [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล] V 1.0.2
+ *   - แก้ไขตำแหน่งของปุ่มยืินยันการแก้ไข/ลบ
+ *  [2026-02-20, ปฏิพัทธ์ จงนันทพันธกุล] V 1.0.3
+ *   - แก้ไขข้อความคำอธิบายรายละเอียดผู้ใช้/แก้ไขข้อมูลผู้ใช้
+ *   - แก้ไขชื่อบทบาท "ผู้ใช้งาน"
+ *  [2026-02-25, พชร ไพศรีสกุล] V 1.0.4
+ *   - แก้ไขการสร้างบัญชีผู้ใช้ และ import จากไฟล์ ให้รองรับการสร้าง default รหัสผ่าน
+ *  [2026-02-27, เศรษฐพงศ์ หอมชื่น] V 1.0.5
+ *   - แก้ไขสีปุ่ม
+ *  [2026-03-06, เศรษฐพงศ์ หอมชื่น] V 1.0.6
+ *   - แก้ไข alert
+ *  [2026-03-21, พชร ไพศรีสกุล] V 1.0.7
+ *   - ปรับปรุงโครงสร้างข้อมูลและการจัดการ State ใน View ให้รองรับการแสดงข้อมูลที่ถูกต้องตามโครงสร้างใหม่ของ API
+ *   - ปรับปรุงการ import และการดาวน์โหลด Template Excel ให้รองรับประเภท Locations โดยใช้ Universal Import Modal และ Download Template Button Component ใหม่ที่รองรับหลายประเภท
+ *
+ * =====================================================================
+ */
+
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import TableComponent from '@/components/table-component.vue'
 import TableActions from '@/components/table-actions-component.vue'
-import ImportUserModal from '@/components/modal/import-user-excel-component.vue'
 import ImportButtonComponent from '@/components/button/import-button-component.vue'
 import BaseButtonComponent from '@/components/button/base/base-button-component.vue'
+import UniversalImportModal from '@/components/modal/universal-import-modal.vue'
 
 import { Icon } from '@iconify/vue'
 import BaseButton from '@/components/button/base/base-button-component.vue'
@@ -28,12 +97,11 @@ const userModalForm = ref({
   us_first_name_en: '',
   us_last_name_en: '',
   us_user_name: '',
-  us_user_pass: '',
   us_phone: '',
   us_department: '',
   us_role_id: '',
   us_tt_id: '',
-  us_job_title: '' || '-',
+  us_job_title: '',
   role_name: '',
   technician_type: '',
 })
@@ -58,9 +126,9 @@ const isEditMode = computed(() => userModalMode.value === 'edit')
 const isAddMode = computed(() => userModalMode.value === 'add')
 
 const modalTitle = computed(() => {
-  if (isAddMode.value) return 'เพิ่มผู้ใช้งาน'
-  if (isEditMode.value) return 'แก้ไขข้อมูลผู้ใช้'
-  return 'รายละเอียดผู้ใช้งาน'
+  if (isAddMode.value) return 'เพิ่มผู้ใช้งานใหม่'
+  if (isEditMode.value) return 'แก้ไขข้อมูลผู้ใช้ (สามารถแก้ไขได้)'
+  return 'รายละเอียดผู้ใช้งาน (ไม่สามารถแก้ไขได้)'
 })
 
 const modalIconClass = computed(() => {
@@ -136,7 +204,7 @@ async function fetchUsers() {
       title: 'ผิดพลาด',
       text: 'ไม่สามารถโหลดข้อมูลผู้ใช้ได้',
       icon: 'error',
-      background: '#fee2e2',
+      background: '#FFFFFF',
       color: '#dc2626',
     })
   }
@@ -200,15 +268,25 @@ function renderThaiRole(role) {
       return 'ผู้ดูแลระบบ'
     case 'Technician':
       return 'ช่างซ่อม'
+    case 'TechnicianLead':
+      return 'หัวหน้าช่างซ่อม'
     case 'Manager':
       return 'ผู้บริหาร'
     case 'User':
-      return 'ผู้ใช้งานทั่วไป'
+      return 'ผู้ใช้งาน'
     case 'Stock':
       return 'ผู้ดูแลคลัง'
     default:
       return role
   }
+}
+
+function handlePhoneInput(event) {
+  // 1. ให้ maskInput จัดการรูปแบบเบอร์และกรองข้อความบน UI ก่อน
+  maskInput(event.target)
+  // 2. บังคับอัปเดตค่าที่ผ่านการกรองแล้ว กลับไปที่ตัวแปร เพื่อไม่ให้ Vue เก็บค่าผิดๆ ไว้
+  userModalForm.value.us_phone = event.target.value
+  clearError('phone')
 }
 
 onMounted(() => {
@@ -229,7 +307,6 @@ function resetModalForm() {
     us_first_name_en: '',
     us_last_name_en: '',
     us_user_name: '',
-    us_user_pass: '',
     us_phone: '',
     us_department: '',
     us_role_id: '',
@@ -271,6 +348,11 @@ function openEditModal(username) {
     userModalMode.value = 'edit'
     const data = { ...row.raw }
     data.us_phone = toDisplay(data.us_phone)
+    if (data.us_tt_id === null || data.us_tt_id === undefined) {
+      data.us_tt_id = ''
+    } else {
+      data.us_tt_id = String(data.us_tt_id)
+    }
     Object.assign(userModalForm.value, data)
     userModalForm.value.us_user_pass = ''
     showUserModal.value = true
@@ -279,7 +361,7 @@ function openEditModal(username) {
       title: 'ผิดพลาด',
       text: err.message,
       icon: 'error',
-      background: '#fee2e2',
+      background: '#FFFFFF',
       color: '#dc2626',
     })
   }
@@ -295,6 +377,11 @@ function openViewModal(username) {
     userModalMode.value = 'view'
     const data = { ...row.raw }
     data.us_phone = toDisplay(data.us_phone)
+    if (data.us_tt_id === null || data.us_tt_id === undefined) {
+      data.us_tt_id = ''
+    } else {
+      data.us_tt_id = String(data.us_tt_id)
+    }
     Object.assign(userModalForm.value, data)
     showUserModal.value = true
   } catch (err) {
@@ -302,7 +389,7 @@ function openViewModal(username) {
       title: 'ผิดพลาด',
       text: err.message,
       icon: 'error',
-      background: '#fee2e2',
+      background: '#FFFFFF',
       color: '#dc2626',
     })
   }
@@ -325,34 +412,44 @@ async function confirmAddUser() {
   if (!validateUserForm()) return
   const result = await Sweetalert.fire({
     title: 'ยืนยันการเพิ่มผู้ใช้งาน?',
-    text: 'คุณต้องการเพิ่มผู้ใช้งานใหม่ในระบบหรือไม่?',
+    text: 'คุณต้องการเพิ่มผู้ใช้งานใหม่หรือไม่?',
     icon: 'question',
     showCancelButton: true,
-    confirmButtonText: 'บันทึก',
+    reverseButtons: true,
+    confirmButtonText: 'ยืนยัน',
     cancelButtonText: 'ยกเลิก',
-    confirmButtonColor: '#16a34a',
+    confirmButtonColor: '#0048EF',
+    cancelButtonColor: '#d4d4d4',
   })
   if (!result.isConfirmed) return
 
   try {
+    // สร้าง payload ก่อน
+    const payload = {
+      ...userModalForm.value,
+      us_ttn_id: parseInt(userModalForm.value.us_ttn_id),
+      us_role_id: parseInt(userModalForm.value.us_role_id),
+      us_tt_id: userModalForm.value.us_tt_id ? parseInt(userModalForm.value.us_tt_id) : null,
+      us_phone: toRaw(userModalForm.value.us_phone),
+    }
+
+    // ลบ password ออกจาก payload
+    delete payload.us_user_pass
+
+    // ส่ง payload ไป backend
     const res = await fetch(`${API_BASE}/users`, {
       method: 'POST',
       headers: getAuthHeaders(),
-      body: JSON.stringify({
-        ...userModalForm.value,
-        us_ttn_id: parseInt(userModalForm.value.us_ttn_id),
-        us_role_id: parseInt(userModalForm.value.us_role_id),
-        us_tt_id: userModalForm.value.us_tt_id ? parseInt(userModalForm.value.us_tt_id) : null,
-        us_phone: toRaw(userModalForm.value.us_phone),
-      }),
+      body: JSON.stringify(payload),
     })
+
     const data = await res.json()
     if (!res.ok) throw new Error(data.message || 'เพิ่มผู้ใช้ไม่สำเร็จ')
 
     toast.fire({
       icon: 'success',
       title: 'เพิ่มผู้ใช้เรียบร้อยแล้ว',
-      background: '#f0f9ff',
+      background: '#FFFFFF',
       color: '#1e3a8a',
     })
     showUserModal.value = false
@@ -361,7 +458,7 @@ async function confirmAddUser() {
     toast.fire({
       icon: 'error',
       title: err.message || 'ไม่สามารถเพิ่มผู้ใช้ได้',
-      background: '#fee2e2',
+      background: '#FFFFFF',
       color: '#dc2626',
     })
   }
@@ -372,12 +469,14 @@ async function confirmEditUser() {
   if (!validateUserForm()) return
   const result = await Sweetalert.fire({
     title: 'ยืนยันการแก้ไขข้อมูล?',
-    text: 'คุณต้องการบันทึกการแก้ไขนี้หรือไม่?',
+    text: 'คุณต้องการบันทึกการแก้ไขหรือไม่?',
     icon: 'question',
     showCancelButton: true,
-    confirmButtonText: 'บันทึก',
+    reverseButtons: true,
+    confirmButtonText: 'ยืนยัน',
     cancelButtonText: 'ยกเลิก',
-    confirmButtonColor: '#f97316',
+    confirmButtonColor: '#fb923c',
+    cancelButtonColor: '#d4d4d4',
   })
   if (!result.isConfirmed) return
   try {
@@ -405,7 +504,7 @@ async function confirmEditUser() {
     toast.fire({
       icon: 'success',
       title: 'แก้ไขข้อมูลผู้ใช้เรียบร้อยแล้ว',
-      background: '#f0f9ff',
+      background: '#FFFFFF',
       color: '#1e3a8a',
     })
     showUserModal.value = false
@@ -414,7 +513,7 @@ async function confirmEditUser() {
     toast.fire({
       icon: 'error',
       title: err.message || 'ไม่สามารถแก้ไขข้อมูลผู้ใช้ได้',
-      background: '#fee2e2',
+      background: '#FFFFFF',
       color: '#dc2626',
     })
   }
@@ -423,13 +522,15 @@ async function confirmEditUser() {
 // Function: Confirm Delete
 async function confirmDelete(username) {
   const result = await Sweetalert.fire({
-    title: 'ยืนยันการลบ?',
+    title: 'ยืนยันการลบข้อมูล?',
     text: `คุณแน่ใจหรือไม่ว่าต้องการลบ "${username}"?`,
     icon: 'warning',
     showCancelButton: true,
-    confirmButtonText: 'ลบ',
+    reverseButtons: false,
+    confirmButtonText: 'ยืนยันการลบ',
     cancelButtonText: 'ยกเลิก',
     confirmButtonColor: '#dc2626',
+    cancelButtonColor: '#a3a3a3',
   })
   if (!result.isConfirmed) return
   try {
@@ -466,7 +567,7 @@ async function confirmDelete(username) {
     toast.fire({
       icon: 'success',
       title: 'ลบผู้ใช้เรียบร้อยแล้ว',
-      background: '#f0f9ff',
+      background: '#FFFFFF',
       color: '#1e3a8a',
     })
     await fetchUsers()
@@ -474,7 +575,7 @@ async function confirmDelete(username) {
     toast.fire({
       icon: 'error',
       title: err.message || 'ไม่สามารถลบผู้ใช้ได้',
-      background: '#fee2e2',
+      background: '#FFFFFF',
       color: '#dc2626',
     })
   }
@@ -573,14 +674,6 @@ function validateUserForm() {
       userModalErrors.value.username = 'กรุณากรอกชื่อผู้ใช้'
       valid = false
     }
-    if (!f.us_user_pass.trim()) {
-      userModalErrors.value.password = 'กรุณากรอกรหัสผ่าน'
-      valid = false
-    }
-  }
-  if (isEditMode.value && f.us_user_pass && !f.us_user_pass.trim()) {
-    userModalErrors.value.password = 'รหัสผ่านใหม่ต้องไม่เป็นช่องว่าง'
-    valid = false
   }
 
   return valid
@@ -623,10 +716,10 @@ async function fetchMasterData() {
       label: role.role_label_th || role.role_name,
     }))
 
-    technicianOptions.value = [
-      { value: '', label: 'ไม่ระบุ' },
-      ...techData.map((tech) => ({ value: String(tech.tt_id), label: tech.tt_name })),
-    ]
+    technicianOptions.value = techData.map((tech) => ({
+      value: String(tech.tt_id),
+      label: tech.tt_name,
+    }))
     technicianFilterOptions.value = techData.map((tech) => tech.tt_name)
     manageTechList.value = techData.map((t) => ({ id: t.tt_id, name: t.tt_name }))
   } catch (err) {
@@ -635,7 +728,7 @@ async function fetchMasterData() {
       title: 'ผิดพลาด',
       text: 'ไม่สามารถโหลดข้อมูลคำนำหน้า/บทบาท/ประเภทช่างได้',
       icon: 'error',
-      background: '#fee2e2',
+      background: '#FFFFFF',
       color: '#dc2626',
     })
   }
@@ -660,6 +753,9 @@ async function handleAddTechType() {
     showCancelButton: true,
     confirmButtonText: 'บันทึก',
     cancelButtonText: 'ยกเลิก',
+    reverseButtons: true,
+    confirmButtonColor: '#0048EF',
+    cancelButtonColor: '#d4d4d4',
     inputValidator: (value) => {
       if (!value || !value.trim()) return 'กรุณากรอกชื่อตำแหน่งช่าง'
       return null
@@ -679,7 +775,7 @@ async function handleAddTechType() {
     toast.fire({
       icon: 'success',
       title: 'เพิ่มตำแหน่งช่างเรียบร้อยแล้ว',
-      background: '#f0f9ff',
+      background: '#FFFFFF',
       color: '#1e3a8a',
     })
     await fetchMasterData()
@@ -689,7 +785,7 @@ async function handleAddTechType() {
       title: 'ผิดพลาด',
       text: err.message || 'ไม่สามารถเพิ่มตำแหน่งช่างได้',
       icon: 'error',
-      background: '#fee2e2',
+      background: '#FFFFFF',
       color: '#dc2626',
     })
   }
@@ -704,6 +800,9 @@ async function handleEditTechType(item) {
     showCancelButton: true,
     confirmButtonText: 'บันทึก',
     cancelButtonText: 'ยกเลิก',
+    reverseButtons: true,
+    confirmButtonColor: '#0048EF',
+    cancelButtonColor: '#d4d4d4',
     inputValidator: (value) => {
       if (!value || !value.trim()) return 'กรุณากรอกชื่อตำแหน่งช่าง'
       return null
@@ -723,7 +822,7 @@ async function handleEditTechType(item) {
     toast.fire({
       icon: 'success',
       title: 'แก้ไขตำแหน่งช่างเรียบร้อยแล้ว',
-      background: '#f0f9ff',
+      background: '#FFFFFF',
       color: '#1e3a8a',
     })
     await fetchMasterData()
@@ -733,7 +832,7 @@ async function handleEditTechType(item) {
       title: 'ผิดพลาด',
       text: err.message || 'ไม่สามารถแก้ไขตำแหน่งช่างได้',
       icon: 'error',
-      background: '#fee2e2',
+      background: '#FFFFFF',
       color: '#dc2626',
     })
   }
@@ -742,12 +841,13 @@ async function handleEditTechType(item) {
 async function handleDeleteTechType(item) {
   const result = await Sweetalert.fire({
     title: 'ยืนยันการลบ?',
-    text: `ต้องการลบ "${item.name}" หรือไม่`,
+    text: `ต้องการลบตำแหน่ง "${item.name}" หรือไม่`,
     icon: 'warning',
     showCancelButton: true,
-    confirmButtonText: 'ลบ',
+    confirmButtonText: 'ยืนยันการลบ',
     cancelButtonText: 'ยกเลิก',
     confirmButtonColor: '#dc2626',
+    cancelButtonColor: '#a3a3a3',
   })
   if (!result.isConfirmed) return
 
@@ -762,7 +862,7 @@ async function handleDeleteTechType(item) {
     toast.fire({
       icon: 'success',
       title: 'ลบตำแหน่งช่างเรียบร้อยแล้ว',
-      background: '#f0f9ff',
+      background: '#FFFFFF',
       color: '#1e3a8a',
     })
     await fetchMasterData()
@@ -772,7 +872,7 @@ async function handleDeleteTechType(item) {
       title: 'ผิดพลาด',
       text: err.message || 'ไม่สามารถลบตำแหน่งช่างได้',
       icon: 'error',
-      background: '#fee2e2',
+      background: '#FFFFFF',
       color: '#dc2626',
     })
   }
@@ -782,7 +882,7 @@ function handleImportSuccess() {
   toast.fire({
     icon: 'success',
     title: 'นำเข้าผู้ใช้งานเรียบร้อยแล้ว',
-    background: '#f0f9ff',
+    background: '#FFFFFF',
     color: '#1e3a8a',
   })
   showImportModal.value = false
@@ -792,28 +892,70 @@ function handleImportError(message) {
   toast.fire({
     icon: 'error',
     title: message || 'นำเข้าผู้ใช้งานไม่สำเร็จ',
-    background: '#fee2e2',
+    background: '#FFFFFF',
     color: '#dc2626',
   })
+}
+
+async function handleResetPassword(userId) {
+  const result = await Sweetalert.fire({
+    title: 'รีเซ็ตรหัสผ่าน?',
+    text: 'ระบบจะสร้างรหัสผ่านใหม่โดยอัตโนมัติ',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'รีเซ็ต',
+    cancelButtonText: 'ยกเลิก',
+    confirmButtonColor: '#dc2626',
+  })
+
+  if (!result.isConfirmed) return
+
+  try {
+    const res = await fetch(`${API_BASE}/users/${userId}/reset-password`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    })
+
+    const data = await res.json()
+
+    if (!res.ok) {
+      throw new Error(data.message || 'รีเซ็ตไม่สำเร็จ')
+    }
+
+    toast.fire({
+      icon: 'success',
+      title: 'รีเซ็ตรหัสผ่านเรียบร้อย',
+      background: '#ffffff',
+      color: '#1e3a8a',
+
+    })
+  } catch (err) {
+    toast.fire({
+      icon: 'error',
+      title: err.message,
+      background: '#fee2e2',
+      color: '#dc2626',
+    })
+  }
 }
 </script>
 
 <template>
   <div class="p-8 mx-auto bg-white shadow-md rounded-xl max-w-7xl">
-    <h1 class="mb-6 text-lg font-bold text-black sm:text-xl">จัดการผู้ใช้งานระบบ</h1>
+    <h1 class="mb-6 text-lg font-bold text-black sm:text-xl">จัดการข้อมูลผู้ใช้งานระบบ</h1>
     <div class="mb-6">
       <div class="flex flex-col gap-4 mb-4 md:flex-row md:items-center md:justify-between">
         <div class="relative z-40 flex flex-wrap items-center gap-3">
           <input
             v-model="searchQuery"
             type="text"
-            placeholder="ค้นหาชื่อผู้ใช้ / หน่วยงาน / บทบาท"
-            class="w-full sm:w-[260px] h-10 px-4 rounded-lg border border-gray-300 bg-white focus:ring-2 focus:ring-blue-500 text-gray-700"
+            placeholder="ค้นหารายการผู้ใช้"
+            class="w-full sm:w-[260px] h-10 px-4 rounded-lg border border-gray-300 bg-white focus:ring-2 focus:ring-blue-500 text-gray-500"
           />
           <div class="relative">
             <button
               @click.stop="toggleRoleFilter"
-              class="flex items-center h-10 gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg"
+              class="flex items-center h-10 gap-2 px-4 py-2 text-gray-500 bg-white border border-gray-300 rounded-lg"
             >
               บทบาท
               <Icon
@@ -842,7 +984,7 @@ function handleImportError(message) {
           <div class="relative">
             <button
               @click.stop="toggleTechFilter"
-              class="flex items-center h-10 gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg"
+              class="flex items-center h-10 gap-2 px-4 py-2 text-gray-500 bg-white border border-gray-300 rounded-lg"
             >
               ตำแหน่ง
               <Icon
@@ -891,7 +1033,7 @@ function handleImportError(message) {
         <div class="flex flex-col gap-2 sm:flex-row">
           <ImportButtonComponent @click="showImportModal = true" />
           <BaseButtonComponent
-            class="h-10 px-4 rounded-lg bg-[#1E48D1] hover:bg-[#1539a9] text-white font-medium shadow-sm"
+            class="h-10 px-4 rounded-lg bg-blue-700 hover:bg-blue-800 text-white font-medium shadow-sm"
             @click="openAddModal"
           >
             <Icon icon="fluent:add-12-filled" width="20" height="20" />
@@ -948,19 +1090,15 @@ function handleImportError(message) {
               width="35"
               height="35"
               style="color: #8e8e8e"
-              v-if="isAddMode || isEditMode"
+              v-if="isAddMode || isEditMode || isViewMode"
             />
           </div>
-          <h2 class="text-xl font-bold text-gray-800">{{ modalTitle }}</h2>
+          <h2 class="text-xl font-bold p-1 text-gray-800">{{ modalTitle }}</h2>
         </div>
 
         <p v-if="isAddMode" class="mb-6 text-sm text-gray-600">
           กรอกข้อมูลเพื่อสร้างบัญชีผู้ใช้ใหม่ในระบบ
         </p>
-        <p v-else-if="isEditMode" class="mb-6 text-sm text-gray-600">
-          คุณต้องการบันทึกการแก้ไขข้อมูลผู้ใช้หรือไม่
-        </p>
-        <p v-else class="mb-6 text-sm text-gray-600">แสดงข้อมูลผู้ใช้ในระบบ (ไม่สามารถแก้ไขได้)</p>
 
         <form @submit.prevent="handleUserModalSubmit">
           <div v-if="isViewMode" class="mb-3">
@@ -994,26 +1132,16 @@ function handleImportError(message) {
                 {{ userModalErrors.username }}
               </p>
             </div>
-            <div>
-              <label class="block text-sm font-medium mb-1.5">
-                {{ isAddMode ? 'รหัสผ่าน' : 'เปลี่ยนรหัสผ่านใหม่' }}
-                <span v-if="isAddMode" class="text-red-500">*</span>
-              </label>
-              <input
-                v-model="userModalForm.us_user_pass"
-                @input="clearError('password')"
-                type="password"
-                :class="[
-                  'w-full px-3 py-2 border rounded-md',
-                  userModalErrors.password ? 'border-red-500' : 'border-gray-300',
-                  isAddMode ? 'placeholder-gray-400 bg-white' : 'placeholder-[#FF0000] bg-white',
-                ]"
-                :placeholder="isAddMode ? 'กรอกรหัสผ่าน' : 'รหัสผ่านใหม่'"
-                :title="isEditMode ? 'หากไม่ต้องการเปลี่ยนรหัสผ่านไม่จำเป็นต้องกรอก' : ''"
-              />
-              <p v-if="userModalErrors.password" class="mt-1 text-sm text-red-500">
-                {{ userModalErrors.password }}
-              </p>
+            <div v-if="isEditMode">
+              <label class="block text-sm font-medium mb-1.5"> รหัสผ่าน </label>
+
+              <button
+                type="button"
+                @click="handleResetPassword(userModalForm.us_id)"
+                class="w-full px-3 py-2 text-white bg-red-500 rounded-md hover:bg-red-600"
+              >
+                รีเซ็ตรหัสผ่าน
+              </button>
             </div>
           </div>
 
@@ -1203,7 +1331,7 @@ function handleImportError(message) {
               >
               <input
                 v-model="userModalForm.us_phone"
-                @input="(maskInput($event.target), clearError('phone'))"
+                @input="handlePhoneInput($event)"
                 type="tel"
                 :disabled="isViewMode"
                 :class="[
@@ -1293,13 +1421,15 @@ function handleImportError(message) {
                     : 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200',
                 ]"
               >
-                <option value="">
-                  {{
-                    userModalForm.us_role_id === '2' || userModalForm.us_role_id === 2
-                      ? 'เลือกตำแหน่ง'
-                      : 'ไม่ระบุ'
-                  }}
+                <option
+                  value=""
+                  v-if="userModalForm.us_role_id !== '2' && userModalForm.us_role_id !== 2"
+                >
+                  ไม่ระบุ
                 </option>
+
+                <option value="" disabled v-else>เลือกตำแหน่ง</option>
+
                 <option v-for="opt in technicianOptions" :key="opt.value" :value="opt.value">
                   {{ opt.label }}
                 </option>
@@ -1323,18 +1453,20 @@ function handleImportError(message) {
               <button
                 type="button"
                 @click="closeUserModal"
-                class="px-4 py-2 text-gray-700 border border-gray-300 rounded-md"
+                class="px-4 py-2 text-white border border-gray-300 rounded-lg bg-neutral-300 hover:bg-neutral-400"
               >
                 ยกเลิก
               </button>
               <button
                 type="submit"
                 :class="[
-                  'px-4 py-2 text-white rounded-md',
-                  isAddMode ? 'bg-green-500' : 'bg-orange-500',
+                  'px-4 py-2 text-white rounded-lg',
+                  isAddMode
+                    ? 'bg-green-500 hover:bg-green-600'
+                    : 'bg-orange-400 hover:bg-orange-500',
                 ]"
               >
-                {{ isAddMode ? 'ยืนยันเพิ่ม' : 'บันทึกแก้ไข' }}
+                {{ isAddMode ? 'เพิ่มผู้ใช้งาน' : 'บันทึกการแก้ไข' }}
               </button>
             </template>
           </div>
@@ -1356,7 +1488,6 @@ function handleImportError(message) {
             <h2 class="text-lg font-bold text-black">จัดการตำแหน่งช่าง</h2>
           </div>
           <BaseButtonComponent
-            to="/main/repair-request"
             @click="handleAddTechType"
             class="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-white bg-blue-700 rounded-md hover:bg-blue-900"
           >
@@ -1409,8 +1540,11 @@ function handleImportError(message) {
       </div>
     </div>
   </div>
-  <ImportUserModal
+  <UniversalImportModal
     v-if="showImportModal"
+    type="users"
+    title="ผู้ใช้งาน"
+    templateFileName="Template_Users_Import.xlsx"
     @close="showImportModal = false"
     @refresh="fetchUsers()"
     @success="handleImportSuccess"

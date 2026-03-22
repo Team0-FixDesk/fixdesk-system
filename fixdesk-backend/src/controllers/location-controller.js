@@ -1,6 +1,59 @@
+/**
+ * =====================================================================
+ * @file            location.controller.js
+ * @layer           Controller Layer (Presentation Layer)
+ * @version         1.2.0
+ * @since           2026-02-10
+ * @author          พชร ไพศรีสกุล
+ * @contributors
+ *   - พชร ไพศรีสกุล
+ *   - นราธิป แสนทวีสุข
+ *
+ * @lastModified    2026-03-03
+ * @lastModifiedBy  นราธิป แสนทวีสุข
+ * ---------------------------------------------------------------------
+ * @description
+ *  Controller สำหรับจัดการข้อมูลสถานที่ (Location Management)
+ *  ทำหน้าที่รับ request จาก client และเรียกใช้งาน locationService
+ *
+ *  รองรับการจัดการ:
+ *    - อาคาร (Building)
+ *    - ชั้น (Floor)
+ *    - ห้อง (Room)
+ *    - Import ข้อมูล Location
+ *    - ตรวจสอบการใช้งานสถานที่ในใบแจ้งซ่อมก่อนแก้ไข/ลบ
+ * 
+ * @usedBy
+ *  - location-route.js 
+ * 
+ * ---------------------------------------------------------------------
+ * @changelog
+ *  [2026-02-10, พชร ไพศรีสกุล] V 1.0.0
+ *   - Initial implementation Location Controller ตาม Layered Architecture
+ *  [2026-02-10, พชร ไพศรีสกุล] V 1.1.0
+ *  - เพิ่มฟังก์ชัน Import ข้อมูล Location แบบ Bulk และเพิ่มการตรวจสอบการใช้งานสถานที่ในใบแจ้งซ่อมก่อนแก้ไข/ลบ
+ *  [2026-03-03, นราธิป แสนทวีสุข] V 1.2.0
+ *  - เพิ่ม checkUsageInRepairs() controller function
+ *  - เพื่อตรวจสอบการใช้งานสถานที่ในใบแจ้งซ่อมก่อนแก้ไข/ลบ     
+ *
+ * =====================================================================
+ */
+
 module.exports = (locationService) => {
   return {
-    /* --- BUILDING --- */
+    /**
+     * ดึงรายการอาคารทั้งหมด
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-10
+     * @lastModifiedBy พชร ไพศรีสกุล
+     * @contributors
+     *  - พชร ไพศรีสกุล
+     *
+     * @param {Object} req - Express request object
+     * @param {Object} res - Express response object
+     * @returns {Promise<void>}
+     */
     async getBuildings(req, res) {
       try {
         const buildingList = await locationService.getAllBuildings();
@@ -10,6 +63,20 @@ module.exports = (locationService) => {
       }
     },
 
+    /**
+     * สร้างอาคารใหม่
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-10
+     * @lastModifiedBy พชร ไพศรีสกุล
+     * @contributors
+     *  - พชร ไพศรีสกุล
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async createBuilding(req, res) {
       try {
         const { bd_name } = req.body;
@@ -29,6 +96,20 @@ module.exports = (locationService) => {
       }
     },
 
+    /**
+     * แก้ไขข้อมูลอาคาร
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-10
+     * @lastModifiedBy พชร ไพศรีสกุล
+     * @contributors
+     *  - พชร ไพศรีสกุล
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async updateBuilding(req, res) {
       try {
         const { id } = req.params;
@@ -47,6 +128,20 @@ module.exports = (locationService) => {
       }
     },
 
+    /**
+     * ลบอาคาร
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-10
+     * @lastModifiedBy พชร ไพศรีสกุล
+     * @contributors
+     *  - พชร ไพศรีสกุล
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async deleteBuilding(req, res) {
       try {
         await locationService.deleteBuilding(req.params.id);
@@ -61,6 +156,20 @@ module.exports = (locationService) => {
     },
 
     /* --- FLOOR --- */
+    /**
+     * ดึงรายการชั้นทั้งหมด หรือ ตามอาคาร
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-10
+     * @lastModifiedBy พชร ไพศรีสกุล
+     * @contributors
+     *  - พชร ไพศรีสกุล
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async getFloors(req, res) {
       try {
         // ถ้ามี buildingId ส่งมา ก็ค้นหาเฉพาะตึกนั้น
@@ -78,6 +187,20 @@ module.exports = (locationService) => {
       }
     },
 
+    /**
+     * สร้างชั้นใหม่
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-10
+     * @lastModifiedBy พชร ไพศรีสกุล
+     * @contributors
+     *  - พชร ไพศรีสกุล
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async createFloor(req, res) {
       try {
         const { fl_name, fl_bd_id } = req.body;
@@ -98,6 +221,20 @@ module.exports = (locationService) => {
       }
     },
 
+    /**
+     * แก้ไขข้อมูลชั้น
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-10
+     * @lastModifiedBy พชร ไพศรีสกุล
+     * @contributors
+     *  - พชร ไพศรีสกุล
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async updateFloor(req, res) {
       try {
         const { fl_name, fl_bd_id } = req.body;
@@ -121,6 +258,20 @@ module.exports = (locationService) => {
       }
     },
 
+    /**
+     * ลบชั้น
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-10
+     * @lastModifiedBy พชร ไพศรีสกุล
+     * @contributors
+     *  - พชร ไพศรีสกุล
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async deleteFloor(req, res) {
       try {
         await locationService.deleteFloor(req.params.id);
@@ -135,6 +286,20 @@ module.exports = (locationService) => {
     },
 
     /* --- ROOM --- */
+    /**
+     * ดึงรายการห้องทั้งหมด หรือ ตามชั้น
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-10
+     * @lastModifiedBy พชร ไพศรีสกุล
+     * @contributors
+     *  - พชร ไพศรีสกุล
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async getRooms(req, res) {
       try {
         if (req.params.floorId) {
@@ -150,6 +315,20 @@ module.exports = (locationService) => {
       }
     },
 
+    /**
+     * สร้างห้องใหม่
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-10
+     * @lastModifiedBy พชร ไพศรีสกุล
+     * @contributors
+     *  - พชร ไพศรีสกุล
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async createRoom(req, res) {
       try {
         const { room_name, room_fl_id } = req.body;
@@ -170,6 +349,20 @@ module.exports = (locationService) => {
       }
     },
 
+    /**
+     * แก้ไขข้อมูลห้อง
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-10
+     * @lastModifiedBy พชร ไพศรีสกุล
+     * @contributors
+     *  - พชร ไพศรีสกุล
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async updateRoom(req, res) {
       try {
         const { room_name, room_fl_id } = req.body;
@@ -193,6 +386,20 @@ module.exports = (locationService) => {
       }
     },
 
+    /**
+     * ลบห้อง
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-10
+     * @lastModifiedBy พชร ไพศรีสกุล
+     * @contributors
+     *  - พชร ไพศรีสกุล
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async deleteRoom(req, res) {
       try {
         await locationService.deleteRoom(req.params.id);
@@ -208,7 +415,21 @@ module.exports = (locationService) => {
       }
     },
 
-    /* --- IMPORT --- */
+    /* --- IMPORT CONTROLLER --- */
+    /**
+     * Import ข้อมูล Location แบบ Bulk
+     *
+     * @author พชร ไพศรีสกุล
+     * @since 2026-02-10
+     * @lastModified 2026-02-10
+     * @lastModifiedBy พชร ไพศรีสกุล
+     * @contributors
+     *  - พชร ไพศรีสกุล
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
     async importLocations(req, res) {
       try {
         const { locations } = req.body;
@@ -222,6 +443,42 @@ module.exports = (locationService) => {
         res
           .status(500)
           .json({ message: "Import ล้มเหลว", error: error.message });
+      }
+    },
+
+    /* --- USAGE CHECK CONTROLLER --- */
+    /**
+     * เช็คการใช้งาน Building, Floor หรือ Room ในรายการแจ้งซ่อม
+     *
+     * @author GitHub Copilot
+     * @since 2026-03-02
+     * @lastModified 2026-03-02
+     * @lastModifiedBy GitHub Copilot
+     *
+     * @param {Object} req
+     * @param {Object} res
+     * @returns {Promise<void>}
+     */
+    async checkUsageInRepairs(req, res) {
+      try {
+        const { type, id } = req.params;
+        
+        if (!['building', 'floor', 'room'].includes(type)) {
+          return res.status(400).json({ message: 'ประเภทไม่ถูกต้อง' });
+        }
+        
+        if (!id || isNaN(id)) {
+          return res.status(400).json({ message: 'ID ไม่ถูกต้อง' });
+        }
+        
+        const result = await locationService.checkUsageInRepairs(type, id);
+        res.json(result);
+      } catch (error) {
+        console.error(error);
+        res.status(500).json({ 
+          message: 'เกิดข้อผิดพลาดในการตรวจสอบการใช้งาน',
+          error: error.message 
+        });
       }
     },
   };

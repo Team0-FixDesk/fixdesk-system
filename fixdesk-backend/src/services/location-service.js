@@ -1,6 +1,56 @@
+/**
+ * =====================================================================
+ * @file            location.service.js
+ * @layer           Service Layer (Business Logic Layer)
+ * @version         1.2.0
+ * @since           2026-02-18
+ * @author          พชร ไพศรีสกุล
+ * @contributors
+ *   - พชร ไพศรีสกุล
+ *   - นราธิป แสนทวีสุข
+ *
+ * @lastModified    2026-03-03
+ * @lastModifiedBy  นราธิป แสนทวีสุข
+ * ---------------------------------------------------------------------
+ * @description
+ *  Service สำหรับจัดการข้อมูลสถานที่ (Location Management)
+ *  ประกอบด้วย Building, Floor, และ Room
+ *
+ *  ทำหน้าที่:
+ *    - จัดการ CRUD ของอาคาร ชั้น และห้อง
+ *    - ตรวจสอบความถูกต้องของข้อมูล
+ *    - ตรวจสอบ Dependency ก่อนลบข้อมูล
+ *    - Import ข้อมูลสถานที่แบบ batch โดยใช้ Transaction
+ * 
+ * @useby
+ *  - Location Controller (location.controller.js) เพื่อให้บริการ API ที่เกี่ยวข้องกับสถานที่
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *   [2026-02-10, พชร ไพศรีสกุล] V 1.0.0
+ *   - Initial implementation Location Service ตาม Layered Architecture
+ *   [2026-02-13, นราธิป แสนทวีสุข] V 1.1.0  
+ *   - แก้ไขการจัดการ transaction ของฐานข้อมูลในการ import locations
+ *   [2026-03-03, นราธิป แสนทวีสุข] V 1.2.0  
+ *   - feat(location): เพิ่ม checkUsageInRepairs() เพื่อตรวจสอบการใช้งานสถานที่ในใบแจ้งซ่อมก่อนแก้ไข/ลบ
+ *
+ * =====================================================================
+ */
+
+/**
+ * Location Service Module
+ * จัดการ Business Logic สำหรับระบบ Location
+ *
+ * @param {Object} db - Database connection instance
+ * @returns {Object} Location Service Functions
+ */
 module.exports = (db) => {
   return {
-    /* ================== BUILDING (อาคาร) ================== */
+    /* ================== BUILDING SERVICE ================== */
+    /**
+     * ดึงรายการอาคารทั้งหมด
+     * @returns {Promise<Array>}
+     */
     async getAllBuildings() {
       const sql =
         "SELECT bd_id AS building_id, bd_name AS building_name FROM building ORDER BY bd_id ASC";
@@ -9,6 +59,13 @@ module.exports = (db) => {
       });
     },
 
+    /**
+     * สร้างอาคารใหม่
+     * ตรวจสอบชื่อซ้ำก่อนเพิ่ม
+     * @param {string} buildingName - ชื่ออาคาร
+     * @throws {Error} DUPLICATE_NAME
+     * @returns {Promise<number>} ID ของอาคารที่สร้าง
+     */
     async createBuilding(buildingName) {
       // 1. เช็คว่าชื่อซ้ำไหม
       const checkSql =
@@ -25,6 +82,16 @@ module.exports = (db) => {
       return result.insertId;
     },
 
+    /**
+     * อัปเดตข้อมูลอาคาร
+     * @param {number} id - ID อาคาร
+     * @param {string} buildingName - ชื่ออาคารใหม่
+     *
+     * @throws {Error} NOT_FOUND
+     * @throws {Error} DUPLICATE_NAME
+     *
+     * @returns {Promise<boolean>}
+     */
     async updateBuilding(id, buildingName) {
       // 1. เช็คชื่อซ้ำ (ที่ไม่ใช่ตัวเอง)
       const checkSql =
@@ -45,6 +112,16 @@ module.exports = (db) => {
       return true;
     },
 
+    /**
+     * ลบอาคาร
+     * ตรวจสอบว่ามี Floor ใช้งานอยู่หรือไม่
+     * @param {number} id - ID อาคาร
+     *
+     * @throws {Error} NOT_FOUND
+     * @throws {Error} DEPENDENCY_EXISTS
+     *
+     * @returns {Promise<boolean>}
+     */
     async deleteBuilding(id) {
       // 1. เช็คว่ามี "ชั้น" เชื่อมอยู่ไหม
       const checkSql = "SELECT COUNT(*) as count FROM floor WHERE fl_bd_id = ?";
@@ -62,7 +139,12 @@ module.exports = (db) => {
       return true;
     },
 
-    /* ================== FLOOR (ชั้น) ================== */
+    /* ================== FLOOR SERVICE ================== */
+    /**
+     * ดึงรายการชั้นตาม Building
+     * @param {number} buildingId - ID อาคาร
+     * @returns {Promise<Array>}
+     */
     async getFloorsByBuilding(buildingId) {
       const sql =
         "SELECT fl_id AS floor_id, fl_name AS floor_name FROM floor WHERE fl_bd_id = ? ORDER BY fl_id ASC";
@@ -73,6 +155,10 @@ module.exports = (db) => {
       });
     },
 
+    /**
+     * ดึงรายการชั้นทั้งหมด
+     * @returns {Promise<Array>}
+     */
     async getAllFloors() {
       const sql = `
           SELECT f.fl_id AS floor_id, f.fl_name AS floor_name, f.fl_bd_id AS building_id, b.bd_name AS building_name
@@ -84,6 +170,17 @@ module.exports = (db) => {
       });
     },
 
+    /**
+     * สร้างชั้นใหม่
+     * ตรวจสอบ Building และชื่อซ้ำ
+     * @param {string} floorName - ชื่อชั้น
+     * @param {number} buildingId - ID อาคาร
+     *
+     * @throws {Error} PARENT_NOT_FOUND
+     * @throws {Error} DUPLICATE_NAME
+     *
+     * @returns {Promise<number>} ID ชั้นใหม่
+     */
     async createFloor(floorName, buildingId) {
       // 1. เช็คว่าตึกมีจริงไหม
       const checkBuildingSql =
@@ -107,6 +204,18 @@ module.exports = (db) => {
       return result.insertId;
     },
 
+    /**
+     * อัปเดตข้อมูลชั้น
+     * @param {number} id - ID ชั้น
+     * @param {string} floorName - ชื่อชั้น
+     * @param {number} buildingId - ID อาคาร
+     *
+     * @throws {Error} NOT_FOUND
+     * @throws {Error} PARENT_NOT_FOUND
+     * @throws {Error} DUPLICATE_NAME
+     *
+     * @returns {Promise<boolean>}
+     */
     async updateFloor(id, floorName, buildingId) {
       // Logic คล้าย createFloor แต่เพิ่มการเช็ค id ตัวเอง
       const checkBuildingSql =
@@ -131,6 +240,16 @@ module.exports = (db) => {
       return true;
     },
 
+    /**
+     * ลบชั้น
+     * ตรวจสอบว่ามี Room ใช้งานอยู่หรือไม่
+     * @param {number} id - ID ชั้น
+     *
+     * @throws {Error} NOT_FOUND
+     * @throws {Error} DEPENDENCY_EXISTS
+     *
+     * @returns {Promise<boolean>}
+     */
     async deleteFloor(id) {
       // เช็คว่ามี "ห้อง" เชื่อมอยู่ไหม
       const checkSql =
@@ -146,11 +265,15 @@ module.exports = (db) => {
       return true;
     },
 
-    /* ================== ROOM (ห้อง) ================== */
+    /* ================== ROOM SERVICE ================== */
+    /**
+     * ดึงรายการห้องทั้งหมด
+     * @returns {Promise<Array>}
+     */
     async getAllRooms() {
       const sql = `
             SELECT r.room_id AS room_id, r.room_name AS room_name, r.room_fl_id AS floor_id,
-                   f.fl_name AS floor_name, f.fl_bd_id AS building_id, b.bd_name AS building_name
+              f.fl_name AS floor_name, f.fl_bd_id AS building_id, b.bd_name AS building_name
             FROM room r
             LEFT JOIN floor f ON r.room_fl_id = f.fl_id
             LEFT JOIN building b ON f.fl_bd_id = b.bd_id
@@ -161,6 +284,11 @@ module.exports = (db) => {
       });
     },
 
+    /**
+     * ดึงรายการห้องตาม Floor
+     * @param {number} floorId - ID ชั้น
+     * @returns {Promise<Array>}
+     */
     async getRoomsByFloor(floorId) {
       const sql =
         "SELECT room_id AS room_id, room_name AS room_name FROM room WHERE room_fl_id = ? ORDER BY room_id ASC";
@@ -171,6 +299,17 @@ module.exports = (db) => {
       });
     },
 
+    /**
+     * สร้างห้องใหม่
+     * ตรวจสอบ Floor และชื่อซ้ำ
+     * @param {string} roomName - ชื่อห้อง
+     * @param {number} floorId - ID ชั้น
+     *
+     * @throws {Error} PARENT_NOT_FOUND
+     * @throws {Error} DUPLICATE_NAME
+     *
+     * @returns {Promise<number>} ID ห้องใหม่
+     */
     async createRoom(roomName, floorId) {
       // เช็คชั้นมีจริง + ชื่อซ้ำ (Logic เดียวกับ Floor)
       const checkFloorSql =
@@ -191,6 +330,18 @@ module.exports = (db) => {
       return result.insertId;
     },
 
+    /**
+     * อัปเดตข้อมูลห้อง
+     * @param {number} id - ID ห้อง
+     * @param {string} roomName - ชื่อห้อง
+     * @param {number} floorId - ID ชั้น
+     *
+     * @throws {Error} NOT_FOUND
+     * @throws {Error} PARENT_NOT_FOUND
+     * @throws {Error} DUPLICATE_NAME
+     *
+     * @returns {Promise<boolean>}
+     */
     async updateRoom(id, roomName, floorId) {
       // Logic Update Room (ตัดทอนให้สั้นลง แต่ Logic เหมือน Create)
       const checkFloorSql =
@@ -214,6 +365,16 @@ module.exports = (db) => {
       return true;
     },
 
+    /**
+     * ลบห้อง
+     * ตรวจสอบว่ามี Repair Form ใช้งานอยู่หรือไม่
+     * @param {number} id - ID ห้อง
+     *
+     * @throws {Error} NOT_FOUND
+     * @throws {Error} DEPENDENCY_EXISTS
+     *
+     * @returns {Promise<boolean>}
+     */
     async deleteRoom(id) {
       // เช็คว่ามีใบแจ้งซ่อมผูกอยู่ไหม
       const checkSql =
@@ -227,9 +388,18 @@ module.exports = (db) => {
       return true;
     },
 
-    /* ================== IMPORT & EXPORT ================== */
+    /* ================== IMPORT SERVICE ================== */
+    /**
+     * Import ข้อมูล Location แบบ batch
+     * รองรับการสร้าง Building, Floor, Room
+     * โดยใช้ Transaction เพื่อความถูกต้องของข้อมูล
+     * @param {Array<Object>} locationList - รายการสถานที่
+     *
+     * @returns {Promise<boolean>}
+     */
     async importLocations(locationList) {
-      const connection = db.promise();
+      const promisePool = db.promise();
+      const connection = await promisePool.getConnection();
       try {
         await connection.beginTransaction();
 
@@ -290,7 +460,56 @@ module.exports = (db) => {
       } catch (error) {
         await connection.rollback();
         throw error;
+      } finally {
+        connection.release();
       }
+    },
+
+    /* ================== USAGE CHECK SERVICE ================== */
+    /**
+     * เช็คว่า Building, Floor หรือ Room มีการใช้งานในรายการแจ้งซ่อมหรือไม่
+     * @param {string} type - ประเภท: 'building', 'floor', 'room'
+     * @param {number} id - ID ของ Building, Floor หรือ Room
+     * @returns {Promise<{inUse: boolean, count: number}>}
+     */
+    async checkUsageInRepairs(type, id) {
+      let sql;
+      
+      if (type === 'building') {
+        // เช็คว่ามีห้องในอาคารนี้ที่ถูกใช้ในรายการแจ้งซ่อมหรือไม่
+        sql = `
+          SELECT COUNT(DISTINCT rf.rf_id) as count 
+          FROM repair_form rf
+          JOIN room r ON rf.rf_room_id = r.room_id
+          JOIN floor f ON r.room_fl_id = f.fl_id
+          WHERE f.fl_bd_id = ?
+        `;
+      } else if (type === 'floor') {
+        // เช็คว่ามีห้องในชั้นนี้ที่ถูกใช้ในรายการแจ้งซ่อมหรือไม่
+        sql = `
+          SELECT COUNT(DISTINCT rf.rf_id) as count 
+          FROM repair_form rf
+          JOIN room r ON rf.rf_room_id = r.room_id
+          WHERE r.room_fl_id = ?
+        `;
+      } else if (type === 'room') {
+        // เช็คว่าห้องนี้ถูกใช้ในรายการแจ้งซ่อมหรือไม่
+        sql = `
+          SELECT COUNT(*) as count 
+          FROM repair_form 
+          WHERE rf_room_id = ?
+        `;
+      } else {
+        throw new Error('INVALID_TYPE');
+      }
+
+      const [result] = await db.promise().query(sql, [id]);
+      const count = result[0].count;
+      
+      return {
+        inUse: count > 0,
+        count: count
+      };
     },
   };
 };
