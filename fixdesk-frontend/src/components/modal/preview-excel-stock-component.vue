@@ -1,16 +1,31 @@
+/**
+ * =====================================================================
+ * @file            preview-excel-stock-component.vue
+ * @module
+ * @layer           Component Layer (UI Component)
+ * @version         1.0.0
+ * @since           2026-02-05
+ * @author
+ * @contributors
+ *
+ * @lastModified    2026-02-27
+ * @lastModifiedBy
+ * ---------------------------------------------------------------------
+ * @description
+ *  โมดอลสำหรับแสดงตัวอย่างข้อมูลสินค้าจากไฟล์ Excel ก่อนนำเข้า
+ *  คาดหวังข้อมูลเป็นรายการที่แมปตามคีย์ pd_name, pd_asset_code,
+ *  pd_category_name, pd_quantity, pd_unit_name, status
+ *
+ * @requires
+ *  - vue
+ * ---------------------------------------------------------------------
+ * @changelog
+ *
+ * =====================================================================
+ */
+
 <script setup>
 import { computed } from 'vue'
-
-/**
- * รับข้อมูล items จาก component import-stock-component
- * คาดหวังว่าข้อมูลที่ส่งมา (props.items) จะถูก map มาจาก Excel แล้วตาม Key ด้านล่างนี้:
- * - pd_name (ชื่อรายการ)
- * - pd_asset_code (หมายเลขครุภัณฑ์)
- * - pd_category_name (หมวดหมู่)
- * - pd_quantity (จำนวน)
- * - pd_unit_name (หน่วยนับ)
- * - status (สถานะ)
- */
 const props = defineProps({
   items: {
     type: Array,
