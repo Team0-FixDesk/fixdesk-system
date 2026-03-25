@@ -162,8 +162,15 @@ module.exports = (db) => {
 
       const [result] = await db.promise().query(sql, params);
 
-      // 5. ส่งการแจ้งเตือนไปยัง LINE Group
+      // 5. ส่งการแจ้งเตือนไปยัง LINE Group (ถ้าไม่ได้ skip)
+      let lineNotificationError = null;
       try {
+        // ถ้า skip_line_notification = true ให้ข้าม LINE notification
+        if (data.skip_line_notification === 'true' || data.skip_line_notification === true) {
+          console.log('ℹ️ Skipping LINE notification as requested. Repair created successfully:', rfCode);
+          return { insertId: result.insertId, rfCode };
+        }
+
         const notifSql = `
           SELECT
             rf.rf_code,
@@ -182,7 +189,7 @@ module.exports = (db) => {
         const [notifData] = await db.promise().query(notifSql, [result.insertId]);
 
         if (notifData.length > 0) {
-          await lineNotification.notifyNewRepair({
+          const notifResult = await lineNotification.notifyNewRepair({
             rf_code: notifData[0].rf_code,
             user_name: notifData[0].user_name,
             repair_title: notifData[0].rf_problem,
@@ -191,10 +198,19 @@ module.exports = (db) => {
             urgency: notifData[0].rf_urgency || 'medium',
             phone: notifData[0].rf_phone
           });
+          // ถ้าเป็น rate limit ให้บันทึก error แต่ไม่ throw (ใบแจ้งซ่อมสร้างสำเร็จแล้ว)
+          if (!notifResult.success && notifResult.errorType === 'RATE_LIMIT_EXCEEDED') {
+            lineNotificationError = { errorType: 'RATE_LIMIT_EXCEEDED', message: 'เครดิต LINE Notify หมด ใบแจ้งซ่อมสร้างสำเร็จแล้ว แต่ไม่ได้ส่งแจ้งเตือนไป' };
+          }
         }
       } catch (lineError) {
         console.error('LINE notification failed:', lineError.message);
         // ไม่ throw error เพื่อไม่ให้กระทบการสร้างใบแจ้งซ่อม
+      }
+
+      // ถ้ามี error จากการส่ง LINE ให้ return พร้อม error info
+      if (lineNotificationError) {
+        return { insertId: result.insertId, rfCode, lineNotificationError };
       }
 
       return { insertId: result.insertId, rfCode };
@@ -502,7 +518,7 @@ WHERE sf.sf_rf_id = ?
         );
 
         if (notifData.length > 0) {
-          await lineNotification.notifyJobAssignment({
+          const notifResult = await lineNotification.notifyJobAssignment({
             rf_code: notifData[0].rf_code,
             technician_name: notifData[0].technician_name,
             assigned_by_name: notifData[0].assigned_by_name,
@@ -512,8 +528,16 @@ WHERE sf.sf_rf_id = ?
             urgency: notifData[0].rf_urgency,
             is_team: false,
           });
+          // ถ้าเป็น rate limit ให้ throw error
+          if (!notifResult.success && notifResult.errorType === 'RATE_LIMIT_EXCEEDED') {
+            throw new Error('LINE_RATE_LIMIT');
+          }
         }
       } catch (lineError) {
+        // ถ้า rate limit ให้ throw ขึ้นไป
+        if (lineError.message === 'LINE_RATE_LIMIT') {
+          throw lineError;
+        }
         console.error("LINE notification failed:", lineError.message);
       }
 
@@ -618,7 +642,7 @@ WHERE sf.sf_rf_id = ?
           );
 
           if (notifData.length > 0) {
-            await lineNotification.notifyJobAssignment({
+            const notifResult = await lineNotification.notifyJobAssignment({
               rf_code: notifData[0].rf_code,
               technician_name: notifData[0].technician_names,
               assigned_by_name: "-",
@@ -629,8 +653,16 @@ WHERE sf.sf_rf_id = ?
               lead_name: leadData.length > 0 ? leadData[0].lead_name : null,
               is_team: true,
             });
+            // ถ้าเป็น rate limit ให้ throw error
+            if (!notifResult.success && notifResult.errorType === 'RATE_LIMIT_EXCEEDED') {
+              throw new Error('LINE_RATE_LIMIT');
+            }
           }
         } catch (lineError) {
+          // ถ้า rate limit ให้ throw ขึ้นไป
+          if (lineError.message === 'LINE_RATE_LIMIT') {
+            throw lineError;
+          }
           console.error("LINE notification failed:", lineError.message);
         }
 
@@ -675,7 +707,7 @@ WHERE sf.sf_rf_id = ?
           );
 
           if (notifData.length > 0) {
-            await lineNotification.notifyJobAccepted({
+            const notifResult = await lineNotification.notifyJobAccepted({
               rf_code: notifData[0].rf_code,
               technician_name: notifData[0].technician_name,
               repair_title: notifData[0].rf_problem,
@@ -683,8 +715,16 @@ WHERE sf.sf_rf_id = ?
               technician_type: notifData[0].technician_type,
               urgency: notifData[0].rf_urgency,
             });
+            // ถ้าเป็น rate limit ให้ throw error
+            if (!notifResult.success && notifResult.errorType === 'RATE_LIMIT_EXCEEDED') {
+              throw new Error('LINE_RATE_LIMIT');
+            }
           }
         } catch (lineError) {
+          // ถ้า rate limit ให้ throw ขึ้นไป
+          if (lineError.message === 'LINE_RATE_LIMIT') {
+            throw lineError;
+          }
           console.error("LINE notification failed:", lineError.message);
         }
       }
