@@ -4,9 +4,10 @@
 * @layer Component (Presentation Layer)
 * @version 1.1.0
 * @since 2025-12-22
-* @author พชร ไพศรีสกุล
-* @lastModified 2026-02-26
-* @lastModifiedBy ธนภัทร จันทร์งาม
+ * @author พชร ไพศรีสกุล
+ * @contributors
+ * @lastModified 2026-02-26
+ * @lastModifiedBy ธนภัทร จันทร์งาม
 * ---------------------------------------------------------------------
 * @description
 * คอมโพเนนต์ปุ่มเมนูย่อย (Kebab Menu) สำหรับแสดงตัวเลือกการจัดการข้อมูลในแต่ละแถวของตาราง

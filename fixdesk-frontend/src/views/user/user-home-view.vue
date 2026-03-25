@@ -1,7 +1,28 @@
+/**
+ * =====================================================================
+ * @file            user-home-view.vue
+ * @module          -
+ * @layer           View (Presentation Layer)
+ * @version         1.0.0
+ * @since
+ * @author
+ * @contributors
+ *
+ * @lastModified
+ * @lastModifiedBy
+ * ---------------------------------------------------------------------
+ * @description
+ *
+ *
+ * @requires
+ *  - vue
+ *  - vue-router
+ *  - @/components/card-home-component.vue
+ *  - @/components/table-component.vue
+ *
  * ---------------------------------------------------------------------
  * @changelog
- *   - ดึงข้อมูลชื่อผู้ใช้ : 
- *     [2026-02-21, พิมลพรรณ มามาก] V
+ *   - Initial header template
  * =====================================================================
  */
 

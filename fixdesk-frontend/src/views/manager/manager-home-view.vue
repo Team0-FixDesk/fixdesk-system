@@ -215,7 +215,7 @@ function buildTooltipHTML({ title = '', rows = [], unitLabel = 'หน่วย:
 ----------------------------- */
 const calcPercentChange = (current, previous) => {
   if (previous === 0) return 0;
-  
+
   return Math.round(((current - previous) / previous) * 100)
 }
 
@@ -225,7 +225,7 @@ const getAnchorDate = (r) => {
   }
   if (r.rf_user_status === 'in_progress') {
     // เช็คทั้ง inprocess และ in_process เผื่อชื่อคอลัมน์ใน DB ไม่นิ่ง
-    return r.rf_in_process_at || r.rf_inprocess_at || r.rf_update_at || r.rf_create_at 
+    return r.rf_in_process_at || r.rf_inprocess_at || r.rf_update_at || r.rf_create_at
   }
   return r.rf_create_at || r.rf_update_at
 }
@@ -237,36 +237,36 @@ const summaryStats = ref({ total: 0, pending: 0, in_progress: 0, done: 0 })
 const summaryGrowth = ref({ total: 0, pending: 0, in_progress: 0, done: 0 })
 
 const summaryCards = computed(() => [
-  { 
-    value: summaryStats.value.total, 
-    label: 'งานซ่อมทั้งหมด', 
-    unit: 'รายการ', 
-    colorClass: 'text-blue-600', 
-    filterStatus: 'all', 
-    growth: summaryGrowth.value.total 
+  {
+    value: summaryStats.value.total,
+    label: 'งานซ่อมทั้งหมด',
+    unit: 'รายการ',
+    colorClass: 'text-blue-600',
+    filterStatus: 'all',
+    growth: summaryGrowth.value.total
   },
-  { 
-    value: summaryStats.value.pending, 
-    label: 'รอดำเนินการทั้งหมด', 
-    unit: 'รายการ', 
-    colorClass: 'text-orange-500', 
-    filterStatus: 'pending', 
-    growth: summaryGrowth.value.pending 
+  {
+    value: summaryStats.value.pending,
+    label: 'รอดำเนินการทั้งหมด',
+    unit: 'รายการ',
+    colorClass: 'text-orange-500',
+    filterStatus: 'pending',
+    growth: summaryGrowth.value.pending
   },
-  { value: summaryStats.value.in_progress, 
-    label: 'กำลังดำเนินการทั้งหมด', 
-    unit: 'รายการ', 
-    colorClass: 'text-sky-600', 
-    filterStatus: 'in_progress', 
-    growth: summaryGrowth.value.in_progress 
+  { value: summaryStats.value.in_progress,
+    label: 'กำลังดำเนินการทั้งหมด',
+    unit: 'รายการ',
+    colorClass: 'text-sky-600',
+    filterStatus: 'in_progress',
+    growth: summaryGrowth.value.in_progress
   },
-  { 
-    value: summaryStats.value.done, 
-    label: 'เสร็จสิ้นทั้งหมด', 
-    unit: 'รายการ', 
-    colorClass: 'text-green-600', 
-    filterStatus: 'done', 
-    growth: summaryGrowth.value.done 
+  {
+    value: summaryStats.value.done,
+    label: 'เสร็จสิ้นทั้งหมด',
+    unit: 'รายการ',
+    colorClass: 'text-green-600',
+    filterStatus: 'done',
+    growth: summaryGrowth.value.done
   },
 ])
 
@@ -375,7 +375,7 @@ function updateMonthlyStackedChart() {
   allRepairs.value.forEach((r) => {
     const anchorDate = getAnchorDate(r)
     if (!anchorDate) return
-    
+
     const d = new Date(anchorDate)
     if (d.getFullYear() === targetYear) {
       const m = d.getMonth()
@@ -442,8 +442,8 @@ function updateStatusPieChart() {
   const isMatch = (dateStr) => {
     if (!dateStr) return false
     const d = new Date(dateStr)
-    return isWeek 
-      ? (d >= startOfWeek && d <= endOfWeek) 
+    return isWeek
+      ? (d >= startOfWeek && d <= endOfWeek)
       : (d.getFullYear() === targetYear && d.getMonth() === targetMonth)
   }
 
@@ -513,7 +513,7 @@ function updateWeeklyTrendChart() {
   }
 
   const buckets = new Array(7).fill(0).map(() => ({ total: 0, pending: 0, in_progress: 0, done: 0 }))
-  
+
   const diffToMonday = (now.getDay() + 6) % 7
   const startOfWeek = new Date(now)
   startOfWeek.setDate(now.getDate() - diffToMonday)
@@ -538,7 +538,7 @@ function updateWeeklyTrendChart() {
     if (isThisWeek(anchorDate)) {
       const idx = idxOf(anchorDate)
       buckets[idx].total += 1
-      
+
       if (r.rf_user_status === 'pending') buckets[idx].pending += 1
       else if (r.rf_user_status === 'in_progress') buckets[idx].in_progress += 1
       else buckets[idx].done += 1
@@ -606,9 +606,9 @@ function updateEfficiencyChart() {
 
   if (isWeek && (targetYear !== now.getFullYear() || targetMonth !== now.getMonth())) {
     efficiencyMeta.value = []
-    efficiencyChartOptions.value = { 
-      ...efficiencyChartOptions.value, 
-      xaxis: { ...efficiencyChartOptions.value.xaxis, categories: ['ไม่มีข้อมูล'] } 
+    efficiencyChartOptions.value = {
+      ...efficiencyChartOptions.value,
+      xaxis: { ...efficiencyChartOptions.value.xaxis, categories: ['ไม่มีข้อมูล'] }
     }
     efficiencyChartSeries.value = [{ name: 'อัตราสำเร็จ', data: [0] }]
     return
@@ -637,9 +637,9 @@ function updateEfficiencyChart() {
   const data = rows.length ? rows.map((r) => Number(r.rate.toFixed(1))) : [0]
 
   efficiencyMeta.value = rows.map((r) => ({ total: r.total, done: r.done }))
-  efficiencyChartOptions.value = { 
-    ...efficiencyChartOptions.value, 
-    xaxis: { ...efficiencyChartOptions.value.xaxis, categories } 
+  efficiencyChartOptions.value = {
+    ...efficiencyChartOptions.value,
+    xaxis: { ...efficiencyChartOptions.value.xaxis, categories }
   }
   efficiencyChartSeries.value = [{ name: 'อัตราสำเร็จ', data }]
 }
@@ -807,7 +807,7 @@ function updateCompareBarChart() {
   const targetYear = selectedYear.value
 
   allRepairs.value.forEach((r) => {
-    if (r.rf_user_status === 'done' || r.rf_done_at) { 
+    if (r.rf_user_status === 'done' || r.rf_done_at) {
       const anchorDate = r.rf_done_at || r.rf_update_at || r.rf_create_at
       if (!anchorDate) return
 
@@ -844,13 +844,13 @@ async function fetchDashboardData() {
     allTechTypes.value = techTypes
 
     const years = new Set()
-    
+
     allRepairs.value.forEach((r) => {
       if (r.rf_create_at) years.add(new Date(r.rf_create_at).getFullYear())
       if (r.rf_done_at) years.add(new Date(r.rf_done_at).getFullYear())
       if (r.rf_in_process_at) years.add(new Date(r.rf_in_process_at).getFullYear())
     })
-    
+
     availableYears.value = Array.from(years).sort((a, b) => b - a)
 
     // ป้องกันหน้าจอแดง: ถ้าไม่มีปีในฐานข้อมูลเลย ให้ใช้ปีปัจจุบัน

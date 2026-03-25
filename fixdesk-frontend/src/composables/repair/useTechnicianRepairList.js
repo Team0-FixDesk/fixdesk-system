@@ -5,6 +5,7 @@
  * @version         1.0.1
  * @since           2026-02-09
  * @author          พชร ไพศรีสกุล
+ * @contributors
  * @lastModified    2026-02-21
  * @lastModifiedBy  เศรษฐพงศ์ หอมชื่น
  * ---------------------------------------------------------------------
@@ -70,7 +71,7 @@ export function useTechnicianRepairList(API_BASE, token, isAuthenticated, logout
         title: 'หมดเวลาในการใช้งาน',
         text: 'คุณไม่ได้ใช้งานเป็นระยะเวลาหนึ่ง กรุณาลงชื่อเข้าสู่ระบบใหม่',
         icon: 'warning',
-        confirmButtonColor: '#0048EF', 
+        confirmButtonColor: '#0048EF',
         confirmButtonText: 'ตกลง'
       })
         logout()
