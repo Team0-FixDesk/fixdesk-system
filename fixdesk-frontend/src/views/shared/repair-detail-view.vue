@@ -1,12 +1,12 @@
 /**
 * =====================================================================
-* @file : repair-detail-view.vue
-* @module : แสดงรายละเอียดใบแจ้งซ่อม
-* @layer : View (Presentation Layer)
-* @version : 1.3.2
-* @since : 2026-02-17
-* @lastModified : 2026-03-21
-* @lastModifiedBy : นราธิป แสนทวีสุข
+* @file                repair-detail-view.vue
+* @module              แสดงรายละเอียดใบแจ้งซ่อม
+* @layer               View (Presentation Layer)
+* @version             1.3.2
+* @since               2026-02-17
+* @lastModified        2026-03-21
+* @lastModifiedBy      นราธิป แสนทวีสุข
 * ---------------------------------------------------------------------
 * @description
 * View สำหรับแสดงรายละเอียดใบแจ้งซ่อม (Repair Detail)
