@@ -112,78 +112,27 @@ const firstNameTH = ref('')
 const lastNameTH = ref('')
 const firstNameEN = ref('')
 const lastNameEN = ref('')
-const username = ref('')
-const tokenData = ref({})
-
-const editForm = ref({
-  us_ttn_id: '',
-  us_department: '',
-  us_phone: '',
-  oldPassword: '',
-  password: '',
-  confirmPassword: '',
-})
-
-const errors = ref({
-  us_ttn_id: '',
-  firstNameTH: '',
-  lastNameTH: '',
-  firstNameEN: '',
-  lastNameEN: '',
-  us_department: '',
-  us_phone: '',
-  username: '',
-  password: '',
-  confirmPassword: '',
-  tempOldPassword: '',
-})
-
-onMounted(() => {
-  const token = localStorage.getItem('token') || sessionStorage.getItem('token')
-  if (token) {
-    try {
-      const decoded = jwtDecode(token)
-      tokenData.value = decoded
-
-      userFullname.value = decoded.us_first_name_th || decoded.us_user_name || 'ผู้ใช้ระบบ'
-      firstNameTH.value = decoded.us_first_name_th || ''
-      lastNameTH.value = decoded.us_last_name_th || ''
-      firstNameEN.value = decoded.us_first_name_en || ''
-      lastNameEN.value = decoded.us_last_name_en || ''
-      username.value = decoded.us_user_name || ''
-    } catch (err) {
-      console.error('❌ Decode token error:', err)
-    }
-  }
-})
-
-function forceClose() {
-  showDropdown.value = false
-  closeAllPopup()
-}
-
-function toggleDropdown() {
-  if (!props.expanded) return
-  showDropdown.value = !showDropdown.value
-}
-
-function logout(e) {
-  e.stopPropagation()
-  // ลบทุกที่ที่เราเคยใช้เก็บ token
-  localStorage.removeItem('token')
-  localStorage.removeItem('session_user')
-  sessionStorage.removeItem('token')
-  sessionStorage.removeItem('session_user')
-
-  window.location.href = '/login'
-}
-
-// รีเซ็ตฟอร์มและข้อความข้อผิดพลาด
-function resetProfileForm() {
-  editForm.value.us_phone = ''
-  tempOldPassword.value = ''
-  errors.value.us_phone = ''
-  errors.value.tempOldPassword = ''
+/**
+ * =====================================================================
+ * @file            sidebar-profile-component.vue
+ * @layer           Component (Presentation Layer)
+ * @version         1.0.0
+ * @since
+ * @author
+ * @contributors
+ *
+ * @lastModified
+ * @lastModifiedBy
+ * @description
+ *  ส่วนแสดงข้อมูลโปรไฟล์ใน sidebar พร้อมเมนูการจัดการบัญชี (แก้ไข/เปลี่ยนรหัส)
+ * @features
+ *
+ * @usedBy
+ *
+ * @changelog
+ *
+ * =====================================================================
+ */
 }
 
 function resetPasswordForm() {

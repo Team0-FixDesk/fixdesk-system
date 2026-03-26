@@ -1,27 +1,3 @@
-/**
- * =====================================================================
- * @file            status-timeline-component.vue
- * @layer           Component (UI Component)
- * @version         1.0.0
- * @since           2025-12-06
- * @author
- * @contributors
- *
- * @lastModified    2025-12-06
- * @lastModifiedBy
- * ---------------------------------------------------------------------
- * @description
- *  คอมโพเนนต์แสดงไทม์ไลน์สถานะ แสดงขั้นตอน เวลา และรายละเอียดของแต่ละขั้นตอน
- *  เหมาะสำหรับแสดงความคืบหน้าของงานหรือกระบวนการต่างๆ
- *
- * @requires
- *  - vue
- * ---------------------------------------------------------------------
- * @changelog
- *
- * =====================================================================
- */
-
 <script setup>
 const props = defineProps({
   timelineSteps: {
@@ -65,29 +41,27 @@ const props = defineProps({
             'bg-yellow-400': step.stepState === 'current',
             'bg-gray-300': step.stepState === 'upcoming',
           }"
-        ></span>
-      </div>
-
-      <!-- เนื้อหา -->
-      <div class="flex-1 -translate-y-1 pl-3 pb-6 text-gray-600">
-        <div class="flex flex-col space-y-0.5">
-          <!-- เวลา -->
-          <p class="text-sm text-gray-500">
-            {{ step.displayTime }}
-          </p>
-          <!-- ชื่อสถานะ -->
-          <p class="text-gray-900 text-sm sm:text-base">
-            {{ step.title }}
-          </p>
-          <!-- รายละเอียด -->
-          <p class="text-sm text-gray-500">
-            {{ step.description }}
-          </p>
-        </div>
-      </div>
-    </div>
-
-    <div v-if="!timelineSteps.length" class="text-gray-400 text-xs sm:text-sm text-center w-full">
+        /**
+         * =====================================================================
+         * @file            status-timeline-component.vue
+         * @layer           Component (Presentation Layer)
+         * @version         1.0.0
+         * @since
+         * @author
+         * @contributors
+         *
+         * @lastModified
+         * @lastModifiedBy
+         * @description
+         *  คอมโพเนนต์แสดงไทม์ไลน์ของสถานะงาน แสดงเวลาและคำอธิบายแต่ละขั้นตอน
+         * @features
+         *
+         * @usedBy
+         *
+         * @changelog
+         *
+         * =====================================================================
+         */
       - ยังไม่มีประวัติการดำเนินการ -
     </div>
   </div>
