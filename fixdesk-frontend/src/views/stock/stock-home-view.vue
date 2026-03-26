@@ -83,7 +83,7 @@ const transactions = ref([])
 const tableRowsList = ref([])
 const loading = ref(false)
 
-// 🔀 สวิตช์กราฟ
+// สวิตช์กราฟ
 const chartMode = ref('request') // 'request' | 'stock' | 'inventory'
 
 // ==================== Navigation ====================

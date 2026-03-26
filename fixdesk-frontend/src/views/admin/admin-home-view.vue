@@ -77,7 +77,6 @@ const router = useRouter()
 const { token, isAuthenticated, logout } = useAuthToken()
 const { userDisplayName, userDepartmentName, fetchUserProfileData } = useUserProfile()
 
-
 const repairRequests = ref([])
 const loading = ref(false)
 const error = ref(null)
