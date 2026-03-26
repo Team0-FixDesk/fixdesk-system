@@ -335,8 +335,11 @@ module.exports = (techService) => {
             .json({ message: "ไม่พบงานซ่อม หรือสถานะไม่ถูกต้อง" });
           
           console.error("Close job error:", err);
-          res.status(500).json({ message: "ดำเนินการไม่สำเร็จ", error: err.message });
-     * เบิกสินค้าโดยช่าง
+        res.status(500).json({ message: "ดำเนินการไม่สำเร็จ", error: err.message });
+      }
+    },
+
+    /** เบิกสินค้าโดยช่าง
      *
      * @author พชร ไพศรีสกุล
      * @since 2026-02-10
@@ -347,6 +350,7 @@ module.exports = (techService) => {
      * @param {Object} res
      * @returns {Promise<void>}
      */
+      
     async withdrawStock(req, res) {
       try {
         const { repair_code, items } = req.body;

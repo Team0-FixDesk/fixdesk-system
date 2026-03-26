@@ -76,8 +76,6 @@ const router = useRouter()
 
 const { userDisplayName, userDepartmentName, fetchUserProfileData } = useUserProfile()
 
-
-
 // ==================== State ====================
 const products = ref([])
 const stockForms = ref([])
@@ -85,16 +83,13 @@ const transactions = ref([])
 const tableRowsList = ref([])
 const loading = ref(false)
 
-// 🔀 สวิตช์กราฟ
+// สวิตช์กราฟ
 const chartMode = ref('request') // 'request' | 'stock' | 'inventory'
 
 // ==================== Navigation ====================
 function openDetail(code) {
   router.push(`/main/stock-requisition/${code}`)
 }
-
-// ==================== Table ====================
-const columns = ['หมายเลขรายการเบิก', 'รายละเอียดการเบิก', 'ตัวดำเนินการ']
 
 // ==================== Dynamic Table Data ====================
 const dynamicTableData = computed(() => {
@@ -584,7 +579,7 @@ onMounted(() => {
     <div class="flex justify-between items-center mb-6">
       <div>
         <h1 class="text-2xl font-bold text-gray-800">
-          หน้าจอหลักของผู้ดูแลคลัง - สวัสดีคุณ {{ userDisplayName }}
+          หน้าจอหลักของผู้ดูแลคลัง - สวัสดีคุณ{{ userDisplayName }}
         </h1>
         <p class="text-lg text-gray-700">
           {{ userDepartmentName }}

@@ -61,6 +61,7 @@ import { useTruncateText } from '@/composables/useTruncateText.js'
 
 const { truncateSentences } = useTruncateText()
 
+
 const TH_LOCALE = 'th-TH'
 
 const STATUS = {
