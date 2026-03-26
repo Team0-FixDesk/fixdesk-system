@@ -1,30 +1,4 @@
 
-/**
- * =====================================================================
- * @file            admin-report-history-view.vue
- * @module          -
- * @layer           View (Presentation Layer)
- * @version         1.0.0
- * @since
- * @author
- * @contributors
- *
- * @lastModified
- * @lastModifiedBy
- * ---------------------------------------------------------------------
- * @description
- *
- *
- * @requires
- *  - vue
- *  - vue-router
- *
- * ---------------------------------------------------------------------
- * @changelog
- *   - Initial header template
- * =====================================================================
- */
-
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'

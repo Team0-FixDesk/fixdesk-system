@@ -6,9 +6,8 @@
  * @version         1.0.0
  * @since           2026-02-17
  * @author          -
- * @contributors
  * @lastModified    2026-02-17
- * @lastModifiedBy  ธนภัทร จันทร์งาม
+ * @lastModifiedBy  ธนภัทร จันทร์งาม 
  * ---------------------------------------------------------------------
  * @description
  *  Component สำหรับแสดงข้อมูลสินค้าแต่ละรายการในรูปแบบการ์ด (Card View)
