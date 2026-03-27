@@ -62,6 +62,7 @@ const selectedTeam = ref([])
 const selectedType = ref('')
 const searchTech = ref('')
 const showAssignTypeFilter = ref(false)
+const isProcessing = ref(false)
 
 // Computed
 const filteredTechnicians = computed(() =>
@@ -178,33 +179,54 @@ async function setLeadForAssignment(rf_code) {
 
 async function confirmAccept() {
   const code = props.repairCode
-  if (!code) return
+  if (!code || isProcessing.value) return
 
-  // โหมดทำงานคนเดียว
-  if (acceptMode.value === 'alone') {
-    try {
+  isProcessing.value = true
+
+  try {
+    // โหมดทำงานคนเดียว
+    if (acceptMode.value === 'alone') {
       const res = await fetch(`${API_BASE}/technician/accept-job/${encodeURIComponent(code)}`, {
         method: 'PUT',
         headers: getAuthHeaders(),
       })
 
       const payload = await res.json().catch(() => ({}))
-      if (!res.ok) {
-        const Toast = Swal.mixin({
+
+      // ถ้า rate limit แจ้งเตือน user เพียงอย่างเดียว แล้วดำเนินการต่อโดยไม่ส่ง LINE
+      if (res.status === 429 || payload.errorType === 'RATE_LIMIT_EXCEEDED') {
+        await Swal.fire({
           toast: true,
           position: 'top-end',
           animation: false,
           showConfirmButton: false,
-          timer: 3000,
+          icon: 'warning',
+          title: 'ถึงขีดจำกัดในการส่งแจ้งเตือน LINE',
+          text: 'ข้อมูลของคุณถูกบันทึกแล้ว',
+          timer: 1000,
           timerProgressBar: true,
+          background: '#fef3c7',
+          color: '#92400e',
         })
-        Toast.fire({
+        isProcessing.value = false
+        emit('success')
+        emit('close')
+        return
+      }
+
+      if (!res.ok) {
+        await Swal.fire({
+          toast: true,
+          position: 'top-end',
+          animation: false,
+          icon: 'error',
           title: 'เกิดข้อผิดพลาด',
           text: payload.message || 'ไม่สามารถรับงานได้',
           icon: 'error',
           background: '#FFFFFF',
           color: '#dc2626',
         })
+        isProcessing.value = false
         return
       }
 
@@ -215,6 +237,7 @@ async function confirmAccept() {
         await setLeadForAssignment(code)
       }
 
+      isProcessing.value = false
       emit('success')
       emit('close')
     } catch (err) {
@@ -258,7 +281,6 @@ async function confirmAccept() {
       return
     }
 
-    try {
       const res = await fetch(`${API_BASE}/assign-repair-team`, {
         method: 'POST',
         headers: getAuthHeaders(),
@@ -270,22 +292,41 @@ async function confirmAccept() {
       })
 
       const payload = await res.json().catch(() => ({}))
-      if (!res.ok) {
-        const Toast = Swal.mixin({
+
+      // ถ้า rate limit แจ้งเตือน user เพียงอย่างเดียว แล้วดำเนินการต่อโดยไม่ส่ง LINE
+      if (res.status === 429 || payload.errorType === 'RATE_LIMIT_EXCEEDED') {
+        await Swal.fire({
           toast: true,
           position: 'top-end',
           animation: false,
-          showConfirmButton: false,
+          icon: 'warning',
+          title: 'ไม่สามารถส่งแจ้งเตือน LINE ได้',
+          text: 'แต่เรากำลังบันทึกข้อมูลต่อ',
+          timer: 3000,
+          timerProgressBar: true,
+          background: '#fef3c7',
+          color: '#92400e',
+        })
+        isProcessing.value = false
+        emit('success')
+        emit('close')
+        return
+      }
+
+      if (!res.ok) {
+        await Swal.fire({
+          toast: true,
+          position: 'top-end',
+          animation: false,
+          icon: 'error',
+          title: 'เกิดข้อผิดพลาด',
+          text: payload.message || 'มอบหมายทีมไม่สำเร็จ',
+          background: '#FFFFFF',
+          color: '#dc2626',
           timer: 3000,
           timerProgressBar: true,
         })
-        Toast.fire({
-          title: 'เกิดข้อผิดพลาด',
-          text: payload.message || 'มอบหมายทีมไม่สำเร็จ',
-          icon: 'error',
-          background: '#FFFFFF',
-          color: '#dc2626',
-        })
+        isProcessing.value = false
         return
       }
 
@@ -296,24 +337,44 @@ async function confirmAccept() {
 
       if (!res2.ok) {
         const p2 = await res2.json().catch(() => ({}))
-        const Toast = Swal.mixin({
+
+        // ถ้า rate limit แจ้งเตือน user เพียงอย่างเดียว แล้วดำเนินการต่อโดยไม่ส่ง LINE
+        if (res2.status === 429 || p2.errorType === 'RATE_LIMIT_EXCEEDED') {
+          await Swal.fire({
+            toast: true,
+            position: 'top-end',
+            animation: false,
+            icon: 'warning',
+            title: 'ไม่สามารถส่งแจ้งเตือน LINE ได้',
+            text: 'แต่เรากำลังบันทึกข้อมูลต่อ',
+            timer: 3000,
+            timerProgressBar: true,
+            background: '#fef3c7',
+            color: '#92400e',
+          })
+          isProcessing.value = false
+          emit('success')
+          emit('close')
+          return
+        }
+
+        await Swal.fire({
           toast: true,
           position: 'top-end',
           animation: false,
-          showConfirmButton: false,
+          icon: 'error',
+          title: 'เกิดข้อผิดพลาด',
+          text: p2.message || 'รับงานหลังมอบหมายทีมไม่สำเร็จ',
+          background: '#FFFFFF',
+          color: '#dc2626',
           timer: 3000,
           timerProgressBar: true,
         })
-        Toast.fire({
-          title: 'เกิดข้อผิดพลาด',
-          text: p2.message || 'รับงานหลังมอบหมายทีมไม่สำเร็จ',
-          icon: 'error',
-          background: '#FFFFFF',
-          color: '#dc2626',
-        })
+        isProcessing.value = false
         return
       }
 
+      isProcessing.value = false
       emit('success')
       emit('close')
     } catch (err) {
@@ -334,6 +395,19 @@ async function confirmAccept() {
         color: '#dc2626',
       })
     }
+  } catch (err) {
+    console.error('Error accepting job:', err)
+    await Swal.fire({
+      toast: true,
+      position: 'top-end',
+      animation: false,
+      icon: 'error',
+      title: 'เกิดข้อผิดพลาด',
+      text: 'ขณะประมวลผลข้อมูล',
+      timer: 3000,
+      timerProgressBar: true,
+    })
+    isProcessing.value = false
   }
 }
 
@@ -454,15 +528,17 @@ onBeforeUnmount(() => {
       <div class="flex justify-end gap-3 mt-6">
         <button
           @click="$emit('close')"
-          class="px-5 py-2 font-medium text-white transition bg-neutral-300 rounded-md hover:bg-neutral-400"
+          :disabled="isProcessing"
+          class="px-5 py-2 font-medium text-white transition bg-neutral-300 rounded-md hover:bg-neutral-400 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           ยกเลิก
         </button>
         <button
           @click="confirmAccept"
-          class="px-5 py-2 font-medium text-white transition bg-blue-700 rounded-md hover:bg-blue-800"
+          :disabled="isProcessing"
+          class="px-5 py-2 font-medium text-white transition bg-blue-700 rounded-md hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          ยืนยัน
+          {{ isProcessing ? 'กำลังดำเนินการ...' : 'ยืนยัน' }}
         </button>
       </div>
     </div>
