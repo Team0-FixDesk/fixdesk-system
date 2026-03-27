@@ -1,13 +1,13 @@
 /**
  * =====================================================================
- * @file my-repair-list.view.vue
- * @module มอดูลแจ้งซ่อม - การติดตามสถานะ และดูรายละเอียดคำร้องแจ้งซ่อม
- * @layer View (Presentation Layer)
- * @version 1.0.1
- * @since 2026-02-04
- * @author พชร ไพศรีสกุล
- * @lastModified 2026-03-03
- * @lastModifiedBy พชร ไพศรีสกุล
+ * @file              my-repair-list.view.vue
+ * @module            มอดูลแจ้งซ่อม - การติดตามสถานะ และดูรายละเอียดคำร้องแจ้งซ่อม
+ * @layer             View (Presentation Layer)
+ * @version           1.0.1
+ * @since             2026-02-04
+ * @author            พชร ไพศรีสกุล
+ * @lastModified      2026-03-03
+ * @lastModifiedBy    พชร ไพศรีสกุล
  * ---------------------------------------------------------------------
  * @description
  * หน้าจอสำหรับแสดงรายการแจ้งซ่อมของผู้ใช้งานปัจจุบัน
