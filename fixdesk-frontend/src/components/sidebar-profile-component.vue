@@ -11,8 +11,8 @@
  *   - พชร ไพศรีสกุล
  *   - ปฏิพัทธ์ จงนันทพันธ์กุล
  *
- * @lastModified    2026-02-22
- * @lastModifiedBy  พชร ไพศรีสกุล
+ * @lastModified    2026-03-13
+ * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
  * ---------------------------------------------------------------------
  * @description
  *  Component ส่วนท้ายของ Sidebar สำหรับแสดงข้อมูลผู้ใช้ และจัดการตั้งค่าบัญชีส่วนตัว
@@ -71,6 +71,10 @@
  *     [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล] V 1.9.4
  *   - ปรับปรุง Sidebar และประสบการณ์ใช้งาน (UX)
  *     [2026-02-22, พชร ไพศรีสกุล] V 1.10.0
+ *   - แก้ไขหน้าต่างลอยตั้งค่าบัญชีเป็นตั้งค่าเบอร์โทรศัพท์ และแก้ไขไอคอน
+ *     [2026-03-13, ปฏิพัทธ์ จงนันทพันธ์กุล] V1.10.2
+ *   - แก้ไขคำ alert 
+ *     [2026-03-13, ปฏิพัทธ์ จงนันทพันธ์กุล]
  *
  * =====================================================================
  */
@@ -289,7 +293,7 @@ async function executeSave(type = '') {
   // สำเร็จ: แสดงข้อความแจ้งเตือนตามประเภทการบันทึก
     Swal.fire({
       title: 'สำเร็จ',
-      text: type === 'password' ? 'เปลี่ยนรหัสผ่านเรียบร้อย' : 'อัปเดตข้อมูลเรียบร้อย',
+      text: type === 'password' ? 'แก้ไขรหัสผ่านเรียบร้อย' : 'แก้ไขเบอร์โทรศัพท์เรียบร้อย',
       icon: 'success',
       confirmButtonColor: '#1E48D1',
     })
@@ -414,8 +418,8 @@ watch(
         @click.stop="openProfilePopup"
         class="flex items-center w-full gap-2 px-4 py-2 text-left hover:bg-blue-800 transition-all"
       >
-        <img :src="SettingIcon" class="w-4 h-4" />
-        <span class="text-white text-sm">ตั้งค่าบัญชี</span>
+        <Icon icon="ic:round-phone" />
+        <span class="text-white text-sm">ตั้งค่าเบอร์โทรศัพท์</span>
       </button>
 
       <button
@@ -451,13 +455,13 @@ watch(
           <div class="flex items-center gap-3 mb-4 sm:mb-6 border-b border-gray-100 pb-4">
             <div class="p-2 bg-blue-600 rounded-full">
               <Icon
-                icon="fluent:person-square-16-regular"
+                icon="ic:round-phone"
                 width="36"
                 height="36"
                 style="color: #ffffff"
               />
             </div>
-            <h2 class="text-black text-xl sm:text-2xl font-bold">ตั้งค่าบัญชี</h2>
+            <h2 class="text-black text-xl sm:text-2xl font-bold">ตั้งค่าเบอร์โทรศัพท์</h2>
           </div>
 
           <div class="space-y-4 sm:space-y-5">
