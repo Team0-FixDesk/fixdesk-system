@@ -60,7 +60,7 @@ const router = useRouter()
 const API_BASE_URL = import.meta.env.VITE_API_BASE
 const MAX_FILE_COUNT = 5
 
-const { createRepair } = useRepairService(API_BASE_URL)
+const { createRepair, createRepairWithoutLineNotification, deleteRepair } = useRepairService(API_BASE_URL)
 
 // ข้อมูลหลักในแบบฟอร์มแจ้งซ่อม
 const repairFormData = ref({
@@ -183,9 +183,9 @@ async function submitRepairRequest() {
     showCancelButton: true,
     reverseButtons: true,
     confirmButtonText: 'ยืนยัน',
-    cancelButtonText: 'ยกเลิก',    
-    confirmButtonColor: '#0048EF', 
-    cancelButtonColor: '#d4d4d4', 
+    cancelButtonText: 'ยกเลิก',
+    confirmButtonColor: '#0048EF',
+    cancelButtonColor: '#d4d4d4',
   })
 
   if (!confirmResult.isConfirmed) return
@@ -219,6 +219,159 @@ async function submitRepairRequest() {
     console.error(err)
 
     Swal.close()
+
+    // ถ้า LINE rate limit และใบแจ้งซ่อมสร้างสำเร็จแล้ว
+    if (err.message === 'LINE_RATE_LIMIT') {
+      const responseData = err.responseData
+
+      // ถ้า repair สร้างสำเร็จแล้ว (มี insertId) แต่ LINE failed
+      if (responseData && responseData.rf_code) {
+        const confirmResult = await Swal.fire({
+          title: '⚠️ ถึงขีดจำกัด',
+          html: `<div style="text-align: left; font-size: 15px; line-height: 1.8;">
+            <p>เนื่องจากใช้ credit เต็มแล้ว</p>
+            <p style="margin-top: 12px;">สามารถแจ้งซ่อมโดยไม่แจ้งเตือนผ่าน LINE ได้</p>
+            <p style="margin-top: 4px;">และจะกลับมาแจ้งเตือนผ่าน LINE ได้ใหม่ ในวันที่ 1 ของเดือนถัดไป</p>
+            <p style="margin-top: 16px;"><strong>ต้องการแจ้งซ่อมต่อหรือไม่?</strong></p>
+          </div>`,
+          icon: 'warning',
+          background: '#FFFFFF',
+          color: '#92400e',
+          confirmButtonColor: '#0048EF',
+          cancelButtonColor: '#a3a3a3',
+          confirmButtonText: 'ตกลง (แจ้งซ่อมต่อ)',
+          cancelButtonText: 'ยกเลิก',
+          showCancelButton: true,
+          reverseButtons: false,
+        })
+
+        // ถ้า user เลือก "ยอมรับ"
+        if (confirmResult.isConfirmed) {
+          Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'success',
+            title: 'ระบบบันทึกคำขอแจ้งซ่อมเรียบร้อยแล้ว',
+            timer: 2500,
+            showConfirmButton: false,
+            width: '380px',
+          })
+          router.push('/main/my-list')
+          return
+        }
+
+        // ถ้า user เลือก "ลบและรีซ้ำ"
+        if (confirmResult.isDenied || confirmResult.isDismissed) {
+          // ลบใบแจ้งซ่อมที่สร้างไป
+          Swal.fire({
+            title: 'กำลังจัดการ...',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading(),
+          })
+
+          try {
+            await deleteRepair(responseData.rf_code)
+
+            // สร้างใหม่แบบไม่ส่ง LINE
+            const retryResult = await createRepairWithoutLineNotification({
+              repairFormData: repairFormData.value,
+              uploadedFileList: uploadedFileList.value,
+            })
+
+            Swal.close()
+
+            Swal.fire({
+              toast: true,
+              position: 'top-end',
+              icon: 'success',
+              title: 'ระบบบันทึกคำขอแจ้งซ่อมเรียบร้อยแล้ว',
+              timer: 2500,
+              showConfirmButton: false,
+              width: '380px',
+            })
+
+            router.push('/main/my-list')
+          } catch (deleteErr) {
+            console.error(deleteErr)
+            Swal.close()
+
+            Swal.fire({
+              toast: true,
+              position: 'top-end',
+              icon: 'error',
+              title: 'เกิดข้อผิดพลาด',
+              timer: 2500,
+              showConfirmButton: false,
+            })
+          }
+          return
+        }
+      } else {
+        // ถ้า rate limit แต่ repair ไม่สร้างสำเร็จ (fallback)
+        const confirmResult = await Swal.fire({
+          title: '⚠️ ถึงขีดจำกัด',
+          html: `<div style="text-align: left; font-size: 15px; line-height: 1.8;">
+            <p>เนื่องจากใช้ credit เต็มแล้ว</p>
+            <p style="margin-top: 12px;">สามารถแจ้งซ่อมโดยไม่แจ้งเตือนผ่าน LINE ได้</p>
+            <p style="margin-top: 4px;">และจะกลับมาแจ้งเตือนผ่าน LINE ได้ใหม่ ในวันที่ 1 ของเดือนถัดไป</p>
+            <p style="margin-top: 16px;"><strong>ต้องการแจ้งซ่อมต่อหรือไม่?</strong></p>
+          </div>`,
+          icon: 'warning',
+          background: '#fef3c7',
+          color: '#92400e',
+          confirmButtonColor: '#0048EF',
+          cancelButtonColor: '#a3a3a3',
+          confirmButtonText: 'ตกลง (แจ้งซ่อมต่อ)',
+          cancelButtonText: 'ยกเลิก',
+          showCancelButton: true,
+          reverseButtons: false,
+        })
+
+        // ถ้า user ยอมรับให้ส่งแจ้งซ่อมต่อแต่ไม่มี LINE notification
+        if (confirmResult.isConfirmed) {
+          Swal.fire({
+            title: 'กำลังส่งแบบฟอร์ม...',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading(),
+          })
+
+          try {
+            // ส่งแจ้งซ่อมโดยไม่รอ LINE notification
+            await createRepairWithoutLineNotification({
+              repairFormData: repairFormData.value,
+              uploadedFileList: uploadedFileList.value,
+            })
+
+            Swal.close()
+
+            Swal.fire({
+              toast: true,
+              position: 'top-end',
+              icon: 'success',
+              title: 'ระบบบันทึกคำขอแจ้งซ่อมเรียบร้อยแล้ว',
+              timer: 2500,
+              showConfirmButton: false,
+              width: '380px',
+            })
+
+            router.push('/main/my-list')
+          } catch (submitErr) {
+            console.error(submitErr)
+            Swal.close()
+
+            Swal.fire({
+              toast: true,
+              position: 'top-end',
+              icon: 'error',
+              title: 'ส่งแบบฟอร์มแจ้งซ่อมไม่สำเร็จ',
+              timer: 2500,
+              showConfirmButton: false,
+            })
+          }
+        }
+        return
+      }
+    }
 
     Swal.fire({
       toast: true,

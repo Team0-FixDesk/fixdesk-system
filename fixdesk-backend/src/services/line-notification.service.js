@@ -108,6 +108,16 @@ async function sendMessageWithRetry(message, retryCount = 0) {
       return sendMessageWithRetry(message, retryCount + 1);
     }
     
+    // ถ้า 429 แล้ว exceed max retries ให้ return error object
+    if (error.statusCode === 429) {
+      console.error(`❌ Failed to send message after ${MAX_RETRIES} retries: Rate limit exceeded`);
+      return { 
+        success: false, 
+        errorType: 'RATE_LIMIT_EXCEEDED',
+        message: `ถึงขีดจำกัดการแจ้งเตือน LINE กรุณาลองใหม่ในอีกสักครู่`
+      };
+    }
+    
     throw error;
   }
 }
@@ -137,8 +147,14 @@ async function processQueue() {
     const { message, resolve, reject } = messageQueue.shift();
 
     try {
-      await sendMessageWithRetry(message);
-      resolve({ success: true });
+      const result = await sendMessageWithRetry(message);
+      
+      // ถ้าส่งไม่สำเร็จเพราะ rate limit
+      if (!result.success && result.errorType === 'RATE_LIMIT_EXCEEDED') {
+        reject(new Error(`RATE_LIMIT_EXCEEDED: ${result.message}`));
+      } else {
+        resolve(result);
+      }
     } catch (error) {
       console.error('❌ Failed to send message after retries:', error.message);
       reject(error);
@@ -431,6 +447,12 @@ async function notifyJobAssignment(assignmentData) {
     return { success: true, message: 'Notification sent' };
   } catch (error) {
     console.error('❌ Failed to send LINE notification:', error.message);
+    
+    // ถ้าเป็น rate limit error ให้ส่ง flag นี้ไป
+    if (error.message.includes('RATE_LIMIT_EXCEEDED')) {
+      return { success: false, errorType: 'RATE_LIMIT_EXCEEDED', message: 'ถึงขีดจำกัดการแจ้งเตือน LINE' };
+    }
+    
     return { success: false, message: error.message };
   }
 }
@@ -698,6 +720,12 @@ async function notifyJobAccepted(acceptData) {
     return { success: true, message: 'Notification sent' };
   } catch (error) {
     console.error('❌ Failed to send LINE acceptance notification:', error.message);
+    
+    // ถ้าเป็น rate limit error ให้ส่ง flag นี้ไป
+    if (error.message.includes('RATE_LIMIT_EXCEEDED')) {
+      return { success: false, errorType: 'RATE_LIMIT_EXCEEDED', message: 'ถึงขีดจำกัดการแจ้งเตือน LINE' };
+    }
+    
     return { success: false, message: error.message };
   }
 }
@@ -996,6 +1024,12 @@ async function notifyNewRepair(newRepairData) {
     return { success: true, message: 'New repair notification sent' };
   } catch (error) {
     console.error('❌ Failed to send LINE new repair notification:', error.message);
+    
+    // ถ้าเป็น rate limit error ให้ส่ง flag นี้ไป
+    if (error.message.includes('RATE_LIMIT_EXCEEDED')) {
+      return { success: false, errorType: 'RATE_LIMIT_EXCEEDED', message: 'ถึงขีดจำกัดการแจ้งเตือน LINE' };
+    }
+    
     return { success: false, message: error.message };
   }
 }
