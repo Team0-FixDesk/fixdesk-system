@@ -15,7 +15,6 @@
  * @description
  *  Route สำหรับจัดการระบบคลังวัสดุ/อุปกรณ์ (Stock Management)
  *  ทำหน้าที่กำหนด endpoint และเชื่อมต่อ Stock Controller กับ Service
- *
  *  รองรับการทำงาน:
  *    - จัดการสินค้า (Products)
  *    - จัดการหมวดหมู่ (Categories)
@@ -29,15 +28,20 @@
  *
  *  ใช้ multer สำหรับ upload รูปภาพสินค้า
  *  และ authMiddleware สำหรับ endpoint ที่ต้องมีการยืนยันตัวตน
+ * 
+ * @usedBy
+ * - app.js (หรือ server.js) เพื่อเชื่อมต่อ Route นี้เข้ากับ Express Application
+ * - stock-controller.js เพื่อเชื่อมต่อ Controller กับ Service
+ * - stock-service.js เพื่อเชื่อมต่อกับ Service Layer ในการจัดการ Stock
  *
  * ---------------------------------------------------------------------
  * @changelog
+ *  [2026-02-10, พชร ไพศรีสกุล] V 1.0.0
  *   - Initial implementation Repair Controller ตาม Layered Architecture
- *     [2026-02-10, พชร ไพศรีสกุล] V 1.0.0
+ *  [2026-02-14, นราธิป แสนทวีสุข] V 1.1.0   
  *   - Allow approving and rejecting items in same requisition
- *     [2026-02-14, นราธิป แสนทวีสุข] V 1.1.0
+ *  [2026-02-17, พชร ไพศรีสกุล] V 1.2.0   
  *   - เพิ่มระบบการคืนอุปกรณ์
- *     [2026-02-17, พชร ไพศรีสกุล] V 1.2.0
  *
  * =====================================================================
  */

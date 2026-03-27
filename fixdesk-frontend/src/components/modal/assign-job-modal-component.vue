@@ -186,7 +186,7 @@ async function confirmAssign() {
         title: 'แจ้งเตือน',
         text: msg,
         icon: 'info',
-        background: '#e0f2fe',
+        background: '#FFFFFF',
         color: '#0277bd',
       })
       loadingAssign.value = false
@@ -225,7 +225,7 @@ async function confirmAssign() {
       },
       title: 'มอบหมายงานเรียบร้อยแล้ว',
       icon: 'success',
-      background: '#f0f9ff',
+      background: '#FFFFFF',
       color: '#1e3a8a',
     })
     loadingAssign.value = false
