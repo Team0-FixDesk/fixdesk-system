@@ -1,3 +1,27 @@
+/**
+ * =====================================================================
+ * @file            back-button-component.vue
+ * @layer           Component (Presentation Layer)
+ * @version         1.0.0
+ * @since
+ * @author
+ * @contributors
+ *
+ * @lastModified
+ * @lastModifiedBy
+ * @description
+ *  ปุ่มย้อนกลับใช้ใน header หรือ modal สำหรับกลับไปยังหน้าก่อนหน้า
+ * @features
+ *  - รองรับการนำทางย้อนกลับและใช้งานเป็นปุ่มไอคอน
+ *  - ขนาดเหมาะกับการใช้งานใน header/modal
+ *
+ * @usedBy
+ *
+ * @changelog
+ *
+ * =====================================================================
+ */
+
 <script setup>
 import { Icon } from '@iconify/vue'
 import BaseButtonComponent from './base/base-button-component.vue'

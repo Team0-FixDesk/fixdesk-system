@@ -1,3 +1,25 @@
+/**
+ * =====================================================================
+ * @file            card-home-component.vue
+ * @layer           Component (Presentation Layer)
+ * @version         1.0.0
+ * @since
+ * @author
+ * @contributors
+ *
+ * @lastModified
+ * @lastModifiedBy
+ * @description
+ *  คอมโพเนนต์การ์ดสำหรับแดชบอร์ด ใช้แสดงสรุปค่าและป้ายกำกับของไอเท็มต่างๆ
+ * @features
+ *
+ * @usedBy
+ *
+ * @changelog
+ *
+ * =====================================================================
+ */
+
 <template>
   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
 

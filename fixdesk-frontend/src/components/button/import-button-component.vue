@@ -1,3 +1,27 @@
+/**
+ * =====================================================================
+ * @file            import-button-component.vue
+ * @layer           Component (Presentation Layer)
+ * @version         1.0.0
+ * @since
+ * @author
+ * @contributors
+ *
+ * @lastModified
+ * @lastModifiedBy
+ * @description
+ *  ปุ่มสำหรับเปิดการนำเข้าข้อมูล (Import Excel) ใช้ในหน้าจอจัดการข้อมูล
+ * @features
+ *  - เปิด modal/flow สำหรับอัปโหลดไฟล์ Excel
+ *  - แสดงไอคอนและข้อความเรียกใช้งาน
+ *
+ * @usedBy
+ *
+ * @changelog
+ *
+ * =====================================================================
+ */
+
 <script setup>
 import { Icon } from '@iconify/vue'
 import BaseButtonComponent from './base/base-button-component.vue'
