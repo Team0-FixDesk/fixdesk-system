@@ -1,24 +1,20 @@
 <script setup>
 /**
  * =====================================================================
- * @file            technician-home.view.vue
- * @module          มอดูลช่างซ่อม - หน้าจอหลักของช่างซ่อม
+ * @file            technician-lead-home-view.vue
+ * @module          มอดูลช่างซ่อม - หน้าจอหลักของหัวหน้าช่าง
  * @layer           View (Presentation Layer)
- * @version         1.0.3
- * @since           2025-10-21
+ * @version         1.0.0
+ * @since           2026-03-16
  * @author          พชร ไพศรีสกุล
  * @contributors
- * - เศรษฐพงศ์ หอมชื่น
- * - พชร ไพศรีสกุล
- * - นราธิป แสนทวีสุข
- * - ปฏิพัทธ์ จงนันทพันธ์กุล
- * - พิมลพรรณ มามาก
+ *  - พชร ไพศรีสกุล
  *
- * @lastModified    2026-03-05
- * @lastModifiedBy  เศรษฐพงศ์ หอมชื่น
+ * @lastModified    2026-03-16
+ * @lastModifiedBy  พชร ไพศรีสกุล
  * ---------------------------------------------------------------------
  * @description
- *  หน้าจอหลักสำหรับช่างซ่อม
+ *  หน้าจอหลักสำหรับหัวหน้าช่างซ่อม
  *   - แสดงสถิติงานซ่อมของช่าง
  *   - แสดงรายการงานที่ได้รับมอบหมายล่าสุด
  *   - แสดงกราฟสัดส่วนสถานะงาน (เสร็จสิ้น / กำลังดำเนินการ / ยกเลิก / อื่นๆ)
@@ -26,23 +22,11 @@
  *
  * ---------------------------------------------------------------------
  * @changelog
- *  [2025-10-21, พชร ไพศรีสกุล] V 1.0.0
+ *  [2026-03-16, พชร ไพศรีสกุล] V 1.0.0
  *   - สร้างไฟล์และโครงสร้างหลักของ View
- *  [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล] V 1.0.1
- *   - เพิ่มชื่อหน้าจอ
- *  [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล] V 1.0.2
- *   - แก้ไขข้อความคำอธิบายสถานะ
- *  [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล] V 1.0.3
- *   - แก้ไขข้อความหัวตาราง และการใช้สัญลักษณ์ : ในตาราง
- *  [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล] V 1.0.4
- *   - แก้ไขข้อความคำอธิบายสถานะ
- *  [2026-02-21, พิมลพรรณ มามาก] V 1.0.5
- *   - ดึงข้อมูลชื่อผู้ใช้
- *  [2026-03-05, เศรษฐพงศ์ หอมชื่น] V 1.0.6
- *   - เปลี่ยนกราฟโดนัทเป็น ApexCharts และเพิ่ม Tooltip
- * 
  * =====================================================================
  */
+
 
 defineOptions({ name: 'TechnicianHomeView' })
 import { computed, onMounted, shallowRef } from 'vue'
@@ -162,11 +146,11 @@ const donutOptions = shallowRef({
             showAlways: true,
             label: 'ภาพรวม',
             color: '#9ca3af',
-            formatter: (w) => w.globals.seriesTotals.reduce((a, b) => a + b, 0),
-          },
-        },
-      },
-    },
+            formatter: (w) => w.globals.seriesTotals.reduce((a, b) => a + b, 0)
+          }
+        }
+      }
+    }
   },
   tooltip: {
     enabled: true,
@@ -201,10 +185,12 @@ onMounted(() => {
   <div class="p-8 mx-auto bg-white shadow-md rounded-xl max-w-8xl">
     <div class="mb-6">
       <p class="text-2xl font-extrabold text-gray-900">
-        หน้าจอหลักของช่างซ่อม - สวัสดีคุณ{{ userDisplayName }}
+          หน้าจอหลักของช่างซ่อม - สวัสดีคุณ{{ userDisplayName }}
       </p>
       <p class="text-lg text-gray-700">{{ userDepartmentName }}</p>
-      <p class="mt-1 text-sm text-gray-600">ตรวจสอบงานซ่อมที่ได้รับมอบหมาย และสถานะของรายการเบิก</p>
+      <p class="mt-1 text-sm text-gray-600">
+        ตรวจสอบงานซ่อมที่ได้รับมอบหมาย และสถานะของรายการเบิก
+      </p>
     </div>
 
     <div class="mt-4 mb-8">
@@ -227,14 +213,7 @@ onMounted(() => {
         </div>
 
         <TableComponent
-          :columns="[
-            'หมายเลขแจ้งซ่อม',
-            'เรื่องที่แจ้ง',
-            'หน่วยงาน',
-            'สถานที่',
-            'ความเร่งด่วน',
-            'สถานะงาน',
-          ]"
+          :columns="['หมายเลขแจ้งซ่อม', 'เรื่องที่แจ้ง', 'หน่วยงาน', 'สถานที่', 'ความเร่งด่วน', 'สถานะงาน']"
           :rows="repairTableRows"
           :rawRows="repairTableRaw"
           :perPage="5"
@@ -252,13 +231,7 @@ onMounted(() => {
         <h2 class="self-start mb-6 text-lg font-bold text-gray-800">สัดส่วนงานทั้งหมด</h2>
 
         <div class="relative flex justify-center w-48 h-48">
-          <ApexChart
-            type="donut"
-            width="100%"
-            height="100%"
-            :options="donutOptions"
-            :series="donutSeries"
-          />
+          <ApexChart type="donut" width="100%" height="100%" :options="donutOptions" :series="donutSeries" />
         </div>
 
         <div class="grid w-full grid-cols-2 mt-6 text-xs gap-x-4 gap-y-2">
@@ -285,13 +258,7 @@ onMounted(() => {
       </div>
 
       <TableComponent
-        :columns="[
-          'หมายเลขรายการเบิก',
-          'รายละเอียดโดยย่อ',
-          'รายการเบิก',
-          'สถานะงาน',
-          'ตัวดำเนินการ',
-        ]"
+        :columns="['หมายเลขรายการเบิก', 'รายละเอียดโดยย่อ', 'รายการเบิก', 'สถานะงาน', 'ตัวดำเนินการ']"
         :rows="stockTableRows"
         :perPage="5"
         :statusStockColumn="3"

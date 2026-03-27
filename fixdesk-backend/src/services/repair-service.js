@@ -10,7 +10,7 @@
  *   - นราธิป แสนทวีสุข
  *   - เศรษฐพงศ์ หอมชื่น
  *
- * @lastModified    2026-03-03
+ * @lastModified    2026-03-17
  * @lastModifiedBy  นราธิป แสนทวีสุข
  * ---------------------------------------------------------------------
  * @description
@@ -83,6 +83,10 @@
  *     [2026-02-25, นราธิป แสนทวีสุข] V 1.5.0
  *   - refactor(location): ใช้ Location Snapshot แทน Real-time JOIN เพื่อรักษาความถูกต้องของข้อมูลประวัติ
  *     [2026-03-03, นราธิป แสนทวีสุข] V 1.6.0
+ *   - feat(repair): เพิ่มระบบอัปโหลดรูปภาพหลังซ่อม (after-repair image upload)
+ *     - เพิ่ม rf_tech_image_after column ในคำสั่ง getRepairDetail()
+ *     - สนับสนุนการแสดงรูปภาพหลังซ่อมเมื่อสถานะเป็น done
+ *     [2026-03-17, นราธิป แสนทวีสุข]
  *
  * =====================================================================
  */
@@ -268,6 +272,7 @@ module.exports = (db) => {
           rf.rf_id, rf.rf_code, rf.rf_problem, rf.rf_detail, rf.rf_urgency,
           rf.rf_phone, rf.rf_create_at, rf.rf_in_process_at, rf.rf_done_at,
           rf.rf_user_status, rf.rf_prop_number, rf.rf_image, rf.rf_tech_summary,
+          rf.rf_tech_image_after,
           rf.rf_repair_method, rf.rf_repair_method_remark, rf.rf_result_status, rf.rf_result_remark,
           t.tt_id AS repair_type_id, t.tt_name AS repair_type_name,
           r.room_id AS room_id, 

@@ -1,10 +1,14 @@
 /**
  * =====================================================================
- * @file            : stock-service.js
+ * @file          stock-service.js
  * @module          : Business Logic สำหรับระบบคลังวัสดุ/อุปกรณ์
  * @layer           : Service Layer (Business Logic Layer)
  * @version         : 1.3.0
  * @since           : 2026-02-17
+ * @author          : นายพชร ไพศรีสกุล
+ * @constructors
+ *  - นายพชร ไพศรีสกุล
+ * 
  * @lastModified    : 2026-02-23
  * @lastModifiedBy  : นายพชร ไพศรีสกุล
  * ---------------------------------------------------------------------

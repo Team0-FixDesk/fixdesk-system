@@ -1,3 +1,31 @@
+/**
+ * =====================================================================
+ * @file            accept-job-modal-component.vue
+ * @module          โมดูลรับงาน
+ * @layer           Component (Presentation Layer)
+ * @version         1.0.0
+ * @since           2025-12-23
+ * @author
+ * @contributors
+ *
+ * @lastModified    2026-03-21
+ * @lastModifiedBy
+ * ---------------------------------------------------------------------
+ * @description
+ *  โมดัลสำหรับรับ/มอบหมายงานซ่อม รองรับการเลือกช่างเดี่ยวหรือเป็นทีม,
+ *  ค้นหาและกรองช่าง, เลือกประเภทการมอบหมาย และยืนยันการรับงาน
+ *  จะส่ง event `close` และ `success` กลับไปยัง parent component
+ *
+ * @requires
+ *  - vue
+ *  - sweetalert2
+ *  - @iconify/vue
+ * ---------------------------------------------------------------------
+ * @changelog
+ *
+ * =====================================================================
+ */
+
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import Swal from 'sweetalert2'
@@ -194,8 +222,9 @@ async function confirmAccept() {
           icon: 'error',
           title: 'เกิดข้อผิดพลาด',
           text: payload.message || 'ไม่สามารถรับงานได้',
-          timer: 3000,
-          timerProgressBar: true,
+          icon: 'error',
+          background: '#FFFFFF',
+          color: '#dc2626',
         })
         isProcessing.value = false
         return
@@ -211,24 +240,46 @@ async function confirmAccept() {
       isProcessing.value = false
       emit('success')
       emit('close')
+    } catch (err) {
+      console.error('Error accepting job (alone):', err)
+      const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        animation: false,
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true,
+      })
+      Toast.fire({
+        title: 'เกิดข้อผิดพลาด',
+        text: 'ขณะรับงาน',
+        icon: 'error',
+        background: '#FFFFFF',
+        color: '#dc2626',
+      })
+    }
+    return
+  }
+
+  // โหมดทำงานเป็นทีม
+  if (acceptMode.value === 'team') {
+    if (!selectedTeam.value || selectedTeam.value.length === 0) {
+      const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        animation: false,
+        showConfirmButton: false,
+        timer: 2000,
+        timerProgressBar: true,
+      })
+      Toast.fire({
+        title: 'โปรดเลือกช่างอย่างน้อย 1 คน',
+        icon: 'warning',
+        background: '#FFFFFF',
+        color: '#d97706',
+      })
       return
     }
-
-    // โหมดทำงานเป็นทีม
-    if (acceptMode.value === 'team') {
-      if (!selectedTeam.value || selectedTeam.value.length === 0) {
-        await Swal.fire({
-          toast: true,
-          position: 'top-end',
-          animation: false,
-          icon: 'warning',
-          title: 'โปรดเลือกช่างอย่างน้อย 1 คน',
-          timer: 2000,
-          timerProgressBar: true,
-        })
-        isProcessing.value = false
-        return
-      }
 
       const res = await fetch(`${API_BASE}/assign-repair-team`, {
         method: 'POST',
@@ -270,6 +321,8 @@ async function confirmAccept() {
           icon: 'error',
           title: 'เกิดข้อผิดพลาด',
           text: payload.message || 'มอบหมายทีมไม่สำเร็จ',
+          background: '#FFFFFF',
+          color: '#dc2626',
           timer: 3000,
           timerProgressBar: true,
         })
@@ -312,6 +365,8 @@ async function confirmAccept() {
           icon: 'error',
           title: 'เกิดข้อผิดพลาด',
           text: p2.message || 'รับงานหลังมอบหมายทีมไม่สำเร็จ',
+          background: '#FFFFFF',
+          color: '#dc2626',
           timer: 3000,
           timerProgressBar: true,
         })
@@ -322,6 +377,23 @@ async function confirmAccept() {
       isProcessing.value = false
       emit('success')
       emit('close')
+    } catch (err) {
+      console.error('Error accepting job (team):', err)
+      const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        animation: false,
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true,
+      })
+      Toast.fire({
+        title: 'เกิดข้อผิดพลาด',
+        text: 'ขณะมอบหมายทีม/รับงาน',
+        icon: 'error',
+        background: '#FFFFFF',
+        color: '#dc2626',
+      })
     }
   } catch (err) {
     console.error('Error accepting job:', err)

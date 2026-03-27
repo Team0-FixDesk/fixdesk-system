@@ -20,46 +20,28 @@
 * - stock แก้ไข / ลบ
 *
 * @emits
-* toggle-menu
-* detail
-* edit
-* delete
-* assign
-* accept
-* outsource
-* close-job
-* open-stock
-*
-* ---------------------------------------------------------------------
-* @changelog
-* - ปรับปรุงคำอธิบายให้สอดคล้องกับการทำงานของ Component [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
-* - แก้ไขสี และไอคอนการมอบหมายงานแล้วในเมนูย่อย [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
-* - ปรับปรุงเงื่อนไขการแสดงเมนูมอบหมายงานให้ถูกต้อง
-*   โดยแยกสถานะงานที่ยังไม่มอบหมาย และงานที่มอบหมายแล้วอย่างชัดเจน [2026-02-26, ธนภัทร จันทร์งาม]
-* =====================================================================
-*/
-
-<script setup>
-import { computed, onMounted, onBeforeUnmount, ref, nextTick } from 'vue'
-import { Icon } from '@iconify/vue'
-
-
-// ✅ FIX: ตรวจว่างานถูกมอบหมายแล้วจริงหรือไม่
-const isAssigned = computed(() => {
-  return Number(props.assignedTech) > 0
-})
-
-
-const props = defineProps({
-  rowId: {
-    type: [String, Number],
-    required: true,
-  },
-  openMenuId: {
-    type: [String, Number],
-    default: null,
-  },
-  role: {
+/**
+ * =====================================================================
+ * @file table-actions.component.vue
+ * @layer Component (Presentation Layer)
+ * @version 1.1.0
+ * @since
+ * @author
+ * @contributors
+ *
+ * @lastModified
+ * @lastModifiedBy
+ * @description
+ *  ปุ่มเมนูย่อยสำหรับแต่ละแถวในตาราง แสดงคำสั่งจัดการข้อมูลตามบทบาท
+ *  (เช่น ดูรายละเอียด แก้ไข ลบ มอบหมาย รับงาน ฯลฯ)
+ * @features
+ *
+ * @usedBy
+ *
+ * @changelog
+ *
+ * =====================================================================
+ */
     type: String,
     required: true, // technician / admin / assign / user / stock / location
   },
