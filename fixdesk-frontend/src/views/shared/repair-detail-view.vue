@@ -1435,63 +1435,6 @@ onMounted(() => {
               </div>
             </div>
           </div>
-
-          <div>
-            <label class="block mb-2 text-sm font-semibold text-gray-700"
-              >{{ repairMethod === 'outsource' ? '3' : '4' }}. รูปภาพหลังซ่อม (ถ้ามี)</label
-            >
-
-            <div
-              v-if="!techImageAfterPreview"
-              class="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors"
-              :class="isEditDragOverTech ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:bg-gray-50'"
-              @click="techImageFileInput?.click()"
-              @dragover.prevent="handleTechImageDragOver"
-              @dragleave.prevent="handleTechImageDragLeave"
-              @drop.prevent="handleTechImageDrop"
-            >
-              <svg class="mx-auto mb-3 w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              <p class="text-base font-medium text-gray-800 mb-1">คลิกเพื่อเลือกรูปภาพ</p>
-              <p class="text-xs text-gray-500 mb-3">รองรับรูปภาพเฉพาะ (สูงสุด 1 รู) สามารถแนบรูปแบบประกอบได้</p>
-              <div class="flex gap-2 justify-center">
-                <span class="inline-block px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded">JPG</span>
-                <span class="inline-block px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded">PNG</span>
-                <span class="inline-block px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded">WEBP</span>
-              </div>
-              <input
-                ref="techImageFileInput"
-                type="file"
-                accept="image/*"
-                class="hidden"
-                @change="onTechImageAfterChange"
-              />
-            </div>
-
-            <div v-else class="mt-3 border border-gray-200 rounded-lg p-4 bg-gray-50">
-              <div class="flex items-start gap-4">
-                <div class="flex-shrink-0">
-                  <img :src="techImageAfterPreview" alt="preview" class="w-20 h-20 object-cover rounded-lg">
-                </div>
-                <div class="flex-1 min-w-0">
-                  <p class="text-sm font-medium text-gray-800 truncate">{{ techImageAfterFile?.name }}</p>
-                  <p class="text-xs text-gray-500 mt-1">ขนาด: {{ (techImageAfterFile?.size / 1024 / 1024).toFixed(2) }} MB</p>
-                  <p class="text-xs text-green-600 font-medium mt-2">✓ อัปโหลดพร้อมบันทึก</p>
-                </div>
-                <button
-                  type="button"
-                  class="flex-shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-full bg-gray-300 hover:bg-gray-400 text-gray-700 transition-colors"
-                  @click="clearTechImageAfter"
-                  title="ลบรูป"
-                >
-                  <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          </div>
         </div>
 
         <div class="flex gap-3 p-5 border-t border-gray-100">
