@@ -1,3 +1,28 @@
+/**
+ * =====================================================================
+ * @file            base-button-component.vue
+ * @layer           Component (Presentation Layer)
+ * @version         1.0.0
+ * @since
+ * @author
+ * @contributors
+ *
+ * @lastModified
+ * @lastModifiedBy
+ * @description
+ *  ปุ่มพื้นฐานที่ใช้เป็น wrapper ให้ปุ่มอื่นๆ รองรับการนำทางและสถานะโหลด
+ * @features
+ *  - รองรับ `to`, `loading`, `disabled`, และ `icon`
+ *  - ส่ง event `click` กลับสู่ parent
+ *
+ * @usedBy
+ *  - หลายปุ่มภายในโครงการ (Import, Back, Repair, Add User ฯลฯ)
+ *
+ * @changelog
+ *
+ * =====================================================================
+ */
+
 <script setup>
 import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'

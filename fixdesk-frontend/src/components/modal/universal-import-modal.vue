@@ -1,4 +1,3 @@
-<script setup>
 /**
  * =====================================================================
  * @file            universal-import-modal.vue
@@ -27,7 +26,9 @@
  *  - Initial implementation Universal Import Excel Modal Component
  *
  * =====================================================================
-*/
+ */
+
+<script setup>
 
 /**
  * Universal Import Excel Modal

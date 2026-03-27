@@ -86,30 +86,28 @@ function renderUrgencyBadge(type) {
       return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-amber-50 text-amber-500 font-semibold">เร่งด่วน</span>`
     case 'low':
       return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-green-100 text-green-600 font-semibold">ไม่เร่งด่วน</span>`
-    default:
-      return type
-  }
-}
-function renderStatusBadge(type) {
-  switch (type) {
-    case 'pending':
-      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-amber-50 text-amber-500 font-semibold">รอดำเนินการ</span>`
-    case 'in_progress':
-      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-blue-100 text-blue-600 font-semibold">กำลังดำเนินการ</span>`
-    case 'outsource':
-      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-purple-100 text-purple-600 font-semibold">จ้างช่างภายนอก</span>`
-    case 'done':
-      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-green-100 text-green-600 font-semibold">ดำเนินการเสร็จสิ้น</span>`
-    case 'cancel':
-      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-gray-100 text-gray-500 font-semibold">ยกเลิก</span>`
-    default:
-      return type
-  }
-}
-function renderStatusStockBadge(type) {
-  switch (type) {
-    case 'waiting':
-      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-amber-50 text-amber-500 font-semibold">รออนุมัติ</span>`
+    /**
+     * =====================================================================
+     * @file            table-component.vue
+     * @layer           Component (Presentation Layer)
+     * @version         1.0.0
+     * @since
+     * @author
+     * @contributors
+     *
+     * @lastModified
+     * @lastModifiedBy
+     * @description
+     *  คอมโพเนนต์ตารางทั่วไป ใช้แสดงข้อมูลแบบแถว-คอลัมน์ พร้อมรองรับ
+     *  การแบ่งหน้า การจัดแนวคอลัมน์ และการแสดงสถานะภายในเซลล์
+     * @features
+     *
+     * @usedBy
+     *
+     * @changelog
+     *
+     * =====================================================================
+     */
     case 'approved':
       return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-green-100 text-green-600 font-semibold">อนุมัติแล้ว</span>`
     case 'rejected':
