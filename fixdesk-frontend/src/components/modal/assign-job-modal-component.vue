@@ -6,15 +6,21 @@
  * @version         1.0.1
  * @since           2025-10-21
  * @author          เศรษฐพงศ์ หอมชื่น
+ * @contributors
+ *
  * @lastModified    2026-02-27
  * @lastModifiedBy  เศรษฐพงศ์ หอมชื่น
  * ---------------------------------------------------------------------
  * @description
- *  Component สำหรับเลือกช่างและมอบหมายงานซ่อม
- *  รองรับฟีเจอร์:
- *    - แสดงรายการช่างว่าง
- *    - เลือกช่างเพื่อมอบหมายงาน
- *    - แสดงประเภทช่างและความพร้อม
+ *  โมดูล UI สำหรับเลือกช่างและมอบหมายงานซ่อม ให้ผู้ใช้เลือกช่าง,
+ *  กรองตามประเภทช่าง และยืนยันการมอบหมายงาน ส่ง event กลับไปยัง
+ *  parent เมื่อมอบหมายสำเร็จ
+ *  - แสดงรายการช่างว่าง
+ *  - เลือกช่างเพื่อมอบหมายงาน
+ *  - แสดงประเภทช่างและความพร้อม
+ * ---------------------------------------------------------------------
+ * @changelog
+ *
  * =====================================================================
  */
 <script setup>
@@ -106,7 +112,7 @@ async function confirmAssign() {
   console.log('🔵 [Assign Modal] confirmAssign called')
   console.log('🔵 [Assign Modal] repairId:', props.repairId)
   console.log('🔵 [Assign Modal] selectedTechnician:', selectedTechnician.value)
-  
+
   if (!selectedTechnician.value) {
     const Toast = Swal.mixin({
       toast: true,
@@ -153,24 +159,43 @@ async function confirmAssign() {
     const resBody = await res.json()
     console.log('🟢 [Assign Modal] API Response:', { ok: res.ok, status: res.status, body: resBody })
 
-    // เช็คกรณี "มอบหมายแล้ว" แม้ว่า res.ok = true
-    const msg = resBody.message || ''
-    if (msg.includes('มอบหมายแล้ว') || msg.includes('ถูกมอบหมายแล้ว')) {
-      const Toast = Swal.mixin({
+    // ถ้า rate limit แจ้งเตือน user เพียงอย่างเดียว แล้วดำเนินการต่อโดยไม่ส่ง LINE
+    if (res.status === 429 || resBody.errorType === 'RATE_LIMIT_EXCEEDED') {
+      await Swal.fire({
         toast: true,
         position: 'top-end',
         animation: false,
         showConfirmButton: false,
+        icon: 'warning',
+        title: 'ถึงขีดจำกัดในการส่งแจ้งเตือน LINE',
+        text: 'ข้อมูลของคุณถูกบันทึกแล้ว',
+        timer: 1000,
+        timerProgressBar: true,
+        background: '#fef3c7',
+        color: '#92400e',
+      })
+      loadingAssign.value = false
+      emit('completed')
+      emit('close')
+      return
+    }
+
+    // เช็คกรณี "มอบหมายแล้ว" แม้ว่า res.ok = true
+    const msg = resBody.message || ''
+    if (msg.includes('มอบหมายแล้ว') || msg.includes('ถูกมอบหมายแล้ว')) {
+      await Swal.fire({
+        toast: true,
+        position: 'top-end',
+        animation: false,
         timer: 2500,
         timerProgressBar: true,
-      })
-      Toast.fire({
         title: 'แจ้งเตือน',
         text: msg,
         icon: 'info',
-        background: '#e0f2fe',
+        background: '#FFFFFF',
         color: '#0277bd',
       })
+      loadingAssign.value = false
       console.log('🟡 [Assign Modal] Already assigned - emitting completed & close')
       emit('completed')
       emit('close')
@@ -178,41 +203,49 @@ async function confirmAssign() {
     }
 
     if (!res.ok) {
-      throw new Error(msg || 'มอบหมายงานไม่สำเร็จ')
+      await Swal.fire({
+        toast: true,
+        position: 'top-end',
+        animation: false,
+        timer: 3000,
+        timerProgressBar: true,
+        title: 'เกิดข้อผิดพลาด',
+        text: msg || 'มอบหมายงานไม่สำเร็จ',
+        icon: 'error',
+        background: '#FFFFFF',
+        color: '#dc2626',
+      })
+      loadingAssign.value = false
+      return
     }
 
-    const Toast = Swal.mixin({
+    await Swal.fire({
       toast: true,
       position: 'top-end',
       animation: false,
-      showConfirmButton: false,
       timer: 3000,
       timerProgressBar: true,
       didOpen: (toast) => {
         toast.addEventListener('mouseenter', Swal.stopTimer)
         toast.addEventListener('mouseleave', Swal.resumeTimer)
       },
-    })
-    Toast.fire({
       title: 'มอบหมายงานเรียบร้อยแล้ว',
       icon: 'success',
-      background: '#f0f9ff',
+      background: '#FFFFFF',
       color: '#1e3a8a',
     })
+    loadingAssign.value = false
     console.log('✅ [Assign Modal] Success - emitting completed & close')
     emit('completed')
     emit('close')
   } catch (err) {
     console.error('❌ [Assign Modal] Error:', err)
-    const Toast = Swal.mixin({
+    await Swal.fire({
       toast: true,
       position: 'top-end',
       animation: false,
-      showConfirmButton: false,
       timer: 3000,
       timerProgressBar: true,
-    })
-    Toast.fire({
       title: 'เกิดข้อผิดพลาด',
       text: err.message,
       icon: 'error',

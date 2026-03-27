@@ -2,11 +2,12 @@
  * =====================================================================
  * @file            location.controller.js
  * @layer           Controller Layer (Presentation Layer)
- * @version         1.1.0
+ * @version         1.2.0
  * @since           2026-02-10
  * @author          พชร ไพศรีสกุล
  * @contributors
  *   - พชร ไพศรีสกุล
+ *   - นราธิป แสนทวีสุข
  *
  * @lastModified    2026-03-03
  * @lastModifiedBy  นราธิป แสนทวีสุข
@@ -20,27 +21,28 @@
  *    - ชั้น (Floor)
  *    - ห้อง (Room)
  *    - Import ข้อมูล Location
- *
+ *    - ตรวจสอบการใช้งานสถานที่ในใบแจ้งซ่อมก่อนแก้ไข/ลบ
+ * 
  * @usedBy
- *   - location.route.js
- *
+ *  - location-route.js 
+ * 
  * ---------------------------------------------------------------------
  * @changelog
- *   - [2026-03-03, นราธิป แสนทวีสุข] V 1.1.0
- *     เพิ่ม checkUsageInRepairs() controller function
- *     เพื่อตรวจสอบการใช้งานสถานที่ในใบแจ้งซ่อมก่อนแก้ไข/ลบ
+ *  [2026-02-10, พชร ไพศรีสกุล] V 1.0.0
  *   - Initial implementation Location Controller ตาม Layered Architecture
- *     [2026-02-10, พชร ไพศรีสกุล] V 1.0.0
+ *  [2026-02-10, พชร ไพศรีสกุล] V 1.1.0
+ *  - เพิ่มฟังก์ชัน Import ข้อมูล Location แบบ Bulk และเพิ่มการตรวจสอบการใช้งานสถานที่ในใบแจ้งซ่อมก่อนแก้ไข/ลบ
+ *  [2026-03-03, นราธิป แสนทวีสุข] V 1.2.0
+ *  - เพิ่ม checkUsageInRepairs() controller function
+ *  - เพื่อตรวจสอบการใช้งานสถานที่ในใบแจ้งซ่อมก่อนแก้ไข/ลบ     
  *
  * =====================================================================
  */
 
 module.exports = (locationService) => {
   return {
-    /* --- BUILDING --- */
     /**
      * ดึงรายการอาคารทั้งหมด
-     *
      * @author พชร ไพศรีสกุล
      * @since 2026-02-10
      * @lastModified 2026-02-10

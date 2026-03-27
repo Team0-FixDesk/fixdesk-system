@@ -25,7 +25,7 @@
  *    - ฟีเจอร์สำหรับช่าง เช่น รับงาน และดูสถิติ
  *
  * @usedBy
- *   - repair.route.js
+ *   - repair-route.js
  *
  * ---------------------------------------------------------------------
  * @changelog
@@ -35,6 +35,7 @@
  *     [2026-02-10, นราธิป แสนทวีสุข] V1.1.0
  *   - แก้ไขข้อความแจ้งเตือน
  *     [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล] V1.1.1
+ * 
  * =====================================================================
  */
 module.exports = (repairService) => {
@@ -146,17 +147,25 @@ module.exports = (repairService) => {
           phoneNumber: req.body.phone_number,
           urgency: req.body.urgency,
           filePaths,
+          skip_line_notification: req.body.skip_line_notification, // รับ flag จาก frontend
         };
 
         const result = await repairService.createRepair(data);
-        res.json({
+        const response = {
           message: "บันทึกฟอร์มแจ้งซ่อมสำเร็จ",
           id: result.insertId,
           rf_code: result.rfCode,
           uploaded_files: req.files
             ? req.files.map((f) => ({ filename: f.filename }))
             : [],
-        });
+        };
+
+        // ถ้า LINE notification เกิด rate limit error ให้ส่งกลับไปด้วย
+        if (result.lineNotificationError) {
+          response.lineNotificationError = result.lineNotificationError;
+        }
+
+        res.json(response);
       } catch (err) {
         res
           .status(500)
@@ -363,6 +372,11 @@ module.exports = (repairService) => {
 
         res.json({ message: "มอบหมายช่างสำเร็จ", assigned_to: technician_id });
       } catch (err) {
+        if (err.message === "LINE_RATE_LIMIT")
+          return res.status(429).json({ 
+            errorType: 'RATE_LIMIT_EXCEEDED',
+            message: "ถึงขีดจำกัดการแจ้งเตือน LINE กรุณาลองใหม่ในอีกสักครู่" 
+          });
         if (
           err.message === "TECH_NOT_FOUND" ||
           err.message === "NOT_A_TECHNICIAN"
@@ -423,6 +437,11 @@ module.exports = (repairService) => {
         });
       } catch (err) {
         console.error("assignTeam error:", err);
+        if (err.message === "LINE_RATE_LIMIT")
+          return res.status(429).json({ 
+            errorType: 'RATE_LIMIT_EXCEEDED',
+            message: "ถึงขีดจำกัดการแจ้งเตือน LINE กรุณาลองใหม่ในอีกสักครู่" 
+          });
         res
           .status(500)
           .json({ message: "มอบหมายทีมไม่สำเร็จ", error: err.message });
@@ -456,6 +475,11 @@ module.exports = (repairService) => {
             .json({ message: "รับงานไม่ได้ (สถานะอาจเปลี่ยนไปแล้ว)" });
         res.json({ message: "รับงานเรียบร้อยแล้ว", rf_code: req.params.code });
       } catch (err) {
+        if (err.message === "LINE_RATE_LIMIT")
+          return res.status(429).json({ 
+            errorType: 'RATE_LIMIT_EXCEEDED',
+            message: "ถึงขีดจำกัดการแจ้งเตือน LINE กรุณาลองใหม่ในอีกสักครู่" 
+          });
         res.status(500).json({ message: "เกิดข้อผิดพลาด", error: err.message });
       }
     },

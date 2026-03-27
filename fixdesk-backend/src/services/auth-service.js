@@ -20,6 +20,9 @@
  *    - เปรียบเทียบ password ที่เข้ารหัสด้วย bcrypt
  *    - สร้าง JWT Token สำหรับยืนยันตัวตน
  *
+ * @useby
+ * - Controller ที่เกี่ยวข้องกับการเข้าสู่ระบบ (Login)
+ * 
  * ---------------------------------------------------------------------
  * @changelog
  *   - Initial implementation Auth Service ตาม Layered Architecture
