@@ -28,8 +28,10 @@ import BaseButtonComponent from './base/base-button-component.vue'
 </script>
 
 <template>
-  <BaseButtonComponent class="h-10 px-4 border-[1px] border-[#0048EF] hover:bg-blue-50 text-[#1E48D1] rounded-lg shadow-sm">
-    <Icon icon="iconoir:import" width="24" height="24" style="color: #0048EF " />
-    Import Excel
+  <BaseButtonComponent
+    class="h-10 px-3 sm:px-4 border-[1px] border-[#0048EF] hover:bg-blue-50 text-[#1E48D1] rounded-lg shadow-sm flex items-center gap-2"
+  >
+    <Icon icon="iconoir:import" width="24" height="24" style="color: #0048EF" class="shrink-0" />
+    <span class="hidden sm:inline">Import Excel</span>
   </BaseButtonComponent>
 </template>

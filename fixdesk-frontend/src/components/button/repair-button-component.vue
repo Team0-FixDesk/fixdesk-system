@@ -30,9 +30,9 @@ import BaseButtonComponent from './base/base-button-component.vue'
 <template>
   <BaseButtonComponent
     to="/main/repair-request"
-    class="h-10 px-4 bg-[#1E48D1] hover:bg-[#163A9B] text-white rounded-lg shadow-sm"
+    class="h-10 px-3 sm:px-4 bg-[#1E48D1] hover:bg-[#163A9B] text-white rounded-lg shadow-sm flex items-center gap-2"
   >
-    <Icon icon="fluent:add-12-filled" width="20" height="20" />
-    แจ้งซ่อม
+    <Icon icon="fluent:add-12-filled" width="20" height="20" class="shrink-0" />
+    <span class="hidden sm:inline">แจ้งซ่อม</span>
   </BaseButtonComponent>
 </template>

@@ -83,12 +83,25 @@ const handleDownload = async () => {
   <BaseButtonComponent
     @click="handleDownload"
     :disabled="isLoading"
-    class="h-10 px-4 border-[1px] border-[#0048EF] hover:bg-blue-50 text-[#1E48D1] rounded-lg shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+    class="h-10 px-3 sm:px-4 border-[1px] border-[#0048EF] hover:bg-blue-50 text-[#1E48D1] rounded-lg shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
   >
-    <Icon v-if="isLoading" icon="eos-icons:loading" width="24" height="24" style="color: #0048EF" />
+    <Icon
+      v-if="isLoading"
+      icon="eos-icons:loading"
+      width="24"
+      height="24"
+      style="color: #0048EF"
+      class="shrink-0"
+    />
+    <Icon
+      v-else
+      icon="iconoir:download"
+      width="24"
+      height="24"
+      style="color: #0048EF"
+      class="shrink-0"
+    />
 
-    <Icon v-else icon="iconoir:download" width="24" height="24" style="color: #0048EF" />
-
-    {{ buttonText }}
+    <span class="hidden sm:inline">{{ buttonText }}</span>
   </BaseButtonComponent>
 </template>
