@@ -144,9 +144,9 @@ function toggleValue(list, value, emitName) {
 
 <template>
   <div class="mb-6">
-    <div class="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-3">
+    <div class="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-2 sm:gap-3">
       <!-- LEFT -->
-      <div class="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3">
+      <div class="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
         <!-- Search -->
         <input
           :value="search"
@@ -154,24 +154,24 @@ function toggleValue(list, value, emitName) {
           type="text"
           placeholder="ค้นหารายการแจ้งซ่อม"
           :title="searchPlaceholder"
-          class="w-full sm:w-[260px] h-10 px-4 rounded-lg border border-gray-300 text-gray-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+          class="w-full sm:w-[260px] h-10 px-3 sm:px-4 rounded-lg border border-gray-300 text-gray-500 focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm"
         />
 
-        <div class="flex flex-wrap items-center gap-3">
+        <div class="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto overflow-x-auto">
           <!-- Date -->
           <input
             v-if="showDate"
             type="date"
             :value="date"
             @input="emit('update:date', $event.target.value)"
-            class="h-10 px-3 rounded-lg border border-gray-300 text-gray-700"
+            class="h-10 px-2 sm:px-3 rounded-lg border border-gray-300 text-gray-700 text-sm flex-shrink-0"
           />
 
           <!-- Urgency (เฉพาะ Repair) -->
-          <div v-if="isRepair && showUrgencies" class="relative">
+          <div v-if="isRepair && showUrgencies" class="relative flex-shrink-0">
             <button
               @click.stop="toggleUrgency"
-              class="flex items-center gap-1 border border-gray-300 rounded-lg px-4 py-2 bg-white hover:bg-gray-50 text-gray-500"
+              class="flex items-center gap-1 border border-gray-300 rounded-lg px-3 sm:px-4 py-2 bg-white hover:bg-gray-50 text-gray-500 text-sm whitespace-nowrap"
             >
               ความเร่งด่วน
               <Icon
@@ -206,10 +206,10 @@ function toggleValue(list, value, emitName) {
           </div>
 
           <!-- Status -->
-          <div v-if="showStatus" class="relative">
+          <div v-if="showStatus" class="relative flex-shrink-0">
             <button
               @click.stop="toggleStatus"
-              class="flex items-center gap-1 border border-gray-300 rounded-lg px-4 py-2 bg-white hover:bg-gray-50 text-gray-500"
+              class="flex items-center gap-1 border border-gray-300 rounded-lg px-3 sm:px-4 py-2 bg-white hover:bg-gray-50 text-gray-500 text-sm whitespace-nowrap"
             >
               สถานะ
               <Icon
@@ -243,7 +243,7 @@ function toggleValue(list, value, emitName) {
           <button
             v-if="search || statuses.length || urgencies.length || date"
             @click="emit('reset')"
-            class="text-blue-600 hover:text-blue-700 text-sm font-medium"
+            class="text-blue-600 hover:text-blue-700 text-xs sm:text-sm font-medium whitespace-nowrap flex-shrink-0"
           >
             ล้างตัวกรอง
           </button>
