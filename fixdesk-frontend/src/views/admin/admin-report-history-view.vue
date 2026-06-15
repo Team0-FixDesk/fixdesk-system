@@ -279,28 +279,28 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-7xl">
+  <div class="bg-white rounded-xl shadow-md p-4 sm:p-6 md:p-8 mx-auto w-full max-w-7xl">
     <!-- Header -->
-    <div class="flex justify-between items-start mb-2">
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-4">
       <div>
-        <h1 class="text-xl font-bold text-black">ประวัติการแจ้งซ่อมที่ดำเนินการเสร็จสิ้น</h1>
+        <h1 class="text-lg sm:text-xl font-bold text-black">ประวัติการแจ้งซ่อมที่ดำเนินการเสร็จสิ้น</h1>
       </div>
 
-      <div class="flex flex-row gap-4 ml-auto">
-        <div class="flex items-center gap-3 justify-end">
-            <label class="text-sm font-medium text-gray-700">เลือกปี:</label>
-            <select v-model.number="selectedYear" @change="refreshDashboard"
-              class="px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm">
+      <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto sm:ml-auto">
+        <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+            <label for="year-select" class="text-xs sm:text-sm font-medium text-gray-700 whitespace-nowrap">เลือกปี:</label>
+            <select id="year-select" v-model.number="selectedYear" @change="refreshDashboard"
+              class="w-full sm:w-auto px-3 sm:px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm text-sm">
               <option v-for="year in availableYears" :key="year" :value="year">
                 {{ formatYearDisplay(year) }}
               </option>
             </select>
           </div>
 
-        <div class="flex items-center gap-2 justify-end">
-            <label class="text-sm font-medium text-gray-700">เลือกเดือน:</label>
-            <select v-model.number="selectedMonthIndex" @change="refreshDashboard"
-              class="px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-sm">
+        <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+            <label for="month-select" class="text-xs sm:text-sm font-medium text-gray-700 whitespace-nowrap">เลือกเดือน:</label>
+            <select id="month-select" v-model.number="selectedMonthIndex" @change="refreshDashboard"
+              class="w-full sm:w-auto px-3 sm:px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-sm">
               <option v-for="(m, idx) in monthLabels" :key="m" :value="idx">
                 {{ m }}
               </option>
@@ -322,8 +322,8 @@ onMounted(() => {
       @reset="resetFilters"
     />
 
-    <div class="mb-2">
-      <p class="text-sm text-gray-600">
+    <div class="mb-4 px-0 sm:px-0">
+      <p class="text-xs sm:text-sm text-gray-600">
         จำนวนงานซ่อมที่เสร็จสิ้น: <span class="font-semibold text-green-600">{{ completedTasks }}</span> รายการ
       </p>
     </div>
