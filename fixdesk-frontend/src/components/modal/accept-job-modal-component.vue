@@ -1,31 +1,3 @@
-/**
- * =====================================================================
- * @file            accept-job-modal-component.vue
- * @module          โมดูลรับงาน
- * @layer           Component (Presentation Layer)
- * @version         1.0.0
- * @since           2025-12-23
- * @author
- * @contributors
- *
- * @lastModified    2026-03-21
- * @lastModifiedBy
- * ---------------------------------------------------------------------
- * @description
- *  โมดัลสำหรับรับ/มอบหมายงานซ่อม รองรับการเลือกช่างเดี่ยวหรือเป็นทีม,
- *  ค้นหาและกรองช่าง, เลือกประเภทการมอบหมาย และยืนยันการรับงาน
- *  จะส่ง event `close` และ `success` กลับไปยัง parent component
- *
- * @requires
- *  - vue
- *  - sweetalert2
- *  - @iconify/vue
- * ---------------------------------------------------------------------
- * @changelog
- *
- * =====================================================================
- */
-
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import Swal from 'sweetalert2'
@@ -62,7 +34,6 @@ const selectedTeam = ref([])
 const selectedType = ref('')
 const searchTech = ref('')
 const showAssignTypeFilter = ref(false)
-const isProcessing = ref(false)
 
 // Computed
 const filteredTechnicians = computed(() =>
@@ -179,55 +150,109 @@ async function setLeadForAssignment(rf_code) {
 
 async function confirmAccept() {
   const code = props.repairCode
-  if (!code || isProcessing.value) return
+  if (!code) return
 
-  isProcessing.value = true
-
-  try {
-    // --- โหมดทำงานคนเดียว ---
-    if (acceptMode.value === 'alone') {
+  // โหมดทำงานคนเดียว
+  if (acceptMode.value === 'alone') {
+    try {
       const res = await fetch(`${API_BASE}/technician/accept-job/${encodeURIComponent(code)}`, {
         method: 'PUT',
         headers: getAuthHeaders(),
       })
 
       const payload = await res.json().catch(() => ({}))
+      console.log('🟢 [Assign Modal] API Response:', { ok: res.ok, status: res.status, body: payload,message:payload.message || 'ไม่สามารถรับงานได้' })
 
-      if (res.status === 429 || payload.errorType === 'RATE_LIMIT_EXCEEDED') {
+      // if (!res.ok) {
+      //   const Toast = Swal.mixin({
+      //     toast: true,
+      //     position: 'top-end',
+      //     animation: false,
+      //     showConfirmButton: false,
+      //     timer: 3000,
+      //     timerProgressBar: true,
+      //   })
+      //   Toast.fire({
+      //     title: 'เกิดข้อผิดพลาด',
+      //     text: payload.message || 'ไม่สามารถรับงานได้',
+      //     icon: 'error',
+      //     background: '#FFFFFF',
+      //     color: '#dc2626',
+      //   })
+      //   return
+      // }
+
+      if (res.status === 429 || resBody.errorType === 'RATE_LIMIT_EXCEEDED') {
         await Swal.fire({
           toast: true,
           position: 'top-end',
+          animation: false,
+          showConfirmButton: false,
           icon: 'warning',
-          title: 'ถึงขีดจำกัดแจ้งเตือน LINE',
-          text: 'ข้อมูลบันทึกแล้ว',
+          title: payload.message || 'ไม่สามารถรับงานได้',
+          text: 'ข้อมูลของคุณถูกบันทึกแล้ว',
           timer: 1000,
-          showConfirmButton: false,
+          timerProgressBar: true,
+          background: '#fef3c7',
+          color: '#92400e',
         })
-      } else if (!res.ok) {
-        throw new Error(payload.message || 'ไม่สามารถรับงานได้')
-      }
-
-      const count = await checkAssignmentCount(code)
-      if (count === 1 || count === null) {
-        await setLeadForAssignment(code)
-      }
-    }
-
-    // --- โหมดทำงานเป็นทีม ---
-    else if (acceptMode.value === 'team') {
-      if (!selectedTeam.value || selectedTeam.value.length === 0) {
-        await Swal.fire({
-          toast: true,
-          position: 'top-end',
-          icon: 'warning',
-          title: 'โปรดเลือกช่างอย่างน้อย 1 คน',
-          timer: 2000,
-          showConfirmButton: false,
-        })
-        isProcessing.value = false
+        // loadingAssign.value = false
+        emit('success')
+        emit('close')
         return
       }
 
+      const count = await checkAssignmentCount(code)
+      if (count === 1) {
+        await setLeadForAssignment(code)
+      } else if (count === null) {
+        await setLeadForAssignment(code)
+      }
+
+      emit('success')
+      emit('close')
+    } catch (err) {
+      console.error('Error accepting job (alone):', err)
+      const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        animation: false,
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true,
+      })
+      Toast.fire({
+        title: 'เกิดข้อผิดพลาด',
+        text: 'ขณะรับงาน',
+        icon: 'error',
+        background: '#FFFFFF',
+        color: '#dc2626',
+      })
+    }
+    return
+  }
+
+  // โหมดทำงานเป็นทีม
+  if (acceptMode.value === 'team') {
+    if (!selectedTeam.value || selectedTeam.value.length === 0) {
+      const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        animation: false,
+        showConfirmButton: false,
+        timer: 2000,
+        timerProgressBar: true,
+      })
+      Toast.fire({
+        title: 'โปรดเลือกช่างอย่างน้อย 1 คน',
+        icon: 'warning',
+        background: '#FFFFFF',
+        color: '#d97706',
+      })
+      return
+    }
+
+    try {
       const res = await fetch(`${API_BASE}/assign-repair-team`, {
         method: 'POST',
         headers: getAuthHeaders(),
@@ -239,39 +264,87 @@ async function confirmAccept() {
       })
 
       const payload = await res.json().catch(() => ({}))
+           // if (!res.ok) {
+      //   const Toast = Swal.mixin({
+      //     toast: true,
+      //     position: 'top-end',
+      //     animation: false,
+      //     showConfirmButton: false,
+      //     timer: 3000,
+      //     timerProgressBar: true,
+      //   })
+      //   Toast.fire({
+      //     title: 'เกิดข้อผิดพลาด',
+      //     text: payload.message || 'มอบหมายทีมไม่สำเร็จ',
+      //     icon: 'error',
+      //     background: '#FFFFFF',
+      //     color: '#dc2626',
+      //   })
+      //   return
+      // }
 
-      if (res.status !== 429 && !res.ok) {
-        throw new Error(payload.message || 'มอบหมายทีมไม่สำเร็จ')
+      console.log('🟢 [Assign Modal] API Response:', { ok: res.ok, status: res.status, body: payload,message:payload.message || 'มอบหมายทีมไม่สำเร็จ' })
+
+      if (res.status === 429 || payload.errorType === 'RATE_LIMIT_EXCEEDED') {
+        await Swal.fire({
+          toast: true,
+          position: 'top-end',
+          animation: false,
+          showConfirmButton: false,
+          icon: 'warning',
+          title: payload.message || 'ไม่สามารถรับงานได้',
+          text: 'ข้อมูลของคุณถูกบันทึกแล้ว',
+          timer: 1000,
+          timerProgressBar: true,
+          background: '#fef3c7',
+          color: '#92400e',
+        })
       }
-
       const res2 = await fetch(`${API_BASE}/technician/accept-job/${encodeURIComponent(code)}`, {
         method: 'PUT',
         headers: getAuthHeaders(),
       })
 
-      if (!res2.ok && res2.status !== 429) {
-        const p2 = await res2.json().catch(() => ({}))
-        throw new Error(p2.message || 'รับงานไม่สำเร็จ')
+const payload2 = await res2.json().catch(() => ({}))
+
+      console.log('🟢 [Assign Modal] API Response:', { ok: res2.ok, status: res2.status, body: payload2,message:payload2.message || 'รับงานหลังมอบหมายทีมไม่สำเร็จ' })
+
+      if (res2.status === 429 || payload2.errorType === 'RATE_LIMIT_EXCEEDED') {
+        await Swal.fire({
+          toast: true,
+          position: 'top-end',
+          animation: false,
+          showConfirmButton: false,
+          icon: 'warning',
+          title: payload2.message || 'รับงานหลังมอบหมายทีมไม่สำเร็จ',
+          text: 'ข้อมูลของคุณถูกบันทึกแล้ว',
+          timer: 1000,
+          timerProgressBar: true,
+          background: '#fef3c7',
+          color: '#92400e',
+        })
       }
+
+      emit('success')
+      emit('close')
+    } catch (err) {
+      console.error('Error accepting job (team):', err)
+      const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        animation: false,
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true,
+      })
+      Toast.fire({
+        title: 'เกิดข้อผิดพลาด',
+        text: 'ขณะมอบหมายทีม/รับงาน',
+        icon: 'error',
+        background: '#FFFFFF',
+        color: '#dc2626',
+      })
     }
-
-    // สำเร็จทุกกรณี
-    isProcessing.value = false
-    emit('success')
-    emit('close')
-
-  } catch (err) {
-    console.error('❌ Error accepting job:', err)
-    await Swal.fire({
-      toast: true,
-      position: 'top-end',
-      icon: 'error',
-      title: 'เกิดข้อผิดพลาด',
-      text: err.message || 'ขณะประมวลผลข้อมูล',
-      timer: 3000,
-      showConfirmButton: false,
-    })
-    isProcessing.value = false
   }
 }
 
@@ -392,17 +465,15 @@ onBeforeUnmount(() => {
       <div class="flex justify-end gap-3 mt-6">
         <button
           @click="$emit('close')"
-          :disabled="isProcessing"
-          class="px-5 py-2 font-medium text-white transition bg-neutral-300 rounded-md hover:bg-neutral-400 disabled:opacity-50 disabled:cursor-not-allowed"
+          class="px-5 py-2 font-medium text-white transition bg-neutral-300 rounded-md hover:bg-neutral-400"
         >
           ยกเลิก
         </button>
         <button
           @click="confirmAccept"
-          :disabled="isProcessing"
-          class="px-5 py-2 font-medium text-white transition bg-blue-700 rounded-md hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
+          class="px-5 py-2 font-medium text-white transition bg-blue-700 rounded-md hover:bg-blue-800"
         >
-          {{ isProcessing ? 'กำลังดำเนินการ...' : 'ยืนยัน' }}
+          ยืนยัน
         </button>
       </div>
     </div>

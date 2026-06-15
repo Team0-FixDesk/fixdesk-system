@@ -563,6 +563,7 @@ const confirmAddItem = async () => {
     })
 
     closeAddModal()
+    await fetchAllStock()
   } catch (error) {
     console.error('Error adding item:', error)
     const Toast = Swal.mixin({
@@ -772,6 +773,10 @@ const processEditFile = (files) => {
 
 const removeEditFile = () => {
   editFilePreviewList.value = []
+}
+
+const removeFile = () => {
+  filePreviewList.value = []
 }
 
 const toast = Swal.mixin({
