@@ -153,134 +153,187 @@ function getColumnWidth(columnIndex) {
   }
   return ''
 }
+
+// Visible columns for mobile card rendering (exclude id column and hidden columns)
+const visibleColumns = computed(() => {
+  return (props.columns || []).map((c, idx) => ({ col: c, index: idx })).filter((item) => {
+    if (props.hiddenColumns && props.hiddenColumns.includes(item.index)) return false
+    if (item.index === props.idColumnIndex) return false
+    return true
+  })
+})
 </script>
 
 <template>
-  <div class="relative overflow-x-auto">
-    <div class="relative overflow-x-auto min-h-[200px] max-h-[600px]">
-      <table class="min-w-[640px] w-full text-xs sm:text-sm border-collapse">
-        <thead class="bg-gray-100 border-b border-gray-300">
-          <tr>
-            <th
-              v-for="(column, columnIndex) in columns"
-              :key="columnIndex"
-              v-show="!hiddenColumns.includes(columnIndex)"
-              class="px-3 py-3 font-semibold text-gray-700 sticky top-0 z-[5] bg-gray-100"
-              :class="[getAlignClass(columnIndex), getColumnWidth(columnIndex)]"
-            >
-              {{ column }}
-            </th>
-          </tr>
-        </thead>
+  <div class="relative">
+    <!-- Desktop / Tablet: table (hidden on very small screens) -->
+    <div class="hidden sm:block overflow-x-auto">
+      <div class="min-w-[640px] w-full">
+        <table class="w-full text-xs sm:text-sm border-collapse">
+          <thead class="bg-gray-100 border-b border-gray-300">
+            <tr>
+              <th
+                v-for="(column, columnIndex) in columns"
+                :key="columnIndex"
+                v-show="!hiddenColumns.includes(columnIndex)"
+                class="px-3 py-3 font-semibold text-gray-700 sticky top-0 z-[5] bg-gray-100"
+                :class="[getAlignClass(columnIndex), getColumnWidth(columnIndex)]"
+              >
+                {{ column }}
+              </th>
+            </tr>
+          </thead>
 
-        <tbody>
-          <tr
-            v-for="(item, rowIndex) in paginatedRows"
-            :key="rowIndex"
-            :class="[
-              'bg-white border-b hover:bg-gray-100 cursor-pointer',
-              { '!bg-blue-50': item.row[props.idColumnIndex] == activeId },
-              { 'border-white hover:bg-white cursor-default': item.isDummy },
-              props.rowHeightClass,
-            ]"
-            @click="!item.isDummy && $emit('detail', getRowId(item.row))"
-          >
-            <td
-              v-for="(cell, cellIndex) in item.row"
-              :key="cellIndex"
-              v-show="!hiddenColumns.includes(cellIndex)"
-              class="px-3 py-2 align-middle "
+          <tbody>
+            <tr
+              v-for="(item, rowIndex) in paginatedRows"
+              :key="rowIndex"
               :class="[
-                getAlignClass(cellIndex),
-                cellIndex === 0 ? 'whitespace-nowrap overflow-hidden' : 'whitespace-nowrap',
-                getColumnWidth(cellIndex),
+                'bg-white border-b hover:bg-gray-100 cursor-pointer',
+                { '!bg-blue-50': item.row[props.idColumnIndex] == activeId },
+                { 'border-white hover:bg-white cursor-default': item.isDummy },
+                props.rowHeightClass,
               ]"
+              @click="!item.isDummy && $emit('detail', getRowId(item.row))"
             >
-              <template v-if="!item.isDummy">
-                <span
-                  v-if="cellIndex === props.idColumnIndex && props.idColumnAsLink"
-                  class="text-blue-600 underline cursor-pointer hover:text-blue-800"
-                  @click.stop="$emit('detail', getRowId(item.row))"
-                  v-html="cell"
-                ></span>
+              <td
+                v-for="(cell, cellIndex) in item.row"
+                :key="cellIndex"
+                v-show="!hiddenColumns.includes(cellIndex)"
+                class="px-3 py-2 align-middle"
+                :class="[
+                  getAlignClass(cellIndex),
+                  cellIndex === 0 ? 'whitespace-normal break-words' : 'whitespace-nowrap',
+                  getColumnWidth(cellIndex),
+                ]"
+              >
+                <template v-if="!item.isDummy">
+                  <span
+                    v-if="cellIndex === props.idColumnIndex && props.idColumnAsLink"
+                    class="text-blue-600 underline cursor-pointer hover:text-blue-800"
+                    @click.stop="$emit('detail', getRowId(item.row))"
+                    v-html="cell"
+                  ></span>
 
-                <span
-                  v-else-if="cellIndex === props.urgencyColumn"
-                  v-html="renderUrgencyBadge(cell)"
-                ></span>
-                <span
-                  v-else-if="cellIndex === props.statusColumn"
-                  v-html="renderStatusBadge(cell)"
-                ></span>
-                <span
-                  v-else-if="cellIndex === props.statusStockColumn"
-                  v-html="renderStatusStockBadge(cell)"
-                ></span>
-                <span
-                  v-else-if="cellIndex === props.statusStockinventoryColumn"
-                  v-html="renderStatusStockInventoryBadge(cell)"
-                ></span>
-                <span
-                  v-else-if="cellIndex === props.transactionTypeColumn"
-                  v-html="renderTransactionTypeBadge(cell)"
-                ></span>
+                  <span
+                    v-else-if="cellIndex === props.urgencyColumn"
+                    v-html="renderUrgencyBadge(cell)"
+                  ></span>
+                  <span
+                    v-else-if="cellIndex === props.statusColumn"
+                    v-html="renderStatusBadge(cell)"
+                  ></span>
+                  <span
+                    v-else-if="cellIndex === props.statusStockColumn"
+                    v-html="renderStatusStockBadge(cell)"
+                  ></span>
+                  <span
+                    v-else-if="cellIndex === props.statusStockinventoryColumn"
+                    v-html="renderStatusStockInventoryBadge(cell)"
+                  ></span>
+                  <span
+                    v-else-if="cellIndex === props.transactionTypeColumn"
+                    v-html="renderTransactionTypeBadge(cell)"
+                  ></span>
 
-                <slot
-                  v-else-if="$slots[`cell-${cellIndex}`]"
-                  :name="`cell-${cellIndex}`"
-                  :row="item.row"
-                  :cell="cell"
-                  :rowIndex="rowIndex"
-                  :columnIndex="cellIndex"
-                  :openMenuId="openMenuId"
-                  @toggle-menu="(id) => (openMenuId = id)"
-                ></slot>
+                  <slot
+                    v-else-if="$slots[`cell-${cellIndex}`]"
+                    :name="`cell-${cellIndex}`"
+                    :row="item.row"
+                    :cell="cell"
+                    :rowIndex="rowIndex"
+                    :columnIndex="cellIndex"
+                    :openMenuId="openMenuId"
+                    @toggle-menu="(id) => (openMenuId = id)"
+                  ></slot>
 
-                <span
-                  v-else
-                  v-html="cell"
-                  :class="cellIndex === 0 ? 'block line-clamp-2 break-words' : 'block truncate'"
-                >
+                  <span
+                    v-else
+                    v-html="cell"
+                    :class="cellIndex === 0 ? 'block line-clamp-2 break-words' : 'block truncate'"
+                  >
+                  </span>
+                </template>
+
+                <template v-else>
+                  <span
+                    v-if="
+                      cellIndex === props.urgencyColumn ||
+                      cellIndex === props.statusColumn ||
+                      cellIndex === props.statusStockColumn ||
+                      cellIndex === props.statusStockinventoryColumn ||
+                      cellIndex === props.transactionTypeColumn
+                    "
+                    class="inline-flex justify-center items-center w-36 h-8 rounded-full invisible"
+                  >
+                    Badge
+                  </span>
+
+                  <div
+                    v-else-if="$slots[`cell-${cellIndex}`]"
+                    class="invisible inline-flex items-center"
+                  >
+                    <div class="w-8 h-8"></div>
+                  </div>
+
+                  <span v-else class="invisible">&nbsp;</span>
+                </template>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Mobile: stacked card list (visible on small screens only) -->
+    <div class="block sm:hidden">
+      <div class="space-y-3">
+        <div
+          v-for="(item, rowIndex) in paginatedRows"
+          :key="`mobile-${rowIndex}`"
+          class="bg-white border rounded-lg p-3 shadow-sm"
+          :class="{ 'opacity-60 cursor-default': item.isDummy }"
+          @click="!item.isDummy && $emit('detail', getRowId(item.row))"
+        >
+          <div class="flex justify-between items-start">
+            <div class="text-sm font-medium text-gray-800">
+              <span v-if="item.row[props.idColumnIndex] !== undefined">
+                <span v-if="props.idColumnAsLink" @click.stop="$emit('detail', getRowId(item.row))" class="text-blue-600 underline">
+                  {{ item.row[props.idColumnIndex] }}
                 </span>
-              </template>
+                <span v-else>{{ item.row[props.idColumnIndex] }}</span>
+              </span>
+            </div>
+            <div class="text-xs text-gray-500">{{ (currentPage - 1) * (parseInt(props.perPage) || 5) + rowIndex + 1 }}</div>
+          </div>
 
-              <template v-else>
-                <span
-                  v-if="
-                    cellIndex === props.urgencyColumn ||
-                    cellIndex === props.statusColumn ||
-                    cellIndex === props.statusStockColumn ||
-                    cellIndex === props.statusStockinventoryColumn ||
-                    cellIndex === props.transactionTypeColumn
-                  "
-                  class="inline-flex justify-center items-center w-36 h-8 rounded-full invisible"
-                >
-                  Badge
-                </span>
-
-                <div
-                  v-else-if="$slots[`cell-${cellIndex}`]"
-                  class="invisible inline-flex items-center"
-                >
-                  <div class="w-8 h-8"></div>
-                </div>
-
-                <span v-else class="invisible">&nbsp;</span>
-              </template>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+          <dl class="mt-2 text-sm text-gray-600 space-y-1">
+            <template v-for="colItem in visibleColumns" :key="colItem.index">
+              <div class="flex justify-between items-start">
+                <dt class="text-gray-500 w-1/2 pr-2 text-xs">{{ colItem.col }}</dt>
+                <dd class="ml-2 w-1/2 text-right">
+                  <span v-if="colItem.index === props.urgencyColumn" v-html="renderUrgencyBadge(item.row[colItem.index])"></span>
+                  <span v-else-if="colItem.index === props.statusColumn" v-html="renderStatusBadge(item.row[colItem.index])"></span>
+                  <span v-else-if="colItem.index === props.statusStockColumn" v-html="renderStatusStockBadge(item.row[colItem.index])"></span>
+                  <span v-else-if="colItem.index === props.statusStockinventoryColumn" v-html="renderStatusStockInventoryBadge(item.row[colItem.index])"></span>
+                  <span v-else-if="colItem.index === props.transactionTypeColumn" v-html="renderTransactionTypeBadge(item.row[colItem.index])"></span>
+                  <span v-else v-html="item.row[colItem.index]" class="block truncate"></span>
+                </dd>
+              </div>
+            </template>
+          </dl>
+        </div>
+      </div>
     </div>
     <div class="flex justify-center sm:justify-end mt-4">
-      <div class="inline-flex border rounded-md">
-        <button @click="currentPage = 1" :disabled="currentPage === 1" class="px-3 py-2">«</button>
-        <button @click="currentPage--" :disabled="currentPage === 1" class="px-3 py-2">‹</button>
+      <div class="inline-flex border rounded-md text-xs sm:text-sm">
+        <button @click="currentPage = 1" :disabled="currentPage === 1" class="px-2 py-1">«</button>
+        <button @click="currentPage--" :disabled="currentPage === 1" class="px-2 py-1">‹</button>
         <button
           v-for="page in totalPages"
           :key="page"
           @click="currentPage = page"
-          class="px-3 py-2"
+          class="px-2 sm:px-3 py-1 sm:py-2"
           :class="{
             'bg-blue-100 text-blue-600': currentPage === page,
             'bg-white text-gray-700': currentPage !== page,
@@ -288,13 +341,13 @@ function getColumnWidth(columnIndex) {
         >
           {{ page }}
         </button>
-        <button @click="currentPage++" :disabled="currentPage === totalPages" class="px-3 py-2">
+        <button @click="currentPage++" :disabled="currentPage === totalPages" class="px-2 py-1">
           ›
         </button>
         <button
           @click="currentPage = totalPages"
           :disabled="currentPage === totalPages"
-          class="px-3 py-2"
+          class="px-2 py-1"
         >
           »
         </button>
