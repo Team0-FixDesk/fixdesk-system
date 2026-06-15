@@ -167,12 +167,12 @@ watch(
   <!-- Modal Overlay -->
   <div
     v-if="isOpen"
-    class="fixed inset-0 z-50 bg-black/50 flex items-center justify-center overflow-y-auto"
+    class="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center overflow-y-auto"
     @click.self="null"
   >
     <!-- Modal Container -->
     <div
-      class="relative bg-white w-full max-w-2xl rounded-lg shadow-xl text-left overflow-hidden my-8 transform transition-all"
+      class="relative bg-white w-full sm:max-w-2xl rounded-t-2xl sm:rounded-lg shadow-xl text-left overflow-hidden sm:my-8 transform transition-all"
       @click.self="null"
     >
       <!-- Modal Header -->

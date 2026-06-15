@@ -269,8 +269,8 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-    <div class="bg-white rounded-lg shadow-lg w-full max-w-xl p-8 relative">
+  <div class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black bg-opacity-40">
+    <div class="bg-white rounded-t-2xl sm:rounded-lg shadow-lg w-full sm:max-w-xl p-6 sm:p-8 relative max-h-[90dvh] flex flex-col">
       <h2 class="text-lg sm:text-xl font-bold text-black mb-6">มอบหมายงานให้ผู้รับผิดชอบหลัก</h2>
       <button
         @click="$emit('close')"
@@ -327,7 +327,7 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
-      <div class="space-y-2 overflow-y-auto max-h-60">
+      <div class="space-y-2 overflow-y-auto flex-1 min-h-0 max-h-60 sm:max-h-72">
         <div
           v-for="tech in filteredTechnicians"
           :key="tech.us_id"
@@ -358,14 +358,14 @@ onBeforeUnmount(() => {
       <div class="flex justify-end gap-3 mt-6">
         <button
           @click="$emit('close')"
-          class="px-5 py-2 font-medium text-white transition bg-neutral-300 rounded-md hover:bg-neutral-400"
+          class="flex-1 sm:flex-none px-5 py-2 font-medium text-white transition bg-neutral-300 rounded-md hover:bg-neutral-400"
         >
           ยกเลิก
         </button>
         <button
           @click="confirmAssign"
           :disabled="!selectedTechnician || loadingAssign"
-          class="px-5 py-2 font-medium text-white transition bg-blue-700 rounded-md hover:bg-blue-800 disabled:opacity-50"
+          class="flex-1 sm:flex-none px-5 py-2 font-medium text-white transition bg-blue-700 rounded-md hover:bg-blue-800 disabled:opacity-50"
         >
           {{ loadingAssign ? 'กำลังมอบหมาย...' : 'ยืนยัน' }}
         </button>
