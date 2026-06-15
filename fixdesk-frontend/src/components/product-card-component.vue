@@ -77,7 +77,7 @@ const statusColorClass = computed(() => {
   >
     <!-- รูปสินค้า (ใหญ่ขึ้น) -->
     <div
-      class="h-36 sm:h-40 w-full bg-gray-50 relative flex items-center justify-center overflow-hidden"
+      class="h-40 w-full bg-gray-50 relative flex items-center justify-center overflow-hidden"
     >
       <img
         v-if="product.imageUrl && !isImageError"
@@ -112,15 +112,15 @@ const statusColorClass = computed(() => {
     </div>
 
     <!-- เนื้อหา (กระชับลง) -->
-    <div class="p-3 sm:p-4 flex flex-col flex-grow">
+    <div class="p-3 flex flex-col flex-grow">
       <h3
-        class="text-sm sm:text-base font-semibold text-gray-800 mb-1 line-clamp-1"
+        class="text-sm font-semibold text-gray-800 mb-1 line-clamp-1"
         :title="product.name"
       >
         {{ product.name }}
       </h3>
 
-  <div class="space-y-1 text-xs sm:text-sm text-gray-500 mb-2 flex-grow">
+      <div class="space-y-1 text-xs text-gray-500 mb-2 flex-grow">
         <div class="flex justify-between items-center">
           <span class="text-gray-400">รหัส:</span>
           <span>{{ product.serialNumber }}</span>
@@ -151,7 +151,7 @@ const statusColorClass = computed(() => {
 
       <button
         @click="emit('add', product, imageRef)"
-        class="w-full py-2 text-xs sm:text-sm rounded-lg bg-blue-50 text-blue-600 font-medium hover:bg-blue-100 active:scale-95 transition-all duration-200 mt-auto"
+        class="w-full py-2 text-xs rounded-lg bg-blue-50 text-blue-600 font-medium hover:bg-blue-100 active:scale-95 transition-all duration-200 mt-auto"
       >
         เพิ่มลงตะกร้า
       </button>
