@@ -925,7 +925,7 @@ onBeforeUnmount(() => {
       <CardSummaryComponent :items="statItems" :item-unit="'รายการ'" />
     </div>
 
-    <div class="relative z-20 mb-6">
+    <div class="z-20 mb-6">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div class="flex flex-wrap items-center gap-3">
           <input
@@ -935,7 +935,7 @@ onBeforeUnmount(() => {
             class="text-gray-700 w-[260px] h-10 px-4 rounded-lg border border-gray-300 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
           />
 
-          <div class="relative">
+          <div class="">
             <button
               @click.stop="showStatusFilter = !showStatusFilter"
               class="flex items-center gap-1 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
