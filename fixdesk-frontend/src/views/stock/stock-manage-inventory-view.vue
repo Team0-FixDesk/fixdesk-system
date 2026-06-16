@@ -925,7 +925,7 @@ onBeforeUnmount(() => {
       <CardSummaryComponent :items="statItems" :item-unit="'รายการ'" />
     </div>
 
-    <div class="relative z-40 mb-6">
+    <div class="relative z-20 mb-6">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div class="flex flex-wrap items-center gap-3">
           <input
