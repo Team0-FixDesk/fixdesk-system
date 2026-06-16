@@ -4,14 +4,14 @@
  * ==============================================================
  * @file            admin-report-history-view.vue
  * @layer           มอดูลส่งออกรายงาน และแดชบอร์ดสรุปผลการแจ้งซ่อม - ประวัติการแจ้งซ่อม
- * @version         1.0.0
+ * @version         1.0.1
  * @since           <YYYY-MM-DD>
  * @author          บุณยกร จันประภาส
  * @contributors
- *   - 
+ *   -
  *
- * @lastModified    <YYYY-MM-DD>
- * @lastModifiedBy  <name>
+ * @lastModified    2026-06-16
+ * @lastModifiedBy  -
  * ---------------------------------------------------------------------
  * @description
  * หน้าจอสำหรับผู้ดูแลระบบ สำหรับดูประวัติการแจ้งซ่อม โดยจะแสดงผลในรุปแบบของตาราง
@@ -23,16 +23,17 @@
  *
  * รองรับการทำงาน:
  *   - แสดงหน้าจอประวัติการแจ้งซ่อมทั้งหมด
+ *   - Responsive: แสดงเป็น Card บนหน้าจอขนาด < 768px
  *
  * ---------------------------------------------------------------------
  * @changelog
- * [<YYYY-MM-DD>, <author>] V<version>
- * - <description>
+ * [2026-06-16] V1.0.1
+ * - เพิ่ม Responsive Card View สำหรับหน้าจอขนาด < 768px
  * ==============================================================
  */
 
 
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { getAdminRepairList } from '@/services/repair'
@@ -93,7 +94,7 @@ function formatYearDisplay(year) {
 }
 
 const { token, isAuthenticated, logout } = useAuthToken()
-const {  fetchUserProfileData } = useUserProfile()
+const { fetchUserProfileData } = useUserProfile()
 
 // Filter UI state (repair filter bar)
 const searchInput = ref('')
@@ -111,6 +112,12 @@ const repairRequests = ref([])
 const loading = ref(false)
 const error = ref(null)
 
+// --- Responsive screen size ---
+const screenSize = ref('lg')
+
+function handleResize() {
+  screenSize.value = window.innerWidth < 768 ? 'sm' : 'lg'
+}
 
 /* =========================
   Helpers (date)
@@ -119,7 +126,6 @@ function toDateSafe(input) {
   const d = new Date(input)
   return Number.isNaN(d.getTime()) ? new Date(0) : d
 }
-
 
 function formatThaiDate(input) {
   const d = toDateSafe(input)
@@ -140,6 +146,60 @@ function toLocalYMD(date) {
 ========================= */
 function isCompletedStatus(status) {
   return status === STATUS.done || status === STATUS.completed
+}
+
+/* =========================
+  Helpers (badge — ใช้ใน card)
+========================= */
+function urgencyClass(urgency) {
+  switch (urgency) {
+    case 'urgent':
+    case 'ด่วน':
+      return 'bg-red-100 text-red-700'
+    case 'normal':
+    case 'ปกติ':
+      return 'bg-blue-100 text-blue-700'
+    default:
+      return 'bg-gray-100 text-gray-600'
+  }
+}
+
+function urgencyLabel(urgency) {
+  switch (urgency) {
+    case 'urgent': return 'ด่วน'
+    case 'normal': return 'ปกติ'
+    default: return urgency || '-'
+  }
+}
+
+function statusClass(status) {
+  switch (status) {
+    case STATUS.done:
+    case STATUS.completed:
+      return 'bg-green-100 text-green-700'
+    case STATUS.inProgress:
+      return 'bg-yellow-100 text-yellow-700'
+    case STATUS.cancel:
+    case STATUS.cancelled:
+      return 'bg-red-100 text-red-700'
+    default:
+      return 'bg-gray-100 text-gray-600'
+  }
+}
+
+function statusLabel(status) {
+  switch (status) {
+    case STATUS.done:
+    case STATUS.completed:
+      return 'เสร็จสิ้น'
+    case STATUS.inProgress:
+      return 'กำลังดำเนินการ'
+    case STATUS.cancel:
+    case STATUS.cancelled:
+      return 'ยกเลิก'
+    default:
+      return status || '-'
+  }
 }
 
 /* =========================
@@ -167,11 +227,27 @@ function buildDetailHtml(r) {
   )
 }
 
+function buildDetailPlain(r) {
+  const reporterName = `${r.us_first_name || ''} ${r.us_last_name || ''}`.trim()
+  return {
+    date: formatThaiDate(r.rf_create_at),
+    reporter: reporterName,
+    department: r.department_name || '-',
+    problem: truncateSentences(r.rf_problem, 1),
+    location:
+      (r.bd_name ?? '-') +
+      ' ชั้น ' +
+      (r.fl_name ?? '-') +
+      ' ' +
+      (r.room_name ?? '-'),
+  }
+}
+
 function mapRepairToRow(r) {
   const rawDate = toDateSafe(r.rf_create_at)
-
   return {
     row: [r.rf_code, r.tt_name, buildDetailHtml(r), r.rf_urgency, r.rf_user_status, ''],
+    detail: buildDetailPlain(r),
     meta: r,
     rawDate,
   }
@@ -197,7 +273,6 @@ async function fetchRepairRequests() {
     }
 
     const payload = await getAdminRepairList(token.value)
-
     const repairs = normalizeRepairs(payload)
     repairRequests.value = repairs.map(mapRepairToRow)
   } catch (e) {
@@ -211,7 +286,6 @@ async function fetchRepairRequests() {
   Computed: Filtered Rows
 ========================= */
 const filteredRequests = computed(() => {
-  // Show only completed/done repairs and match selected month/year, plus filter bar criteria
   const q = String(searchInput.value || '').trim().toLowerCase()
 
   return repairRequests.value.filter((item) => {
@@ -221,11 +295,9 @@ const filteredRequests = computed(() => {
     const d = item.rawDate
     if (!d || !(d instanceof Date)) return false
 
-    // Month/year match
     if (d.getFullYear() !== Number(selectedYear.value)) return false
     if (d.getMonth() !== Number(selectedMonthIndex.value)) return false
 
-    // Search match (code, type, detail html)
     if (q) {
       const code = String(item.row?.[0] ?? '').toLowerCase()
       const type = String(item.row?.[1] ?? '').toLowerCase()
@@ -233,18 +305,15 @@ const filteredRequests = computed(() => {
       if (!code.includes(q) && !type.includes(q) && !detail.includes(q)) return false
     }
 
-    // Status filter (if provided)
     if (selectedStatuses.value.length > 0) {
       const rowStatus = String(item.row?.[4] ?? '')
       if (!selectedStatuses.value.includes(rowStatus)) return false
     }
 
-    // Date filter from filter bar (YYYY-MM-DD)
     if (selectedDate.value) {
       if (toLocalYMD(d) !== selectedDate.value) return false
     }
 
-    // Urgency filter (if provided)
     if (selectedUrgencies.value.length > 0) {
       const urgency = String(item.row?.[3] ?? '')
       if (!selectedUrgencies.value.includes(urgency)) return false
@@ -275,6 +344,12 @@ function goToRepairDetail(ticketId) {
 onMounted(() => {
   fetchUserProfileData()
   fetchRepairRequests()
+  window.addEventListener('resize', handleResize)
+  handleResize()
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', handleResize)
 })
 </script>
 
@@ -288,24 +363,30 @@ onMounted(() => {
 
       <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto sm:ml-auto">
         <div class="flex flex-col sm:flex-row sm:items-center gap-2">
-            <label for="year-select" class="text-xs sm:text-sm font-medium text-gray-700 whitespace-nowrap">เลือกปี:</label>
-            <select id="year-select" v-model.number="selectedYear" @change="refreshDashboard"
-              class="w-full sm:w-auto px-3 sm:px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm text-sm">
-              <option v-for="year in availableYears" :key="year" :value="year">
-                {{ formatYearDisplay(year) }}
-              </option>
-            </select>
-          </div>
+          <label for="year-select" class="text-xs sm:text-sm font-medium text-gray-700 whitespace-nowrap">เลือกปี:</label>
+          <select
+            id="year-select"
+            v-model.number="selectedYear"
+            class="w-full sm:w-auto px-3 sm:px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm text-sm"
+          >
+            <option v-for="year in availableYears" :key="year" :value="year">
+              {{ formatYearDisplay(year) }}
+            </option>
+          </select>
+        </div>
 
         <div class="flex flex-col sm:flex-row sm:items-center gap-2">
-            <label for="month-select" class="text-xs sm:text-sm font-medium text-gray-700 whitespace-nowrap">เลือกเดือน:</label>
-            <select id="month-select" v-model.number="selectedMonthIndex" @change="refreshDashboard"
-              class="w-full sm:w-auto px-3 sm:px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-sm">
-              <option v-for="(m, idx) in monthLabels" :key="m" :value="idx">
-                {{ m }}
-              </option>
-            </select>
-          </div>
+          <label for="month-select" class="text-xs sm:text-sm font-medium text-gray-700 whitespace-nowrap">เลือกเดือน:</label>
+          <select
+            id="month-select"
+            v-model.number="selectedMonthIndex"
+            class="w-full sm:w-auto px-3 sm:px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-sm"
+          >
+            <option v-for="(m, idx) in monthLabels" :key="m" :value="idx">
+              {{ m }}
+            </option>
+          </select>
+        </div>
       </div>
     </div>
 
@@ -322,34 +403,107 @@ onMounted(() => {
       @reset="resetFilters"
     />
 
-    <div class="mb-4 px-0 sm:px-0">
+    <div class="mb-4">
       <p class="text-xs sm:text-sm text-gray-600">
-        จำนวนงานซ่อมที่เสร็จสิ้น: <span class="font-semibold text-green-600">{{ completedTasks }}</span> รายการ
+        จำนวนงานซ่อมที่เสร็จสิ้น:
+        <span class="font-semibold text-green-600">{{ completedTasks }}</span> รายการ
       </p>
     </div>
 
-    <!-- Table -->
-    <TableComponent
-      :columns="[
-        'หมายเลขแจ้งซ่อม',
-        'ประเภทงาน',
-        'รายละเอียดโดยย่อ',
-        'ความเร่งด่วน',
-        'สถานะงาน',
-        'ตัวดำเนินการ',
-      ]"
-      :rows="rowsForDisplay"
-      :perPage="10"
-      :urgencyColumn="3"
-      :statusColumn="4"
-      :columnAlign="['left', 'left', 'left', 'center', 'center', 'center']"
-      :id-column-index="0"
-      :id-column-as-link="true"
-      @detail="goToRepairDetail"
-    >
-      <template #cell-5="{ row }">
-        <InfoButtonComponent @click="goToRepairDetail(row[0])" />
-      </template>
-    </TableComponent>
+    <!-- Desktop Table View -->
+    <div v-if="screenSize === 'lg'" class="-mx-2 overflow-x-auto sm:mx-0">
+      <TableComponent
+        :columns="[
+          'หมายเลขแจ้งซ่อม',
+          'ประเภทงาน',
+          'รายละเอียดโดยย่อ',
+          'ความเร่งด่วน',
+          'สถานะงาน',
+          'ตัวดำเนินการ',
+        ]"
+        :rows="rowsForDisplay"
+        :perPage="10"
+        :urgencyColumn="3"
+        :statusColumn="4"
+        :columnAlign="['left', 'left', 'left', 'center', 'center', 'center']"
+        :id-column-index="0"
+        :id-column-as-link="true"
+        @detail="goToRepairDetail"
+      >
+        <template #cell-5="{ row }">
+          <InfoButtonComponent @click="goToRepairDetail(row[0])" />
+        </template>
+      </TableComponent>
+    </div>
+
+    <!-- Mobile Card View -->
+    <div v-else class="space-y-3 px-2 sm:px-0">
+      <div
+        v-for="item in filteredRequests"
+        :key="item.row[0]"
+        class="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition overflow-hidden"
+      >
+        <!-- Card Header -->
+        <div class="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-100">
+          <div class="flex-1 min-w-0">
+            <h3 class="font-semibold text-gray-900 text-base leading-tight">
+              {{ item.row[0] }}
+            </h3>
+            <p class="text-xs text-gray-500 mt-0.5">{{ item.row[1] }}</p>
+          </div>
+          <button
+            @click="goToRepairDetail(item.row[0])"
+            class="flex-shrink-0 ml-3 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition"
+          >
+            รายละเอียด
+          </button>
+        </div>
+
+        <!-- Card Body -->
+        <div class="px-4 py-3 space-y-1.5 text-sm">
+          <div>
+            <span class="text-gray-500 font-medium">วันที่แจ้งซ่อม :</span>
+            <span class="text-gray-900 ml-1">{{ item.detail.date }}</span>
+          </div>
+          <div>
+            <span class="text-gray-500 font-medium">ชื่อผู้แจ้ง :</span>
+            <span class="text-gray-900 ml-1">{{ item.detail.reporter }}</span>
+          </div>
+          <div>
+            <span class="text-gray-500 font-medium">หน่วยงาน :</span>
+            <span class="text-gray-900 ml-1">{{ item.detail.department }}</span>
+          </div>
+          <div>
+            <span class="text-gray-500 font-medium">เรื่องที่แจ้ง :</span>
+            <span class="text-gray-900 ml-1">{{ item.detail.problem }}</span>
+          </div>
+          <div>
+            <span class="text-gray-500 font-medium">สถานที่ :</span>
+            <span class="text-gray-900 ml-1">{{ item.detail.location }}</span>
+          </div>
+
+          <!-- Badges -->
+          <div class="flex flex-wrap gap-2 pt-2">
+            <span
+              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+              :class="urgencyClass(item.row[3])"
+            >
+              ความเร่งด่วน: {{ urgencyLabel(item.row[3]) }}
+            </span>
+            <span
+              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+              :class="statusClass(item.row[4])"
+            >
+              {{ statusLabel(item.row[4]) }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div v-if="filteredRequests.length === 0" class="text-center py-12">
+        <p class="text-gray-500 text-sm">ไม่พบข้อมูลการแจ้งซ่อม</p>
+      </div>
+    </div>
   </div>
 </template>
