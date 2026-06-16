@@ -183,7 +183,7 @@ function toggleValue(list, value, emitName) {
 
           <div
             v-if="isUrgencyOpen"
-            class="absolute left-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg p-3 z-50 text-sm"
+            class="absolute left-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg p-3 z-20 text-sm"
           >
             <label
               v-for="u in [
@@ -221,7 +221,7 @@ function toggleValue(list, value, emitName) {
 
           <div
             v-if="isStatusOpen"
-            class="absolute left-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg p-3 z-50 text-sm"
+            class="absolute left-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg p-3 z-20 text-sm"
           >
             <label
               v-for="s in statusOptions"
