@@ -41,28 +41,22 @@
  *   [2026-03-03, พชร ไพศรีสกุล]
  * =====================================================================
  */
-
 <script setup>
 
-defineOptions({ name: 'MyListView' }) // กำหนดชื่อของ component สำหรับการ debug
-import { ref, onMounted } from 'vue'
+defineOptions({ name: 'MyListView' })
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import Sweetalert from 'sweetalert2'
 import { useMyRepairs } from '@/composables/useMyRepairs'
 
-// utils and HTML generation moved into composable; no local import needed
-
-import TableComponent from '@/components/table-component.vue' // คอมโพเนนต์ตาราง
-import TableActions from '@/components/table-actions-component.vue' // คอมโพเนนต์ปุ่มการกระทำของแถว
-import RepairButton from '@/components/button/repair-button-component.vue' // ปุ่มสำหรับเพิ่มการซ่อมใหม่
-import RepairFilterBar from '@/components/filters/repair-filter-bar-component.vue' // แถบกรองสำหรับการซ่อม
-
-// auth handled inside composable
+import TableComponent from '@/components/table-component.vue'
+import TableActions from '@/components/table-actions-component.vue'
+import RepairButton from '@/components/button/repair-button-component.vue'
+import RepairFilterBar from '@/components/filters/repair-filter-bar-component.vue'
 
 const router = useRouter()
 const route = useRoute()
 
-// โครงสร้างตาราง - ชื่อแต่ละคอลัมน์
 const tableColumnList = [
   'หมายเลขแจ้งซ่อม',
   'ประเภทงาน',
@@ -72,10 +66,8 @@ const tableColumnList = [
   'ตัวดำเนินการ',
 ]
 
-// ข้อมูลตาราง และสถานะ UI
 const openMenuId = ref(null)
 
-// use composable to centralize data and actions
 const {
   search,
   selectedStatuses,
@@ -87,54 +79,69 @@ const {
   filteredRows,
 } = useMyRepairs()
 
-// สถานะตัวกรอง (Filter)
-// local refs that bind to composable
 const searchInput = search
 const selectedStatuseList = selectedStatuses
 const selectedUrgencieLsit = selectedUrgencies
 
-// ฟังก์ชันโหลดข้อมูล
-/**
- * โหลดรายการการซ่อมของผู้ใช้ปัจจุบัน
- * ตรวจสอบการยืนยันตัวตน จากนั้นดึงข้อมูลจาก API
- * แปลงข้อมูลให้เป็นรูปแบบตาราง
- */
-// load data via composable
-// loadMyRepairs is provided by useMyRepairs
+// --- Responsive ---
+const screenSize = ref('lg')
 
-/**
- * กรองแถวตาราง ตามเงื่อนไข:
- * 1. ค้นหาตามชื่อ ประเภท หรือสถานที่
- * 2. กรองตามความเร่งด่วน
- * 3. กรองตามสถานะ
- * 4. กรองตามวันที่
- */
-// filteredRows provided by composable
+function handleResize() {
+  screenSize.value = window.innerWidth < 768 ? 'sm' : 'lg'
+}
 
-// รีเซ็ตตัวกรองทั้งหมด
-// reset is provided by composable resetFilters
+// --- Badge Helpers ---
+function urgencyClass(urgency) {
+  switch (urgency) {
+    case 'urgent': return 'bg-red-100 text-red-700'
+    case 'normal': return 'bg-blue-100 text-blue-700'
+    default: return 'bg-gray-100 text-gray-600'
+  }
+}
 
-// นำทางไปยังหน้ารายละเอียดการซ่อม
+function urgencyLabel(urgency) {
+  switch (urgency) {
+    case 'urgent': return 'ด่วน'
+    case 'normal': return 'ปกติ'
+    default: return urgency || '-'
+  }
+}
+
+function statusClass(status) {
+  switch (status) {
+    case 'done':
+    case 'completed': return 'bg-green-100 text-green-700'
+    case 'in_progress': return 'bg-yellow-100 text-yellow-700'
+    case 'cancel':
+    case 'cancelled': return 'bg-red-100 text-red-700'
+    default: return 'bg-gray-100 text-gray-600'
+  }
+}
+
+function statusLabel(status) {
+  switch (status) {
+    case 'done':
+    case 'completed': return 'เสร็จสิ้น'
+    case 'in_progress': return 'กำลังดำเนินการ'
+    case 'cancel':
+    case 'cancelled': return 'ยกเลิก'
+    default: return status || '-'
+  }
+}
+
 const openDetail = (code) => router.push(`/main/repair-detail/${code}`)
-// นำทางไปยังหน้าแก้ไขการซ่อม
 const openEdit = (code) => router.push(`/main/repair-edit/${code}`)
 
-// show confirm dialog and call composable delete
 async function handleDeleteRepair(repairCode) {
   const confirm = await Sweetalert.fire({
     title: 'ยืนยันลบรายการนี้?',
     text: `คุณต้องการลบรายการแจ้งซ่อมหมายเลข ${repairCode} หรือไม่?`,
     icon: 'warning',
-
     showCancelButton: true,
-    // ไม่ใช้ reverseButtons → confirm จะอยู่ซ้าย
-
     confirmButtonText: 'ยืนยันการลบ',
     cancelButtonText: 'ยกเลิก',
-
-    // Destructive action
-    confirmButtonColor: '#DC2626', // red-600
-    cancelButtonColor: '#a3a3a3', // gray-500
+    confirmButtonColor: '#DC2626',
+    cancelButtonColor: '#a3a3a3',
   })
 
   if (!confirm.isConfirmed) return
@@ -163,12 +170,17 @@ async function handleDeleteRepair(repairCode) {
   }
 }
 
-// ลักษณะ Lifecycle
 onMounted(() => {
   loadMyRepairs()
   if (route.query.status && ['pending', 'in_progress', 'done'].includes(route.query.status)) {
     selectedStatuseList.value = [route.query.status]
   }
+  window.addEventListener('resize', handleResize)
+  handleResize()
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', handleResize)
 })
 </script>
 
@@ -176,7 +188,7 @@ onMounted(() => {
   <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-7xl">
     <h1 class="text-xl font-bold text-black mb-6">รายการแจ้งซ่อมของฉัน</h1>
 
-    <!-- แถบตัวกรอง - ค้นหา, กรองสถานะ, ความเร่งด่วน, วันที่ -->
+    <!-- Filter Bar -->
     <RepairFilterBar
       mode="repair"
       v-model:search="searchInput"
@@ -185,14 +197,13 @@ onMounted(() => {
       v-model:date="selectedDate"
       @reset="resetFilters"
     >
-      <!-- ส่วนขวา: ปุ่มเพิ่มการซ่อมใหม่ -->
       <template #right>
         <RepairButton />
       </template>
     </RepairFilterBar>
 
-    <!-- ตาราง - แสดงรายการการซ่อมของผู้ใช้ -->
-    <div class="p-3 mx-auto max-w-8xl">
+    <!-- Desktop Table View -->
+    <div v-if="screenSize === 'lg'" class="p-3 mx-auto max-w-8xl">
       <TableComponent
         :columns="tableColumnList"
         :rows="filteredRows"
@@ -204,8 +215,6 @@ onMounted(() => {
         :id-column-as-link="true"
         @detail="openDetail"
       >
-        <!-- เทมเพลต: คอลัมน์การกระทำ (ปุ่มแก้ไข/ลบ) -->
-        <!-- คอลัมน์ Action (ดัชนี 5) -->
         <template #cell-5="{ row }">
           <TableActions
             :row-id="row[0]"
@@ -220,6 +229,65 @@ onMounted(() => {
           />
         </template>
       </TableComponent>
+    </div>
+
+    <!-- Mobile Card View -->
+    <div v-else class="space-y-3 px-2 mt-3">
+      <div
+        v-for="row in filteredRows"
+        :key="row[0]"
+        class="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition overflow-hidden"
+      >
+        <!-- Card Header -->
+        <div class="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-100">
+          <div class="flex-1 min-w-0">
+            <h3 class="font-semibold text-gray-900 text-base leading-tight">
+              {{ row[0] }}
+            </h3>
+            <p class="text-xs text-gray-500 mt-0.5">{{ row[1] }}</p>
+          </div>
+          <div class="flex-shrink-0 ml-3">
+            <TableActions
+              :row-id="row[0]"
+              :open-menu-id="openMenuId"
+              @toggle-menu="openMenuId = $event"
+              role="user"
+              :row="row"
+              :status="row[4]"
+              @detail="openDetail(row[0])"
+              @edit="openEdit(row[0])"
+              @delete="handleDeleteRepair(row[0])"
+            />
+          </div>
+        </div>
+
+        <!-- Card Body -->
+        <div class="px-4 py-3 space-y-1.5 text-sm">
+          <!-- Detail HTML จาก composable -->
+          <div class="text-gray-700 leading-relaxed" v-html="row[2]" />
+
+          <!-- Badges -->
+          <div class="flex flex-wrap gap-2 pt-2">
+            <span
+              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+              :class="urgencyClass(row[3])"
+            >
+              ความเร่งด่วน: {{ urgencyLabel(row[3]) }}
+            </span>
+            <span
+              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+              :class="statusClass(row[4])"
+            >
+              {{ statusLabel(row[4]) }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div v-if="filteredRows.length === 0" class="text-center py-12">
+        <p class="text-gray-500 text-sm">ไม่พบข้อมูลรายการแจ้งซ่อม</p>
+      </div>
     </div>
   </div>
 </template>
