@@ -215,7 +215,7 @@ onMounted(() => {
     <h1 class="text-xl font-bold text-black mb-6">รายการเบิกของฉัน</h1>
 
     <!-- Filters -->
-    <div class="relative z-40 mb-6">
+    <div class="z-40 mb-6">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div class="flex flex-wrap items-center gap-3">
           <input v-model="searchKeyword" type="text" placeholder="ค้นหารายการเบิก"
