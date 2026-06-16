@@ -164,13 +164,13 @@ async function importSelected() {
       <table class="w-full text-sm">
         <thead class="sticky top-0 z-10 bg-gray-100 shadow-sm">
           <tr>
-            <th class="p-2 w-10"></th>
-            <th class="p-2 text-left">ชื่อผู้ใช้</th>
-            <th class="p-2 text-left">ชื่อ-นามสกุล</th>
-            <th class="p-2 text-left">ตำแหน่ง</th>
-            <th class="p-2 text-left">หน่วยงาน</th>
-            <th class="p-2 text-left">บทบาท</th>
-            <th class="p-2 text-left">ประเภทช่าง</th>
+            <th class="p-2 w-10 sticky left-0 z-20 bg-gray-100"></th>
+            <th class="p-2 text-left sticky left-10 z-20 bg-gray-100 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] whitespace-nowrap">ชื่อผู้ใช้</th>
+            <th class="p-2 text-left whitespace-nowrap">ชื่อ-นามสกุล</th>
+            <th class="p-2 text-left whitespace-nowrap">ตำแหน่ง</th>
+            <th class="p-2 text-left whitespace-nowrap">หน่วยงาน</th>
+            <th class="p-2 text-left whitespace-nowrap">บทบาท</th>
+            <th class="p-2 text-left whitespace-nowrap">ประเภทช่าง</th>
           </tr>
         </thead>
 
@@ -180,7 +180,7 @@ async function importSelected() {
             :key="index"
             :class="!u.isValid ? 'bg-red-50' : 'hover:bg-gray-50'"
           >
-            <td class="p-3">
+            <td class="p-3 sticky left-0 z-10 bg-inherit">
               <label class="inline-flex items-center cursor-pointer">
                 <input
                   type="checkbox"
@@ -206,30 +206,30 @@ async function importSelected() {
               </label>
             </td>
 
-            <td class="p-2 font-mono text-xs">
+            <td class="p-2 font-mono text-xs sticky left-10 z-10 bg-inherit shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] whitespace-nowrap">
               {{ u.username }}
             </td>
 
-            <td class="p-2">
+            <td class="p-2 whitespace-nowrap">
               <div>{{ u.title_name }}{{ u.first_name_th }} {{ u.last_name_th }}</div>
               <div class="text-xs text-gray-400">{{ u.first_name_en }} {{ u.last_name_en }}</div>
             </td>
 
-            <td class="p-2">
+            <td class="p-2 whitespace-nowrap">
               {{ u.position || '-' }}
             </td>
 
-            <td class="p-2">
+            <td class="p-2 whitespace-nowrap">
               {{ u.department }}
             </td>
 
-            <td class="p-2">
+            <td class="p-2 whitespace-nowrap">
               <span class="px-2 py-1 text-xs rounded">
                 {{ u.role_name }}
               </span>
             </td>
 
-            <td class="p-2">
+            <td class="p-2 whitespace-nowrap">
               <span
                 v-if="u.role_name === 'Technician'"
                 :class="u.technician_type ? 'text-blue-600' : 'text-red-500 font-bold'"
@@ -243,16 +243,16 @@ async function importSelected() {
       </table>
     </div>
 
-    <div class="flex justify-end gap-2 mt-4">
+    <div class="flex gap-2 mt-4">
       <button
-        class="inline-flex items-center justify-center w-full h-10 px-4 font-medium text-gray-700 transition-colors border border-gray-300 rounded-md sm:justify-start sm:w-auto hover:bg-gray-50"
+        class="flex-1 sm:flex-none inline-flex items-center justify-center h-10 px-4 font-medium text-gray-700 transition-colors border border-gray-300 rounded-md hover:bg-gray-50"
         @click="$emit('back')"
       >
         ย้อนกลับ
       </button>
 
       <button
-        class="inline-flex items-center justify-center w-full h-10 px-4 font-medium text-white transition-colors bg-green-500 rounded-md sm:w-auto sm:justify-start hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
+        class="flex-1 sm:flex-none inline-flex items-center justify-center h-10 px-4 font-medium text-white transition-colors bg-green-500 rounded-md hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
         :disabled="selectedCount === 0"
         @click="importSelected"
       >

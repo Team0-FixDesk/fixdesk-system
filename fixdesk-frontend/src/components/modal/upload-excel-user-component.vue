@@ -30,7 +30,7 @@
 <template>
   <div>
     <div
-      class="p-10 text-center border-2 border-dashed rounded-lg cursor-pointer hover:border-blue-500 bg-gray-50 hover:bg-blue-50 transition-colors"
+      class="p-6 sm:p-10 text-center border-2 border-dashed rounded-lg cursor-pointer hover:border-blue-500 bg-gray-50 hover:bg-blue-50 transition-colors"
       :class="isDragging ? 'border-blue-500 bg-blue-100' : 'border-gray-300'"
       @click="fileInput.click()"
       @dragover.prevent="isDragging = true"
@@ -40,7 +40,7 @@
       <div class="flex flex-col items-center justify-center gap-2">
         <svg
           xmlns="http://www.w3.org/2000/svg"
-          class="w-12 h-12 text-gray-400"
+          class="w-10 h-10 sm:w-12 sm:h-12 text-gray-400"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"

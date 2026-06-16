@@ -117,10 +117,10 @@ async function importSelected(){
       <table class="w-full text-sm">
         <thead class="sticky top-0 bg-gray-100">
           <tr>
-            <th class="p-2"></th>
-            <th class="p-2 text-left">อาคาร</th>
-            <th class="p-2 text-left">ชั้น</th>
-            <th class="p-2 text-left">ห้อง</th>
+            <th class="p-2 w-10"></th>
+            <th class="p-2 text-left whitespace-nowrap">อาคาร</th>
+            <th class="p-2 text-left whitespace-nowrap">ชั้น</th>
+            <th class="p-2 text-left whitespace-nowrap">ห้อง</th>
           </tr>
         </thead>
 
@@ -149,24 +149,24 @@ async function importSelected(){
               </label>
             </td>
             <td class="p-2">{{ l.building_name }}</td>
-            <td class="p-2">{{ l.floor_name }}</td>
-            <td class="p-2">{{ l.room_name }}</td>
+            <td class="p-2 whitespace-nowrap">{{ l.floor_name }}</td>
+            <td class="p-2 whitespace-nowrap">{{ l.room_name }}</td>
           </tr>
         </tbody>
       </table>
     </div>
 
-    <div class="flex justify-end gap-2 mt-4">
+    <div class="flex gap-2 mt-4">
       <button
-        class="px-4 py-2 border rounded-md"
+        class="flex-1 sm:flex-none px-4 py-2 border rounded-md hover:bg-gray-50 transition"
         @click="$emit('back')"
       >
         ย้อนกลับ
       </button>
 
       <button
-        class="px-4 py-2 text-white bg-green-500 rounded-md disabled:bg-gray-400"
-        :disabled="selectedCount===0"
+        class="flex-1 sm:flex-none px-4 py-2 text-white bg-green-500 rounded-md disabled:bg-gray-400 hover:bg-green-600 transition"
+        :disabled="selectedCount === 0"
         @click="importSelected"
       >
         Import {{ selectedCount }}

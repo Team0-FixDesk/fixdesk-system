@@ -139,13 +139,13 @@ async function importSelected() {
       <table class="w-full text-sm">
         <thead class="sticky top-0 z-10 bg-gray-100 shadow-sm">
           <tr>
-            <th class="p-2 w-10"></th>
-            <th class="p-2 text-left">ชื่อรายการ</th>
-            <th class="p-2 text-left">ครุภัณฑ์</th>
-            <th class="p-2 text-left">หมวดหมู่</th>
-            <th class="p-2 text-center w-20">จำนวน</th>
-            <th class="p-2 text-left w-20">หน่วย</th>
-            <th class="p-2 text-left w-24">สถานะ</th>
+            <th class="p-2 w-10 sticky left-0 z-20 bg-gray-100"></th>
+            <th class="p-2 text-left sticky left-10 z-20 bg-gray-100 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">ชื่อรายการ</th>
+            <th class="p-2 text-left whitespace-nowrap">ครุภัณฑ์</th>
+            <th class="p-2 text-left whitespace-nowrap">หมวดหมู่</th>
+            <th class="p-2 text-center w-20 whitespace-nowrap">จำนวน</th>
+            <th class="p-2 text-left w-20 whitespace-nowrap">หน่วย</th>
+            <th class="p-2 text-left w-24 whitespace-nowrap">สถานะ</th>
           </tr>
         </thead>
 
@@ -155,7 +155,7 @@ async function importSelected() {
             :key="index"
             :class="!item.isValid ? 'bg-red-50' : 'hover:bg-gray-50'"
           >
-            <td class="p-3">
+            <td class="p-3 sticky left-0 z-10 bg-inherit">
               <label class="inline-flex items-center cursor-pointer">
                 <input
                   type="checkbox"
@@ -181,15 +181,15 @@ async function importSelected() {
               </label>
             </td>
 
-            <td class="p-2 font-medium">
+            <td class="p-2 font-medium sticky left-10 z-10 bg-inherit shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">
               {{ item.pd_name }}
             </td>
 
-            <td class="p-2 font-mono text-xs text-gray-600">
+            <td class="p-2 font-mono text-xs text-gray-600 whitespace-nowrap">
               {{ item.pd_asset_code || '-' }}
             </td>
 
-            <td class="p-2">
+            <td class="p-2 whitespace-nowrap">
               {{ item.pd_category_name }}
             </td>
 
@@ -197,13 +197,13 @@ async function importSelected() {
               {{ item.pd_quantity }}
             </td>
 
-            <td class="p-2 text-gray-500">
+            <td class="p-2 text-gray-500 whitespace-nowrap">
               {{ item.pd_unit_name }}
             </td>
 
             <td class="p-2">
               <span
-                class="px-2 py-1 text-xs rounded"
+                class="px-2 py-1 text-xs rounded whitespace-nowrap"
                 :class="
                   item.status === 'พร้อมใช้งาน' || item.status === 'Active'
                     ? 'bg-green-100 text-green-700'

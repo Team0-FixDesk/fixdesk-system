@@ -274,18 +274,25 @@ function getColumnWidth(columnIndex) {
       <div class="inline-flex border rounded-md">
         <button @click="currentPage = 1" :disabled="currentPage === 1" class="px-3 py-2">«</button>
         <button @click="currentPage--" :disabled="currentPage === 1" class="px-3 py-2">‹</button>
-        <button
-          v-for="page in totalPages"
-          :key="page"
-          @click="currentPage = page"
-          class="px-3 py-2"
-          :class="{
-            'bg-blue-100 text-blue-600': currentPage === page,
-            'bg-white text-gray-700': currentPage !== page,
-          }"
-        >
-          {{ page }}
-        </button>
+        <template v-for="page in totalPages" :key="page">
+          <button
+            v-if="page === 1 || page === totalPages || (page >= currentPage - 1 && page <= currentPage + 1)"
+            @click="currentPage = page"
+            class="px-3 py-2"
+            :class="{
+              'bg-blue-100 text-blue-600': currentPage === page,
+              'bg-white text-gray-700': currentPage !== page,
+            }"
+          >
+            {{ page }}
+          </button>
+          <span
+            v-else-if="page === currentPage - 2 || page === currentPage + 2"
+            class="px-2 py-2 text-gray-400 select-none"
+          >
+            …
+          </span>
+        </template>
         <button @click="currentPage++" :disabled="currentPage === totalPages" class="px-3 py-2">
           ›
         </button>
