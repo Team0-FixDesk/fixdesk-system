@@ -94,7 +94,7 @@ const desktopHandlers = {
   onMouseleave: () => (isOpen.value = false),
 }
 
-// Mobile state (ใหม่)
+// Mobile state
 const isMobile = ref(false)
 const mobileOpen = ref(false)
 
