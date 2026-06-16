@@ -161,44 +161,22 @@ async function confirmAccept() {
       })
 
       const payload = await res.json().catch(() => ({}))
-      console.log('🟢 [Assign Modal] API Response:', { ok: res.ok, status: res.status, body: payload,message:payload.message || 'ไม่สามารถรับงานได้' })
-
-      // if (!res.ok) {
-      //   const Toast = Swal.mixin({
-      //     toast: true,
-      //     position: 'top-end',
-      //     animation: false,
-      //     showConfirmButton: false,
-      //     timer: 3000,
-      //     timerProgressBar: true,
-      //   })
-      //   Toast.fire({
-      //     title: 'เกิดข้อผิดพลาด',
-      //     text: payload.message || 'ไม่สามารถรับงานได้',
-      //     icon: 'error',
-      //     background: '#FFFFFF',
-      //     color: '#dc2626',
-      //   })
-      //   return
-      // }
-
-      if (res.status === 429 || resBody.errorType === 'RATE_LIMIT_EXCEEDED') {
-        await Swal.fire({
+      if (!res.ok) {
+        const Toast = Swal.mixin({
           toast: true,
           position: 'top-end',
           animation: false,
           showConfirmButton: false,
-          icon: 'warning',
-          title: payload.message || 'ไม่สามารถรับงานได้',
-          text: 'ข้อมูลของคุณถูกบันทึกแล้ว',
-          timer: 1000,
+          timer: 3000,
           timerProgressBar: true,
-          background: '#fef3c7',
-          color: '#92400e',
         })
-        // loadingAssign.value = false
-        emit('success')
-        emit('close')
+        Toast.fire({
+          title: 'เกิดข้อผิดพลาด',
+          text: payload.message || 'ไม่สามารถรับงานได้',
+          icon: 'error',
+          background: '#FFFFFF',
+          color: '#dc2626',
+        })
         return
       }
 
@@ -264,65 +242,48 @@ async function confirmAccept() {
       })
 
       const payload = await res.json().catch(() => ({}))
-           // if (!res.ok) {
-      //   const Toast = Swal.mixin({
-      //     toast: true,
-      //     position: 'top-end',
-      //     animation: false,
-      //     showConfirmButton: false,
-      //     timer: 3000,
-      //     timerProgressBar: true,
-      //   })
-      //   Toast.fire({
-      //     title: 'เกิดข้อผิดพลาด',
-      //     text: payload.message || 'มอบหมายทีมไม่สำเร็จ',
-      //     icon: 'error',
-      //     background: '#FFFFFF',
-      //     color: '#dc2626',
-      //   })
-      //   return
-      // }
-
-      console.log('🟢 [Assign Modal] API Response:', { ok: res.ok, status: res.status, body: payload,message:payload.message || 'มอบหมายทีมไม่สำเร็จ' })
-
-      if (res.status === 429 || payload.errorType === 'RATE_LIMIT_EXCEEDED') {
-        await Swal.fire({
+      if (!res.ok) {
+        const Toast = Swal.mixin({
           toast: true,
           position: 'top-end',
           animation: false,
           showConfirmButton: false,
-          icon: 'warning',
-          title: payload.message || 'ไม่สามารถรับงานได้',
-          text: 'ข้อมูลของคุณถูกบันทึกแล้ว',
-          timer: 1000,
+          timer: 3000,
           timerProgressBar: true,
-          background: '#fef3c7',
-          color: '#92400e',
         })
+        Toast.fire({
+          title: 'เกิดข้อผิดพลาด',
+          text: payload.message || 'มอบหมายทีมไม่สำเร็จ',
+          icon: 'error',
+          background: '#FFFFFF',
+          color: '#dc2626',
+        })
+        return
       }
+
       const res2 = await fetch(`${API_BASE}/technician/accept-job/${encodeURIComponent(code)}`, {
         method: 'PUT',
         headers: getAuthHeaders(),
       })
 
-const payload2 = await res2.json().catch(() => ({}))
-
-      console.log('🟢 [Assign Modal] API Response:', { ok: res2.ok, status: res2.status, body: payload2,message:payload2.message || 'รับงานหลังมอบหมายทีมไม่สำเร็จ' })
-
-      if (res2.status === 429 || payload2.errorType === 'RATE_LIMIT_EXCEEDED') {
-        await Swal.fire({
+      if (!res2.ok) {
+        const p2 = await res2.json().catch(() => ({}))
+        const Toast = Swal.mixin({
           toast: true,
           position: 'top-end',
           animation: false,
           showConfirmButton: false,
-          icon: 'warning',
-          title: payload2.message || 'รับงานหลังมอบหมายทีมไม่สำเร็จ',
-          text: 'ข้อมูลของคุณถูกบันทึกแล้ว',
-          timer: 1000,
+          timer: 3000,
           timerProgressBar: true,
-          background: '#fef3c7',
-          color: '#92400e',
         })
+        Toast.fire({
+          title: 'เกิดข้อผิดพลาด',
+          text: p2.message || 'รับงานหลังมอบหมายทีมไม่สำเร็จ',
+          icon: 'error',
+          background: '#FFFFFF',
+          color: '#dc2626',
+        })
+        return
       }
 
       emit('success')
