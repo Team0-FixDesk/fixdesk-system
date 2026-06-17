@@ -61,6 +61,17 @@ const tableColumns = TABLE_COLUMNS
 const tableRowsList = ref([])
 
 // --- Responsive ---
+const rowMetaByCode = computed(() => {
+  const map = new Map()
+  for (const item of filteredRows.value) {
+    map.set(item.row[0], item.meta)
+  }
+  return map
+})
+
+function getMetaByCode(code) {
+  return rowMetaByCode.value.get(code)
+}
 const screenSize = ref('lg')
 
 function handleResize() {
@@ -271,7 +282,7 @@ onBeforeUnmount(() => {
         :id-column-as-link="true"
         @detail="openDetail"
       >
-        <template #cell-4="{ row, rowIndex }">
+        <template #cell-4="{ row }">
           <TableActions
             :row-id="row[0]"
             :open-menu-id="openMenuId"
@@ -279,7 +290,7 @@ onBeforeUnmount(() => {
             role="assign"
             :row="row"
             :status="row[3]"
-            :assigned-tech="filteredRows[rowIndex].meta.rf_assigned_tech_id"
+            :assigned-tech="getMetaByCode(row[0])?.rf_assigned_tech_id"
             @assign="openAssignModal(row)"
             @detail="openDetail(row[0])"
           />
