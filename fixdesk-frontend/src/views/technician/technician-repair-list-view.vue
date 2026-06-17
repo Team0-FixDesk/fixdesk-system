@@ -43,11 +43,13 @@
  *     - แสดง preview รูปภาพพร้อมชื่อไฟล์และขนาดไฟล์
  *     - Validation: ตรวจสอบประเภทไฟล์ (image/* เท่านั้น)
  *     [2026-03-17, นราธิป แสนทวีสุข]
+ *   - เพิ่มการแสดงผลแบบ Responsive: สลับจาก Table เป็น Card บนหน้าจอขนาดเล็ก
+ *     [2026-06-17, Claude]
  * =====================================================================
  */
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
 
@@ -86,6 +88,85 @@ const repairMethod = ref('in_house') // in_house, outsource, other
 const repairMethodRemark = ref('')
 const resultStatus = ref('completed') // completed, incomplete, other
 const resultRemark = ref('')
+
+// --- Responsive Table/Card Switching ---
+const screenSize = ref('lg')
+
+function handleResize() {
+  if (window.innerWidth < 768) {
+    screenSize.value = 'sm'
+  } else {
+    screenSize.value = 'lg'
+  }
+}
+
+// แปลงรหัสสถานะ (เก็บไว้ใช้เฉพาะมุมมอง Card บนมือถือ)
+function renderStatusLabel(status) {
+  switch (status) {
+    case 'pending':
+      return 'รอดำเนินการ'
+    case 'in_progress':
+      return 'กำลังดำเนินการ'
+    case 'outsource':
+      return 'จ้างช่างภายนอก'
+    case 'done':
+      return 'เสร็จสิ้น'
+    default:
+      return status
+  }
+}
+
+// "รายละเอียดโดยย่อ" เก็บมาเป็น string ต่อกันด้วย </br> เช่น
+// "วันที่แจ้งซ่อม : ... </br> ชื่อผู้แจ้ง : ... </br> หน่วยงาน : ..."
+// ฟังก์ชันนี้แยกออกเป็น label/value ทีละฟิลด์ เพื่อแสดงผลบน Card ให้อ่านง่าย
+function parseRepairDetail(text) {
+  if (!text) return []
+  return text
+    .split(/<\/br>/i)
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((part) => {
+      const idx = part.indexOf(':')
+      if (idx === -1) return { label: '', value: part }
+      return {
+        label: part.slice(0, idx).trim(),
+        value: part.slice(idx + 1).trim(),
+      }
+    })
+}
+
+// ดึงค่าของฟิลด์ที่ต้องการจาก "รายละเอียดโดยย่อ" มาแสดงเป็นหัวข้อย่อยบน Card
+function getRepairField(text, label) {
+  const found = parseRepairDetail(text).find((p) => p.label === label)
+  return found ? found.value : ''
+}
+
+// แปลง "รายละเอียดโดยย่อ" ทั้งสตริง เป็น object ที่มีฟิลด์ชัดเจน สำหรับแสดงผลบน Card
+function getRepairDetailObject(text) {
+  return {
+    date: getRepairField(text, 'วันที่แจ้งซ่อม') || '-',
+    reporter: getRepairField(text, 'ชื่อผู้แจ้ง') || '-',
+    department: getRepairField(text, 'หน่วยงาน') || '-',
+    problem: getRepairField(text, 'เรื่องที่แจ้ง') || '-',
+    location: getRepairField(text, 'สถานที่') || '-',
+  }
+}
+
+// สีของ badge สถานะงาน (ใช้เฉพาะมุมมอง Card บนมือถือ)
+function techStatusClass(status) {
+  switch (status) {
+    case 'done':
+      return 'bg-green-100 text-green-700'
+    case 'in_progress':
+      return 'bg-yellow-100 text-yellow-700'
+    case 'outsource':
+      return 'bg-purple-100 text-purple-700'
+    case 'pending':
+      return 'bg-gray-100 text-gray-600'
+    default:
+      return 'bg-gray-100 text-gray-600'
+  }
+}
 
 function processFiles(files) {
   const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp', 'image/gif']
@@ -175,6 +256,16 @@ const filteredRows = computed(() => {
     return matchSearch && matchStatus
   })
 })
+
+/**
+ * ข้อมูลสำหรับมุมมอง Card บนมือถือ: row เดิม + detail ที่แยกฟิลด์ไว้ล่วงหน้า
+ */
+const cardItems = computed(() =>
+  filteredRows.value.map((row) => ({
+    row,
+    detail: getRepairDetailObject(row[1]),
+  }))
+)
 
 /**
  * เปิดหน้ารายละเอียดใบแจ้งซ่อม
@@ -356,6 +447,12 @@ async function confirmCloseJob() {
 ======================== */
 onMounted(() => {
   fetchRepairList()
+  window.addEventListener('resize', handleResize)
+  handleResize() // ตรวจสอบครั้งแรก
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', handleResize)
 })
 </script>
 
@@ -377,12 +474,87 @@ onMounted(() => {
       </select>
     </div>
 
-    <!-- Table Component -->
-    <TableComponent :columns="['หมายเลขแจ้งซ่อม', 'รายละเอียดโดยย่อ', 'สถานะงาน', 'ตัวดำเนินการ']" :rows="filteredRows" :perPage="10" :statusColumn="2" :columnAlign="['left', 'left', 'center', 'center']" :id-column-index="0" :id-column-as-link="true" @detail="goToDetail">
-      <template #cell-3="{ row }">
-        <TableActionsComponent role="technician" :row-id="row[0]" :open-menu-id="openMenuId" :row="row" :status="row[2]" @toggle-menu="openMenuId = $event" @detail="goToDetail(row[0])" @accept="handleAccept(row[0])" @close-job="handleCloseJob(row[0])" @outsource="handleOutsource(row[0])" @open-stock="handleOpenStock(row[0])" />
-      </template>
-    </TableComponent>
+    <!-- Desktop Table View -->
+    <div v-if="screenSize === 'lg'" class="-mx-2 overflow-x-auto sm:mx-0">
+      <TableComponent :columns="['หมายเลขแจ้งซ่อม', 'รายละเอียดโดยย่อ', 'สถานะงาน', 'ตัวดำเนินการ']" :rows="filteredRows" :perPage="10" :statusColumn="2" :columnAlign="['left', 'left', 'center', 'center']" :id-column-index="0" :id-column-as-link="true" @detail="goToDetail">
+        <template #cell-3="{ row }">
+          <TableActionsComponent role="technician" :row-id="row[0]" :open-menu-id="openMenuId" :row="row" :status="row[2]" @toggle-menu="openMenuId = $event" @detail="goToDetail(row[0])" @accept="handleAccept(row[0])" @close-job="handleCloseJob(row[0])" @outsource="handleOutsource(row[0])" @open-stock="handleOpenStock(row[0])" />
+        </template>
+      </TableComponent>
+    </div>
+
+    <!-- Mobile Card View -->
+    <div v-else class="space-y-3 px-2 sm:px-0">
+      <div
+        v-for="item in cardItems"
+        :key="item.row[0]"
+        class="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition overflow-hidden"
+      >
+        <!-- Card Header -->
+        <div class="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-100">
+          <div class="flex-1 min-w-0">
+            <h3 class="font-semibold text-gray-900 text-base leading-tight">
+              {{ item.row[0] }}
+            </h3>
+            <p class="text-xs text-gray-500 mt-0.5">{{ item.detail.problem }}</p>
+          </div>
+          <div class="flex-shrink-0 ml-3">
+            <TableActionsComponent
+              role="technician"
+              :row-id="item.row[0]"
+              :open-menu-id="openMenuId"
+              :row="item.row"
+              :status="item.row[2]"
+              @toggle-menu="openMenuId = $event"
+              @detail="goToDetail(item.row[0])"
+              @accept="handleAccept(item.row[0])"
+              @close-job="handleCloseJob(item.row[0])"
+              @outsource="handleOutsource(item.row[0])"
+              @open-stock="handleOpenStock(item.row[0])"
+            />
+          </div>
+        </div>
+
+        <!-- Card Body -->
+        <div class="px-4 py-3 space-y-1.5 text-sm">
+          <div>
+            <span class="text-gray-500 font-medium">วันที่แจ้งซ่อม :</span>
+            <span class="text-gray-900 ml-1">{{ item.detail.date }}</span>
+          </div>
+          <div>
+            <span class="text-gray-500 font-medium">ชื่อผู้แจ้ง :</span>
+            <span class="text-gray-900 ml-1">{{ item.detail.reporter }}</span>
+          </div>
+          <div>
+            <span class="text-gray-500 font-medium">หน่วยงาน :</span>
+            <span class="text-gray-900 ml-1">{{ item.detail.department }}</span>
+          </div>
+          <div>
+            <span class="text-gray-500 font-medium">เรื่องที่แจ้ง :</span>
+            <span class="text-gray-900 ml-1">{{ item.detail.problem }}</span>
+          </div>
+          <div>
+            <span class="text-gray-500 font-medium">สถานที่ :</span>
+            <span class="text-gray-900 ml-1">{{ item.detail.location }}</span>
+          </div>
+
+          <!-- Badge -->
+          <div class="flex flex-wrap gap-2 pt-2">
+            <span
+              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+              :class="techStatusClass(item.row[2])"
+            >
+              {{ renderStatusLabel(item.row[2]) }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div v-if="cardItems.length === 0" class="text-center py-12">
+        <p class="text-gray-500 text-sm">ไม่พบรายการงานซ่อม</p>
+      </div>
+    </div>
 
     <!-- Accept Job Modal -->
     <AcceptJobModal v-if="showAcceptPopup" :repairCode="currentAcceptCode" :currentUserId="userId" @close="showAcceptPopup = false" @success="fetchRepairList" />
