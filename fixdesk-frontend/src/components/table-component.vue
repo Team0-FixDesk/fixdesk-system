@@ -49,6 +49,11 @@ const props = defineProps({
 
   idColumnAsLink: { type: Boolean, default: false },
   rowHeightClass: { type: String, default: 'h-14' },
+
+  actionColumnIndex: {
+    type: Number,
+    default: null,
+  },
 })
 
 const emit = defineEmits(['detail'])
@@ -342,19 +347,35 @@ function getColumnWidth(columnIndex) {
             ></span>
           </div>
 
-          <!-- ถ้าคอลัมน์ 0 เป็น badge เร่งด่วน/สถานะ ให้โผล่มุมขวาบนของหัวการ์ดด้วย -->
-          <span
-            v-if="isBadgeColumn(0)"
-            class="shrink-0"
-            v-html="getBadgeHtml(0, item.row[0])"
-          ></span>
+          <!-- มุมขวาบน: badge (ถ้ามี) + ปุ่มเมนู action (ถ้ามี) -->
+          <div class="flex items-center gap-2 shrink-0">
+            <span
+              v-if="isBadgeColumn(0)"
+              v-html="getBadgeHtml(0, item.row[0])"
+            ></span>
+
+            <span
+              v-if="props.actionColumnIndex !== null && $slots[`cell-${props.actionColumnIndex}`]"
+              @click.stop
+            >
+              <slot
+                :name="`cell-${props.actionColumnIndex}`"
+                :row="item.row"
+                :cell="item.row[props.actionColumnIndex]"
+                :rowIndex="rowIndex"
+                :columnIndex="props.actionColumnIndex"
+                :openMenuId="openMenuId"
+                @toggle-menu="(id) => (openMenuId = id)"
+              ></slot>
+            </span>
+          </div>
         </div>
 
         <!-- รายละเอียด: คอลัมน์ที่เหลือแสดงเป็น label: value -->
         <div class="px-4 py-3 space-y-2">
           <template v-for="cellIndex in mobileDetailColumnIndexes" :key="cellIndex">
             <div
-              v-if="cellIndex !== 0 || !isBadgeColumn(0)"
+              v-if="(cellIndex !== 0 || !isBadgeColumn(0)) && cellIndex !== props.actionColumnIndex"
               class="flex items-start justify-between gap-3 text-sm"
             >
               <span class="text-gray-500 shrink-0">{{ columns[cellIndex] }}</span>

@@ -338,6 +338,7 @@ onMounted(() => {
         :columnAlign="['left', 'left', 'left', 'center', 'center', 'center']"
         :id-column-index="0"
         :id-column-as-link="true"
+        :action-column-index="5"
         @detail="goToRepairDetail"
       >
         <template #cell-5="{ row }">
