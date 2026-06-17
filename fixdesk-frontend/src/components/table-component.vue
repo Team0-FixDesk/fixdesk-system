@@ -3,7 +3,7 @@
  * =====================================================================
  * @file            table-component.vue
  * @layer           Component (Presentation Layer)
- * @version         1.0.0
+ * @version         1.1.0
  * @since
  * @author
  * @contributors
@@ -13,11 +13,14 @@
  * @description
  *  คอมโพเนนต์ตารางทั่วไป ใช้แสดงข้อมูลแบบแถว-คอลัมน์ พร้อมรองรับ
  *  การแบ่งหน้า การจัดแนวคอลัมน์ และการแสดงสถานะภายในเซลล์
+ *  บนหน้าจอมือถือ (ต่ำกว่า sm) จะแสดงผลเป็นรูปแบบการ์ดแทนตาราง
  * @features
  *
  * @usedBy
  *
  * @changelog
+ *  - 1.1.0: เพิ่มมุมมองการ์ดสำหรับมือถือ + prop hiddenColumnsMobile
+ *           + ย่อ pagination บนมือถือ
  *
  * =====================================================================
  */
@@ -40,10 +43,16 @@ const props = defineProps({
 
   columnAlign: { type: Array, default: () => [] },
   hiddenColumns: { type: Array, default: () => [] },
+  // คอลัมน์ที่ต้องการซ่อนเฉพาะบนมุมมองการ์ด (มือถือ) เท่านั้น
+  // (ไม่กระทบมุมมองตารางบน desktop/tablet)
+  hiddenColumnsMobile: { type: Array, default: () => [] },
 
   idColumnAsLink: { type: Boolean, default: false },
   rowHeightClass: { type: String, default: 'h-14' },
 })
+
+const emit = defineEmits(['detail'])
+
 const openMenuId = ref(null)
 const currentPage = ref(1)
 
@@ -92,6 +101,20 @@ const paginatedRows = computed(() => {
   }
 
   return pageRows
+})
+
+// คอลัมน์อื่น ๆ (ไม่ใช่คอลัมน์หัวการ์ด/ID) ที่ต้องแสดงในมุมมองการ์ด
+// คือคอลัมน์ที่ไม่ถูกซ่อนทั้งจาก hiddenColumns และ hiddenColumnsMobile
+// และไม่ใช่ตัว idColumnIndex เอง (เพราะเอาไปใช้เป็นหัวการ์ดแล้ว)
+const mobileDetailColumnIndexes = computed(() => {
+  return props.columns
+    .map((_, index) => index)
+    .filter((index) => {
+      if (index === props.idColumnIndex) return false
+      if (props.hiddenColumns.includes(index)) return false
+      if (props.hiddenColumnsMobile.includes(index)) return false
+      return true
+    })
 })
 
 function getAlignClass(columnIndex) {
@@ -165,14 +188,28 @@ function renderTransactionTypeBadge(type) {
   }
 }
 
-function getColumnWidth(columnIndex) {
-  if (
+// ฟังก์ชันกลาง: เลือก renderer ของ badge ตาม columnIndex (ใช้ร่วมกันทั้งตารางและการ์ด)
+function getBadgeHtml(columnIndex, cell) {
+  if (columnIndex === props.urgencyColumn) return renderUrgencyBadge(cell)
+  if (columnIndex === props.statusColumn) return renderStatusBadge(cell)
+  if (columnIndex === props.statusStockColumn) return renderStatusStockBadge(cell)
+  if (columnIndex === props.statusStockinventoryColumn) return renderStatusStockInventoryBadge(cell)
+  if (columnIndex === props.transactionTypeColumn) return renderTransactionTypeBadge(cell)
+  return null
+}
+
+function isBadgeColumn(columnIndex) {
+  return (
     columnIndex === props.urgencyColumn ||
     columnIndex === props.statusColumn ||
     columnIndex === props.statusStockColumn ||
     columnIndex === props.statusStockinventoryColumn ||
     columnIndex === props.transactionTypeColumn
-  ) {
+  )
+}
+
+function getColumnWidth(columnIndex) {
+  if (isBadgeColumn(columnIndex)) {
     return 'w-40 min-w-[160px] max-w-[160px]'
   }
   return ''
@@ -180,8 +217,9 @@ function getColumnWidth(columnIndex) {
 </script>
 
 <template>
-  <div class="relative overflow-x-auto">
-    <div class="relative overflow-x-auto min-h-[200px] max-h-[600px]">
+  <div class="relative">
+    <!-- ===================== Desktop / Tablet: Table view ===================== -->
+    <div class="relative overflow-x-auto min-h-[200px] max-h-[600px] hidden sm:block">
       <table class="min-w-[640px] w-full text-xs sm:text-sm border-collapse">
         <thead class="bg-gray-100 border-b border-gray-300">
           <tr>
@@ -207,7 +245,7 @@ function getColumnWidth(columnIndex) {
               { 'border-white hover:bg-white cursor-default': item.isDummy },
               props.rowHeightClass,
             ]"
-            @click="!item.isDummy && $emit('detail', getRowId(item.row))"
+            @click="!item.isDummy && emit('detail', getRowId(item.row))"
           >
             <td
               v-for="(cell, cellIndex) in item.row"
@@ -224,29 +262,13 @@ function getColumnWidth(columnIndex) {
                 <span
                   v-if="cellIndex === props.idColumnIndex && props.idColumnAsLink"
                   class="text-blue-600 underline cursor-pointer hover:text-blue-800"
-                  @click.stop="$emit('detail', getRowId(item.row))"
+                  @click.stop="emit('detail', getRowId(item.row))"
                   v-html="cell"
                 ></span>
 
                 <span
-                  v-else-if="cellIndex === props.urgencyColumn"
-                  v-html="renderUrgencyBadge(cell)"
-                ></span>
-                <span
-                  v-else-if="cellIndex === props.statusColumn"
-                  v-html="renderStatusBadge(cell)"
-                ></span>
-                <span
-                  v-else-if="cellIndex === props.statusStockColumn"
-                  v-html="renderStatusStockBadge(cell)"
-                ></span>
-                <span
-                  v-else-if="cellIndex === props.statusStockinventoryColumn"
-                  v-html="renderStatusStockInventoryBadge(cell)"
-                ></span>
-                <span
-                  v-else-if="cellIndex === props.transactionTypeColumn"
-                  v-html="renderTransactionTypeBadge(cell)"
+                  v-else-if="isBadgeColumn(cellIndex)"
+                  v-html="getBadgeHtml(cellIndex, cell)"
                 ></span>
 
                 <slot
@@ -270,13 +292,7 @@ function getColumnWidth(columnIndex) {
 
               <template v-else>
                 <span
-                  v-if="
-                    cellIndex === props.urgencyColumn ||
-                    cellIndex === props.statusColumn ||
-                    cellIndex === props.statusStockColumn ||
-                    cellIndex === props.statusStockinventoryColumn ||
-                    cellIndex === props.transactionTypeColumn
-                  "
+                  v-if="isBadgeColumn(cellIndex)"
                   class="inline-flex justify-center items-center w-36 h-8 rounded-full invisible"
                 >
                   Badge
@@ -296,8 +312,90 @@ function getColumnWidth(columnIndex) {
         </tbody>
       </table>
     </div>
+
+    <!-- ===================== Mobile: Card view ===================== -->
+    <div class="sm:hidden min-h-[200px] max-h-[600px] overflow-y-auto space-y-3 pr-1">
+      <div
+        v-for="(item, rowIndex) in paginatedRows"
+        :key="rowIndex"
+        v-show="!item.isDummy"
+        class="rounded-lg border bg-white shadow-sm overflow-hidden cursor-pointer active:bg-gray-50"
+        :class="{ '!bg-blue-50 !border-blue-200': item.row[props.idColumnIndex] == activeId }"
+        @click="emit('detail', getRowId(item.row))"
+      >
+        <!-- หัวการ์ด: คอลัมน์แรก/ID เด่น -->
+        <div class="flex items-start justify-between gap-3 px-4 py-3 bg-gray-50 border-b">
+          <div class="min-w-0 flex-1">
+            <div class="text-[11px] uppercase tracking-wide text-gray-400 font-medium mb-0.5">
+              {{ columns[props.idColumnIndex] }}
+            </div>
+            <span
+              v-if="props.idColumnAsLink"
+              class="text-blue-600 underline font-semibold text-sm break-words"
+              @click.stop="emit('detail', getRowId(item.row))"
+              v-html="item.row[props.idColumnIndex]"
+            ></span>
+            <span
+              v-else
+              class="text-gray-900 font-semibold text-sm break-words"
+              v-html="item.row[props.idColumnIndex]"
+            ></span>
+          </div>
+
+          <!-- ถ้าคอลัมน์ 0 เป็น badge เร่งด่วน/สถานะ ให้โผล่มุมขวาบนของหัวการ์ดด้วย -->
+          <span
+            v-if="isBadgeColumn(0)"
+            class="shrink-0"
+            v-html="getBadgeHtml(0, item.row[0])"
+          ></span>
+        </div>
+
+        <!-- รายละเอียด: คอลัมน์ที่เหลือแสดงเป็น label: value -->
+        <div class="px-4 py-3 space-y-2">
+          <template v-for="cellIndex in mobileDetailColumnIndexes" :key="cellIndex">
+            <div
+              v-if="cellIndex !== 0 || !isBadgeColumn(0)"
+              class="flex items-start justify-between gap-3 text-sm"
+            >
+              <span class="text-gray-500 shrink-0">{{ columns[cellIndex] }}</span>
+
+              <span class="text-right min-w-0">
+                <span
+                  v-if="isBadgeColumn(cellIndex)"
+                  v-html="getBadgeHtml(cellIndex, item.row[cellIndex])"
+                ></span>
+
+                <slot
+                  v-else-if="$slots[`cell-${cellIndex}`]"
+                  :name="`cell-${cellIndex}`"
+                  :row="item.row"
+                  :cell="item.row[cellIndex]"
+                  :rowIndex="rowIndex"
+                  :columnIndex="cellIndex"
+                  :openMenuId="openMenuId"
+                  @toggle-menu="(id) => (openMenuId = id)"
+                ></slot>
+
+                <span v-else class="text-gray-800 break-words" v-html="item.row[cellIndex]"></span>
+              </span>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- ไม่มีข้อมูลในหน้านี้ -->
+      <div
+        v-if="paginatedRows.every((item) => item.isDummy)"
+        class="flex items-center justify-center py-10 text-gray-400 text-sm"
+      >
+        ไม่มีข้อมูล
+      </div>
+    </div>
+
+    <!-- ===================== Pagination ===================== -->
     <div class="flex justify-center sm:justify-end mt-4">
-      <div class="inline-flex border rounded-md">
+      <!-- Desktop/Tablet: เลขหน้าแบบเต็ม -->
+      <div class="hidden sm:inline-flex border rounded-md">
         <button @click="currentPage = 1" :disabled="currentPage === 1" class="px-3 py-2">«</button>
         <button @click="currentPage--" :disabled="currentPage === 1" class="px-3 py-2">‹</button>
         <template v-for="page in totalPages" :key="page">
@@ -319,6 +417,25 @@ function getColumnWidth(columnIndex) {
             …
           </span>
         </template>
+        <button @click="currentPage++" :disabled="currentPage === totalPages" class="px-3 py-2">
+          ›
+        </button>
+        <button
+          @click="currentPage = totalPages"
+          :disabled="currentPage === totalPages"
+          class="px-3 py-2"
+        >
+          »
+        </button>
+      </div>
+
+      <!-- Mobile: ย่อให้เหลือ « ‹ หน้า/ทั้งหมด › » -->
+      <div class="sm:hidden inline-flex items-center border rounded-md">
+        <button @click="currentPage = 1" :disabled="currentPage === 1" class="px-3 py-2">«</button>
+        <button @click="currentPage--" :disabled="currentPage === 1" class="px-3 py-2">‹</button>
+        <span class="px-3 py-2 text-sm text-gray-700 select-none whitespace-nowrap">
+          {{ currentPage }} / {{ totalPages }}
+        </span>
         <button @click="currentPage++" :disabled="currentPage === totalPages" class="px-3 py-2">
           ›
         </button>
