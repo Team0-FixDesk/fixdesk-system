@@ -574,20 +574,20 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-8xl">
+  <div class="bg-white rounded-xl shadow-md p-4 sm:p-6 lg:p-8 mx-auto max-w-8xl">
     <!-- Header -->
-    <div class="flex justify-between items-center mb-6">
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
       <div>
-        <h1 class="text-2xl font-bold text-gray-800">
+        <h1 class="text-xl sm:text-2xl font-bold text-gray-800">
           หน้าจอหลักของผู้ดูแลคลัง - สวัสดีคุณ{{ userDisplayName }}
         </h1>
-        <p class="text-lg text-gray-700">
+        <p class="text-base sm:text-lg text-gray-700">
           {{ userDepartmentName }}
         </p>
 
         <p class="text-sm text-gray-500">ตรวจสอบสถานะของรายการเบิก และสถิติของการเบิก</p>
       </div>
-      <repairButton />
+      <repairButton class="self-start sm:self-auto" />
     </div>
 
     <!-- Cards -->
@@ -595,13 +595,13 @@ onMounted(() => {
       <CardHomeComponent :items="statItems" :item-unit="'รายการ'" />
     </div>
 
-    <div class="flex gap-4">
+    <div class="flex flex-col lg:flex-row gap-4">
       <!-- Chart -->
-      <div class="bg-white rounded-lg border p-6 flex-[1.4]">
+      <div class="bg-white rounded-lg border p-4 sm:p-6 w-full lg:flex-[1.4]">
         <!-- Toggle -->
-        <div class="flex justify-between items-center mb-4">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
           <div>
-            <h1 class="text-xl font-bold text-gray-800">
+            <h1 class="text-lg sm:text-xl font-bold text-gray-800">
               {{
                 chartMode === 'request'
                   ? 'แนวโน้มคำขอเบิก (7 วันล่าสุด)'
@@ -622,23 +622,23 @@ onMounted(() => {
           </div>
 
           <!-- Segmented Switch -->
-          <div class="flex bg-gray-100 rounded-lg p-1">
+          <div class="flex bg-gray-100 rounded-lg p-1 overflow-x-auto w-full sm:w-auto">
             <button
-              class="px-4 py-1 text-sm rounded-md transition"
+              class="px-3 sm:px-4 py-1 text-sm rounded-md transition whitespace-nowrap"
               :class="chartMode === 'request' ? 'bg-white shadow text-blue-600' : 'text-gray-500'"
               @click="chartMode = 'request'"
             >
               คำขอเบิก
             </button>
             <button
-              class="px-4 py-1 text-sm rounded-md transition"
+              class="px-3 sm:px-4 py-1 text-sm rounded-md transition whitespace-nowrap"
               :class="chartMode === 'stock' ? 'bg-white shadow text-blue-600' : 'text-gray-500'"
               @click="chartMode = 'stock'"
             >
               เข้า-ออก
             </button>
             <button
-              class="px-4 py-1 text-sm rounded-md transition"
+              class="px-3 sm:px-4 py-1 text-sm rounded-md transition whitespace-nowrap"
               :class="chartMode === 'inventory' ? 'bg-white shadow text-blue-600' : 'text-gray-500'"
               @click="chartMode = 'inventory'"
             >
@@ -648,13 +648,13 @@ onMounted(() => {
         </div>
 
         <ApexChart
-          height="320"
+          height="280"
           :options="chartOptions"
           :series="chartMode === 'request' ? requestSeries : chartMode === 'stock' ? stockSeries : inventorySeries"
         />
 
         <!-- Custom Legend -->
-        <div class="mt-4 flex flex-wrap items-center gap-4 text-sm text-gray-600">
+        <div class="mt-4 flex flex-wrap items-center gap-3 sm:gap-4 text-sm text-gray-600">
           <template v-if="chartMode === 'request'">
             <div class="flex items-center gap-2">
               <span class="w-3 h-3 rounded-full bg-[#F59E0B]"></span>
@@ -703,34 +703,38 @@ onMounted(() => {
       </div>
 
       <!-- Table -->
-      <div class="bg-white rounded-lg border p-6 flex-[1]">
-        <h1 class="text-xl font-bold text-gray-800">{{ dynamicTableData.title }}</h1>
-        <p class="text-gray-600 mb-4">{{ dynamicTableData.subtitle }}</p>
+      <div class="bg-white rounded-lg border p-4 sm:p-6 w-full lg:flex-[1]">
+        <h1 class="text-lg sm:text-xl font-bold text-gray-800">{{ dynamicTableData.title }}</h1>
+        <p class="text-gray-600 mb-4 text-sm sm:text-base">{{ dynamicTableData.subtitle }}</p>
 
-        <TableComponent
-          v-if="chartMode === 'request'"
-          :columns="dynamicTableData.columns"
-          :rows="dynamicTableData.rows"
-          :perPage="5"
-          :columnAlign="dynamicTableData.columnAlign"
-          :id-column-index="0"
-          :id-column-as-link="true"
-          @Detail="openDetail"
-        >
-          <template #cell-2="{ row }">
-            <InfoButtonComponent @click="openDetail(row[0])" />
-          </template>
-        </TableComponent>
+        <div class="overflow-x-auto">
+          <TableComponent
+            v-if="chartMode === 'request'"
+            :columns="dynamicTableData.columns"
+            :rows="dynamicTableData.rows"
+            :perPage="5"
+            :columnAlign="dynamicTableData.columnAlign"
+            :id-column-index="0"
+            :id-column-as-link="true"
+            :action-column-index="2"
+            @Detail="openDetail"
+          >
+            <template #cell-2="{ row }">
+              <InfoButtonComponent @click="openDetail(row[0])" />
+            </template>
+          </TableComponent>
 
-        <TableComponent
-          v-else
-          :columns="dynamicTableData.columns"
-          :rows="dynamicTableData.rows"
-          :perPage="5"
-          :columnAlign="dynamicTableData.columnAlign"
-          :transactionTypeColumn="dynamicTableData.transactionTypeColumn"
-          :statusStockinventoryColumn="dynamicTableData.statusStockinventoryColumn"
-        />
+          <TableComponent
+            v-else
+            :columns="dynamicTableData.columns"
+            :rows="dynamicTableData.rows"
+            :perPage="5"
+            :columnAlign="dynamicTableData.columnAlign"
+            :transactionTypeColumn="dynamicTableData.transactionTypeColumn"
+            :statusStockinventoryColumn="dynamicTableData.statusStockinventoryColumn"
+            :id-column-index="0"
+          />
+        </div>
       </div>
     </div>
   </div>
