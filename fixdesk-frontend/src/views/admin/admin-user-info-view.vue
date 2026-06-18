@@ -1044,7 +1044,7 @@ async function handleResetPassword(userId) {
             ล้างตัวกรอง
           </button>
         </div>
-        <div class="flex flex-col gap-2 sm:flex-row">
+        <div class="flex items-center gap-3">
           <ImportButtonComponent @click="showImportModal = true" />
           <BaseButtonComponent
             class="h-10 px-4 rounded-lg bg-blue-700 hover:bg-blue-800 text-white font-medium shadow-sm"
