@@ -270,7 +270,7 @@ onBeforeUnmount(() => {
     />
 
     <!-- Desktop Table View -->
-    <div v-if="screenSize === 'lg'" class="-mx-2 overflow-x-auto sm:mx-0">
+    <div  class="-mx-2 overflow-x-auto sm:mx-0">
       <TableComponent
         :columns="tableColumns"
         :rows="filteredRows.map((item) => item.row)"
@@ -280,6 +280,8 @@ onBeforeUnmount(() => {
         :columnAlign="['left', 'left', 'center', 'center', 'center']"
         :id-column-index="0"
         :id-column-as-link="true"
+        :action-column-index="4"
+
         @detail="openDetail"
       >
         <template #cell-4="{ row }">
@@ -297,83 +299,7 @@ onBeforeUnmount(() => {
         </template>
       </TableComponent>
     </div>
-
-    <!-- Mobile Card View -->
-    <div v-else class="space-y-3 px-2 sm:px-0">
-      <div
-        v-for="(item, index) in filteredRows"
-        :key="item.row[0]"
-        class="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition overflow-hidden"
-      >
-        <!-- Card Header -->
-        <div class="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-100">
-          <div class="flex-1 min-w-0">
-            <h3 class="font-semibold text-gray-900 text-base leading-tight">
-              {{ item.row[0] }}
-            </h3>
-            <p class="text-xs text-gray-500 mt-0.5">{{ item.detail.type }}</p>
-          </div>
-          <div class="flex-shrink-0 ml-3">
-            <TableActions
-              :row-id="item.row[0]"
-              :open-menu-id="openMenuId"
-              @toggle-menu="openMenuId = $event"
-              role="assign"
-              :row="item.row"
-              :status="item.row[3]"
-              :assigned-tech="item.meta.rf_assigned_tech_id"
-              @assign="openAssignModal(item.row)"
-              @detail="openDetail(item.row[0])"
-            />
-          </div>
-        </div>
-
-        <!-- Card Body -->
-        <div class="px-4 py-3 space-y-1.5 text-sm">
-          <div>
-            <span class="text-gray-500 font-medium">วันที่แจ้งซ่อม :</span>
-            <span class="text-gray-900 ml-1">{{ item.detail.date }}</span>
-          </div>
-          <div>
-            <span class="text-gray-500 font-medium">ชื่อผู้แจ้ง :</span>
-            <span class="text-gray-900 ml-1">{{ item.detail.reporter }}</span>
-          </div>
-          <div>
-            <span class="text-gray-500 font-medium">หน่วยงาน :</span>
-            <span class="text-gray-900 ml-1">{{ item.detail.department }}</span>
-          </div>
-          <div>
-            <span class="text-gray-500 font-medium">เรื่องที่แจ้ง :</span>
-            <span class="text-gray-900 ml-1">{{ item.detail.problem }}</span>
-          </div>
-          <div>
-            <span class="text-gray-500 font-medium">สถานที่ :</span>
-            <span class="text-gray-900 ml-1">{{ item.detail.location }}</span>
-          </div>
-
-          <!-- Badges -->
-          <div class="flex flex-wrap gap-2 pt-2">
-            <span
-              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-              :class="urgencyClass(item.row[2])"
-            >
-              ความเร่งด่วน: {{ urgencyLabel(item.row[2]) }}
-            </span>
-            <span
-              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-              :class="statusClass(item.row[3])"
-            >
-              {{ statusLabel(item.row[3]) }}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Empty State -->
-      <div v-if="filteredRows.length === 0" class="text-center py-12">
-        <p class="text-gray-500 text-sm">ไม่พบข้อมูลคำร้องแจ้งซ่อม</p>
-      </div>
-    </div>
+ 
   </div>
 
   <AssignJobModalComponent
