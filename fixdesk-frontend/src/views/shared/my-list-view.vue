@@ -90,45 +90,6 @@ function handleResize() {
   screenSize.value = window.innerWidth < 768 ? 'sm' : 'lg'
 }
 
-// --- Badge Helpers ---
-function urgencyClass(urgency) {
-  switch (urgency) {
-    case 'urgent': return 'bg-red-100 text-red-700'
-    case 'normal': return 'bg-blue-100 text-blue-700'
-    default: return 'bg-gray-100 text-gray-600'
-  }
-}
-
-function urgencyLabel(urgency) {
-  switch (urgency) {
-    case 'urgent': return 'ด่วน'
-    case 'normal': return 'ปกติ'
-    default: return urgency || '-'
-  }
-}
-
-function statusClass(status) {
-  switch (status) {
-    case 'done':
-    case 'completed': return 'bg-green-100 text-green-700'
-    case 'in_progress': return 'bg-yellow-100 text-yellow-700'
-    case 'cancel':
-    case 'cancelled': return 'bg-red-100 text-red-700'
-    default: return 'bg-gray-100 text-gray-600'
-  }
-}
-
-function statusLabel(status) {
-  switch (status) {
-    case 'done':
-    case 'completed': return 'เสร็จสิ้น'
-    case 'in_progress': return 'กำลังดำเนินการ'
-    case 'cancel':
-    case 'cancelled': return 'ยกเลิก'
-    default: return status || '-'
-  }
-}
-
 const openDetail = (code) => router.push(`/main/repair-detail/${code}`)
 const openEdit = (code) => router.push(`/main/repair-edit/${code}`)
 
@@ -202,8 +163,7 @@ onBeforeUnmount(() => {
       </template>
     </RepairFilterBar>
 
-    <!-- Desktop Table View -->
-    <div v-if="screenSize === 'lg'" class="p-3 mx-auto max-w-8xl">
+    <div class="p-3 mx-auto max-w-8xl">
       <TableComponent
         :columns="tableColumnList"
         :rows="filteredRows"
@@ -213,6 +173,7 @@ onBeforeUnmount(() => {
         :columnAlign="['left', 'left', 'left', 'center', 'center', 'center']"
         :id-column-index="0"
         :id-column-as-link="true"
+        :action-column-index="5"
         @detail="openDetail"
       >
         <template #cell-5="{ row }">
@@ -229,65 +190,6 @@ onBeforeUnmount(() => {
           />
         </template>
       </TableComponent>
-    </div>
-
-    <!-- Mobile Card View -->
-    <div v-else class="space-y-3 px-2 mt-3">
-      <div
-        v-for="row in filteredRows"
-        :key="row[0]"
-        class="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition overflow-hidden"
-      >
-        <!-- Card Header -->
-        <div class="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-100">
-          <div class="flex-1 min-w-0">
-            <h3 class="font-semibold text-gray-900 text-base leading-tight">
-              {{ row[0] }}
-            </h3>
-            <p class="text-xs text-gray-500 mt-0.5">{{ row[1] }}</p>
-          </div>
-          <div class="flex-shrink-0 ml-3">
-            <TableActions
-              :row-id="row[0]"
-              :open-menu-id="openMenuId"
-              @toggle-menu="openMenuId = $event"
-              role="user"
-              :row="row"
-              :status="row[4]"
-              @detail="openDetail(row[0])"
-              @edit="openEdit(row[0])"
-              @delete="handleDeleteRepair(row[0])"
-            />
-          </div>
-        </div>
-
-        <!-- Card Body -->
-        <div class="px-4 py-3 space-y-1.5 text-sm">
-          <!-- Detail HTML จาก composable -->
-          <div class="text-gray-700 leading-relaxed" v-html="row[2]" />
-
-          <!-- Badges -->
-          <div class="flex flex-wrap gap-2 pt-2">
-            <span
-              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-              :class="urgencyClass(row[3])"
-            >
-              ความเร่งด่วน: {{ urgencyLabel(row[3]) }}
-            </span>
-            <span
-              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-              :class="statusClass(row[4])"
-            >
-              {{ statusLabel(row[4]) }}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Empty State -->
-      <div v-if="filteredRows.length === 0" class="text-center py-12">
-        <p class="text-gray-500 text-sm">ไม่พบข้อมูลรายการแจ้งซ่อม</p>
-      </div>
     </div>
   </div>
 </template>
