@@ -475,86 +475,19 @@ onBeforeUnmount(() => {
     </div>
 
     <!-- Desktop Table View -->
-    <div v-if="screenSize === 'lg'" class="-mx-2 overflow-x-auto sm:mx-0">
-      <TableComponent :columns="['หมายเลขแจ้งซ่อม', 'รายละเอียดโดยย่อ', 'สถานะงาน', 'ตัวดำเนินการ']" :rows="filteredRows" :perPage="10" :statusColumn="2" :columnAlign="['left', 'left', 'center', 'center']" :id-column-index="0" :id-column-as-link="true" @detail="goToDetail">
+    <div  class="-mx-2 overflow-x-auto sm:mx-0">
+      <TableComponent :columns="['หมายเลขแจ้งซ่อม', 'รายละเอียดโดยย่อ', 'สถานะงาน', 'ตัวดำเนินการ']" :rows="filteredRows" :perPage="10" :statusColumn="2"
+       :columnAlign="['left', 'left', 'center', 'center']" 
+       :id-column-index="0" 
+       :action-column-index="3"
+       :id-column-as-link="true" @detail="goToDetail">
         <template #cell-3="{ row }">
           <TableActionsComponent role="technician" :row-id="row[0]" :open-menu-id="openMenuId" :row="row" :status="row[2]" @toggle-menu="openMenuId = $event" @detail="goToDetail(row[0])" @accept="handleAccept(row[0])" @close-job="handleCloseJob(row[0])" @outsource="handleOutsource(row[0])" @open-stock="handleOpenStock(row[0])" />
         </template>
       </TableComponent>
     </div>
 
-    <!-- Mobile Card View -->
-    <div v-else class="space-y-3 px-2 sm:px-0">
-      <div
-        v-for="item in cardItems"
-        :key="item.row[0]"
-        class="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition overflow-hidden"
-      >
-        <!-- Card Header -->
-        <div class="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-100">
-          <div class="flex-1 min-w-0">
-            <h3 class="font-semibold text-gray-900 text-base leading-tight">
-              {{ item.row[0] }}
-            </h3>
-            <p class="text-xs text-gray-500 mt-0.5">{{ item.detail.problem }}</p>
-          </div>
-          <div class="flex-shrink-0 ml-3">
-            <TableActionsComponent
-              role="technician"
-              :row-id="item.row[0]"
-              :open-menu-id="openMenuId"
-              :row="item.row"
-              :status="item.row[2]"
-              @toggle-menu="openMenuId = $event"
-              @detail="goToDetail(item.row[0])"
-              @accept="handleAccept(item.row[0])"
-              @close-job="handleCloseJob(item.row[0])"
-              @outsource="handleOutsource(item.row[0])"
-              @open-stock="handleOpenStock(item.row[0])"
-            />
-          </div>
-        </div>
-
-        <!-- Card Body -->
-        <div class="px-4 py-3 space-y-1.5 text-sm">
-          <div>
-            <span class="text-gray-500 font-medium">วันที่แจ้งซ่อม :</span>
-            <span class="text-gray-900 ml-1">{{ item.detail.date }}</span>
-          </div>
-          <div>
-            <span class="text-gray-500 font-medium">ชื่อผู้แจ้ง :</span>
-            <span class="text-gray-900 ml-1">{{ item.detail.reporter }}</span>
-          </div>
-          <div>
-            <span class="text-gray-500 font-medium">หน่วยงาน :</span>
-            <span class="text-gray-900 ml-1">{{ item.detail.department }}</span>
-          </div>
-          <div>
-            <span class="text-gray-500 font-medium">เรื่องที่แจ้ง :</span>
-            <span class="text-gray-900 ml-1">{{ item.detail.problem }}</span>
-          </div>
-          <div>
-            <span class="text-gray-500 font-medium">สถานที่ :</span>
-            <span class="text-gray-900 ml-1">{{ item.detail.location }}</span>
-          </div>
-
-          <!-- Badge -->
-          <div class="flex flex-wrap gap-2 pt-2">
-            <span
-              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-              :class="techStatusClass(item.row[2])"
-            >
-              {{ renderStatusLabel(item.row[2]) }}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Empty State -->
-      <div v-if="cardItems.length === 0" class="text-center py-12">
-        <p class="text-gray-500 text-sm">ไม่พบรายการงานซ่อม</p>
-      </div>
-    </div>
+  
 
     <!-- Accept Job Modal -->
     <AcceptJobModal v-if="showAcceptPopup" :repairCode="currentAcceptCode" :currentUserId="userId" @close="showAcceptPopup = false" @success="fetchRepairList" />
