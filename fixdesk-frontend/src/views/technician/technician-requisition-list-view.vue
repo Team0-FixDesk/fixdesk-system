@@ -256,6 +256,7 @@ onMounted(() => {
 
     <!-- Table -->
     <TableComponent :columns="TABLE_COLUMNS" :rows="filteredRows" :perPage="10" :statusStockColumn="3"
+      :action-column-index="4"
       :columnAlign="['left', 'left', 'left', 'center']" @detail="(row) => goToRepairDetail(row.repairFormCode)">
       <template #cell-0="{ row }">
         <a href="#" @click.prevent="goToRepairDetail(row[1].repairFormCode)"
