@@ -1579,14 +1579,15 @@ onBeforeUnmount(() => {
       </div>
 
       <!-- Desktop Table View -->
-      <div v-if="screenSize === 'lg'" class="-mx-2 sm:mx-0 overflow-x-auto">
+      <div  class="-mx-2 sm:mx-0 overflow-x-auto">
         <TableComponent
           :columns="columns"
           :rows="tableRowsList"
           :perPage="10"
-          :idColumnIndex="0"
+          :idColumnIndex="1"
           :hiddenColumns="[0]"
           :column-align="['left', 'left', 'left', 'left', 'center']"
+          :action-column-index="4"
           @detail="openViewModal"
           @edit="openEditModal"
           @delete="confirmDelete"
@@ -1608,57 +1609,7 @@ onBeforeUnmount(() => {
         </TableComponent>
       </div>
 
-      <!-- Mobile Card View -->
-      <div v-else class="space-y-3 px-2 sm:px-0">
-        <div
-          v-for="item in displayData"
-          :key="item.id"
-          class="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition overflow-hidden"
-        >
-          <!-- Card Header -->
-          <div class="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-100">
-            <div class="flex-1 min-w-0">
-              <h3 class="font-semibold text-gray-900 text-base leading-tight">
-                <span v-if="item.room">{{ item.room }}</span>
-                <span v-else-if="item.floor">{{ item.floor }}</span>
-                <span v-else>{{ item.building }}</span>
-              </h3>
-            </div>
-            <div class="flex-shrink-0 ml-3">
-              <TableActionsComponent
-                :row-id="item.id"
-                :row="[item.id, item.building, item.floor, item.room]"
-                role="admin"
-                :open-menu-id="openMenuId"
-                @toggle-menu="openMenuId = $event"
-                @detail="openViewModal(item.id)"
-                @edit="openEditModal(item.id)"
-                @delete="confirmDelete(item.id)"
-              />
-            </div>
-          </div>
-
-          <!-- Card Body -->
-          <div class="px-4 py-3 space-y-2">
-            <div v-if="item.building" class="text-sm">
-              <span class="text-gray-600 font-medium">อาคาร :</span>
-              <span class="text-gray-900 font-semibold ml-2">{{ item.building }}</span>
-            </div>
-            <div v-if="item.floor" class="text-sm">
-              <span class="text-gray-600 font-medium">ชั้น :</span>
-              <span class="text-gray-900 font-semibold ml-2">{{ item.floor }}</span>
-            </div>
-            <div v-if="item.room" class="text-sm">
-              <span class="text-gray-600 font-medium">ห้อง :</span>
-              <span class="text-gray-900 font-semibold ml-2">{{ item.room }}</span>
-            </div>
-          </div>
-        </div>
-
-        <div v-if="displayData.length === 0" class="text-center py-12">
-          <p class="text-gray-500 text-sm">ไม่พบข้อมูลสถานที่</p>
-        </div>
-      </div>
+  
     </div>
 
     <!-- View Modal -->

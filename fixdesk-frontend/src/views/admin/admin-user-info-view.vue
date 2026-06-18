@@ -1056,7 +1056,7 @@ async function handleResetPassword(userId) {
         </div>
       </div>
       <!-- Desktop Table View -->
-      <div v-if="screenSize === 'lg'" class="-mx-2 overflow-x-auto sm:mx-0">
+      <div  class="-mx-2 overflow-x-auto sm:mx-0">
         <TableComponent
           :columns="columns"
           :rows="
@@ -1072,6 +1072,7 @@ async function handleResetPassword(userId) {
           :perPage="10"
           :columnAlign="['left', 'left', 'left', 'left', 'left', 'center']"
           :id-column-as-link="false"
+          :action-column-index="5"
           @detail="openViewModal"
         >
           <template #cell-5="{ row }">
@@ -1089,60 +1090,6 @@ async function handleResetPassword(userId) {
         </TableComponent>
       </div>
 
-      <!-- Mobile Card View -->
-      <div v-else class="space-y-3 px-2 sm:px-0">
-        <div
-          v-for="user in filteredRows"
-          :key="user.username"
-          class="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition overflow-hidden"
-        >
-          <!-- Card Header -->
-          <div class="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-100">
-            <div class="flex-1 min-w-0">
-              <h3 class="font-semibold text-gray-900 text-base leading-tight">
-                {{ user.fullNameTh }}
-              </h3>
-              <p class="text-xs text-gray-600 mt-1">{{ user.fullNameEn }}</p>
-            </div>
-            <div class="flex-shrink-0 ml-3">
-              <TableActions
-                :row-id="user.username"
-                :row="[user.fullNameTh, user.username, user.department, renderThaiRole(user.role), user.jobTitle]"
-                role="admin"
-                :open-menu-id="openMenuId"
-                @toggle-menu="openMenuId = $event"
-                @detail="openViewModal(user.username)"
-                @edit="openEditModal(user.username)"
-                @delete="confirmDelete(user.username)"
-              />
-            </div>
-          </div>
-
-          <!-- Card Body -->
-          <div class="px-4 py-3 space-y-2">
-            <div class="text-sm">
-              <span class="text-gray-600 font-medium">ชื่อผู้ใช้ :</span>
-              <span class="text-gray-900 font-semibold ml-2">{{ user.username }}</span>
-            </div>
-            <div class="text-sm">
-              <span class="text-gray-600 font-medium">หน่วยงาน :</span>
-              <span class="text-gray-900 font-semibold ml-2">{{ user.department }}</span>
-            </div>
-            <div class="text-sm">
-              <span class="text-gray-600 font-medium">บทบาท :</span>
-              <span class="text-gray-900 font-semibold ml-2">{{ renderThaiRole(user.role) }}</span>
-            </div>
-            <div class="text-sm">
-              <span class="text-gray-600 font-medium">ตำแหน่ง :</span>
-              <span class="text-gray-900 font-semibold ml-2">{{ user.jobTitle }}</span>
-            </div>
-          </div>
-        </div>
-
-        <div v-if="filteredRows.length === 0" class="text-center py-12">
-          <p class="text-gray-500 text-sm">ไม่พบข้อมูลผู้ใช้</p>
-        </div>
-      </div>
     </div>
 
     <div
