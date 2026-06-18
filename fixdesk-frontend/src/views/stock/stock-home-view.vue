@@ -587,7 +587,6 @@ onMounted(() => {
 
         <p class="text-sm text-gray-500">ตรวจสอบสถานะของรายการเบิก และสถิติของการเบิก</p>
       </div>
-      <repairButton class="self-start sm:self-auto" />
     </div>
 
     <!-- Cards -->
