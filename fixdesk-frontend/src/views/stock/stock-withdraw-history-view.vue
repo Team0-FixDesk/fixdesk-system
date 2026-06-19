@@ -141,7 +141,7 @@ async function loadStockForms() {
         title: 'หมดเวลาเข้าสู่ระบบ',
         text: 'กรุณาเข้าสู่ระบบใหม่',
         icon: 'warning',
-        confirmButtonColor: '#0048EF', 
+        confirmButtonColor: '#0048EF',
         confirmButtonText: 'ตกลง'
       })
       router.push('/login')
@@ -213,7 +213,7 @@ onMounted(() => {
 
     <!-- Table -->
     <TableComponent :columns="columns" :rows="filteredRows.map((i) => i.row)" :perPage="10" :statusStockColumn="3"
-      :columnAlign="['left', 'left', 'left', 'center', 'center']" :id-column-index="0" :id-column-as-link="true"
+      :columnAlign="['left', 'left', 'left', 'center', 'center']" :id-column-index="0" :id-column-as-link="true" :action-column-index="4"
       @detail="openDetail">
       <template #cell-4="{ row }">
         <InfoButtonComponent @click="openDetail(row[0])" />

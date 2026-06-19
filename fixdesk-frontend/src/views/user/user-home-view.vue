@@ -40,9 +40,9 @@
        [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล] V1.0.0
  *   - แก้ไขข้อความคำอธิบายสถานะ
        [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล] V1.0.0
- *   - แก้ไขข้อความหัวตาราง และการใช้สัญลักษณ์ :  
+ *   - แก้ไขข้อความหัวตาราง และการใช้สัญลักษณ์ :
        [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล] V1.0.0
- *   - ดึงข้อมูลชื่อผู้ใช้ : 
+ *   - ดึงข้อมูลชื่อผู้ใช้ :
  *     [2026-02-21, พิมลพรรณ มามาก] V
  * =====================================================================
  */
@@ -223,58 +223,62 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-8xl">
-    <div class="flex justify-between items-center mb-6">
+  <div class="bg-white rounded-xl shadow-md p-4 sm:p-6 lg:p-8 mx-auto max-w-8xl">
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
       <div>
-        <h1 class="text-2xl font-extrabold text-gray-900">สวัสดีคุณ{{ userDisplayName }}</h1>
-        <p class="text-lg font-semibold text-gray-700">{{ userDepartmentName }}</p>
+        <h1 class="text-xl sm:text-2xl font-extrabold text-gray-900">สวัสดีคุณ{{ userDisplayName }}</h1>
+        <p class="text-base sm:text-lg font-semibold text-gray-700">{{ userDepartmentName }}</p>
       </div>
-      <RepairButton />
+      <RepairButton class="self-start sm:self-auto" />
     </div>
 
-    <div class="mt-8 mb-8">
+    <div class="mt-6 mb-6 sm:mt-8 sm:mb-8">
       <CardHomeComponent :items="statsItemsList" @click="onCardClick" />
     </div>
 
-    <div class="grid grid-cols-12 gap-6">
-      <div class="col-span-8 bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div class="lg:col-span-8 bg-white rounded-xl border border-slate-200 shadow-sm p-4 sm:p-5">
         <div class="border-b border-slate-200 pb-2 mb-4">
-          <h2 class="text-xl font-bold mb-1">รายการที่ฉันแจ้งซ่อม</h2>
+          <h2 class="text-lg sm:text-xl font-bold mb-1">รายการที่ฉันแจ้งซ่อม</h2>
           <p class="text-xs text-gray-500">
             7 รายการแจ้งซ่อมล่าสุด (เรียงจากวันที่แจ้ง)
             - สามารถเลือกรายการแจ้งซ่อมในตารางเพื่อดูรายละเอียดเพิ่มเติม
           </p>
         </div>
 
-        <TableComponent
-          :columns="['วันที่แจ้งซ่อม', 'หมายเลขแจ้งซ่อม', 'ประเภทงาน', 'ความเร่งด่วน', 'สถานะงาน']"
-          :rows="tableRowsList"
-          :rawRows="tableRawRowsList"
-          :perPage="7"
-          :columnAlign="['left', 'left', 'left', 'center', 'center']"
-          mode="user"
-          :idColumnIndex="1"
-          :urgencyColumn="3"
-          :statusColumn="4"
-          :activeId="selectedTrackingCode"
-          @detail="onRowClick"
-        >
-          <template #cell-1="{ row }">
-            <a
-              href="#"
-              @click.prevent="router.push(`/main/repair-detail/${row[1]}`)"
-              class="text-blue-600 hover:text-blue-800 underline"
-            >
-              {{ row[1] }}
-            </a>
-          </template>
-        </TableComponent>
+        <div class="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
+          <TableComponent
+            :columns="['วันที่แจ้งซ่อม', 'หมายเลขแจ้งซ่อม', 'ประเภทงาน', 'ความเร่งด่วน', 'สถานะงาน']"
+            :rows="tableRowsList"
+            :rawRows="tableRawRowsList"
+            :perPage="7"
+            :columnAlign="['left', 'left', 'left', 'center', 'center']"
+            mode="user"
+            :idColumnIndex="1"
+            :urgencyColumn="3"
+            :statusColumn="4"
+            :activeId="selectedTrackingCode"
+            :action-column-index="5"
+            class="w-full"
+            @detail="onRowClick"
+          >
+            <template #cell-1="{ row }">
+              <a
+                href="#"
+                @click.prevent="router.push(`/main/repair-detail/${row[1]}`)"
+                class="text-blue-600 hover:text-blue-800 underline whitespace-nowrap"
+              >
+                {{ row[1] }}
+              </a>
+            </template>
+          </TableComponent>
+        </div>
       </div>
 
-      <div class="col-span-4 bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+      <div class="lg:col-span-4 bg-white rounded-xl border border-slate-200 shadow-sm p-4 sm:p-5">
         <div class="border-b border-slate-200 pb-3 mb-4">
           <div class="flex justify-between items-center mb-1">
-            <h2 class="text-xl font-bold">ตรวจสอบสถานะ</h2>
+            <h2 class="text-lg sm:text-xl font-bold">ตรวจสอบสถานะ</h2>
           </div>
           <div>
             <p class="text-sm text-gray-500 mt-1">

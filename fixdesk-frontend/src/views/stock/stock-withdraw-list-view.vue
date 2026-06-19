@@ -189,6 +189,7 @@ onMounted(() => {
       :columnAlign="['left', 'left', 'left', 'center', 'center']"
       :id-column-index="0"
       :id-column-as-link="true"
+      :action-column-index="4"
       @detail="openDetail"
     >
       <template #cell-4="{ row }">

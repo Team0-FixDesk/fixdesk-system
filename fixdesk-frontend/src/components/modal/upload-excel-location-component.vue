@@ -108,7 +108,7 @@ function handleDrop(e){
 <template>
   <div>
     <div
-      class="p-10 text-center border-2 border-dashed rounded-lg cursor-pointer hover:border-blue-500 bg-gray-50 hover:bg-blue-50 transition-colors"
+      class="p-6 sm:p-10 text-center border-2 border-dashed rounded-lg cursor-pointer hover:border-blue-500 bg-gray-50 hover:bg-blue-50 transition-colors"
       :class="isDragging ? 'border-blue-500 bg-blue-100' : 'border-gray-300'"
       @click="fileInput.click()"
       @dragover.prevent="isDragging = true"

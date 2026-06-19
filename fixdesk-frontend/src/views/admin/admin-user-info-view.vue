@@ -153,6 +153,7 @@ const showTechFilter = ref(false)
 const userIdByUsername = ref({})
 const openMenuId = ref(null)
 const showImportModal = ref(false)
+const screenSize = ref('lg')
 
 async function fetchUsers() {
   try {
@@ -262,6 +263,14 @@ function closeDropdown(event) {
   }
 }
 
+function handleResize() {
+  if (window.innerWidth < 768) {
+    screenSize.value = 'sm'
+  } else {
+    screenSize.value = 'lg'
+  }
+}
+
 function renderThaiRole(role) {
   switch (role) {
     case 'Admin':
@@ -293,8 +302,13 @@ onMounted(() => {
   fetchUsers()
   fetchMasterData()
   document.addEventListener('click', closeDropdown)
+  window.addEventListener('resize', handleResize)
+  handleResize() // ตรวจสอบครั้งแรก
 })
-onBeforeUnmount(() => document.removeEventListener('click', closeDropdown))
+onBeforeUnmount(() => {
+  document.removeEventListener('click', closeDropdown)
+  window.removeEventListener('resize', handleResize)
+})
 
 // --- Unified Modal Logic ---
 
@@ -945,14 +959,14 @@ async function handleResetPassword(userId) {
     <h1 class="mb-6 text-lg font-bold text-black sm:text-xl">จัดการข้อมูลผู้ใช้งานระบบ</h1>
     <div class="mb-6">
       <div class="flex flex-col gap-4 mb-4 md:flex-row md:items-center md:justify-between">
-        <div class="relative z-40 flex flex-wrap items-center gap-3">
+        <div class="flex flex-wrap items-center gap-3">
           <input
             v-model="searchQuery"
             type="text"
             placeholder="ค้นหารายการผู้ใช้"
             class="w-full sm:w-[260px] h-10 px-4 rounded-lg border border-gray-300 bg-white focus:ring-2 focus:ring-blue-500 text-gray-500"
           />
-          <div class="relative">
+          <div class="">
             <button
               @click.stop="toggleRoleFilter"
               class="flex items-center h-10 gap-2 px-4 py-2 text-gray-500 bg-white border border-gray-300 rounded-lg"
@@ -1030,7 +1044,7 @@ async function handleResetPassword(userId) {
             ล้างตัวกรอง
           </button>
         </div>
-        <div class="flex flex-col gap-2 sm:flex-row">
+        <div class="flex items-center gap-3">
           <ImportButtonComponent @click="showImportModal = true" />
           <BaseButtonComponent
             class="h-10 px-4 rounded-lg bg-blue-700 hover:bg-blue-800 text-white font-medium shadow-sm"
@@ -1041,7 +1055,8 @@ async function handleResetPassword(userId) {
           </BaseButtonComponent>
         </div>
       </div>
-      <div class="-mx-2 overflow-x-auto sm:mx-0">
+      <!-- Desktop Table View -->
+      <div  class="-mx-2 overflow-x-auto sm:mx-0">
         <TableComponent
           :columns="columns"
           :rows="
@@ -1057,6 +1072,7 @@ async function handleResetPassword(userId) {
           :perPage="10"
           :columnAlign="['left', 'left', 'left', 'left', 'left', 'center']"
           :id-column-as-link="false"
+          :action-column-index="5"
           @detail="openViewModal"
         >
           <template #cell-5="{ row }">
@@ -1073,6 +1089,7 @@ async function handleResetPassword(userId) {
           </template>
         </TableComponent>
       </div>
+
     </div>
 
     <div

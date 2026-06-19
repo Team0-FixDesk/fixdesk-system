@@ -1,3 +1,4 @@
+<script setup>
 /**
  * =====================================================================
  * @file            universal-import-modal.vue
@@ -26,9 +27,7 @@
  *  - Initial implementation Universal Import Excel Modal Component
  *
  * =====================================================================
- */
-
-<script setup>
+*/
 
 /**
  * Universal Import Excel Modal
@@ -105,17 +104,17 @@ function handleSuccess(result) {
 </script>
 
 <template>
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
-    <div class="w-full max-w-5xl p-6 bg-white shadow-xl rounded-xl">
-      <div class="flex items-center justify-between pb-4 mb-4 border-b">
+  <div class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm sm:px-4">
+    <div class="w-full sm:max-w-5xl p-4 sm:p-6 bg-white shadow-xl rounded-t-2xl sm:rounded-xl max-h-[90dvh] flex flex-col">
+      <div class="flex items-start justify-between pb-4 mb-4 border-b gap-3">
         <div>
-          <h2 class="text-xl font-semibold text-gray-800">นำเข้าข้อมูล{{ title }}</h2>
+          <h2 class="text-lg sm:text-xl font-semibold text-gray-800">นำเข้าข้อมูล{{ title }}</h2>
           <p class="text-sm text-gray-500">
             ขั้นตอนที่ {{ step }} จาก 2 : {{ step === 1 ? 'อัปโหลดไฟล์' : 'ตรวจสอบข้อมูล' }}
           </p>
         </div>
 
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2 shrink-0">
           <DownloadTemplateButton
             :templateType="type"
             :fileName="templateFileName"
@@ -131,7 +130,7 @@ function handleSuccess(result) {
         </div>
       </div>
 
-      <div class="min-h-[400px]">
+      <div class="min-h-0 flex-1 overflow-y-auto">
         <component
           :is="currentStepComponents.upload"
           v-if="step === 1"

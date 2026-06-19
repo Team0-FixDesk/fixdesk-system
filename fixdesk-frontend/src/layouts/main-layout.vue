@@ -196,6 +196,17 @@ function handleFirstLoginSuccess() {
   // ปิด modal เท่านั้น - ไม่ต้องรีเฟรช
   // รหัสผ่านมีการเปลี่ยนแล้วในฐานข้อมูล และ us_active ถูกตั้งเป็น 1
 }
+
+
+
+const isDesktop = ref(window.innerWidth >= 820)
+
+const handleResize = () => {
+  isDesktop.value = window.innerWidth >= 820
+}
+
+onMounted(() => window.addEventListener('resize', handleResize))
+onUnmounted(() => window.removeEventListener('resize', handleResize))
 </script>
 
 <template>
@@ -205,11 +216,11 @@ function handleFirstLoginSuccess() {
   </div>
 
   <!-- layout หลัก -->
-  <div v-else class="relative">
-    <component :is="SidebarComponent" class="z-50" />
+  <div v-else class="relative flex min-h-screen">
+    <component :is="SidebarComponent" class="z-50 flex-shrink-0" />
     <main
-      class="p-6 bg-gray-50 min-h-screen transition-all duration-300"
-      style="padding-left: 120px"
+      class="flex-1 p-4 sm:p-6 bg-gray-50 min-h-screen transition-all duration-300 overflow-x-hidden"
+      :style="{ paddingLeft: isDesktop ? '120px' : 'auto' }"
     >
       <RouterView />
       <footer class="mt-8 text-center text-sm text-gray-400">Powered by 92 Tech co,.ltd</footer>

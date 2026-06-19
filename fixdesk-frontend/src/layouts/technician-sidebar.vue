@@ -69,16 +69,10 @@ import LogsListIcon from '@/assets/icons/sidebar/logs-list-icon.svg'
 import HistoryListIcon from '@/assets/icons/sidebar/history-list-icon.svg'
 import DashboardIcon from '@/assets/icons/sidebar/dashboard-icon.svg'
 import StockIcon from '@/assets/icons/sidebar/stock-icon.svg'
+import { computed, onMounted, onUnmounted } from 'vue'
+import { Icon } from '@iconify/vue'
 
-/**
- * สถานะการเปิด/ปิด Sidebar
- * ใช้ควบคุมการขยายความกว้าง (w-20 / w-64)
- * และควบคุมการแสดงผลข้อความเมนู
- *
- * @type {import('vue').Ref<boolean>}
- */
-const isOpen = ref(false)
-
+import { isOpen, desktopHandlers, isExpanded, isMobile, mobileOpen, sidebarClasses } from '@/utils/responsive.util'
 /**
  * โครงสร้างเมนูแบบแบ่งหมวด (Section-based Structure)
  * รูปแบบข้อมูล:
@@ -121,59 +115,82 @@ const menuSections = [
 </script>
 
 <template>
+  <!-- ปุ่ม Hamburger (แสดงเฉพาะ mobile) -->
+  <button
+    v-if="isMobile && !mobileOpen"
+    class="fixed top-4 left-4 z-60 flex items-center justify-center w-10 h-10 bg-[#1E48D1] text-white rounded-lg shadow-lg md:hidden"
+    @click="mobileOpen = true"
+    aria-label="Toggle menu"
+  >
+    <Icon :icon="mobileOpen ? 'mdi:close' : 'mdi:menu'" width="22" height="22" />
+  </button>
+
+  <!-- Backdrop (แสดงเฉพาะ mobile ตอน sidebar เปิด) -->
+  <Transition name="fade">
+    <div
+      v-if="isMobile && mobileOpen"
+      class="fixed inset-0 z-30 bg-black/40 md:hidden"
+      @click="mobileOpen = false"
+    />
+  </Transition>
+
+  <!-- Sidebar -->
   <aside
-    class="fixed top-0 left-0 h-screen bg-[#1E48D1] text-white shadow-lg transition-[width] duration-300 ease-in-out overflow-y-auto overflow-x-hidden flex flex-col justify-between select-none"
-    :class="isOpen ? 'w-64' : 'w-20'"
-    @mouseenter="isOpen = true"
-    @mouseleave="isOpen = false"
+    class="fixed top-0 left-0 h-screen bg-[#1E48D1] text-white shadow-lg overflow-y-auto overflow-x-hidden flex flex-col justify-between select-none z-50"
+    :class="sidebarClasses"
+    v-bind="!isMobile ? desktopHandlers : {}"
   >
     <!-- โลโก้ -->
     <div class="flex items-center justify-start h-20 border-b border-blue-700 px-4">
       <img :src="LogoFIXDESK" alt="FixDesk Logo" class="w-10 h-10 object-contain" />
       <span
         class="ml-3 text-2xl font-bold tracking-wide transition-opacity duration-300"
-        :class="isOpen ? 'opacity-100 visible' : 'opacity-0 invisible'"
+        :class="isExpanded ? 'opacity-100 visible' : 'opacity-0 invisible'"
       >
         FIXDESK
       </span>
     </div>
+
     <!-- เมนูหลัก -->
     <nav class="flex flex-col gap-2 mt-6 px-2 flex-1">
       <template v-for="(section, sIndex) in menuSections" :key="sIndex">
-        <!-- หัวข้อหมวด -->
         <div class="h-1 px-3 mt-2 mb-2 flex items-center">
           <span
             class="text-xs uppercase tracking-wider text-blue-200 transition-opacity duration-200"
-            :class="isOpen ? 'opacity-100' : 'opacity-0'"
+            :class="isExpanded ? 'opacity-100' : 'opacity-0'"
           >
             {{ section.title }}
           </span>
         </div>
 
-        <!-- รายการเมนู -->
         <RouterLink
           v-for="(menu, index) in section.items"
           :key="index"
-          :title="!isOpen ? menu.label : ''"
+          :title="!isExpanded ? menu.label : ''"
           :to="menu.path"
           class="group flex items-center rounded-lg transition-all duration-200 h-10 px-2 hover:bg-blue-800"
           active-class="bg-blue-900 shadow-inner"
+          @click="isMobile && (mobileOpen = false)"
         >
-          <div
-            class="flex items-center justify-center w-10 h-10 shrink-0 transition-all duration-300"
-          >
-            <img :src="menu.icon" :alt="menu.label" class="w-5 h-5" />
+          <div class="flex items-center justify-center w-10 h-10 shrink-0 transition-all duration-300">
+            <template v-if="typeof menu.icon === 'string'">
+              <img :src="menu.icon" :alt="menu.label" class="w-5 h-5" />
+            </template>
+            <template v-else>
+              <Icon :icon="menu.icon.name" width="20" height="20" style="color: #ffffff" />
+            </template>
           </div>
 
           <span
             class="text-sm font-medium whitespace-nowrap transition-all duration-300"
-            :class="isOpen ? 'opacity-100 visible ml-2' : 'opacity-0 invisible ml-0'"
+            :class="isExpanded ? 'opacity-100 visible ml-2' : 'opacity-0 invisible ml-0'"
           >
             {{ menu.label }}
           </span>
         </RouterLink>
       </template>
     </nav>
-    <SidebarProfile :expanded="isOpen" />
+
+    <SidebarProfile :expanded="isExpanded" />
   </aside>
 </template>

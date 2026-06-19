@@ -118,6 +118,7 @@ const showBuildingFilter = ref(false)
 const showFloorFilter = ref(false)
 const selectedBuilding = ref('')
 const selectedFloor = ref('')
+const screenSize = ref('lg')
 
 // Modal states
 const showViewModal = ref(false)
@@ -1405,13 +1406,24 @@ function handleImportError(message) {
 }
 
 // Lifecycle hooks
+function handleResize() {
+  if (window.innerWidth < 768) {
+    screenSize.value = 'sm'
+  } else {
+    screenSize.value = 'lg'
+  }
+}
+
 onMounted(async () => {
   await refreshData()
   document.addEventListener('click', closeDropdown)
+  window.addEventListener('resize', handleResize)
+  handleResize() // ตรวจสอบครั้งแรก
 })
 
 onBeforeUnmount(() => {
   document.removeEventListener('click', closeDropdown)
+  window.removeEventListener('resize', handleResize)
 })
 </script>
 
@@ -1432,7 +1444,7 @@ onBeforeUnmount(() => {
           />
 
           <!-- ฟิลเตอร์อาคาร -->
-          <div class="relative">
+          <div class="">
             <button
               @click.stop="toggleBuildingFilter"
               class="h-10 flex items-center gap-2 border border-gray-300 rounded-lg px-4 py-2 bg-white text-gray-500"
@@ -1566,15 +1578,16 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
-      <!-- ตาราง -->
-      <div class="-mx-2 sm:mx-0 overflow-x-auto">
+      <!-- Desktop Table View -->
+      <div  class="-mx-2 sm:mx-0 overflow-x-auto">
         <TableComponent
           :columns="columns"
           :rows="tableRowsList"
           :perPage="10"
-          :idColumnIndex="0"
+          :idColumnIndex="1"
           :hiddenColumns="[0]"
           :column-align="['left', 'left', 'left', 'left', 'center']"
+          :action-column-index="4"
           @detail="openViewModal"
           @edit="openEditModal"
           @delete="confirmDelete"
@@ -1595,6 +1608,8 @@ onBeforeUnmount(() => {
           </template>
         </TableComponent>
       </div>
+
+
     </div>
 
     <!-- View Modal -->

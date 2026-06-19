@@ -62,7 +62,6 @@ const selectedTeam = ref([])
 const selectedType = ref('')
 const searchTech = ref('')
 const showAssignTypeFilter = ref(false)
-const isProcessing = ref(false)
 
 // Computed
 const filteredTechnicians = computed(() =>
@@ -179,55 +178,85 @@ async function setLeadForAssignment(rf_code) {
 
 async function confirmAccept() {
   const code = props.repairCode
-  if (!code || isProcessing.value) return
+  if (!code) return
 
-  isProcessing.value = true
-
-  try {
-    // --- โหมดทำงานคนเดียว ---
-    if (acceptMode.value === 'alone') {
+  // โหมดทำงานคนเดียว
+  if (acceptMode.value === 'alone') {
+    try {
       const res = await fetch(`${API_BASE}/technician/accept-job/${encodeURIComponent(code)}`, {
         method: 'PUT',
         headers: getAuthHeaders(),
       })
 
       const payload = await res.json().catch(() => ({}))
-
-      if (res.status === 429 || payload.errorType === 'RATE_LIMIT_EXCEEDED') {
-        await Swal.fire({
+      if (!res.ok) {
+        const Toast = Swal.mixin({
           toast: true,
           position: 'top-end',
-          icon: 'warning',
-          title: 'ถึงขีดจำกัดแจ้งเตือน LINE',
-          text: 'ข้อมูลบันทึกแล้ว',
-          timer: 1000,
+          animation: false,
           showConfirmButton: false,
+          timer: 3000,
+          timerProgressBar: true,
         })
-      } else if (!res.ok) {
-        throw new Error(payload.message || 'ไม่สามารถรับงานได้')
+        Toast.fire({
+          title: 'เกิดข้อผิดพลาด',
+          text: payload.message || 'ไม่สามารถรับงานได้',
+          icon: 'error',
+          background: '#FFFFFF',
+          color: '#dc2626',
+        })
+        return
       }
 
       const count = await checkAssignmentCount(code)
       if (count === 1 || count === null) {
         await setLeadForAssignment(code)
       }
+
+      emit('success')
+      emit('close')
+    } catch (err) {
+      console.error('Error accepting job (alone):', err)
+      const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        animation: false,
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true,
+      })
+      Toast.fire({
+        title: 'เกิดข้อผิดพลาด',
+        text: 'ขณะรับงาน',
+        icon: 'error',
+        background: '#FFFFFF',
+        color: '#dc2626',
+      })
+    }
+    return
+  }
+
+  // โหมดทำงานเป็นทีม
+  if (acceptMode.value === 'team') {
+    if (!selectedTeam.value || selectedTeam.value.length === 0) {
+      const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        animation: false,
+        showConfirmButton: false,
+        timer: 2000,
+        timerProgressBar: true,
+      })
+      Toast.fire({
+        title: 'โปรดเลือกช่างอย่างน้อย 1 คน',
+        icon: 'warning',
+        background: '#FFFFFF',
+        color: '#d97706',
+      })
+      return
     }
 
-    // --- โหมดทำงานเป็นทีม ---
-    else if (acceptMode.value === 'team') {
-      if (!selectedTeam.value || selectedTeam.value.length === 0) {
-        await Swal.fire({
-          toast: true,
-          position: 'top-end',
-          icon: 'warning',
-          title: 'โปรดเลือกช่างอย่างน้อย 1 คน',
-          timer: 2000,
-          showConfirmButton: false,
-        })
-        isProcessing.value = false
-        return
-      }
-
+    try {
       const res = await fetch(`${API_BASE}/assign-repair-team`, {
         method: 'POST',
         headers: getAuthHeaders(),
@@ -239,9 +268,23 @@ async function confirmAccept() {
       })
 
       const payload = await res.json().catch(() => ({}))
-
-      if (res.status !== 429 && !res.ok) {
-        throw new Error(payload.message || 'มอบหมายทีมไม่สำเร็จ')
+      if (!res.ok) {
+        const Toast = Swal.mixin({
+          toast: true,
+          position: 'top-end',
+          animation: false,
+          showConfirmButton: false,
+          timer: 3000,
+          timerProgressBar: true,
+        })
+        Toast.fire({
+          title: 'เกิดข้อผิดพลาด',
+          text: payload.message || 'มอบหมายทีมไม่สำเร็จ',
+          icon: 'error',
+          background: '#FFFFFF',
+          color: '#dc2626',
+        })
+        return
       }
 
       const res2 = await fetch(`${API_BASE}/technician/accept-job/${encodeURIComponent(code)}`, {
@@ -251,27 +294,44 @@ async function confirmAccept() {
 
       if (!res2.ok && res2.status !== 429) {
         const p2 = await res2.json().catch(() => ({}))
-        throw new Error(p2.message || 'รับงานไม่สำเร็จ')
+        const Toast = Swal.mixin({
+          toast: true,
+          position: 'top-end',
+          animation: false,
+          showConfirmButton: false,
+          timer: 3000,
+          timerProgressBar: true,
+        })
+        Toast.fire({
+          title: 'เกิดข้อผิดพลาด',
+          text: p2.message || 'รับงานหลังมอบหมายทีมไม่สำเร็จ',
+          icon: 'error',
+          background: '#FFFFFF',
+          color: '#dc2626',
+        })
+        return
       }
+
+      emit('success')
+      emit('close')
+    } catch (err) {
+      console.error('Error accepting job (team):', err)
+      const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        animation: false,
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true,
+      })
+      Toast.fire({
+        title: 'เกิดข้อผิดพลาด',
+        text: 'ขณะมอบหมายทีม/รับงาน',
+        icon: 'error',
+        background: '#FFFFFF',
+        color: '#dc2626',
+      })
     }
-
-    // สำเร็จทุกกรณี
-    isProcessing.value = false
-    emit('success')
-    emit('close')
-
-  } catch (err) {
-    console.error('❌ Error accepting job:', err)
-    await Swal.fire({
-      toast: true,
-      position: 'top-end',
-      icon: 'error',
-      title: 'เกิดข้อผิดพลาด',
-      text: err.message || 'ขณะประมวลผลข้อมูล',
-      timer: 3000,
-      showConfirmButton: false,
-    })
-    isProcessing.value = false
   }
 }
 
@@ -287,8 +347,8 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-    <div class="bg-white rounded-lg shadow-lg w-full max-w-xl p-8 relative">
+  <div class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black bg-opacity-40">
+    <div class="bg-white rounded-t-2xl sm:rounded-lg shadow-lg w-full sm:max-w-xl p-6 sm:p-8 relative max-h-[90dvh] flex flex-col">
       <h2 class="text-lg sm:text-xl font-bold text-black mb-6">รับงาน / มอบหมายทีม</h2>
 
       <button
@@ -310,7 +370,7 @@ onBeforeUnmount(() => {
         </label>
       </div>
 
-      <div v-if="acceptMode === 'team'">
+      <div v-if="acceptMode === 'team'" class="flex flex-col min-h-0 flex-1">
         <div class="flex flex-col sm:flex-row gap-3 mb-4">
           <div class="relative w-full sm:w-1/2">
             <button
@@ -360,7 +420,7 @@ onBeforeUnmount(() => {
           </div>
         </div>
 
-        <div class="space-y-2 overflow-y-auto max-h-60">
+        <div class="space-y-2 overflow-y-auto flex-1 min-h-0 max-h-60 sm:max-h-72">
           <div
             v-for="tech in filteredTechnicians"
             :key="tech.us_id"
@@ -392,17 +452,15 @@ onBeforeUnmount(() => {
       <div class="flex justify-end gap-3 mt-6">
         <button
           @click="$emit('close')"
-          :disabled="isProcessing"
-          class="px-5 py-2 font-medium text-white transition bg-neutral-300 rounded-md hover:bg-neutral-400 disabled:opacity-50 disabled:cursor-not-allowed"
+          class="flex-1 sm:flex-none px-5 py-2 font-medium text-white transition bg-neutral-300 rounded-md hover:bg-neutral-400"
         >
           ยกเลิก
         </button>
         <button
           @click="confirmAccept"
-          :disabled="isProcessing"
-          class="px-5 py-2 font-medium text-white transition bg-blue-700 rounded-md hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
+          class="flex-1 sm:flex-none px-5 py-2 font-medium text-white transition bg-blue-700 rounded-md hover:bg-blue-800"
         >
-          {{ isProcessing ? 'กำลังดำเนินการ...' : 'ยืนยัน' }}
+          ยืนยัน
         </button>
       </div>
     </div>

@@ -453,9 +453,7 @@ watch(
     <!-- ลูกศร: แสดงเฉพาะตอนขยาย -->
     <img
       v-if="props.expanded"
-      :src="
-        showDropdown ? ChevronDownIcon : ChevronUpIcon
-      "
+      :src="showDropdown ? ChevronDownIcon : ChevronUpIcon"
       alt="Chevron Icon"
       class="w-5 h-5 ml-auto transition-transform duration-200"
     />
@@ -491,36 +489,29 @@ watch(
     </div>
   </footer>
 
-  <!-- หน้าต่างตั้งค่าบัญชี (แก้ไขข้อมูลส่วนตัว) -->
-  <div
-    v-if="showPopupProfile"
-    class="fixed inset-0 z-50 bg-black/50 overflow-y-auto"
-  >
-    <div
-      class="flex min-h-full items-center justify-center p-4 text-center sm:p-0"
-    >
-      <div
-        class="relative bg-white w-full max-w-2xl rounded-lg shadow-xl text-left overflow-hidden sm:my-8 transform transition-all"
-      >
-        <div class="p-6 sm:p-8">
-          <div class="flex items-center gap-3 mb-4 sm:mb-6 border-b border-gray-100 pb-4">
-            <div class="p-2 bg-blue-600 rounded-full">
-              <Icon
-                icon="ic:round-phone"
-                width="36"
-                height="36"
-                style="color: #ffffff"
-              />
-            </div>
-            <h2 class="text-black text-xl sm:text-2xl font-bold">ตั้งค่าเบอร์โทรศัพท์</h2>
-          </div>
+  <!-- Teleport: popup ทั้งหมดไป mount ที่ body แทน sidebar -->
+  <Teleport to="body">
 
-          <div class="space-y-4 sm:space-y-5">
-            <div>
-              <label class="block text-sm sm:text-base font-medium mb-1 text-black"
-                >ชื่อ - นามสกุล (ภาษาไทย)</label
-              >
-              <div class="relative">
+    <!-- หน้าต่างตั้งค่าเบอร์โทรศัพท์ -->
+    <div
+      v-if="showPopupProfile"
+      class="fixed inset-0 z-50 bg-black/50 overflow-y-auto"
+    >
+      <div class="flex min-h-full items-end sm:items-center justify-center sm:p-4 text-center sm:p-0">
+        <div
+          class="relative bg-white w-full sm:max-w-2xl rounded-t-2xl sm:rounded-lg shadow-xl text-left overflow-hidden sm:my-8 transform transition-all"
+        >
+          <div class="p-6 sm:p-8">
+            <div class="flex items-center gap-3 mb-4 sm:mb-6 border-b border-gray-100 pb-4">
+              <div class="p-2 bg-blue-600 rounded-full">
+                <Icon icon="ic:round-phone" width="36" height="36" style="color: #ffffff" />
+              </div>
+              <h2 class="text-black text-xl sm:text-2xl font-bold">ตั้งค่าเบอร์โทรศัพท์</h2>
+            </div>
+
+            <div class="space-y-4 sm:space-y-5">
+              <div>
+                <label class="block text-sm sm:text-base font-medium mb-1 text-black">ชื่อ - นามสกุล (ภาษาไทย)</label>
                 <input
                   type="text"
                   :value="getFullNameTH()"
@@ -528,13 +519,9 @@ watch(
                   disabled
                 />
               </div>
-            </div>
 
-            <div>
-              <label class="block text-sm sm:text-base font-medium mb-1 text-black"
-                >ชื่อ - นามสกุล (ภาษาอังกฤษ)</label
-              >
-              <div class="relative">
+              <div>
+                <label class="block text-sm sm:text-base font-medium mb-1 text-black">ชื่อ - นามสกุล (ภาษาอังกฤษ)</label>
                 <input
                   type="text"
                   :value="getFullNameEN()"
@@ -542,14 +529,10 @@ watch(
                   disabled
                 />
               </div>
-            </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label class="block text-sm sm:text-base font-medium mb-1 text-black"
-                  >หน่วยงาน</label
-                >
-                <div class="relative">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm sm:text-base font-medium mb-1 text-black">หน่วยงาน</label>
                   <input
                     v-model="editForm.us_department"
                     type="text"
@@ -557,205 +540,158 @@ watch(
                     disabled
                   />
                 </div>
-              </div>
 
-              <div>
-                <label class="block text-sm sm:text-base font-medium mb-1 text-black"
-                  >เบอร์โทรศัพท์ <span class="text-red-500">*</span></label
-                >
-                <div class="relative">
+                <div>
+                  <label class="block text-sm sm:text-base font-medium mb-1 text-black">
+                    เบอร์โทรศัพท์ <span class="text-red-500">*</span>
+                  </label>
                   <input
                     v-model="editForm.us_phone"
                     type="tel"
                     @input="maskInput($event.target)"
-                    class="w-full pl-3 pr-3 py-2 border border-gray-300 rounded-lg text-black"
+                    class="w-full pl-3 pr-3 py-2 border border-gray-300 rounded-lg text-black text-sm sm:text-base"
                     placeholder="กรอกเบอร์โทร"
                   />
+                  <p v-if="errors.us_phone" class="text-red-500 text-xs sm:text-sm mt-1">{{ errors.us_phone }}</p>
                 </div>
-                <p v-if="errors.us_phone" class="text-red-500 text-xs sm:text-sm mt-1">
-                  {{ errors.us_phone }}
-                </p>
               </div>
-            </div>
 
-            <div>
-              <label class="block text-sm sm:text-base font-medium mb-1 text-black"
-                >รหัสผ่านปัจจุบัน <span class="text-red-500">*</span></label
-              >
-              <div class="relative">
+              <div>
+                <label class="block text-sm sm:text-base font-medium mb-1 text-black">
+                  รหัสผ่านปัจจุบัน <span class="text-red-500">*</span>
+                </label>
                 <input
                   v-model="tempOldPassword"
                   type="password"
                   :class="[
                     'w-full pl-3 pr-3 py-2 border rounded-lg text-black text-sm sm:text-base focus:ring-0 focus:outline-none transition-colors',
-                    errors.tempOldPassword
-                      ? 'border-red-500 focus:border-red-500'
-                      : 'border-gray-300 focus:border-black',
+                    errors.tempOldPassword ? 'border-red-500' : 'border-gray-300 focus:border-black',
                   ]"
                   placeholder="กรอกรหัสผ่านปัจจุบัน"
                 />
+                <p v-if="errors.tempOldPassword" class="text-red-500 text-xs sm:text-sm mt-1">{{ errors.tempOldPassword }}</p>
               </div>
-              <p v-if="errors.tempOldPassword" class="text-red-500 text-xs sm:text-sm mt-1">
-                {{ errors.tempOldPassword }}
-              </p>
             </div>
-          </div>
 
-          <div
-            class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 mt-6 pt-4 border-t border-gray-200"
-          >
-            <button
-              type="button"
-              @click="closeAllPopup"
-              class="w-full sm:w-auto px-6 py-2.5 border border-gray-300 rounded-lg text-black hover:bg-gray-100 transition text-sm sm:text-base"
-            >
-              ยกเลิก
-            </button>
-            <button
-              type="button"
-              @click="saveProfile('profile')"
-
-              :class="[
-                'w-full sm:w-auto px-6 py-2.5 rounded-lg font-semibold text-sm sm:text-base transition',
-                errors.tempOldPassword
-                  ? 'bg-blue-600 text-white hover:bg-blue-700'
-                  : 'bg-blue-600 text-white hover:bg-blue-700',
-              ]"
-            >
-              ยืนยัน
-            </button>
+            <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 mt-6 pt-4 border-t border-gray-200">
+              <button
+                type="button"
+                @click="closeAllPopup"
+                class="w-full sm:w-auto px-6 py-2.5 border border-gray-300 rounded-lg text-black hover:bg-gray-100 transition text-sm sm:text-base"
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="button"
+                @click="saveProfile('profile')"
+                class="w-full sm:w-auto px-6 py-2.5 rounded-lg font-semibold text-sm sm:text-base transition bg-blue-600 text-white hover:bg-blue-700"
+              >
+                ยืนยัน
+              </button>
+            </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- หน้าต่างตั้งค่ารหัสผ่าน -->
-  <div
-    v-if="showPopupPassword"
-    class="fixed inset-0 z-50 bg-black/50 overflow-y-auto"
-  >
+    <!-- หน้าต่างตั้งค่ารหัสผ่าน -->
     <div
-      class="flex min-h-full items-center justify-center p-4 text-center sm:p-0"
+      v-if="showPopupPassword"
+      class="fixed inset-0 z-50 bg-black/50 overflow-y-auto"
     >
-      <div
-        class="relative bg-white w-full max-w-2xl rounded-lg shadow-xl text-left overflow-hidden sm:my-8 transform transition-all"
-      >
-        <div class="p-6 sm:p-8">
-          <div class="flex items-center gap-3 mb-4 sm:mb-6 border-b border-gray-100 pb-4">
-            <div class="p-2 bg-blue-600 rounded-full">
-              <Icon icon="fluent:edit-24-regular" width="24" height="24" style="color: #ffffff" />
+      <div class="flex min-h-full items-end sm:items-center justify-center sm:p-4 text-center sm:p-0">
+        <div
+          class="relative bg-white w-full sm:max-w-2xl rounded-t-2xl sm:rounded-lg shadow-xl text-left overflow-hidden sm:my-8 transform transition-all"
+        >
+          <div class="p-6 sm:p-8">
+            <div class="flex items-center gap-3 mb-4 sm:mb-6 border-b border-gray-100 pb-4">
+              <div class="p-2 bg-blue-600 rounded-full">
+                <Icon icon="fluent:edit-24-regular" width="24" height="24" style="color: #ffffff" />
+              </div>
+              <h2 class="text-black text-xl sm:text-2xl font-bold">ตั้งค่ารหัสผ่าน</h2>
             </div>
-            <h2 class="text-black text-xl sm:text-2xl font-bold">ตั้งค่ารหัสผ่าน</h2>
-          </div>
 
-          <div class="space-y-4">
-            <div>
-              <label class="block text-sm sm:text-base font-medium mb-1 text-black"
-                >ชื่อบัญชีผู้ใช้</label
-              >
-              <div class="relative">
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm sm:text-base font-medium mb-1 text-black">ชื่อบัญชีผู้ใช้</label>
                 <input
                   v-model="username"
                   type="text"
                   class="w-full pl-3 pr-3 py-2 border border-gray-300 rounded-lg text-black bg-gray-100 cursor-not-allowed text-sm sm:text-base"
                   disabled
                 />
+                <p v-if="errors.username" class="text-red-500 text-xs sm:text-sm mt-1">{{ errors.username }}</p>
               </div>
-              <p v-if="errors.username" class="text-red-500 text-xs sm:text-sm mt-1">
-                {{ errors.username }}
-              </p>
-            </div>
 
-            <div>
-              <label class="block text-sm sm:text-base font-medium mb-1 text-black"
-                >รหัสผ่านปัจจุบัน <span class="text-red-500">*</span></label
-              >
-              <div class="relative">
+              <div>
+                <label class="block text-sm sm:text-base font-medium mb-1 text-black">
+                  รหัสผ่านปัจจุบัน <span class="text-red-500">*</span>
+                </label>
                 <input
                   v-model="tempOldPassword"
                   type="password"
                   :class="[
                     'w-full pl-3 pr-3 py-2 border rounded-lg text-black text-sm sm:text-base focus:ring-0 focus:outline-none transition-colors',
-                    errors.tempOldPassword
-                      ? 'border-red-500 focus:border-red-500'
-                      : 'border-gray-300 focus:border-black',
+                    errors.tempOldPassword ? 'border-red-500' : 'border-gray-300 focus:border-black',
                   ]"
                   placeholder="กรอกรหัสผ่านปัจจุบัน"
                 />
+                <p v-if="errors.tempOldPassword" class="text-red-500 text-xs sm:text-sm mt-1">{{ errors.tempOldPassword }}</p>
               </div>
-              <p v-if="errors.tempOldPassword" class="text-red-500 text-xs sm:text-sm mt-1">
-                {{ errors.tempOldPassword }}
-              </p>
-            </div>
 
-            <div>
-              <label class="block text-sm sm:text-base font-medium mb-1 text-black"
-                >รหัสผ่านใหม่ <span class="text-red-500">*</span></label
-              >
-              <div class="relative">
+              <div>
+                <label class="block text-sm sm:text-base font-medium mb-1 text-black">
+                  รหัสผ่านใหม่ <span class="text-red-500">*</span>
+                </label>
                 <input
                   v-model="editForm.password"
                   type="password"
                   :class="[
                     'w-full pl-3 pr-3 py-2 border rounded-lg text-black text-sm sm:text-base focus:ring-0 focus:outline-none transition-colors',
-                    errors.password
-                      ? 'border-red-500 focus:border-red-500'
-                      : 'border-gray-300 focus:border-black',
+                    errors.password ? 'border-red-500' : 'border-gray-300 focus:border-black',
                   ]"
                   placeholder="กรอกรหัสผ่านใหม่"
                 />
+                <p v-if="errors.password" class="text-red-500 text-xs sm:text-sm mt-1">{{ errors.password }}</p>
               </div>
-              <p v-if="errors.password" class="text-red-500 text-xs sm:text-sm mt-1">
-                {{ errors.password }}
-              </p>
-            </div>
 
-            <div>
-              <label class="block text-sm sm:text-base font-medium mb-1 text-black"
-                >ยืนยันรหัสผ่านใหม่ <span class="text-red-500">*</span></label
-              >
-              <div class="relative">
+              <div>
+                <label class="block text-sm sm:text-base font-medium mb-1 text-black">
+                  ยืนยันรหัสผ่านใหม่ <span class="text-red-500">*</span>
+                </label>
                 <input
                   v-model="editForm.confirmPassword"
                   type="password"
                   :class="[
                     'w-full pl-3 pr-3 py-2 border rounded-lg text-black text-sm sm:text-base focus:ring-0 focus:outline-none transition-colors',
-                    errors.confirmPassword
-                      ? 'border-red-500 focus:border-red-500'
-                      : 'border-gray-300 focus:border-black',
+                    errors.confirmPassword ? 'border-red-500' : 'border-gray-300 focus:border-black',
                   ]"
                   placeholder="กรอกยืนยันรหัสผ่านใหม่"
                 />
+                <p v-if="errors.confirmPassword" class="text-red-500 text-xs sm:text-sm mt-1">{{ errors.confirmPassword }}</p>
               </div>
-              <p v-if="errors.confirmPassword" class="text-red-500 text-xs sm:text-sm mt-1">
-                {{ errors.confirmPassword }}
-              </p>
             </div>
-          </div>
 
-          <div
-            class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 mt-6 pt-4 border-t border-gray-200"
-          >
-            <button
-              type="button"
-              @click="closeAllPopup"
-              class="w-full sm:w-auto px-6 py-2.5 border border-gray-300 rounded-lg text-black hover:bg-gray-100 transition text-sm sm:text-base"
-            >
-              ยกเลิก
-            </button>
-            <button
-              type="button"
-              @click="saveProfile('password')"
-              class="w-full sm:w-auto px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold text-sm sm:text-base"
-            >
-              ยืนยัน
-            </button>
+            <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 mt-6 pt-4 border-t border-gray-200">
+              <button
+                type="button"
+                @click="closeAllPopup"
+                class="w-full sm:w-auto px-6 py-2.5 border border-gray-300 rounded-lg text-black hover:bg-gray-100 transition text-sm sm:text-base"
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="button"
+                @click="saveProfile('password')"
+                class="w-full sm:w-auto px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold text-sm sm:text-base"
+              >
+                ยืนยัน
+              </button>
+            </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
 
-
+  </Teleport>
 </template>
