@@ -219,6 +219,15 @@ function getColumnWidth(columnIndex) {
   }
   return ''
 }
+// Mobile badge (w-auto) — ใช้เฉพาะใน card view
+function getBadgeHtmlMobile(columnIndex, cell) {
+  const html = getBadgeHtml(columnIndex, cell)
+  if (!html) return null
+  return html
+    .replace(/w-36|w-24/g, 'w-auto')
+    .replace(/h-8/g, 'h-7')
+    .replace('inline-flex', 'inline-flex px-3 text-xs')
+}
 </script>
 
 <template>
@@ -351,7 +360,7 @@ function getColumnWidth(columnIndex) {
           <div class="flex items-center gap-2 shrink-0">
             <span
               v-if="isBadgeColumn(0)"
-              v-html="getBadgeHtml(0, item.row[0])"
+              v-html="getBadgeHtmlMobile(0, item.row[0])"
             ></span>
 
             <span
@@ -381,7 +390,7 @@ function getColumnWidth(columnIndex) {
                 <span class="text-gray-800 min-w-0 flex-1">
                 <span
                   v-if="isBadgeColumn(cellIndex)"
-                  v-html="getBadgeHtml(cellIndex, item.row[cellIndex])"
+                  v-html="getBadgeHtmlMobile(cellIndex, item.row[cellIndex])"
                 ></span>
 
                 <slot
