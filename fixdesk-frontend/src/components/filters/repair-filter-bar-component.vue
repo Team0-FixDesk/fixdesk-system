@@ -167,7 +167,7 @@ function toggleValue(list, value, emitName) {
         />
 
         <!-- Urgency (เฉพาะ Repair) -->
-        <div v-if="isRepair && showUrgencies" class="relative">
+        <div v-if="isRepair && showUrgencies" class="">
           <button
             @click.stop="toggleUrgency"
             class="flex items-center gap-1 border border-gray-300 rounded-lg px-4 py-2 bg-white hover:bg-gray-50 text-gray-500"
