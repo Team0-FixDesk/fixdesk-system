@@ -1444,7 +1444,7 @@ onBeforeUnmount(() => {
           />
 
           <!-- ฟิลเตอร์อาคาร -->
-          <div class="relative">
+          <div class="">
             <button
               @click.stop="toggleBuildingFilter"
               class="h-10 flex items-center gap-2 border border-gray-300 rounded-lg px-4 py-2 bg-white text-gray-500"
@@ -1609,7 +1609,7 @@ onBeforeUnmount(() => {
         </TableComponent>
       </div>
 
-  
+
     </div>
 
     <!-- View Modal -->

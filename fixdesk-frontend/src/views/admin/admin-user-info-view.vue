@@ -959,14 +959,14 @@ async function handleResetPassword(userId) {
     <h1 class="mb-6 text-lg font-bold text-black sm:text-xl">จัดการข้อมูลผู้ใช้งานระบบ</h1>
     <div class="mb-6">
       <div class="flex flex-col gap-4 mb-4 md:flex-row md:items-center md:justify-between">
-        <div class="relative flex flex-wrap items-center gap-3">
+        <div class="flex flex-wrap items-center gap-3">
           <input
             v-model="searchQuery"
             type="text"
             placeholder="ค้นหารายการผู้ใช้"
             class="w-full sm:w-[260px] h-10 px-4 rounded-lg border border-gray-300 bg-white focus:ring-2 focus:ring-blue-500 text-gray-500"
           />
-          <div class="relative">
+          <div class="">
             <button
               @click.stop="toggleRoleFilter"
               class="flex items-center h-10 gap-2 px-4 py-2 text-gray-500 bg-white border border-gray-300 rounded-lg"
