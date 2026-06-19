@@ -59,7 +59,7 @@ const statusColorClass = computed(() => {
   >
     <!-- รูปสินค้า (ใหญ่ขึ้น) -->
     <div
-      class="h-40 w-full bg-gray-50 relative flex items-center justify-center overflow-hidden"
+      class="h-40 w-full bg-gray-50 flex items-center justify-center overflow-hidden"
     >
       <img
         v-if="product.imageUrl && !isImageError"

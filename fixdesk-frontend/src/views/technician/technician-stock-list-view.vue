@@ -457,7 +457,7 @@ onBeforeUnmount(() => {
 
     <div class="mb-6">
       <div class="flex flex-wrap md:flex-nowrap items-start md:items-center justify-between gap-4">
-        <div class="flex flex-wrap items-center gap-3 flex-grow relative">
+        <div class="flex flex-wrap items-center gap-3 flex-grow">
           <input
             v-model="searchKeyword"
             type="text"
@@ -465,7 +465,7 @@ onBeforeUnmount(() => {
             class="text-gray-700 w-full md:w-[400px] h-10 px-4 rounded-lg border border-gray-300 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
           />
 
-          <div class="relative">
+          <div class="">
             <button
               @click.stop="isCategoryFilterVisible = !isCategoryFilterVisible"
               class="flex items-center gap-1 border border-gray-300 rounded-lg px-4 py-2 bg-white text-gray-700 hover:bg-gray-50"
@@ -559,7 +559,7 @@ onBeforeUnmount(() => {
             </svg>
           </button>
 
-          <div class="relative">
+          <div class="">
             <button
               @click.stop="isStatusFilterVisible = !isStatusFilterVisible"
               class="flex items-center gap-1 border border-gray-300 rounded-lg px-4 py-2 bg-white text-gray-700 hover:bg-gray-50"
