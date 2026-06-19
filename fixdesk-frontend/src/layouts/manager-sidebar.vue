@@ -70,56 +70,7 @@ import ReportIcon from '@/assets/icons/sidebar/report-icon.svg'
 import { computed, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 
-/**
- * สถานะการเปิด/ปิด Sidebar
- * ใช้ควบคุมการขยายความกว้าง (w-20 / w-64)
- * และควบคุมการแสดงผลข้อความเมนู
- *
- * @type {import('vue').Ref<boolean>}
- */
-const isOpen = ref(false)
-const desktopHandlers = {
-  onMouseenter: () => (isOpen.value = true),
-  onMouseleave: () => (isOpen.value = false),
-}
-
-// Mobile state
-const isMobile = ref(false)
-const mobileOpen = ref(false)
-
-function checkMobile() {
-  isMobile.value = window.innerWidth < 768
-  if (!isMobile.value) mobileOpen.value = false
-}
-
-onMounted(() => {
-  checkMobile()
-  window.addEventListener('resize', checkMobile)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('resize', checkMobile)
-})
-
-// --- Computed: ตัดสินว่า sidebar ควร "ขยาย" หรือเปล่า ---
-const isExpanded = computed(() =>
-  isMobile.value ? mobileOpen.value : isOpen.value
-)
-
-// --- Computed: class ของ aside ตาม mode ---
-const sidebarClasses = computed(() => {
-  if (isMobile.value) {
-    return [
-      'w-64',
-      'transition-transform duration-300 ease-in-out',
-      mobileOpen.value ? 'translate-x-0' : '-translate-x-full',
-    ]
-  }
-  return [
-    'transition-[width] duration-300 ease-in-out',
-    isOpen.value ? 'w-64' : 'w-20',
-  ]
-})
+import { isOpen, desktopHandlers, isExpanded, isMobile, mobileOpen, sidebarClasses } from '@/utils/responsive.util'
 /**
  * โครงสร้างเมนูแบบแบ่งหมวด (Section-based Structure)
  * รูปแบบข้อมูล:
