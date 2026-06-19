@@ -1,3 +1,31 @@
+/**
+ * =====================================================================
+ * @file            accept-job-modal-component.vue
+ * @module          โมดูลรับงาน
+ * @layer           Component (Presentation Layer)
+ * @version         1.0.0
+ * @since           2025-12-23
+ * @author
+ * @contributors
+ *
+ * @lastModified    2026-03-21
+ * @lastModifiedBy
+ * ---------------------------------------------------------------------
+ * @description
+ *  โมดัลสำหรับรับ/มอบหมายงานซ่อม รองรับการเลือกช่างเดี่ยวหรือเป็นทีม,
+ *  ค้นหาและกรองช่าง, เลือกประเภทการมอบหมาย และยืนยันการรับงาน
+ *  จะส่ง event `close` และ `success` กลับไปยัง parent component
+ *
+ * @requires
+ *  - vue
+ *  - sweetalert2
+ *  - @iconify/vue
+ * ---------------------------------------------------------------------
+ * @changelog
+ *
+ * =====================================================================
+ */
+
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import Swal from 'sweetalert2'
@@ -181,9 +209,7 @@ async function confirmAccept() {
       }
 
       const count = await checkAssignmentCount(code)
-      if (count === 1) {
-        await setLeadForAssignment(code)
-      } else if (count === null) {
+      if (count === 1 || count === null) {
         await setLeadForAssignment(code)
       }
 
@@ -266,7 +292,7 @@ async function confirmAccept() {
         headers: getAuthHeaders(),
       })
 
-      if (!res2.ok) {
+      if (!res2.ok && res2.status !== 429) {
         const p2 = await res2.json().catch(() => ({}))
         const Toast = Swal.mixin({
           toast: true,

@@ -431,7 +431,7 @@ async function notifyJobAssignment(assignmentData) {
               action: {
                 type: 'uri',
                 label: 'ดูรายละเอียดบนเว็บไซต์',
-                uri: process.env.FRONTEND_URL || 'https://fixdesk.zeenontakorn-demo.xyz/login#/login'
+                uri: `http://dekdee2.informatics.buu.ac.th:8057/#/login` // ลิงก์ไปยังหน้ารายละเอียดงาน
               },
               style: 'primary',
               color: '#0367D1'
@@ -704,7 +704,7 @@ async function notifyJobAccepted(acceptData) {
               action: {
                 type: 'uri',
                 label: 'ดูรายละเอียดบนเว็บไซต์',
-                uri: process.env.FRONTEND_URL || 'https://fixdesk.zeenontakorn-demo.xyz/login#/login'
+                uri: `http://dekdee2.informatics.buu.ac.th:8057/login#/login` // ลิงก์ไปยังหน้าล็อกอิน
               },
               style: 'primary',
               color: '#10B981'
@@ -1008,7 +1008,7 @@ async function notifyNewRepair(newRepairData) {
               action: {
                 type: 'uri',
                 label: 'มอบหมายช่างเลย',
-                uri: process.env.FRONTEND_URL || 'https://fixdesk.zeenontakorn-demo.xyz/login#/login'
+                uri: `http://dekdee2.informatics.buu.ac.th:8057/login#/login`
               },
               style: 'primary',
               color: '#F97316'
