@@ -374,13 +374,9 @@ function getColumnWidth(columnIndex) {
         <!-- รายละเอียด: คอลัมน์ที่เหลือแสดงเป็น label: value -->
         <div class="px-4 py-3 space-y-2">
           <template v-for="cellIndex in mobileDetailColumnIndexes" :key="cellIndex">
-            <div
-              v-if="(cellIndex !== 0 || !isBadgeColumn(0)) && cellIndex !== props.actionColumnIndex"
-              class="flex items-start justify-between gap-3 text-sm"
-            >
-              <span class="text-gray-500 shrink-0">{{ columns[cellIndex] }}</span>
-
-              <span class="text-right min-w-0">
+            <div class="flex items-start gap-2 text-sm">
+              <span class="text-gray-500 shrink-0 min-w-[110px]">{{ columns[cellIndex] }}</span>
+                <span class="text-gray-800 min-w-0 flex-1">
                 <span
                   v-if="isBadgeColumn(cellIndex)"
                   v-html="getBadgeHtml(cellIndex, item.row[cellIndex])"
