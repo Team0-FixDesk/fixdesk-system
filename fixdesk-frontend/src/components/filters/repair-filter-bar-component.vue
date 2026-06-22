@@ -146,7 +146,7 @@ function toggleValue(list, value, emitName) {
   <div class="mb-6">
     <div class="flex flex-wrap items-center justify-between gap-3">
       <!-- LEFT -->
-      <div class="flex flex-wrap items-center gap-3">
+      <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto">
         <!-- Search -->
         <input
           :value="search"
@@ -154,20 +154,20 @@ function toggleValue(list, value, emitName) {
           type="text"
           placeholder="ค้นหารายการแจ้งซ่อม"
           :title="searchPlaceholder"
-          class="w-[260px] h-10 px-4 rounded-lg border border-gray-300 text-gray-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+          class="w-full sm:w-[260px] h-10 px-4 rounded-lg border border-gray-300 text-gray-500 focus:ring-2 focus:ring-blue-500 focus:outline-none flex-shrink-0"
         />
 
         <!-- Date -->
         <input
-        v-if="showDate"
+          v-if="showDate"
           type="date"
           :value="date"
           @input="emit('update:date', $event.target.value)"
-          class="h-10 px-3 rounded-lg border border-gray-300 text-gray-700"
+          class="h-10 px-3 rounded-lg border border-gray-300 text-gray-700 flex-shrink-0 min-w-[150px] w-full sm:w-auto"
         />
 
         <!-- Urgency (เฉพาะ Repair) -->
-        <div v-if="isRepair && showUrgencies" class="">
+        <div v-if="isRepair && showUrgencies" class="flex-shrink-0">
           <button
             @click.stop="toggleUrgency"
             class="flex items-center gap-1 border border-gray-300 rounded-lg px-4 py-2 bg-white hover:bg-gray-50 text-gray-500"
@@ -205,7 +205,7 @@ function toggleValue(list, value, emitName) {
         </div>
 
         <!-- Status -->
-        <div v-if="showStatus" class="">
+        <div v-if="showStatus" class="flex-shrink-0">
           <button
             @click.stop="toggleStatus"
             class="flex items-center gap-1 border border-gray-300 rounded-lg px-4 py-2 bg-white hover:bg-gray-50 text-gray-500"
@@ -242,7 +242,7 @@ function toggleValue(list, value, emitName) {
         <button
           v-if="search || statuses.length || urgencies.length || date"
           @click="emit('reset')"
-          class="text-blue-600 hover:text-blue-700 text-sm font-medium"
+          class="text-blue-600 hover:text-blue-700 text-sm font-medium flex-shrink-0"
         >
           ล้างตัวกรอง
         </button>
