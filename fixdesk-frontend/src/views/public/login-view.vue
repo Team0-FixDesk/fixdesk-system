@@ -55,23 +55,23 @@ const togglePassword = () => {
 <template>
   <!-- หัวข้อหลัก - พื้นหลังและการจัดเรียง -->
   <div
-    class="min-h-screen flex items-center justify-center bg-gradient-to-b from-blue-50 to-blue-200 bg-center px-4"
+    class="min-h-screen flex items-center justify-center bg-gradient-to-b from-blue-50 to-blue-200 bg-center px-4 py-8"
   >
     <div
-      class="relative overflow-visible bg-white/95 rounded-xl shadow-xl w-full max-w-md sm:max-w-xl lg:max-w-3xl flex flex-col lg:flex-row items-center gap-8 p-10"
+      class="relative overflow-x-hidden overflow-y-visible bg-white/95 rounded-xl shadow-xl w-full max-w-sm sm:max-w-xl lg:max-w-3xl flex flex-col lg:flex-row items-center gap-6 sm:gap-8 p-6 sm:p-10"
     >
       <div class="flex flex-col items-center justify-center flex-1">
         <img
           :src="Logo92Tech"
           alt="92 Tech logo"
-          class="hidden md:block absolute top-4 left-4 w-10"
+          class="hidden md:block absolute top-4 left-4 w-8 sm:w-10"
         />
-        <img :src="LogoFIXDESK" alt="FixDesk logo" class="w-48 h-auto" />
+        <img :src="LogoFIXDESK" alt="FixDesk logo" class="w-32 sm:w-40 lg:w-48 h-auto" />
       </div>
 
       <!-- ส่วนฟอร์มเข้าสู่ระบบ -->
-      <div class="flex-1 flex flex-col items-center">
-        <h1 class="text-3xl font-bold text-[#1E48D1] mb-6">เข้าสู่ระบบ</h1>
+      <div class="flex-1 flex flex-col items-center w-full">
+        <h1 class="text-2xl sm:text-3xl font-bold text-[#1E48D1] mb-4 sm:mb-6">เข้าสู่ระบบ</h1>
         <form class="flex flex-col gap-4 w-full max-w-sm" @submit.prevent="handleLogin">
           <input
             v-model="username"
@@ -116,7 +116,7 @@ const togglePassword = () => {
             >
               <Icon icon="fluent:info-16-filled" width="16" height="16" style="color: #8e8e8e" />
               <div
-                class="absolute z-50 bottom-full left-0 mt-2 w-[330px] p-3 text-xs text-white bg-gray-800 rounded-lg opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity pointer-events-none text-left"
+                class="absolute z-50 bottom-full left-0 mt-2 w-72 max-w-[calc(100vw-4rem)] p-3 text-xs text-white bg-gray-800 rounded-lg opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity pointer-events-none text-left"
               >
                 <p class="mb-1">หากเลือก ระบบจะบันทึกข้อมูลการเข้าสู่ระบบไว้ในอุปกรณ์นี้</p>
                 <ul class="list-disc list-outside pl-5 space-y-1 text-gray-200">
@@ -149,7 +149,7 @@ const togglePassword = () => {
           </p>
         </div>
       </div>
-      <span class="absolute bottom-4 left-6 text-xs text-gray-400">
+      <span class="absolute bottom-2 sm:bottom-4 left-1/2 -translate-x-1/2 lg:left-6 lg:translate-x-0 text-[10px] sm:text-xs text-gray-400 whitespace-nowrap">
         Powered by 92 Tech co,.ltd
       </span>
     </div>
