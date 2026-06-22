@@ -205,7 +205,7 @@ function toggleValue(list, value, emitName) {
         </div>
 
         <!-- Status -->
-        <div v-if="showStatus" class="relative">
+        <div v-if="showStatus" class="">
           <button
             @click.stop="toggleStatus"
             class="flex items-center gap-1 border border-gray-300 rounded-lg px-4 py-2 bg-white hover:bg-gray-50 text-gray-500"
