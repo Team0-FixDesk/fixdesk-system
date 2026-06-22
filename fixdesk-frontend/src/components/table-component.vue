@@ -231,7 +231,7 @@ function getBadgeHtmlMobile(columnIndex, cell) {
 </script>
 
 <template>
-  <div class="relative">
+  <div class="">
     <!-- ===================== Desktop / Tablet: Table view ===================== -->
     <div class="relative overflow-x-auto min-h-[200px] max-h-[600px] hidden sm:block">
       <table class="min-w-[640px] w-full text-xs sm:text-sm border-collapse">
@@ -383,7 +383,7 @@ function getBadgeHtmlMobile(columnIndex, cell) {
         <!-- รายละเอียด: คอลัมน์ที่เหลือแสดงเป็น label: value -->
         <div class="px-4 py-3 space-y-2">
           <template v-for="cellIndex in mobileDetailColumnIndexes" :key="cellIndex">
-            <div 
+            <div
             v-if="(cellIndex !== 0 || !isBadgeColumn(0)) && cellIndex !== props.actionColumnIndex"
             class="flex items-start gap-2 text-sm">
               <span class="text-gray-500 shrink-0 min-w-[110px]">{{ columns[cellIndex] }}</span>
