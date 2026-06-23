@@ -167,7 +167,7 @@ function toggleValue(list, value, emitName) {
         />
 
         <!-- Urgency (เฉพาะ Repair) -->
-        <div v-if="isRepair && showUrgencies" class="flex-shrink-0">
+        <div v-if="isRepair && showUrgencies" class="relative flex-shrink-0">
           <button
             @click.stop="toggleUrgency"
             class="flex items-center gap-1 border border-gray-300 rounded-lg px-4 py-2 bg-white hover:bg-gray-50 text-gray-500"
@@ -183,7 +183,7 @@ function toggleValue(list, value, emitName) {
 
           <div
             v-if="isUrgencyOpen"
-            class="absolute left-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg p-3 z-20 text-sm"
+            class="absolute left-0 sm:left-0 right-0 sm:right-auto mt-2 w-48 max-w-[calc(100vw-2rem)] bg-white border border-gray-200 rounded-md shadow-lg p-3 z-20 text-sm"
           >
             <label
               v-for="u in [
@@ -205,7 +205,7 @@ function toggleValue(list, value, emitName) {
         </div>
 
         <!-- Status -->
-        <div v-if="showStatus" class="flex-shrink-0">
+        <div v-if="showStatus" class="relative flex-shrink-0">
           <button
             @click.stop="toggleStatus"
             class="flex items-center gap-1 border border-gray-300 rounded-lg px-4 py-2 bg-white hover:bg-gray-50 text-gray-500"
