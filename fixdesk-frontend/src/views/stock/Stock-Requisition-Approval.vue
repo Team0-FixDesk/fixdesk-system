@@ -314,8 +314,8 @@ const confirmApprove = async () => {
 
     confirmButtonText: 'ยืนยัน',
     cancelButtonText: 'ยกเลิก',
-    confirmButtonColor: '#0048EF', 
-    cancelButtonColor: '#d4d4d4', 
+    confirmButtonColor: '#0048EF',
+    cancelButtonColor: '#d4d4d4',
     reverseButtons: true,
 
     // ปรับขนาด title ให้เล็กลง
@@ -356,7 +356,7 @@ const confirmApprove = async () => {
     router.push('/main/stock-withdraw-history')
 
     // Redirect to stock-withdraw-list
-    
+
   } catch (err) {
     console.error('Error details:', err)
     console.error('Error response:', err.response?.data)
@@ -388,7 +388,7 @@ function goBack() {
 
 <template>
   <div>
-    <div class="mx-auto max-w-7xl">
+    <div class="mx-auto max-w-8xl">
       <!-- Top Header -->
       <div class="bg-white rounded-xl shadow-sm p-4 mb-4 border border-slate-200">
         <div class="flex items-start sm:items-center justify-between">

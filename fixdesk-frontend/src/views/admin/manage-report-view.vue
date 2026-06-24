@@ -669,7 +669,7 @@ onMounted(() => {
     <!-- Centered main content -->
     <div class="max-w-[1400px] mx-auto">
       <!-- Main card -->
-      <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-7xl-6">
+      <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-8xl-6">
         <!-- Page title and description -->
         <h1 class="text-2xl font-bold text-gray-800">สร้างรายงาน</h1>
         <p class="text-gray-500 mt-1">สร้างรายงาน และดาวน์โหลดใบแจ้งซ่อมที่ดำเนินการเสร็จสิ้น</p>

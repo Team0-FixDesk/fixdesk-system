@@ -457,7 +457,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="max-w-7xl mx-auto p-8 bg-white rounded-xl shadow-md">
+  <div class="max-w-8xl mx-auto p-8 bg-white rounded-xl shadow-md">
     <h1 class="mb-6 text-xl font-bold">รายการงานซ่อมของฉัน</h1>
 
     <!-- Search & Filter Controls -->
@@ -477,8 +477,8 @@ onBeforeUnmount(() => {
     <!-- Desktop Table View -->
     <div  class="-mx-2 overflow-x-auto sm:mx-0">
       <TableComponent :columns="['หมายเลขแจ้งซ่อม', 'รายละเอียดโดยย่อ', 'สถานะงาน', 'ตัวดำเนินการ']" :rows="filteredRows" :perPage="10" :statusColumn="2"
-       :columnAlign="['left', 'left', 'center', 'center']" 
-       :id-column-index="0" 
+       :columnAlign="['left', 'left', 'center', 'center']"
+       :id-column-index="0"
        :action-column-index="3"
        :id-column-as-link="true" @detail="goToDetail">
         <template #cell-3="{ row }">
@@ -487,7 +487,7 @@ onBeforeUnmount(() => {
       </TableComponent>
     </div>
 
-  
+
 
     <!-- Accept Job Modal -->
     <AcceptJobModal v-if="showAcceptPopup" :repairCode="currentAcceptCode" :currentUserId="userId" @close="showAcceptPopup = false" @success="fetchRepairList" />

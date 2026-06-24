@@ -955,7 +955,7 @@ async function handleResetPassword(userId) {
 </script>
 
 <template>
-  <div class="p-8 mx-auto bg-white shadow-md rounded-xl max-w-7xl">
+  <div class="p-8 mx-auto bg-white shadow-md rounded-xl max-w-8xl">
     <h1 class="mb-6 text-lg font-bold text-black sm:text-xl">จัดการข้อมูลผู้ใช้งานระบบ</h1>
     <div class="mb-6">
       <div class="flex flex-col gap-4 mb-4 md:flex-row md:items-center md:justify-between">

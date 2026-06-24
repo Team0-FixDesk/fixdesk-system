@@ -204,7 +204,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-7xl">
+  <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-8xl">
     <h1 class="text-xl font-bold mb-6">ประวัติการเบิกของทั้งหมด</h1>
 
     <!-- Filters -->

@@ -354,7 +354,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="bg-white rounded-xl shadow-md p-4 sm:p-6 md:p-8 mx-auto w-full max-w-7xl">
+  <div class="bg-white rounded-xl shadow-md p-4 sm:p-6 md:p-8 mx-auto w-full max-w-8xl">
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-4">
       <div>

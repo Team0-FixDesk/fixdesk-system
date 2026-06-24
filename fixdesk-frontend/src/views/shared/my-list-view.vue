@@ -146,7 +146,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-7xl">
+  <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-8xl">
     <h1 class="text-xl font-bold text-black mb-6">รายการแจ้งซ่อมของฉัน</h1>
 
     <!-- Filter Bar -->

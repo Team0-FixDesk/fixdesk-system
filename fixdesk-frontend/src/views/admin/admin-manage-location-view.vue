@@ -1428,7 +1428,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-7xl">
+  <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-8xl">
     <h1 class="text-lg sm:text-xl font-bold text-black mb-6">จัดการข้อมูลสถานที่ในระบบ</h1>
 
     <!-- ฟิลเตอร์ -->

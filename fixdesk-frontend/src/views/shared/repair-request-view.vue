@@ -402,7 +402,7 @@ async function cancelRepairRequest() {
 </script>
 
 <template>
-  <div class="bg-white rounded-xl shadow-md mx-auto max-w-7xl p-4 sm:p-8 lg:p-12">
+  <div class="bg-white rounded-xl shadow-md mx-auto max-w-8xl p-4 sm:p-8 lg:p-12">
     <div class="mb-6">
       <h1 class="text-lg sm:text-xl font-bold text-black">แบบฟอร์มแจ้งซ่อม</h1>
     </div>

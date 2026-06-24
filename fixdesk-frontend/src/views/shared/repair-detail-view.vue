@@ -835,7 +835,7 @@ onMounted(() => {
       ไม่พบข้อมูลใบแจ้งซ่อม {{ repairCode }}
     </div>
 
-    <div v-else-if="repair" class="space-y-4 max-w-7xl mx-auto py-8">
+    <div v-else-if="repair" class="space-y-4 max-w-8xl mx-auto py-8">
       <!-- หัวข้อบนสุด -->
       <div
         class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between bg-white px-8 py-5 rounded-3xl shadow-sm border border-gray-100">
