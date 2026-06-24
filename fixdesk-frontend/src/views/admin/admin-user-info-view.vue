@@ -1017,7 +1017,7 @@ async function handleResetPassword(userId) {
                 <label v-for="t in technicianFilterOptions" :key="t" class="flex items-center py-1">
                   <input
                     type="checkbox"
-                    v-model="allSelected"
+                    :value="t" v-model="selectedTechTypes"
                     class="text-blue-600 cursor-pointer"
                   />
 
@@ -1037,7 +1037,7 @@ async function handleResetPassword(userId) {
             </div>
           </div>
           <button
-            v-if="selectedRoles.length || selectedTechTypes.length"
+            v-if="selectedRoles.length || selectedTechTypes.length || searchQuery"
             @click="clearFilters"
             class="text-sm font-medium text-blue-600 hover:text-blue-700"
           >
