@@ -892,15 +892,15 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="container p-12 px-5 py-6 mx-auto bg-white shadow-md rounded-xl max-w-8xl">
-    <div class="flex items-center justify-between mb-6">
-      <h1 class="text-2xl font-bold text-gray-800">รายการคลัง</h1>
-      <div class="flex flex-col gap-2 sm:flex-row">
-        <ImportButtonComponent @click="showImportModal = true" />
+  <div class="container p-4 mx-auto bg-white shadow-md rounded-xl max-w-8xl sm:p-6 lg:p-8">
+    <div class="flex flex-col gap-4 mb-6 sm:flex-row sm:items-center sm:justify-between">
+      <h1 class="text-xl font-bold text-gray-800 sm:text-2xl">รายการคลัง</h1>
+      <div class="flex flex-row gap-2 sm:flex-row">
+        <ImportButtonComponent class="w-[20%] sm:w-auto" @click="showImportModal = true" />
 
         <button
           @click="showAddModal = true"
-          class="flex items-center px-4 py-2 text-white transition-colors bg-blue-700 rounded-lg shadow-sm hover:bg-blue-800"
+          class="flex items-center justify-center w-[100%] px-4 py-2 text-white transition-colors bg-blue-700 rounded-lg shadow-sm sm:w-auto hover:bg-blue-800"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -926,136 +926,134 @@ onBeforeUnmount(() => {
     </div>
 
     <div class="z-20 mb-6">
-      <div class="flex flex-wrap items-center justify-between gap-3">
-        <div class="flex flex-wrap items-center gap-3">
-          <input
-            v-model="searchQuery"
-            type="text"
-            placeholder="ค้นหารายการของ"
-            class="text-gray-700 w-[260px] h-10 px-4 rounded-lg border border-gray-300 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
-          />
+      <div class="flex flex-wrap items-center gap-3">
+        <input
+          v-model="searchQuery"
+          type="text"
+          placeholder="ค้นหารายการของ"
+          class="text-gray-700 w-full sm:w-[260px] h-10 px-4 rounded-lg border border-gray-300 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+        />
 
-          <div class="">
-            <button
-              @click.stop="showStatusFilter = !showStatusFilter"
-              class="flex items-center gap-1 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-            >
-              สถานะ
-              <Icon
-                icon="meteor-icons:chevron-down"
-                style="color: gray"
-                class="w-4 h-4 transition-transform duration-200 opacity-70"
-                :class="{ 'rotate-180': showStatusFilter }"
+        <div class="">
+          <button
+            @click.stop="showStatusFilter = !showStatusFilter"
+            class="flex items-center gap-1 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+          >
+            สถานะ
+            <Icon
+              icon="meteor-icons:chevron-down"
+              style="color: gray"
+              class="w-4 h-4 transition-transform duration-200 opacity-70"
+              :class="{ 'rotate-180': showStatusFilter }"
+            />
+          </button>
+
+          <div
+            v-if="showStatusFilter"
+            class="absolute z-10 w-48 max-w-[90vw] p-3 mt-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-md shadow-lg"
+          >
+            <label class="flex items-center py-1 cursor-pointer hover:bg-gray-50">
+              <input
+                type="checkbox"
+                value="in_stock"
+                v-model="selectedStatusList"
+                class="w-4 h-4 text-green-600 rounded"
               />
-            </button>
+              <span class="ml-2">พร้อมใช้งาน</span>
+            </label>
 
-            <div
-              v-if="showStatusFilter"
-              class="absolute z-10 w-48 p-3 mt-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-md shadow-lg"
-            >
-              <label class="flex items-center py-1 cursor-pointer hover:bg-gray-50">
-                <input
-                  type="checkbox"
-                  value="in_stock"
-                  v-model="selectedStatusList"
-                  class="w-4 h-4 text-green-600 rounded"
-                />
-                <span class="ml-2">พร้อมใช้งาน</span>
-              </label>
-
-              <label class="flex items-center py-1 cursor-pointer hover:bg-gray-50">
-                <input
-                  type="checkbox"
-                  value="low_stock"
-                  v-model="selectedStatusList"
-                  class="w-4 h-4 text-orange-500 rounded"
-                />
-                <span class="ml-2">ใกล้หมด</span>
-              </label>
-
-              <label class="flex items-center py-1 cursor-pointer hover:bg-gray-50">
-                <input
-                  type="checkbox"
-                  value="out_of_stock"
-                  v-model="selectedStatusList"
-                  class="w-4 h-4 text-red-600 rounded"
-                />
-                <span class="ml-2">สินค้าหมด</span>
-              </label>
-            </div>
-          </div>
-
-          <div class="relative">
-            <button
-              @click.stop="showTypeFilter = !showTypeFilter"
-              class="flex items-center gap-1 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg"
-            >
-              หมวดหมู่
-              <Icon
-                icon="meteor-icons:chevron-down"
-                style="color: gray"
-                class="w-4 h-4 transition-transform duration-200 opacity-70"
-                :class="{ 'rotate-180': showTypeFilter }"
-                alt="toggle"
+            <label class="flex items-center py-1 cursor-pointer hover:bg-gray-50">
+              <input
+                type="checkbox"
+                value="low_stock"
+                v-model="selectedStatusList"
+                class="w-4 h-4 text-orange-500 rounded"
               />
-            </button>
-            <div
-              v-if="showTypeFilter"
-              class="absolute z-10 w-56 p-3 mt-2 overflow-y-auto text-sm text-gray-700 bg-white border border-gray-200 rounded-md shadow-lg max-h-72"
-            >
-              <button
-                @click="openManageCategoryModal"
-                class="flex items-center w-full gap-2 px-2 py-2 mb-2 text-blue-600 border border-blue-200 rounded-md hover:bg-blue-50"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="w-4 h-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                  />
-                </svg>
-                จัดการหมวดหมู่
-              </button>
-              <hr class="my-2" />
-              <div v-if="typeOptionList.length === 0" class="text-gray-400 text-sm p-2">
-                ไม่มีข้อมูล
-              </div>
-              <label
-                v-for="category in typeOptionList"
-                :key="category.value"
-                class="flex items-center py-1 cursor-pointer hover:bg-gray-50"
-              >
-                <input
-                  type="checkbox"
-                  :value="category.label"
-                  v-model="selectedTypeList"
-                  class="w-4 h-4 text-blue-600 border-gray-300 rounded"
-                />
-                <span class="ml-2">{{ category.label }}</span>
-              </label>
-            </div>
-          </div>
+              <span class="ml-2">ใกล้หมด</span>
+            </label>
 
-          <transition name="fade">
-            <button
-              v-if="searchQuery || selectedStatusList.length || selectedTypeList.length"
-              @click="clearFilters"
-              class="text-sm font-medium text-blue-600 hover:text-blue-700"
-            >
-              ล้างตัวกรอง
-            </button>
-          </transition>
+            <label class="flex items-center py-1 cursor-pointer hover:bg-gray-50">
+              <input
+                type="checkbox"
+                value="out_of_stock"
+                v-model="selectedStatusList"
+                class="w-4 h-4 text-red-600 rounded"
+              />
+              <span class="ml-2">สินค้าหมด</span>
+            </label>
+          </div>
         </div>
+
+        <div class="relative">
+          <button
+            @click.stop="showTypeFilter = !showTypeFilter"
+            class="flex items-center gap-1 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg"
+          >
+            หมวดหมู่
+            <Icon
+              icon="meteor-icons:chevron-down"
+              style="color: gray"
+              class="w-4 h-4 transition-transform duration-200 opacity-70"
+              :class="{ 'rotate-180': showTypeFilter }"
+              alt="toggle"
+            />
+          </button>
+          <div
+            v-if="showTypeFilter"
+            class="absolute z-10 w-56 max-w-[90vw] p-3 mt-2 overflow-y-auto text-sm text-gray-700 bg-white border border-gray-200 rounded-md shadow-lg max-h-72"
+          >
+            <button
+              @click="openManageCategoryModal"
+              class="flex items-center w-full gap-2 px-2 py-2 mb-2 text-blue-600 border border-blue-200 rounded-md hover:bg-blue-50"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                />
+              </svg>
+              จัดการหมวดหมู่
+            </button>
+            <hr class="my-2" />
+            <div v-if="typeOptionList.length === 0" class="text-gray-400 text-sm p-2">
+              ไม่มีข้อมูล
+            </div>
+            <label
+              v-for="category in typeOptionList"
+              :key="category.value"
+              class="flex items-center py-1 cursor-pointer hover:bg-gray-50"
+            >
+              <input
+                type="checkbox"
+                :value="category.label"
+                v-model="selectedTypeList"
+                class="w-4 h-4 text-blue-600 border-gray-300 rounded"
+              />
+              <span class="ml-2">{{ category.label }}</span>
+            </label>
+          </div>
+        </div>
+
+        <transition name="fade">
+          <button
+            v-if="searchQuery || selectedStatusList.length || selectedTypeList.length"
+            @click="clearFilters"
+            class="text-sm font-medium text-blue-600 hover:text-blue-700"
+          >
+            ล้างตัวกรอง
+          </button>
+        </transition>
       </div>
     </div>
-    <div class="p-3 mx-auto max-w-8xl">
+    <div class="mx-auto -mx-4 overflow-x-auto max-w-8xl sm:mx-auto sm:p-3">
       <TableComponent
         :columns="columnList"
         :rows="filteredRowList"
@@ -1063,6 +1061,7 @@ onBeforeUnmount(() => {
         :idColumnIndex="1"
         :hiddenColumns="[0, 3]"
         :statusStockinventoryColumn="6"
+        :action-column-index="7"
         :columnAlign="['left', 'left', 'center', 'center']"
       >
         <template #cell-7="{ row }">
@@ -1083,13 +1082,13 @@ onBeforeUnmount(() => {
 
     <div
       v-if="showAddModal"
-      class="fixed inset-0 z-50 flex items-center justify-center font-sans bg-black bg-opacity-50"
+      class="fixed inset-0 z-50 flex items-center justify-center p-4 font-sans bg-black bg-opacity-50"
       @click.self="closeAddModal"
     >
       <div
         class="bg-white rounded-lg w-full max-w-2xl shadow-xl max-h-[90vh] overflow-y-auto relative animate-fade-in-up"
       >
-        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+        <div class="flex items-center justify-between px-4 py-4 border-b border-gray-100 sm:px-6">
           <div class="flex items-center gap-3">
             <div class="flex items-center justify-center p-1 text-white bg-blue-700 rounded">
               <svg
@@ -1126,7 +1125,7 @@ onBeforeUnmount(() => {
           </button>
         </div>
 
-        <div class="p-6">
+        <div class="p-4 sm:p-6">
           <form @submit.prevent="confirmAddItem">
             <div class="mb-4">
               <label class="block mb-1 text-sm font-medium text-black">
@@ -1137,7 +1136,7 @@ onBeforeUnmount(() => {
                 v-model="formData.name"
                 type="text"
                 :class="[
-                  'text-black placeholder-gray-400 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-700 transition-all]',
+                  'text-black placeholder-gray-400 w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-700 transition-all',
                   addErrors.name ? 'border-red-500' : 'border-gray-300',
                 ]"
                 placeholder="กรุณากรอกชื่อรายการ"
@@ -1246,7 +1245,7 @@ onBeforeUnmount(() => {
                 v-if="filePreviewList.length === 0"
                 for="dropzone-file"
                 :class="[
-                  'flex flex-col items-center justify-center w-full border-2 border-dashed rounded-lg cursor-pointer transition flex-1 min-h-[220px] sm:min-h-[280px] mb-4',
+                  'flex flex-col items-center justify-center w-full border-2 border-dashed rounded-lg cursor-pointer transition flex-1 min-h-[200px] sm:min-h-[280px] mb-4 px-2 text-center',
                   isDragOver
                     ? 'border-blue-400 bg-blue-50 scale-105'
                     : 'border-gray-300 bg-gray-50 hover:bg-gray-100',
@@ -1274,7 +1273,7 @@ onBeforeUnmount(() => {
                   <p class="mt-1 text-xs text-gray-400">รองรับรูปภาพเท่านั้น (สูงสุด 1 รูป)</p>
                   <p class="mt-1 text-xs text-gray-500">สามารถแนบรูปภาพประกอบได้</p>
 
-                  <div class="flex items-center gap-2 mt-2">
+                  <div class="flex flex-wrap items-center justify-center gap-2 mt-2">
                     <span class="px-2 py-1 text-xs text-green-700 bg-green-100 rounded">JPG</span>
                     <span class="px-2 py-1 text-xs text-green-700 bg-green-100 rounded">PNG</span>
                     <span class="px-2 py-1 text-xs text-green-700 bg-green-100 rounded">WEBP</span>
@@ -1291,9 +1290,9 @@ onBeforeUnmount(() => {
               </label>
 
               <div v-else class="relative w-full p-4 mb-4 border rounded-lg bg-gray-50">
-                <div class="flex items-start gap-4">
+                <div class="flex flex-col items-start gap-4 sm:flex-row">
                   <div
-                    class="flex-shrink-0 w-24 h-24 overflow-hidden bg-white border border-gray-200 rounded-lg"
+                    class="flex-shrink-0 w-20 h-20 mx-auto overflow-hidden bg-white border border-gray-200 rounded-lg sm:w-24 sm:h-24 sm:mx-0"
                   >
                     <img
                       :src="filePreviewList[0].url"
@@ -1302,14 +1301,14 @@ onBeforeUnmount(() => {
                     />
                   </div>
 
-                  <div class="flex-1 min-w-0 pt-1">
+                  <div class="flex-1 min-w-0 pt-1 text-center sm:text-left">
                     <p class="text-sm font-semibold text-gray-900 truncate">
                       {{ filePreviewList[0].name }}
                     </p>
                     <p class="text-xs text-gray-500 mt-1">
                       ขนาด: {{ (filePreviewList[0].size / 1024 / 1024).toFixed(2) }} MB
                     </p>
-                    <p class="flex items-center mt-2 text-xs text-green-600">
+                    <p class="flex items-center justify-center mt-2 text-xs text-green-600 sm:justify-start">
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
                         class="w-4 h-4 mr-1"
@@ -1348,11 +1347,11 @@ onBeforeUnmount(() => {
               </div>
             </div>
 
-            <div class="flex justify-end gap-4 pt-4 border-t border-gray-100 border-dashed">
+            <div class="flex flex-col-reverse gap-3 pt-4 border-t border-gray-100 border-dashed sm:flex-row sm:justify-end sm:gap-4">
               <button
                 type="button"
                 @click="closeAddModal"
-                class="px-8 py-2 text-sm font-medium text-white transition-colors bg-neutral-300 border border-gray-300 rounded-lg shadow-sm hover:bg-neutral-400"
+                class="w-full px-8 py-2 text-sm font-medium text-white transition-colors bg-neutral-300 border border-gray-300 rounded-lg shadow-sm sm:w-auto hover:bg-neutral-400"
               >
                 ยกเลิก
               </button>
@@ -1360,7 +1359,7 @@ onBeforeUnmount(() => {
               <button
                 type="button"
                 @click="confirmAddItem"
-                class="px-8 py-2 text-sm font-medium text-white transition-colors bg-blue-700 rounded-lg shadow-sm hover:bg-blue-800"
+                class="w-full px-8 py-2 text-sm font-medium text-white transition-colors bg-blue-700 rounded-lg shadow-sm sm:w-auto hover:bg-blue-800"
               >
                 บันทึก
               </button>
@@ -1372,13 +1371,13 @@ onBeforeUnmount(() => {
 
     <div
       v-if="showEditModal"
-      class="fixed inset-0 z-50 flex items-center justify-center font-sans bg-black bg-opacity-50"
+      class="fixed inset-0 z-50 flex items-center justify-center p-4 font-sans bg-black bg-opacity-50"
       @click.self="closeEditModal"
     >
       <div
         class="bg-white rounded-lg w-full max-w-2xl shadow-xl max-h-[90vh] overflow-y-auto relative animate-fade-in-up"
       >
-        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+        <div class="flex items-center justify-between px-4 py-4 border-b border-gray-100 sm:px-6">
           <div class="flex items-center gap-3">
             <div class="flex items-center justify-center p-1 text-white bg-orange-500 rounded">
               <svg
@@ -1419,7 +1418,7 @@ onBeforeUnmount(() => {
           </button>
         </div>
 
-        <div class="p-6">
+        <div class="p-4 sm:p-6">
           <form @submit.prevent="confirmEditItem">
             <div class="mb-4">
               <label class="block mb-1 text-sm font-medium text-black">
@@ -1540,7 +1539,7 @@ onBeforeUnmount(() => {
                 v-if="editFilePreviewList.length === 0 && !editForm.uploadImage"
                 for="dropzone-file-edit"
                 :class="[
-                  'flex flex-col items-center justify-center w-full border-2 border-dashed rounded-lg cursor-pointer transition flex-1 min-h-[200px] mb-4',
+                  'flex flex-col items-center justify-center w-full border-2 border-dashed rounded-lg cursor-pointer transition flex-1 min-h-[200px] mb-4 px-2 text-center',
                   isEditDragOver
                     ? 'border-orange-400 bg-orange-50 scale-105'
                     : 'border-gray-300 bg-gray-50 hover:bg-gray-100',
@@ -1554,7 +1553,7 @@ onBeforeUnmount(() => {
                   <p class="mt-1 text-xs text-gray-400">รองรับรูปภาพเท่านั้น (สูงสุด 1 รูป)</p>
                   <p class="mt-1 text-xs text-gray-500">สามารถแนบรูปภาพประกอบได้</p>
 
-                  <div class="flex items-center gap-2 mt-2">
+                  <div class="flex flex-wrap items-center justify-center gap-2 mt-2">
                     <span class="px-2 py-1 text-xs text-green-700 bg-green-100 rounded">JPG</span>
                     <span class="px-2 py-1 text-xs text-green-700 bg-green-100 rounded">PNG</span>
                     <span class="px-2 py-1 text-xs text-green-700 bg-green-100 rounded">WEBP</span>
@@ -1574,7 +1573,7 @@ onBeforeUnmount(() => {
                 class="mb-4"
               >
                 <div
-                  class="relative flex items-center justify-center w-full h-64 overflow-hidden bg-gray-100 border border-gray-300 rounded-lg group"
+                  class="relative flex items-center justify-center w-full h-48 overflow-hidden bg-gray-100 border border-gray-300 rounded-lg sm:h-64 group"
                 >
                   <img
                     :src="`${API_BASE}/uploads/${editForm.uploadImage}`"
@@ -1584,7 +1583,7 @@ onBeforeUnmount(() => {
 
                   <label
                     for="dropzone-file-edit-replace"
-                    class="absolute inset-0 flex flex-col items-center justify-center text-white transition-opacity bg-black bg-opacity-50 opacity-0 cursor-pointer group-hover:opacity-100"
+                    class="absolute inset-0 flex flex-col items-center justify-center text-center text-white transition-opacity bg-black bg-opacity-50 opacity-0 cursor-pointer group-hover:opacity-100"
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -1600,7 +1599,7 @@ onBeforeUnmount(() => {
                         d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
                       />
                     </svg>
-                    <span class="font-semibold">คลิกเพื่อเปลี่ยนรูปภาพ</span>
+                    <span class="px-2 font-semibold">คลิกเพื่อเปลี่ยนรูปภาพ</span>
                   </label>
                   <input
                     id="dropzone-file-edit-replace"
@@ -1616,13 +1615,13 @@ onBeforeUnmount(() => {
               </div>
 
               <div v-else class="relative w-full p-4 mb-4 border rounded-lg bg-gray-50">
-                <div class="flex items-start gap-4">
+                <div class="flex flex-col items-start gap-4 sm:flex-row">
                   <div
-                    class="flex-shrink-0 w-24 h-24 overflow-hidden bg-white border border-gray-200 rounded-lg"
+                    class="flex-shrink-0 w-20 h-20 mx-auto overflow-hidden bg-white border border-gray-200 rounded-lg sm:w-24 sm:h-24 sm:mx-0"
                   >
                     <img :src="editFilePreviewList[0].url" class="w-full h-full object-cover" />
                   </div>
-                  <div class="flex-1 min-w-0 pt-1">
+                  <div class="flex-1 min-w-0 pt-1 text-center sm:text-left">
                     <p class="text-sm font-semibold text-gray-900 truncate">
                       {{ editFilePreviewList[0].name }}
                     </p>
@@ -1649,18 +1648,18 @@ onBeforeUnmount(() => {
               </div>
             </div>
 
-            <div class="flex justify-end gap-4 pt-4 border-t border-gray-100 border-dashed">
+            <div class="flex flex-col-reverse gap-3 pt-4 border-t border-gray-100 border-dashed sm:flex-row sm:justify-end sm:gap-4">
               <button
                 type="button"
                 @click="closeEditModal"
-                class="px-8 py-2 text-sm font-medium text-white transition-colors bg-neutral-300 border border-gray-300 rounded-lg shadow-sm hover:bg-neutral-400"
+                class="w-full px-8 py-2 text-sm font-medium text-white transition-colors bg-neutral-300 border border-gray-300 rounded-lg shadow-sm sm:w-auto hover:bg-neutral-400"
               >
                 ยกเลิก
               </button>
 
               <button
                 type="submit"
-                class="px-8 py-2 text-sm font-medium text-white transition-colors bg-orange-400 rounded-lg shadow-sm hover:bg-orange-500"
+                class="w-full px-8 py-2 text-sm font-medium text-white transition-colors bg-orange-400 rounded-lg shadow-sm sm:w-auto hover:bg-orange-500"
               >
                 บันทึกการแก้ไข
               </button>
@@ -1672,10 +1671,10 @@ onBeforeUnmount(() => {
 
     <div
       v-if="showManageCategoryModal"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
       @click.self="closeManageCategoryModal"
     >
-      <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 max-h-[80vh] flex flex-col">
+      <div class="bg-white rounded-xl shadow-xl w-full max-w-md max-h-[80vh] flex flex-col">
         <div class="flex items-center justify-between p-4 border-b">
           <h2 class="text-lg font-bold text-gray-800">จัดการหมวดหมู่</h2>
           <button @click="closeManageCategoryModal" class="text-gray-400 hover:text-gray-600">
@@ -1725,10 +1724,10 @@ onBeforeUnmount(() => {
             <li
               v-for="category in manageCategoryList"
               :key="category.id"
-              class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100"
+              class="flex items-center justify-between gap-2 p-3 bg-gray-50 rounded-lg hover:bg-gray-100"
             >
-              <span class="text-gray-700">{{ category.name }}</span>
-              <div class="flex gap-2">
+              <span class="text-gray-700 truncate">{{ category.name }}</span>
+              <div class="flex flex-shrink-0 gap-2">
                 <button
                   @click="handleEditCategory(category)"
                   class="p-1.5 text-blue-600 hover:bg-blue-100 rounded"

@@ -31,7 +31,7 @@
  * =====================================================================
  */
 <script setup>
-import { ref, computed, onMounted, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, nextTick, watch, onBeforeUnmount } from 'vue'
 import { jsPDF } from 'jspdf'
 import html2canvas from 'html2canvas'
 import { jwtDecode } from 'jwt-decode'
@@ -168,6 +168,9 @@ async function generatePDF() {
   }
 
   isGenerating.value = true
+  const original = previewScale.value
+  previewScale.value = 1
+  await nextTick() // รอ DOM อัปเดตเป็น scale 1 ก่อน
 
   try {
     await nextTick()
@@ -231,16 +234,17 @@ async function generatePDF() {
       text: 'ไม่สามารถสร้าง PDF ได้ กรุณาลองใหม่อีกครั้ง',
     })
   } finally {
+    previewScale.value = original
     isGenerating.value = false
   }
 }
 
 function resetForm() {
   formData.value = {
-    department: '',
+    department: 'สำนักปลัดเทศบาล ฝ่ายอำนวยการ งานอาคารและสถานที่',
     documentNumber: '',
-    subject: '',
-    to: '',
+    subject: 'รายงานการปฏิบัติงานของงานอาคารและสถานที่',
+    to: 'นายกเทศมนตรีนครบ้านสวน',
     content: '',
     month: thaiMonths[currentMonthIndex],
     position: ''
@@ -265,19 +269,47 @@ onMounted(() => {
     }
   }
 })
+
+const previewWrapperRef = ref(null)
+const previewScale = ref(1)
+
+const DOC_WIDTH = 794
+const DOC_HEIGHT = 1123
+
+const scaledHeight = computed(() => DOC_HEIGHT * previewScale.value)
+
+function updateScale() {
+  if (!previewWrapperRef.value) return
+  const availableWidth = previewWrapperRef.value.clientWidth
+  // ไม่ให้ขยายเกิน 1 (เกินขนาดจริง) แค่ย่อลงเมื่อพื้นที่ไม่พอ
+  previewScale.value = Math.min(1, availableWidth / DOC_WIDTH)
+}
+
+let resizeObserver
+onMounted(() => {
+  updateScale()
+  resizeObserver = new ResizeObserver(updateScale)
+  if (previewWrapperRef.value) resizeObserver.observe(previewWrapperRef.value)
+  window.addEventListener('resize', updateScale)
+})
+
+onBeforeUnmount(() => {
+  resizeObserver?.disconnect()
+  window.removeEventListener('resize', updateScale)
+})
 </script>
 
 <template>
   <div class="min-h-screen bg-gray-50 p-4 pt-16">
     <div class="max-w-[1400px] mx-auto">
       <div class="flex flex-col lg:flex-row gap-4">
-        <div class="bg-white rounded-xl shadow-lg p-4 lg:w-[850px] flex-shrink-0">
+        <div class="bg-white rounded-xl shadow-lg p-4 lg:max-w-[850px] lg:w-full flex-shrink-0">
           <h2 class="text-lg font-semibold text-gray-700 mb-3 flex items-center gap-2">
             ตัวอย่างเอกสาร
           </h2>
-          <div class="pdf-preview-wrapper">
-            <div class="justify-center flex">
-              <div ref="exportWrapper" class="export-wrapper">
+          <div class="pdf-preview-wrapper" ref="previewWrapperRef">
+            <div class="preview-scale-container" :style="{ height: scaledHeight + 'px' }">
+              <div ref="exportWrapper" class="export-wrapper" :style="{ transform: `scale(${previewScale})` }">
                 <div ref="documentRef" class="pdf-document">
                   <div class="pdf-header">
                     <img :src="GarudaIcon" alt="ครุฑ" class="garuda-icon" />
@@ -456,9 +488,19 @@ onMounted(() => {
 /* ... rest of your existing CSS definitions for font faces ... */
 
 .pdf-preview-wrapper {
-  transform: scale(1);
-  transform-origin: center;
-  margin-bottom: 30px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  overflow: hidden; /* กันล้นแนวนอนบนจอเล็ก */
+}
+
+.preview-scale-container {
+  width: 100%;
+  max-width: 794px;
+  overflow: hidden;
+  margin: 0 auto;
+  display: flex;
+  justify-content: center;
 }
 
 .pdf-document {
@@ -580,8 +622,10 @@ onMounted(() => {
 .export-wrapper {
   width: 794px;
   height: 1123px;
+  transform-origin: top center;
   display: flex;
   justify-content: center;
   align-items: center;
+  transition: transform 0.15s ease;
 }
 </style>

@@ -119,6 +119,10 @@ const lastNameEN = ref('')
 const username = ref('')
 const tokenData = ref({})
 
+const showOldPassword = ref(false)
+const showNewPassword = ref(false)
+const showConfirmPassword = ref(false)
+
 const editForm = ref({
   us_ttn_id: '',
   us_department: '',
@@ -560,15 +564,24 @@ watch(
                 <label class="block text-sm sm:text-base font-medium mb-1 text-black">
                   รหัสผ่านปัจจุบัน <span class="text-red-500">*</span>
                 </label>
-                <input
-                  v-model="tempOldPassword"
-                  type="password"
-                  :class="[
-                    'w-full pl-3 pr-3 py-2 border rounded-lg text-black text-sm sm:text-base focus:ring-0 focus:outline-none transition-colors',
-                    errors.tempOldPassword ? 'border-red-500' : 'border-gray-300 focus:border-black',
-                  ]"
-                  placeholder="กรอกรหัสผ่านปัจจุบัน"
-                />
+                <div class="relative">
+                  <input
+                    v-model="tempOldPassword"
+                    :type="showOldPassword ? 'text' : 'password'"
+                    :class="[
+                      'w-full pl-3 pr-10 py-2 border rounded-lg text-black text-sm sm:text-base focus:ring-0 focus:outline-none transition-colors',
+                      errors.tempOldPassword ? 'border-red-500' : 'border-gray-300 focus:border-black',
+                    ]"
+                    placeholder="กรอกรหัสผ่านปัจจุบัน"
+                  />
+                  <button
+                    type="button"
+                    @click="showOldPassword = !showOldPassword"
+                    class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-black"
+                  >
+                    <Icon :icon="showOldPassword ? 'mdi:eye-off' : 'mdi:eye'" width="20" height="20" />
+                  </button>
+                </div>
                 <p v-if="errors.tempOldPassword" class="text-red-500 text-xs sm:text-sm mt-1">{{ errors.tempOldPassword }}</p>
               </div>
             </div>
@@ -627,15 +640,24 @@ watch(
                 <label class="block text-sm sm:text-base font-medium mb-1 text-black">
                   รหัสผ่านปัจจุบัน <span class="text-red-500">*</span>
                 </label>
-                <input
-                  v-model="tempOldPassword"
-                  type="password"
-                  :class="[
-                    'w-full pl-3 pr-3 py-2 border rounded-lg text-black text-sm sm:text-base focus:ring-0 focus:outline-none transition-colors',
-                    errors.tempOldPassword ? 'border-red-500' : 'border-gray-300 focus:border-black',
-                  ]"
-                  placeholder="กรอกรหัสผ่านปัจจุบัน"
-                />
+                <div class="relative">
+                  <input
+                    v-model="tempOldPassword"
+                    :type="showOldPassword ? 'text' : 'password'"
+                    :class="[
+                      'w-full pl-3 pr-10 py-2 border rounded-lg text-black text-sm sm:text-base focus:ring-0 focus:outline-none transition-colors',
+                      errors.tempOldPassword ? 'border-red-500' : 'border-gray-300 focus:border-black',
+                    ]"
+                    placeholder="กรอกรหัสผ่านปัจจุบัน"
+                  />
+                  <button
+                    type="button"
+                    @click="showOldPassword = !showOldPassword"
+                    class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-black"
+                  >
+                    <Icon :icon="showOldPassword ? 'mdi:eye-off' : 'mdi:eye'" width="20" height="20" />
+                  </button>
+                </div>
                 <p v-if="errors.tempOldPassword" class="text-red-500 text-xs sm:text-sm mt-1">{{ errors.tempOldPassword }}</p>
               </div>
 
@@ -643,15 +665,24 @@ watch(
                 <label class="block text-sm sm:text-base font-medium mb-1 text-black">
                   รหัสผ่านใหม่ <span class="text-red-500">*</span>
                 </label>
-                <input
-                  v-model="editForm.password"
-                  type="password"
-                  :class="[
-                    'w-full pl-3 pr-3 py-2 border rounded-lg text-black text-sm sm:text-base focus:ring-0 focus:outline-none transition-colors',
-                    errors.password ? 'border-red-500' : 'border-gray-300 focus:border-black',
-                  ]"
-                  placeholder="กรอกรหัสผ่านใหม่"
-                />
+                <div class="relative">
+                  <input
+                    v-model="editForm.password"
+                    :type="showNewPassword ? 'text' : 'password'"
+                    :class="[
+                      'w-full pl-3 pr-10 py-2 border rounded-lg text-black text-sm sm:text-base focus:ring-0 focus:outline-none transition-colors',
+                      errors.password ? 'border-red-500' : 'border-gray-300 focus:border-black',
+                    ]"
+                    placeholder="กรอกรหัสผ่านใหม่"
+                  />
+                  <button
+                    type="button"
+                    @click="showNewPassword = !showNewPassword"
+                    class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-black"
+                  >
+                    <Icon :icon="showNewPassword ? 'mdi:eye-off' : 'mdi:eye'" width="20" height="20" />
+                  </button>
+                </div>
                 <p v-if="errors.password" class="text-red-500 text-xs sm:text-sm mt-1">{{ errors.password }}</p>
               </div>
 
@@ -659,15 +690,24 @@ watch(
                 <label class="block text-sm sm:text-base font-medium mb-1 text-black">
                   ยืนยันรหัสผ่านใหม่ <span class="text-red-500">*</span>
                 </label>
-                <input
-                  v-model="editForm.confirmPassword"
-                  type="password"
-                  :class="[
-                    'w-full pl-3 pr-3 py-2 border rounded-lg text-black text-sm sm:text-base focus:ring-0 focus:outline-none transition-colors',
-                    errors.confirmPassword ? 'border-red-500' : 'border-gray-300 focus:border-black',
-                  ]"
-                  placeholder="กรอกยืนยันรหัสผ่านใหม่"
-                />
+                <div class="relative">
+                  <input
+                    v-model="editForm.confirmPassword"
+                    :type="showConfirmPassword ? 'text' : 'password'"
+                    :class="[
+                      'w-full pl-3 pr-10 py-2 border rounded-lg text-black text-sm sm:text-base focus:ring-0 focus:outline-none transition-colors',
+                      errors.confirmPassword ? 'border-red-500' : 'border-gray-300 focus:border-black',
+                    ]"
+                    placeholder="กรอกยืนยันรหัสผ่านใหม่"
+                  />
+                  <button
+                    type="button"
+                    @click="showConfirmPassword = !showConfirmPassword"
+                    class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-black"
+                  >
+                    <Icon :icon="showConfirmPassword ? 'mdi:eye-off' : 'mdi:eye'" width="20" height="20" />
+                  </button>
+                </div>
                 <p v-if="errors.confirmPassword" class="text-red-500 text-xs sm:text-sm mt-1">{{ errors.confirmPassword }}</p>
               </div>
             </div>

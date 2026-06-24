@@ -959,14 +959,14 @@ async function handleResetPassword(userId) {
     <h1 class="mb-6 text-lg font-bold text-black sm:text-xl">จัดการข้อมูลผู้ใช้งานระบบ</h1>
     <div class="mb-6">
       <div class="flex flex-col gap-4 mb-4 md:flex-row md:items-center md:justify-between">
-        <div class="relative flex flex-wrap items-center gap-3">
+        <div class="flex flex-wrap items-center gap-3">
           <input
             v-model="searchQuery"
             type="text"
             placeholder="ค้นหารายการผู้ใช้"
             class="w-full sm:w-[260px] h-10 px-4 rounded-lg border border-gray-300 bg-white focus:ring-2 focus:ring-blue-500 text-gray-500"
           />
-          <div class="relative">
+          <div class="">
             <button
               @click.stop="toggleRoleFilter"
               class="flex items-center h-10 gap-2 px-4 py-2 text-gray-500 bg-white border border-gray-300 rounded-lg"
@@ -1017,7 +1017,7 @@ async function handleResetPassword(userId) {
                 <label v-for="t in technicianFilterOptions" :key="t" class="flex items-center py-1">
                   <input
                     type="checkbox"
-                    v-model="allSelected"
+                    :value="t" v-model="selectedTechTypes"
                     class="text-blue-600 cursor-pointer"
                   />
 
@@ -1037,14 +1037,14 @@ async function handleResetPassword(userId) {
             </div>
           </div>
           <button
-            v-if="selectedRoles.length || selectedTechTypes.length"
+            v-if="selectedRoles.length || selectedTechTypes.length || searchQuery"
             @click="clearFilters"
             class="text-sm font-medium text-blue-600 hover:text-blue-700"
           >
             ล้างตัวกรอง
           </button>
         </div>
-        <div class="flex flex-col gap-2 sm:flex-row">
+        <div class="flex items-center gap-3">
           <ImportButtonComponent @click="showImportModal = true" />
           <BaseButtonComponent
             class="h-10 px-4 rounded-lg bg-blue-700 hover:bg-blue-800 text-white font-medium shadow-sm"
@@ -1056,7 +1056,7 @@ async function handleResetPassword(userId) {
         </div>
       </div>
       <!-- Desktop Table View -->
-      <div v-if="screenSize === 'lg'" class="-mx-2 overflow-x-auto sm:mx-0">
+      <div  class="-mx-2 overflow-x-auto sm:mx-0">
         <TableComponent
           :columns="columns"
           :rows="
@@ -1072,6 +1072,7 @@ async function handleResetPassword(userId) {
           :perPage="10"
           :columnAlign="['left', 'left', 'left', 'left', 'left', 'center']"
           :id-column-as-link="false"
+          :action-column-index="5"
           @detail="openViewModal"
         >
           <template #cell-5="{ row }">
@@ -1089,60 +1090,6 @@ async function handleResetPassword(userId) {
         </TableComponent>
       </div>
 
-      <!-- Mobile Card View -->
-      <div v-else class="space-y-3 px-2 sm:px-0">
-        <div
-          v-for="user in filteredRows"
-          :key="user.username"
-          class="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition overflow-hidden"
-        >
-          <!-- Card Header -->
-          <div class="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-100">
-            <div class="flex-1 min-w-0">
-              <h3 class="font-semibold text-gray-900 text-base leading-tight">
-                {{ user.fullNameTh }}
-              </h3>
-              <p class="text-xs text-gray-600 mt-1">{{ user.fullNameEn }}</p>
-            </div>
-            <div class="flex-shrink-0 ml-3">
-              <TableActions
-                :row-id="user.username"
-                :row="[user.fullNameTh, user.username, user.department, renderThaiRole(user.role), user.jobTitle]"
-                role="admin"
-                :open-menu-id="openMenuId"
-                @toggle-menu="openMenuId = $event"
-                @detail="openViewModal(user.username)"
-                @edit="openEditModal(user.username)"
-                @delete="confirmDelete(user.username)"
-              />
-            </div>
-          </div>
-
-          <!-- Card Body -->
-          <div class="px-4 py-3 space-y-2">
-            <div class="text-sm">
-              <span class="text-gray-600 font-medium">ชื่อผู้ใช้ :</span>
-              <span class="text-gray-900 font-semibold ml-2">{{ user.username }}</span>
-            </div>
-            <div class="text-sm">
-              <span class="text-gray-600 font-medium">หน่วยงาน :</span>
-              <span class="text-gray-900 font-semibold ml-2">{{ user.department }}</span>
-            </div>
-            <div class="text-sm">
-              <span class="text-gray-600 font-medium">บทบาท :</span>
-              <span class="text-gray-900 font-semibold ml-2">{{ renderThaiRole(user.role) }}</span>
-            </div>
-            <div class="text-sm">
-              <span class="text-gray-600 font-medium">ตำแหน่ง :</span>
-              <span class="text-gray-900 font-semibold ml-2">{{ user.jobTitle }}</span>
-            </div>
-          </div>
-        </div>
-
-        <div v-if="filteredRows.length === 0" class="text-center py-12">
-          <p class="text-gray-500 text-sm">ไม่พบข้อมูลผู้ใช้</p>
-        </div>
-      </div>
     </div>
 
     <div
