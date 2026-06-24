@@ -237,10 +237,10 @@ async function generatePDF() {
 
 function resetForm() {
   formData.value = {
-    department: '',
+    department: 'สำนักปลัดเทศบาล ฝ่ายอำนวยการ งานอาคารและสถานที่',
     documentNumber: '',
-    subject: '',
-    to: '',
+    subject: 'รายงานการปฏิบัติงานของงานอาคารและสถานที่',
+    to: 'นายกเทศมนตรีนครบ้านสวน',
     content: '',
     month: thaiMonths[currentMonthIndex],
     position: ''
