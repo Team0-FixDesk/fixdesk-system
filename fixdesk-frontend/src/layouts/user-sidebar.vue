@@ -147,7 +147,7 @@ const menuSections = [
   <!-- ปุ่ม Hamburger (แสดงเฉพาะ mobile) -->
   <button
     v-if="isMobile && !mobileOpen"
-    class="fixed top-4 left-4 z-60 flex items-center justify-center w-10 h-10 bg-[#1E48D1] text-white rounded-lg shadow-lg md:hidden"
+    class="fixed top-4 left-4 z-50 flex items-center justify-center w-10 h-10 bg-[#1E48D1] text-white rounded-lg shadow-lg md:hidden"
     @click="mobileOpen = true"
     aria-label="Toggle menu"
   >
