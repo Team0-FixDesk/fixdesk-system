@@ -25,7 +25,7 @@ export function useAuthToken() {
   const logout = () => {
     localStorage.removeItem('token')
     sessionStorage.removeItem('token')
-    window.location.href = '/login'
+    globalThis.location.href = '/#/login'
   }
 
   return {

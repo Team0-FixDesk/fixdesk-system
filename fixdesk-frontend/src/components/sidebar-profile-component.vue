@@ -183,7 +183,7 @@ function logout(e) {
   sessionStorage.removeItem('token')
   sessionStorage.removeItem('session_user')
 
-  window.location.href = '/login'
+  globalThis.location.href = '/#/login'
 }
 
 // รีเซ็ตฟอร์มและข้อความข้อผิดพลาด
