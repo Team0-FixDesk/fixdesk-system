@@ -406,7 +406,7 @@ async function cancelRepairRequest() {
     <div class="mb-6">
       <h1 class="text-lg sm:text-xl font-bold text-black">แบบฟอร์มแจ้งซ่อม</h1>
     </div>
-    <div class="mx-auto max-w-6xl">
+    <div class="mx-auto max-w-8xl">
       <form class="space-y-6">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10">
           <div>

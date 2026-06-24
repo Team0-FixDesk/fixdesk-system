@@ -667,7 +667,7 @@ onMounted(() => {
   <!-- Root container for the report management page -->
   <div class="min-h-screen bg-gray-50 p-4 pt-4">
     <!-- Centered main content -->
-    <div class="max-w-[1400px] mx-auto">
+    <div class="mx-auto">
       <!-- Main card -->
       <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-8xl-6">
         <!-- Page title and description -->
