@@ -49,6 +49,8 @@
  *   - เพิ่มตารางแบบไดนามิกตามโหมดกราฟที่เลือก      [2026-02-27, นราธิป แสนทวีสุข]
  *   - เพิ่มการคำนวณยอดคงคลังย้อนหลัง 7 วัน        [2026-02-27, นราธิป แสนทวีสุข]
  *   - ใช้ badge system มาตรฐานจาก TableComponent  [2026-02-27, นราธิป แสนทวีสุข]
+ *   - เปลี่ยนมาใช้ handleUnauthorized จาก auth.util แทน logout() จาก useAuthToken
+ *     เพื่อให้ Alert token หมดอายุเหมือนกันทุกหน้า  [2026-06-26, พชร ไพศรีสกุล]
  * =====================================================================
  */
 
@@ -66,6 +68,7 @@ import InfoButtonComponent from '@/components/button/info-button-component.vue'
 
 import { getAllProductList, getAllStockFormList, getAllTransactions } from '@/services/stock'
 import { useAuthToken } from '@/composables/useAuthToken'
+import { handleUnauthorized } from '@/utils/auth.util'
 
 const { token, isAuthenticated, logout } = useAuthToken()
 
@@ -166,7 +169,7 @@ async function fetchDashboard() {
   loading.value = true
   try {
     if (!isAuthenticated.value) {
-      logout()
+      handleUnauthorized(router)
       return
     }
 

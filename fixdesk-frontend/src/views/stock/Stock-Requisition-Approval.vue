@@ -74,6 +74,8 @@
  *  - เปลี่ยน Alert เป็น Toast และเพิ่ม Auto Redirect    [2026-02-17, นราธิป]
  *  - ปรับ Checkbox ให้อยู่กลางบรรทัด                      [2026-02-17, นราธิป]
  *  - ปรับสีของปุ่ม และปรับแต่ง checkbox                [2026-02-27, เศรษฐพงศ์]
+ *  - เปลี่ยนมาใช้ handleUnauthorized จาก auth.util ใน catch ของ loadDetail และ confirmApprove
+ *    เพื่อให้ Alert token หมดอายุเหมือนกันทุกหน้า  [2026-06-26, พชร ไพศรีสกุล]
  * =====================================================================
  */
 
@@ -83,6 +85,7 @@ import axios from 'axios'
 import Sweetalert from 'sweetalert2'
 import BackButtonComponent from '@/components/button/back-button-component.vue'
 import { Icon } from '@iconify/vue'
+import { handleUnauthorized } from '@/utils/auth.util'
 
 
 defineOptions({ name: 'StockWithdrawApproveView' })
@@ -270,6 +273,10 @@ const loadDetail = async () => {
       img: d.pd_upload_image ? `${API}/uploads/${d.pd_upload_image}` : null,
     }))
   } catch (err) {
+    if (err.response?.status === 401) {
+      handleUnauthorized(router)
+      return
+    }
     console.error(err)
     Sweetalert.fire('เกิดข้อผิดพลาด', 'ไม่สามารถโหลดข้อมูลได้', 'error')
   }
@@ -360,7 +367,10 @@ const confirmApprove = async () => {
   } catch (err) {
     console.error('Error details:', err)
     console.error('Error response:', err.response?.data)
-
+    if (err.response?.status === 401) {
+      handleUnauthorized(router)
+      return
+    }
     const errorMsg = err.response?.data?.message || err.message || 'อัปเดตสถานะไม่สำเร็จ'
     Sweetalert.fire('ผิดพลาด', errorMsg, 'error')
   } finally {

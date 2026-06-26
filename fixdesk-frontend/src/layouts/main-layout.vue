@@ -3,7 +3,7 @@
  * =====================================================================
  * @file            main-layout.view.vue
  * @layer           View (Layout Layer)
- * @version         1.0.1
+ * @version         1.1.1
  * @since           2025-10-22
  * @author          พชร ไพศรีสกุล
  * @contributors
@@ -38,6 +38,9 @@
  *   - แก้ไข alert
  *  [2026-03-16, พชร ไพศรีสกุล] V 1.1.0
  *   - เพิ่ม Technician Lead Sidebar
+ *  [2026-06-26, บุณยกร จันประภาส] V 1.1.1
+ *   - เปลี่ยนมาใช้ handleUnauthorized จาก auth.util แทน clearAuthAndGoLogin
+ *     เพื่อให้ Swal หมดเวลาเข้าสู่ระบบเหมือนกันทุกหน้า
  *
  * =====================================================================
  */
@@ -45,7 +48,8 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { jwtDecode } from 'jwt-decode'
-import Swal from 'sweetalert2'
+
+import { handleUnauthorized } from '@/utils/auth.util'
 
 // import sidebar ของแต่ละ role
 import AdminSidebar from './admin-sidebar.vue'
@@ -69,33 +73,18 @@ const usernameForFirstLogin = ref(null)
 const IDLE_TIMEOUT = 2 * 60 * 60 * 1000
 let idleTimer = null
 
-function clearAuthAndGoLogin(showAlert = false) {
+function clearAuthAndGoLogin() {
   localStorage.removeItem('token')
   localStorage.removeItem('session_user')
   sessionStorage.removeItem('token')
   sessionStorage.removeItem('session_user')
-
-  if (showAlert) {
-    Swal.fire({
-      icon: 'warning',
-      title: 'หมดเวลาเข้าสู่ระบบ',
-      text: 'กรุณาเข้าสู่ระบบใหม่',
-      confirmButtonColor: '#0048EF',
-      confirmButtonText: 'ตกลง',
-      allowOutsideClick: false,
-      allowEscapeKey: false,
-    }).then(() => {
-      router.push('/login')
-    })
-  } else {
-    router.push('/login')
-  }
+  router.push('/login')
 }
 
 function resetIdleTimer() {
   clearTimeout(idleTimer)
   idleTimer = setTimeout(() => {
-    clearAuthAndGoLogin(true)
+    handleUnauthorized(router)
   }, IDLE_TIMEOUT)
 }
 
@@ -105,7 +94,7 @@ onMounted(() => {
   const token = localToken || sessionToken
 
   if (!token) {
-    clearAuthAndGoLogin(false)
+    clearAuthAndGoLogin()
     return
   }
 
@@ -159,7 +148,7 @@ onMounted(() => {
     }
   } catch (err) {
     console.error('invalid token', err)
-    clearAuthAndGoLogin(false)
+    clearAuthAndGoLogin()
   }
 })
 
@@ -196,8 +185,6 @@ function handleFirstLoginSuccess() {
   // ปิด modal เท่านั้น - ไม่ต้องรีเฟรช
   // รหัสผ่านมีการเปลี่ยนแล้วในฐานข้อมูล และ us_active ถูกตั้งเป็น 1
 }
-
-
 
 const isDesktop = ref(window.innerWidth >= 820)
 

@@ -54,6 +54,7 @@ import JSZip from 'jszip'
 import RepairFilterBarComponent from '@/components/filters/repair-filter-bar-component.vue'
 import TableComponent from '@/components/table-component.vue'
 import Swal from 'sweetalert2'
+import { handleUnauthorized } from '@/utils/auth.util'
 
 defineOptions({ name: 'ManageReportView' })
 
@@ -422,7 +423,13 @@ const fetchRepairRequests = async () => {
       },
     })
 
-    if (!response.ok) throw new Error('โหลดข้อมูลล้มเหลว')
+    if (!response.ok) {
+      if (response.status === 401) {
+        handleUnauthorized(router)
+        return
+      }
+      throw new Error('โหลดข้อมูลล้มเหลว')
+    }
 
     const data = await response.json()
     repairRequests.value = data.map((r) => ({

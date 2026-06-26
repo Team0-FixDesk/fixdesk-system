@@ -57,6 +57,9 @@
  *  [2026-03-21, พชร ไพศรีสกุล] V 1.1.0
  *  - ปรับปรุงโครงสร้างข้อมูลและการจัดการ State ใน View ให้รองรับการแสดงข้อมูลที่ถูกต้องตามโครงสร้างใหม่ของ API
  *  - ปรับปรุงการ import และการดาวน์โหลด Template Excel ให้รองรับประเภท Locations โดยใช้ Universal Import Modal และ Download Template Button Component ใหม่ที่รองรับหลายประเภท
+ *  [2026-06-26, พชร ไพศรีสกุล] V 1.1.1
+ *  - เปลี่ยนมาใช้ handleUnauthorized จาก auth.util แทน handleAuthError ของตัวเอง
+ *    เพื่อให้ Alert token หมดอายุเหมือนกันทุกหน้า
  *
  * =====================================================================
  */
@@ -64,6 +67,7 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
+import { handleUnauthorized } from '@/utils/auth.util'
 import { Icon } from '@iconify/vue'
 import ImportButtonComponent from '@/components/button/import-button-component.vue'
 import BaseButtonComponent from '@/components/button/base/base-button-component.vue'
@@ -92,17 +96,7 @@ const getAuthHeaders = () => {
 // ฟังก์ชันสำหรับเช็ค Token หมดอายุ
 const handleAuthError = (status) => {
   if (status === 401) {
-    Swal.fire({
-      icon: 'warning',
-      title: 'หมดเวลาเข้าสู่ระบบ',
-      text: 'กรุณาเข้าสู่ระบบใหม่',
-      confirmButtonColor: '#1d4ed8',
-      confirmButtonText: 'ตกลง',
-    }).then(() => {
-      localStorage.removeItem('token')
-      sessionStorage.removeItem('token')
-      router.push('/login')
-    })
+    handleUnauthorized(router)
     return true
   }
   return false

@@ -1,5 +1,12 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE
 
+// Helper: throw error พร้อม status เพื่อให้ view จับ 401 ได้
+function throwApiError(status, message) {
+  const error = new Error(message)
+  error.status = status
+  throw error
+}
+
 // 1. ฟังก์ชันดึงสถิติการแจ้งซ่อมของผู้ใช้
 export async function getRepairStatistics(targetUserId, userAuthenticationToken) {
   // ยิง Request ไปขอข้อมูลสถิติ โดยแนบ Token ไปยืนยันตัวตนด้วย
@@ -9,7 +16,7 @@ export async function getRepairStatistics(targetUserId, userAuthenticationToken)
 
   // ถ้าเซิร์ฟเวอร์ตอบกลับมาว่า "ไม่สำเร็จ" ให้แจ้ง Error ทันที
   if (!apiResponse.ok) {
-    throw new Error('Load stats failed')
+    throwApiError(apiResponse.status, 'Load stats failed')
   }
 
   // แปลงข้อมูลที่ได้เป็น JSON แล้วส่งกลับไป
@@ -28,7 +35,7 @@ export async function getMyRepairList(targetUserId, userAuthenticationToken) {
 
   // ถ้ามีปัญหา ให้เอาข้อความจากเซิร์ฟเวอร์มาแจ้งเตือน
   if (!apiResponse.ok) {
-    throw new Error(responseData.message)
+    throwApiError(apiResponse.status, responseData.message)
   }
 
   return responseData
@@ -41,7 +48,7 @@ export async function getRepairDetailByCode(repairRequestCode) {
   const responseData = await apiResponse.json()
 
   if (!apiResponse.ok) {
-    throw new Error(responseData.message || 'โหลดข้อมูลไม่สำเร็จ')
+    throwApiError(apiResponse.status, responseData.message || 'โหลดข้อมูลไม่สำเร็จ')
   }
 
   return responseData
@@ -62,7 +69,7 @@ export async function getAdminRepairList(userAuthenticationToken) {
 
   // ถ้าโหลดไม่สำเร็จ ให้แจ้ง Error
   if (!apiResponse.ok) {
-    throw new Error(responseData?.message || 'โหลดข้อมูลล้มเหลว')
+    throwApiError(apiResponse.status, responseData?.message || 'โหลดข้อมูลล้มเหลว')
   }
 
   return responseData
@@ -76,7 +83,7 @@ export async function getTechnicianRepairList(userAuthenticationToken) {
   })
 
   if (!apiResponse.ok) {
-    throw new Error('Fetch failed')
+    throwApiError(apiResponse.status, 'Fetch failed')
   }
 
   return apiResponse.json()

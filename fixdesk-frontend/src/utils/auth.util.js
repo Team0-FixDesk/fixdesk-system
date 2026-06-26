@@ -33,6 +33,28 @@
  * =====================================================================
  */
 
+import Swal from 'sweetalert2'
+ 
+// ฟังก์ชันสำหรับจัดการเมื่อ session หมดเวลา (HTTP 401)
+// ใช้งาน: handleUnauthorized(router) ตรงที่ response.status === 401
+export function handleUnauthorized(router) {
+  localStorage.removeItem('token')
+  localStorage.removeItem('session_user')
+  sessionStorage.removeItem('token')
+  sessionStorage.removeItem('session_user')
+
+  Swal.fire({
+    icon: 'warning',
+    title: 'หมดเวลาเข้าสู่ระบบ',
+    text: 'กรุณาเข้าสู่ระบบใหม่',
+    confirmButtonColor: '#0048EF',
+    confirmButtonText: 'ตกลง',
+    allowOutsideClick: false,
+    allowEscapeKey: false,
+  }).then(() => {
+    router.push('/login')
+  })
+}
 // ฟังก์ชันสำหรับหาว่า User ตำแหน่งนี้ ต้องเด้งไปที่หน้าไหน
 export function getRoutePathByUserRole(userRoleName) {
   // สร้างรายการจับคู่ไว้ว่า "ตำแหน่งไหน" คู่กับ "หน้าไหน"

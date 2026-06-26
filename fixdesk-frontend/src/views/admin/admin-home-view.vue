@@ -57,6 +57,7 @@ import InfoButtonComponent from '@/components/button/info-button-component.vue'
 
 import { useUserProfile } from '@/composables/useUserProfile.js'
 import { useAuthToken } from '@/composables/useAuthToken'
+import { handleUnauthorized } from '@/utils/auth.util'
 import { useTruncateText } from '@/composables/useTruncateText.js'
 
 const { truncateSentences } = useTruncateText()
@@ -183,6 +184,10 @@ async function fetchRepairRequests() {
     const repairs = normalizeRepairs(payload)
     repairRequests.value = repairs.map(mapRepairToRow)
   } catch (e) {
+    if (e?.status === 401 || e?.message?.includes('401')) {
+      handleUnauthorized(router)
+      return
+    }
     error.value = e?.message || 'เกิดข้อผิดพลาด'
   } finally {
     loading.value = false

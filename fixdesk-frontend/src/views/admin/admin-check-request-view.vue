@@ -35,6 +35,7 @@ import AssignJobModalComponent from '@/components/modal/assign-job-modal-compone
 import RepairFilterBar from '@/components/filters/repair-filter-bar-component.vue'
 
 import { useTruncateText } from '@/composables/useTruncateText.js'
+import { handleUnauthorized } from '@/utils/auth.util'
 
 const { truncateSentences } = useTruncateText()
 
@@ -138,6 +139,10 @@ async function fetchAdminRepairs() {
 
   const payload = await response.json().catch(() => null)
   if (!response.ok) {
+    if (response.status === 401) {
+      handleUnauthorized(router)
+      return []
+    }
     const message = payload?.message || 'Failed to load repairs.'
     throw new Error(message)
   }

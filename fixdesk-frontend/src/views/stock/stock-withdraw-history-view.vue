@@ -49,6 +49,7 @@
  *    โดยควบคุมการแสดงผลผ่าน sessionStorage     [2026-02-21, ธนภัทร จันทร์งาม]
  *  - แก้ไข alert         [2026-03-06, เศรษฐพงศ์ หอมชื่น]
  *  - แก้ไขคำ alert  [2026-03-13, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *  - เปลี่ยนมาใช้ handleUnauthorized จาก auth.util แทนการเขียน Swal เอง
  * =====================================================================
  */
 
@@ -60,6 +61,7 @@ import RepairFilterBar from '@/components/filters/repair-filter-bar-component.vu
 import InfoButtonComponent from '@/components/button/info-button-component.vue'
 
 import Sweetalert from 'sweetalert2'
+import { handleUnauthorized } from '@/utils/auth.util'
 
 defineOptions({ name: 'StockWithdrawHistoryView' })
 
@@ -104,7 +106,8 @@ async function loadStockForms() {
     })
 
     if (res.status === 401) {
-      throw new Error('TOKEN_EXPIRED')
+      handleUnauthorized(router)
+      return
     }
 
     const data = await res.json()
@@ -136,18 +139,7 @@ async function loadStockForms() {
         },
       }))
   } catch (err) {
-    if (err.message === 'TOKEN_EXPIRED') {
-      Sweetalert.fire({
-        title: 'หมดเวลาเข้าสู่ระบบ',
-        text: 'กรุณาเข้าสู่ระบบใหม่',
-        icon: 'warning',
-        confirmButtonColor: '#0048EF',
-        confirmButtonText: 'ตกลง'
-      })
-      router.push('/login')
-    } else {
-      console.error(err)
-    }
+    console.error(err)
   }
 }
 

@@ -69,6 +69,7 @@
  */
 
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { useRouter } from 'vue-router'
 import TableComponent from '@/components/table-component.vue'
 import TableActions from '@/components/table-actions-component.vue'
 import ImportButtonComponent from '@/components/button/import-button-component.vue'
@@ -79,11 +80,13 @@ import { Icon } from '@iconify/vue'
 import BaseButton from '@/components/button/base/base-button-component.vue'
 
 import Sweetalert from 'sweetalert2'
+import { handleUnauthorized } from '@/utils/auth.util'
 
 import { usePhoneNumberFormatter } from '@/composables/usePhoneFormat'
 const { toRaw, toDisplay, maskInput } = usePhoneNumberFormatter()
 
 defineOptions({ name: 'AdminUserInfoView' })
+const router = useRouter()
 const API_BASE = import.meta.env.VITE_API_BASE
 
 // --- Shared State for Unified Modal ---
@@ -161,6 +164,7 @@ async function fetchUsers() {
     const data = await res.json()
 
     if (!res.ok) {
+      if (res.status === 401) { handleUnauthorized(router); return }
       throw new Error(data.message || 'โหลดข้อมูลไม่สำเร็จ')
     }
 
@@ -458,7 +462,10 @@ async function confirmAddUser() {
     })
 
     const data = await res.json()
-    if (!res.ok) throw new Error(data.message || 'เพิ่มผู้ใช้ไม่สำเร็จ')
+    if (!res.ok) {
+      if (res.status === 401) { handleUnauthorized(router); return }
+      throw new Error(data.message || 'เพิ่มผู้ใช้ไม่สำเร็จ')
+    }
 
     toast.fire({
       icon: 'success',
@@ -513,7 +520,10 @@ async function confirmEditUser() {
       body: JSON.stringify(payload),
     })
     const data = await res.json()
-    if (!res.ok) throw new Error(data.message || 'อัปเดตไม่สำเร็จ')
+    if (!res.ok) {
+      if (res.status === 401) { handleUnauthorized(router); return }
+      throw new Error(data.message || 'อัปเดตไม่สำเร็จ')
+    }
 
     toast.fire({
       icon: 'success',
@@ -576,7 +586,10 @@ async function confirmDelete(username) {
       const txt = await res.text()
       message = txt && txt.trim().startsWith('<') ? 'ปลายทางส่งกลับเป็น HTML' : txt
     }
-    if (!res.ok) throw new Error(message || `ลบไม่สำเร็จ (HTTP ${res.status})`)
+    if (!res.ok) {
+      if (res.status === 401) { handleUnauthorized(router); return }
+      throw new Error(message || `ลบไม่สำเร็จ (HTTP ${res.status})`)
+    }
 
     toast.fire({
       icon: 'success',
@@ -784,7 +797,10 @@ async function handleAddTechType() {
       body: JSON.stringify({ tt_name: name.trim() }),
     })
     const data = await res.json()
-    if (!res.ok) throw new Error(data.message || 'เพิ่มตำแหน่งช่างไม่สำเร็จ')
+    if (!res.ok) {
+      if (res.status === 401) { handleUnauthorized(router); return }
+      throw new Error(data.message || 'เพิ่มตำแหน่งช่างไม่สำเร็จ')
+    }
 
     toast.fire({
       icon: 'success',
@@ -831,7 +847,10 @@ async function handleEditTechType(item) {
       body: JSON.stringify({ tt_name: name.trim() }),
     })
     const data = await res.json()
-    if (!res.ok) throw new Error(data.message || 'แก้ไขตำแหน่งช่างไม่สำเร็จ')
+    if (!res.ok) {
+      if (res.status === 401) { handleUnauthorized(router); return }
+      throw new Error(data.message || 'แก้ไขตำแหน่งช่างไม่สำเร็จ')
+    }
 
     toast.fire({
       icon: 'success',
@@ -871,7 +890,10 @@ async function handleDeleteTechType(item) {
       headers: getAuthHeaders(),
     })
     const data = await res.json().catch(() => ({}))
-    if (!res.ok) throw new Error(data.message || 'ลบตำแหน่งช่างไม่สำเร็จ')
+    if (!res.ok) {
+      if (res.status === 401) { handleUnauthorized(router); return }
+      throw new Error(data.message || 'ลบตำแหน่งช่างไม่สำเร็จ')
+    }
 
     toast.fire({
       icon: 'success',
@@ -933,6 +955,7 @@ async function handleResetPassword(userId) {
     const data = await res.json()
 
     if (!res.ok) {
+      if (res.status === 401) { handleUnauthorized(router); return }
       throw new Error(data.message || 'รีเซ็ตไม่สำเร็จ')
     }
 

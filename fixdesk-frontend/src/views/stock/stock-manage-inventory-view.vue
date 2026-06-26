@@ -34,12 +34,15 @@
  *  [2026-03-21, พชร ไพศรีสกุล] V 1.0.3
  *  - ปรับปรุงโครงสร้างข้อมูลและการจัดการ State ใน View ให้รองรับการแสดงข้อมูลที่ถูกต้องตามโครงสร้างใหม่ของ API
  *  - ปรับปรุงการ import และการดาวน์โหลด Template Excel ให้รองรับประเภท Locations โดยใช้ Universal Import Modal และ Download Template Button Component ใหม่ที่รองรับหลายประเภท
+ *  - เปลี่ยนมาใช้ handleUnauthorized จาก auth.util แทนการเขียน Swal เอง
+ *    เพื่อให้ Alert token หมดอายุเหมือนกันทุกหน้า
  *
  * =====================================================================
  */
 import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
+import { handleUnauthorized } from '@/utils/auth.util'
 import TableComponent from '@/components/table-component.vue'
 import TableActions from '@/components/table-actions-component.vue'
 import CardSummaryComponent from '@/components/card-home-component.vue'
@@ -176,30 +179,14 @@ async function fetchAllStock() {
   try {
     const token = localStorage.getItem('token') || sessionStorage.getItem('token')
     if (!token) {
-      Sweetalert.fire({
-        title: 'หมดเวลาเข้าสู่ระบบ',
-        text: 'กรุณาเข้าสู่ระบบใหม่',
-        icon: 'warning',
-        confirmButtonColor: '#0048EF',
-        confirmButtonText: 'ตกลง',
-      })
-      router.push('/login')
+      handleUnauthorized(router)
       return
     }
 
     const response = await fetch(`${API_BASE}/show-stock`, { headers: getAuthHeaders() })
 
     if (response.status === 401) {
-      Swal.fire({
-        title: 'หมดเวลาเข้าสู่ระบบ',
-        text: 'กรุณาเข้าสู่ระบบใหม่',
-        icon: 'warning',
-        confirmButtonColor: '#1d4ed8',
-        confirmButtonText: 'ตกลง',
-      })
-      sessionStorage.removeItem('token')
-      localStorage.removeItem('token')
-      router.push('/login')
+      handleUnauthorized(router)
       return
     }
 
