@@ -139,7 +139,7 @@ const menuSections = [
   {
     title: 'เมนูหลัก',
     items: [
-      { icon: HomeIcon, label: 'หน้าหลัก', path: '/main/Dashboard' },
+      { icon: HomeIcon, label: 'หน้าหลัก', path: '/main/manager-home' },
       { icon: RepairIcon, label: 'แจ้งซ่อม', path: '/main/repair-request' },
       { icon: ListIcon, label: 'รายการของฉัน', path: '/main/my-list' },
       { icon: ReportIcon, label: 'สร้างรายงาน', path: '/main/manage-report' },

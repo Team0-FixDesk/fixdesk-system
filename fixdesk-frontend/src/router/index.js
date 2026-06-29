@@ -107,7 +107,8 @@ const router = createRouter({
           component: AdminReportHistoryView,
           meta: { roles: ['Admin'] },
         },
-        { path: 'dashboard', component: ManagerHomeView, meta: { roles: ['Manager', 'Admin'] } },
+        { path: 'manager-home', component: ManagerHomeView, meta: { roles: ['Manager'] } },
+        { path: 'dashboard', component: ManagerHomeView, meta: { roles: ['Admin'] } },
         {
           path: 'information-summary',
           component: ManagerSummaryView,
@@ -262,7 +263,7 @@ function getHomeByRole(role) {
     case 'Technician':
       return '/main/technician-home'
     case 'Manager':
-      return '/main/dashboard'
+      return '/main/manager-home'
     case 'Stock':
       return '/main/stock-home'
     default:
