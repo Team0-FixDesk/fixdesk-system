@@ -887,8 +887,8 @@ onMounted(() => {
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 class="text-2xl font-bold text-gray-800">
-                <span v-if="userRoleName === 'Admin'">
-                  หน้าจอสรุปภาพรวมการแจ้งซ่อม - สวัสดีคุณ{{ userDisplayName }}
+                <span v-if="userRoleName?.toLowerCase() === ''">
+                  หน้าจอสรุปภาพรวมการแจ้งซ่อม
                 </span>
                 <span v-else>
                   หน้าจอหลักของผู้บริหาร - สวัสดีคุณ{{ userDisplayName }}
