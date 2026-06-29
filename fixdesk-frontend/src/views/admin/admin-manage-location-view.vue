@@ -351,7 +351,7 @@ function openEditModal(type, raw_id) {
     building_name: item.building_name,
     original_building_name: item.building_name,
   }
-  
+
   modalExpandedFloors.value = [] // Reset expand
   showEditModal.value = true
 }
@@ -401,7 +401,7 @@ async function saveBuildingNameOnly() {
     })
     if (handleAuthError(res.status)) return
     if (!res.ok) throw new Error('อัปเดตไม่สำเร็จ')
-    
+
     editForm.value.original_building_name = newName
     await refreshData()
     Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'อัปเดตชื่ออาคารสำเร็จ', showConfirmButton: false, timer: 2000 })
@@ -424,17 +424,17 @@ async function promptAddFloor() {
       if (!/^[0-9]+$/.test(value)) return 'ระบุเป็นตัวเลขเท่านั้น'
     }
   })
-  
+
   if (floorName) {
     try {
       const res = await fetch(`${API_BASE}/floors`, {
         method: 'POST',
         headers: getAuthHeaders(),
-        body: JSON.stringify({ fl_name: floorName.trim(), fl_bd_id: editForm.value.building_id })
+        body: JSON.stringify({ fl_name: floorName.trim() })
       })
       if (handleAuthError(res.status)) return
       if (!res.ok) throw new Error('บันทึกไม่สำเร็จ')
-      
+
       await refreshData()
       Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'เพิ่มชั้นสำเร็จ', showConfirmButton: false, timer: 2000 })
     } catch (err) {
@@ -457,17 +457,20 @@ async function promptEditFloor(floor) {
       if (!/^[0-9]+$/.test(value)) return 'ระบุเป็นตัวเลขเท่านั้น'
     }
   })
-  
+
   if (floorName && floorName.trim() !== floor.floor_name) {
     try {
       const res = await fetch(`${API_BASE}/floors/${floor.floor_id}`, {
         method: 'PUT',
         headers: getAuthHeaders(),
-        body: JSON.stringify({ fl_name: floorName.trim() })
+        body: JSON.stringify({
+          fl_name: floorName.trim(),
+          fl_bd_id: floor.building_id   // ← เพิ่มฟิลด์นี้
+        })
       })
       if (handleAuthError(res.status)) return
       if (!res.ok) throw new Error('บันทึกไม่สำเร็จ')
-      
+
       await refreshData()
       Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'เปลี่ยนเลขชั้นสำเร็จ', showConfirmButton: false, timer: 2000 })
     } catch (err) {
@@ -490,7 +493,7 @@ async function promptAddRoom(floorId) {
       if (!/^[ก-๙a-zA-Z0-9\s/]+$/.test(value)) return 'รูปแบบข้อมูลไม่ถูกต้อง'
     }
   })
-  
+
   if (roomName) {
     try {
       const res = await fetch(`${API_BASE}/rooms`, {
@@ -500,7 +503,7 @@ async function promptAddRoom(floorId) {
       })
       if (handleAuthError(res.status)) return
       if (!res.ok) throw new Error('บันทึกไม่สำเร็จ')
-      
+
       await refreshData()
       // เปิด Tree ของชั้นที่เพิ่งเพิ่มอัตโนมัติ
       if (!modalExpandedFloors.value.includes(floorId)) modalExpandedFloors.value.push(floorId)
@@ -525,7 +528,7 @@ async function promptEditRoom(room) {
       if (!/^[ก-๙a-zA-Z0-9\s/]+$/.test(value)) return 'รูปแบบข้อมูลไม่ถูกต้อง'
     }
   })
-  
+
   if (roomName && roomName.trim() !== room.room_name) {
     try {
       const res = await fetch(`${API_BASE}/rooms/${room.room_id}`, {
@@ -535,7 +538,7 @@ async function promptEditRoom(room) {
       })
       if (handleAuthError(res.status)) return
       if (!res.ok) throw new Error('บันทึกไม่สำเร็จ')
-      
+
       await refreshData()
       Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'แก้ไขชื่อห้องสำเร็จ', showConfirmButton: false, timer: 2000 })
     } catch (err) {
@@ -597,7 +600,7 @@ async function confirmDelete(type, raw_id) {
 
     await refreshData()
     Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, title: 'สำเร็จ!', text: `ลบ${typeText}เรียบร้อยแล้ว`, icon: 'success' })
-    
+
     // ถ้าลบอาคารหลัก ให้ปิดหน้าต่าง Edit Manager (เพราะไม่มีข้อมูลแล้ว)
     if (type === 'building' && showEditModal.value && editForm.value.building_id == raw_id) {
       showEditModal.value = false
@@ -642,7 +645,7 @@ async function bulkCreateLocation() {
 
     const res = await fetch(`${API_BASE}/rooms`, { method: 'POST', headers: getAuthHeaders(), body: JSON.stringify({ room_name: addForm.value.room_name.trim(), room_fl_id: floorId }) })
     if (handleAuthError(res.status)) return
-    
+
     showAddModal.value = false
     Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, icon: 'success', title: 'สร้างสถานที่เรียบร้อยแล้ว' })
     await refreshData()
@@ -836,7 +839,7 @@ onBeforeUnmount(() => {
             <h4 class="font-semibold text-gray-800 mb-3 flex items-center gap-2">
               <Icon icon="material-symbols:account-tree" width="20" height="20" class="text-gray-600" /> โครงสร้างชั้นและห้อง
             </h4>
-            
+
             <div v-if="viewData.stats?.floors.length === 0" class="text-center py-4 bg-gray-50 rounded-lg text-gray-500 text-sm">ยังไม่มีข้อมูลในอาคารนี้</div>
             <div v-else class="space-y-3">
               <div v-for="floor in viewData.stats.floors" :key="floor.floor_id" class="border border-gray-200 rounded-lg overflow-hidden">
@@ -865,7 +868,7 @@ onBeforeUnmount(() => {
 
     <div v-if="showEditModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-2 sm:px-0" @click.self="showEditModal = false">
       <div class="bg-white rounded-lg w-full max-w-4xl shadow-xl max-h-[90vh] overflow-y-auto p-4 sm:p-6 md:p-8">
-        
+
         <div class="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
           <div class="bg-orange-400 p-3 rounded-full shadow-sm">
             <Icon icon="fluent:edit-24-regular" width="24" height="24" style="color: #ffffff" />
@@ -924,7 +927,7 @@ onBeforeUnmount(() => {
                        </button>
                     </div>
                  </div>
-                 
+
                  <div class="p-3 sm:p-4 bg-gray-50">
                     <div v-if="editBuildingRooms(floor.floor_id).length === 0" class="text-sm text-gray-400 text-center py-2 bg-white rounded border border-dashed border-gray-200">
                        ยังไม่มีห้องในชั้นนี้
