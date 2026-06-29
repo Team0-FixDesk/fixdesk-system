@@ -226,7 +226,7 @@ onMounted(() => {
   <div class="bg-white rounded-xl shadow-md p-4 sm:p-6 lg:p-8 mx-auto max-w-8xl">
     <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
       <div>
-        <h1 class="text-xl sm:text-2xl font-extrabold text-gray-900">สวัสดีคุณ{{ userDisplayName }}</h1>
+        <h1 class="text-xl sm:text-2xl font-extrabold text-gray-900">หน้าจอหลักของผู้ใช้งาน - สวัสดีคุณ{{ userDisplayName }}</h1>
         <p class="text-base sm:text-lg font-semibold text-gray-700">{{ userDepartmentName }}</p>
       </div>
       <RepairButton class="self-start sm:self-auto" />
