@@ -48,6 +48,7 @@
  *   - แก้ไขสีปุ่ม
  *      [2026-02-27, เศรษฐพงศ์ หอมชื่น] V1.0.2
  *   - แก้ไขการแสดงรายการแจ้งซ่อม
+ *   - เปลี่ยนมาใช้ handleUnauthorized จาก auth.util ทุกจุดที่มี 401
  *      [2026-03-03, พชร ไพศรีสกุล] V1.0.3
  * =====================================================================
  */
@@ -59,6 +60,7 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
 import { Icon } from '@iconify/vue'
+import { handleUnauthorized } from '@/utils/auth.util'
 
 // Components
 import ProductCardComponent from '@/components/product-card-component.vue'
@@ -112,6 +114,11 @@ const fetchRepairJobList = async () => {
     const response = await fetch(`${API_BASE_URL}/technician/repairs`, {
       headers: getAuthHeaders(),
     })
+
+    if (response.status === 401) {
+      handleUnauthorized(router)
+      return
+    }
 
     if (!response.ok) {
       throw new Error('โหลดรายการแจ้งซ่อมไม่สำเร็จ')
@@ -169,6 +176,11 @@ const fetchCategoryOptionList = async () => {
   try {
     const response = await fetch(`${API_BASE_URL}/category`, { headers: getAuthHeaders() })
 
+    if (response.status === 401) {
+      handleUnauthorized(router)
+      return
+    }
+
     if (!response.ok) {
       throw new Error('Load categories fail')
     }
@@ -190,17 +202,14 @@ const fetchStockItemList = async () => {
     const token = sessionStorage.getItem('token') || localStorage.getItem('token')
 
     if (!token) {
-      Swal.fire('แจ้งเตือน', 'กรุณาเข้าสู่ระบบก่อนใช้งาน', 'warning')
-      router.push('/login')
+      handleUnauthorized(router)
       return
     }
 
     const response = await fetch(`${API_BASE_URL}/show-stock`, { headers: getAuthHeaders() })
 
     if (response.status === 401) {
-      sessionStorage.removeItem('token')
-      localStorage.removeItem('token')
-      router.push('/login')
+      handleUnauthorized(router)
       return
     }
 
@@ -374,6 +383,11 @@ const confirmWithdraw = async (formData) => {
     })
 
     const responseBody = await response.json()
+
+    if (response.status === 401) {
+      handleUnauthorized(router)
+      return
+    }
 
     if (!response.ok) {
       throw new Error(responseBody.message)

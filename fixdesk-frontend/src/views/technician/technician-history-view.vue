@@ -29,6 +29,8 @@
  *   - แก้ไขชื่อหน้าจอ           [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล]
  *   - แก้ไขข้อความหัวตาราง     [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล]
  *   - แก้ไขข้อความในช่องค้นหา   [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *   - เปลี่ยนมาใช้ handleUnauthorized จาก auth.util
+ *     เพื่อให้ Alert token หมดอายุเหมือนกันทุกหน้า  [2026-06-26, พชร ไพศรีสกุล]
  *
  * =====================================================================
  */
@@ -36,7 +38,7 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
-
+import { handleUnauthorized } from '@/utils/auth.util'
 import TableComponent from '@/components/table-component.vue'
 import InfoButtonComponent from '@/components/button/info-button-component.vue'
 
@@ -128,6 +130,11 @@ async function loadRepairHistory() {
     const res = await fetch(`${API_BASE}/technician/history`, {
       headers: { Authorization: `Bearer ${token}` },
     })
+
+    if (res.status === 401) {
+      handleUnauthorized(router)
+      return
+    }
 
     const data = await res.json()
     if (!res.ok) throw new Error(data.message)

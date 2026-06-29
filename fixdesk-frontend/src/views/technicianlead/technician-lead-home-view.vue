@@ -4,14 +4,14 @@
  * @file            technician-lead-home-view.vue
  * @module          มอดูลช่างซ่อม - หน้าจอหลักของหัวหน้าช่าง
  * @layer           View (Presentation Layer)
- * @version         1.0.0
+ * @version         1.0.1
  * @since           2026-03-16
  * @author          พชร ไพศรีสกุล
  * @contributors
  *  - พชร ไพศรีสกุล
  *
- * @lastModified    2026-03-16
- * @lastModifiedBy  พชร ไพศรีสกุล
+ * @lastModified    2026-06-26
+ * @lastModifiedBy  บุณยกร จันประภาส
  * ---------------------------------------------------------------------
  * @description
  *  หน้าจอหลักสำหรับหัวหน้าช่างซ่อม
@@ -24,6 +24,10 @@
  * @changelog
  *  [2026-03-16, พชร ไพศรีสกุล] V 1.0.0
  *   - สร้างไฟล์และโครงสร้างหลักของ View
+ *  [2026-06-26, บุณยกร จันประภาส] V 1.0.1
+ *   - เปลี่ยนมาใช้ handleUnauthorized จาก auth.util แทน logout() จาก useAuthToken
+ *     เพื่อให้ Alert token หมดอายุเหมือนกันทุกหน้า
+ *   - แก้ไขชื่อหน้าจอเป็น หัวหน้าช่างซ่อม
  * =====================================================================
  */
 
@@ -35,6 +39,7 @@ import ApexChart from 'vue3-apexcharts'
 
 import { useAuthToken } from '@/composables/useAuthToken'
 import { useUserProfile } from '@/composables/useUserProfile'
+import { handleUnauthorized } from '@/utils/auth.util'
 
 import CardHomeComponent from '@/components/card-home-component.vue'
 import TableComponent from '@/components/table-component.vue'
@@ -48,8 +53,9 @@ import { useTechnicianStats } from '@/composables/repair/useTechnicianStats'
 
 const router = useRouter()
 
-const { token, userId, isAuthenticated, logout } = useAuthToken()
-const { repairRequests, fetchRepairRequests } = useTechnicianRepairs(token, isAuthenticated, logout)
+const { token, userId, isAuthenticated } = useAuthToken()
+const onUnauthorized = () => handleUnauthorized(router)
+const { repairRequests, fetchRepairRequests } = useTechnicianRepairs(token, isAuthenticated, onUnauthorized)
 const { statItems } = useTechnicianStats(repairRequests)
 const { repairTableRows, repairTableRaw, onRepairRowClick } = useTechnicianRepairTable(
   repairRequests,
@@ -59,7 +65,7 @@ const { stockForms, fetchStockForms } = useTechnicianStockForms(
   token,
   userId,
   isAuthenticated,
-  logout,
+  onUnauthorized,
 )
 const { stockTableRows, truncateItem, extractQuantity, openDetail } = useTechnicianStockTable(
   stockForms,
@@ -185,7 +191,7 @@ onMounted(() => {
   <div class="p-8 mx-auto bg-white shadow-md rounded-xl max-w-8xl">
     <div class="mb-6">
       <p class="text-2xl font-extrabold text-gray-900">
-          หน้าจอหลักของช่างซ่อม - สวัสดีคุณ{{ userDisplayName }}
+          หน้าจอหลักของหัวหน้าช่างซ่อม - สวัสดีคุณ{{ userDisplayName }}
       </p>
       <p class="text-lg text-gray-700">{{ userDepartmentName }}</p>
       <p class="mt-1 text-sm text-gray-600">

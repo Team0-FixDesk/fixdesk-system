@@ -45,6 +45,8 @@
  *     [2026-03-17, นราธิป แสนทวีสุข]
  *   - เพิ่มการแสดงผลแบบ Responsive: สลับจาก Table เป็น Card บนหน้าจอขนาดเล็ก
  *     [2026-06-17, บุณยกร จันประภาส]
+ *   - เปลี่ยนมาใช้ handleUnauthorized จาก auth.util แทน logout() จาก useAuthToken
+ *     เพื่อให้ Alert token หมดอายุเหมือนกันทุกหน้า  [2026-06-26, พชร ไพศรีสกุล]
  * =====================================================================
  */
 
@@ -56,7 +58,9 @@ import Swal from 'sweetalert2'
 import { useTechnicianRepairList } from '@/composables/repair/useTechnicianRepairList'
 
 import { useAuthToken } from '@/composables/useAuthToken'
-const { token, userId, isAuthenticated, logout } = useAuthToken()
+import { handleUnauthorized } from '@/utils/auth.util'
+const { token, userId, isAuthenticated } = useAuthToken()
+const onUnauthorized = () => handleUnauthorized(router)
 
 import TableComponent from '@/components/table-component.vue'
 import TableActionsComponent from '@/components/table-actions-component.vue'
@@ -65,7 +69,7 @@ import AcceptJobModal from '@/components/modal/accept-job-modal-component.vue'
 const router = useRouter()
 const API_BASE = import.meta.env.VITE_API_BASE
 
-const { repairList, fetchRepairList } = useTechnicianRepairList(API_BASE, token, isAuthenticated, logout)
+const { repairList, fetchRepairList } = useTechnicianRepairList(API_BASE, token, isAuthenticated, onUnauthorized)
 
 const openMenuId = ref(null)
 

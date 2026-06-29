@@ -36,6 +36,8 @@
  * - เพิ่ม Toast แจ้งเตือนเมื่อกลับจากหน้าดำเนินการ
  *   โดยใช้ sessionStorage และป้องกันการแสดงซ้ำ
  *   [2026-02-21, ธนภัทร จันทร์งาม]
+ * - เปลี่ยนมาใช้ handleUnauthorized จาก auth.util
+ *   เพื่อให้ Alert token หมดอายุเหมือนกันทุกหน้า
  * =====================================================================
  */
 
@@ -45,6 +47,7 @@ import { useRouter, useRoute } from 'vue-router'
 import TableComponent from '@/components/table-component.vue'
 import InfoButtonComponent from '@/components/button/info-button-component.vue'
 import Swal from 'sweetalert2'
+import { handleUnauthorized } from '@/utils/auth.util'
 
 defineOptions({ name: 'TechnicianRequisitionListView' })
 
@@ -110,6 +113,11 @@ async function fetchMyRequisitions() {
         Authorization: `Bearer ${token}`,
       },
     })
+
+    if (response.status === 401) {
+      handleUnauthorized(router)
+      return
+    }
 
     const responseData = await response.json()
     if (!response.ok) throw new Error(responseData.message || 'โหลดข้อมูลล้มเหลว')

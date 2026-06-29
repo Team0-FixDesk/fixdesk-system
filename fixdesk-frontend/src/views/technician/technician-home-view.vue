@@ -40,6 +40,8 @@
  *   - ดึงข้อมูลชื่อผู้ใช้
  *  [2026-03-05, เศรษฐพงศ์ หอมชื่น] V 1.0.6
  *   - เปลี่ยนกราฟโดนัทเป็น ApexCharts และเพิ่ม Tooltip
+ *   - เปลี่ยนมาใช้ handleUnauthorized จาก auth.util แทน logout() จาก useAuthToken
+ *     เพื่อให้ Alert token หมดอายุเหมือนกันทุกหน้า  [2026-06-26, พชร ไพศรีสกุล]
  * 
  * =====================================================================
  */
@@ -51,6 +53,7 @@ import ApexChart from 'vue3-apexcharts'
 
 import { useAuthToken } from '@/composables/useAuthToken'
 import { useUserProfile } from '@/composables/useUserProfile'
+import { handleUnauthorized } from '@/utils/auth.util'
 
 import CardHomeComponent from '@/components/card-home-component.vue'
 import TableComponent from '@/components/table-component.vue'
@@ -64,8 +67,9 @@ import { useTechnicianStats } from '@/composables/repair/useTechnicianStats'
 
 const router = useRouter()
 
-const { token, userId, isAuthenticated, logout } = useAuthToken()
-const { repairRequests, fetchRepairRequests } = useTechnicianRepairs(token, isAuthenticated, logout)
+const { token, userId, isAuthenticated } = useAuthToken()
+const onUnauthorized = () => handleUnauthorized(router)
+const { repairRequests, fetchRepairRequests } = useTechnicianRepairs(token, isAuthenticated, onUnauthorized)
 const { statItems } = useTechnicianStats(repairRequests)
 const { repairTableRows, repairTableRaw, onRepairRowClick } = useTechnicianRepairTable(
   repairRequests,
@@ -75,7 +79,7 @@ const { stockForms, fetchStockForms } = useTechnicianStockForms(
   token,
   userId,
   isAuthenticated,
-  logout,
+  onUnauthorized,
 )
 const { stockTableRows, truncateItem, extractQuantity, openDetail } = useTechnicianStockTable(
   stockForms,
