@@ -486,11 +486,99 @@ const processFile = (files) => {
   ]
 }
 
+// --- ตรวจสอบรายการซ้ำ ---
+function findDuplicateProduct({ name, assetCode }) {
+  // ถ้ามีเลขครุภัณฑ์ ถือเป็นของเฉพาะตัว ไม่นับว่าซ้ำ (ไม่ควรรวมจำนวน)
+  if (assetCode && assetCode.trim() !== '') return null
+
+  const normalizedName = name.trim().toLowerCase()
+  if (!normalizedName) return null
+
+  return allRowList.value.find((row) => {
+    const rowName = String(row[1] || '').trim().toLowerCase()
+    const rowAssetCode = row[3]
+    const hasNoAssetCode = !rowAssetCode || rowAssetCode === '-'
+
+    return hasNoAssetCode && rowName === normalizedName
+  })
+}
+
+// --- อัปเดตจำนวนของรายการเดิม ---
+async function updateExistingProductQuantity(duplicateRow, newQuantity) {
+  try {
+    const productId = duplicateRow[0]
+    const categoryId = productIdToCategoryIdMap.value[productId]
+
+    const formDataToSubmit = new FormData()
+    formDataToSubmit.append('pd_name', duplicateRow[1])
+    formDataToSubmit.append('pd_asset_code', duplicateRow[3] !== '-' ? duplicateRow[3] : '')
+    formDataToSubmit.append('pd_quantity', newQuantity)
+    formDataToSubmit.append('pd_unit_id', duplicateRow[5])
+    formDataToSubmit.append('status', duplicateRow[6] === 'active' ? 'active' : 'inactive')
+    if (categoryId != null) {
+      formDataToSubmit.append('pd_category_id', categoryId)
+    }
+
+    const response = await fetch(`${API_BASE}/update-stock/${productId}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: formDataToSubmit,
+    })
+
+    const result = await response.json()
+    if (!response.ok) throw new Error(result.message || 'อัปเดตจำนวนไม่สำเร็จ')
+
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: 'success',
+      title: 'เพิ่มจำนวนเข้ารายการเดิมเรียบร้อยแล้ว',
+      showConfirmButton: false,
+      timer: 2000,
+    })
+  } catch (error) {
+    console.error('Error updating quantity:', error)
+    Swal.fire('ผิดพลาด', error.message || 'เกิดข้อผิดพลาดในการอัปเดตจำนวน', 'error')
+  }
+}
+
 // --- Actions Methods ---
 const confirmAddItem = async () => {
   if (!validateForm()) {
     return
   }
+
+  // --- เช็คว่ามีรายการนี้อยู่แล้วหรือไม่ ---
+  const duplicate = findDuplicateProduct({
+    name: formData.value.name,
+  })
+
+  if (duplicate) {
+  const currentQuantity = Number(duplicate[4]) || 0
+  const addQuantity = Number(formData.value.quantity) || 0
+
+  const result = await Swal.fire({
+    title: 'พบรายการนี้อยู่แล้ว',
+    html: `มีรายการ "<b>${formData.value.name}</b>" ในหมวดหมู่นี้อยู่แล้ว (จำนวนปัจจุบัน ${currentQuantity})<br/>ต้องการเพิ่มจำนวนเข้ารายการเดิมหรือไม่?`,
+    icon: 'question',
+    showCancelButton: true,
+    showDenyButton: true,
+    confirmButtonText: `เพิ่มจำนวน (รวมเป็น ${currentQuantity + addQuantity})`,
+    denyButtonText: 'สร้างรายการใหม่',
+    cancelButtonText: 'ยกเลิก',
+    confirmButtonColor: '#2563eb',
+    denyButtonColor: '#a3a3a3',
+  })
+
+  if (result.isDismissed) return
+
+  if (result.isConfirmed) {
+    await updateExistingProductQuantity(duplicate, currentQuantity + addQuantity)
+    closeAddModal()
+    fetchAllStock()
+    return
+  }
+}
 
   const formDataToSubmit = new FormData()
   formDataToSubmit.append('pd_name', formData.value.name)
@@ -550,6 +638,7 @@ const confirmAddItem = async () => {
     })
 
     closeAddModal()
+    fetchAllStock()
   } catch (error) {
     console.error('Error adding item:', error)
     const Toast = Swal.mixin({
