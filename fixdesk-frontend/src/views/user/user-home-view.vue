@@ -1,47 +1,98 @@
+/**
+ * =====================================================================
+ * @file            technician-home.view.vue
+ * @module          มอดูลแจ้งซ่อม - การติดตามสถานะ และดูรายละเอียดคำร้องแจ้งซ่อม
+ * @layer           View (Presentation Layer)
+ * @version         1.0.1
+ * @since           2025-10-21
+ * @author          เศรษฐพงศ์ หอมชื่น
+ * @contributor
+ *   - เศรษฐพงศ์ หอมชื่น
+ *   - ปฏิพัทธ์ จงนันทพันธ์กุล
+ *
+ * @lastModified    2026-02-21
+ * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
+ * ---------------------------------------------------------------------
+ * @description
+ *  หน้าจอหลักสำหรับช่างซ่อม
+ *   - แสดงสถิติงานซ่อมของช่าง
+ *   - แสดงรายการงานที่ได้รับมอบหมายล่าสุด
+ *   - แสดงกราฟสัดส่วนสถานะงาน (เสร็จสิ้น / กำลังดำเนินการ / ยกเลิก / อื่นๆ)
+ *   - แสดงรายการเบิกของล่าสุดของช่าง
+ *
+ * @requires
+ *  - vue
+ *  - vue-router
+ *  - @/composables/useAuthToken
+ *  - @/composables/useUserProfile
+ *  - @/composables/repair/useTechnicianRepairs
+ *  - @/composables/repair/useTechnicianRepairTable
+ *  - @/composables/repair/useTechnicianStats
+ *  - @/composables/stock/useTechnicianStockForms
+ *  - @/composables/stock/useTechnicianStockTable
+ *  - @/components/card-home-component.vue
+ *  - @/components/table-component.vue
+ *  - @/components/button/info-button-component.vue
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *   - เพิ่มชื่อหน้าจอ และแก้ไขคำอธิบายหน้าจอ
+       [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล] V1.0.0
+ *   - แก้ไขข้อความคำอธิบายสถานะ
+       [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล] V1.0.0
+ *   - แก้ไขข้อความหัวตาราง และการใช้สัญลักษณ์ :
+       [2026-02-21, ปฏิพัทธ์ จงนันทพันธ์กุล] V1.0.0
+ *   - ดึงข้อมูลชื่อผู้ใช้ :
+ *     [2026-02-21, พิมลพรรณ มามาก] V
+ * =====================================================================
+ */
+
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
+
+import { getRepairStatistics, getMyRepairList, getRepairDetailByCode } from '@/services/repair'
+
+import { formatThaiShortDate } from '@/utils/date.util'
+import { createRepairTimelineData } from '@/utils/repairTimeline.util'
+
+import CardHomeComponent from '@/components/card-home-component.vue'
 import TableComponent from '@/components/table-component.vue'
-import repairButton from '@/components/repair-button-component.vue'
+import RepairButton from '@/components/button/repair-button-component.vue'
 import RepairStatusTimeline from '@/components/status-timeline-component.vue'
+
 import { useAuthToken } from '@/composables/useAuthToken'
 import { useUserProfile } from '@/composables/useUserProfile'
 
-// นำเข้า Component Card
-import cardHomeComponent from '@/components/card-home-component.vue'
-
-// ค่าพื้นฐานของ API
-const API_BASE = import.meta.env.VITE_API_BASE
-
 const { token, userId, isAuthenticated, logout } = useAuthToken()
-const { displayName, displayDepartment, fetchUserProfile } = useUserProfile(API_BASE)
+const { userDisplayName, userDepartmentName, fetchUserProfileData} = useUserProfile()
 
 // ตัวแปรสำหรับ Card สถิติ
-const statsItems = ref([
+const statsItemsList = ref([
   {
     value: 0,
-    label: 'แจ้งซ่อมทั้งหมด',
+    label: 'จำนวนรายการแจ้งซ่อมทั้งหมด',
     unit: 'รายการ',
     colorClass: 'text-violet-500',
     filterStatus: '',
   },
   {
     value: 0,
-    label: 'รอดำเนินการทั้งหมด',
+    label: 'จำนวนรายการแจ้งซ่อมที่รอดำเนินการ',
     unit: 'รายการ',
     colorClass: 'text-amber-500',
     filterStatus: 'pending',
   },
   {
     value: 0,
-    label: 'กำลังดำเนินการทั้งหมด',
+    label: 'จำนวนรายการแจ้งซ่อมที่กำลังดำเนินการ',
     unit: 'รายการ',
     colorClass: 'text-blue-600',
     filterStatus: 'in_progress',
   },
   {
     value: 0,
-    label: 'ดำเนินการเสร็จสิ้นทั้งหมด',
+    label: 'จำนวนรายการแจ้งซ่อมที่ดำเนินการเสร็จสิ้น',
     unit: 'รายการ',
     colorClass: 'text-green-600',
     filterStatus: 'done',
@@ -59,10 +110,10 @@ const selectedRepairDetail = ref(null)
 
 // ตัวแปรสถานะหลักของหน้า
 const router = useRouter()
-const allMyRepairs = ref([])
-const recentRepairs = ref([])
+const allMyRepairsList = ref([])
+const recentRepairsList = ref([])
 const selectedTrackingCode = ref('')
-const selectedTimelineSteps = ref([])
+const selectedTimelineStepsList = ref([])
 const isTimelineLoading = ref(false)
 
 async function fetchRepairStats() {
@@ -72,53 +123,40 @@ async function fetchRepairStats() {
   }
 
   try {
-    const res = await fetch(`${API_BASE}/repair-stats/${userId.value}`, {
-      headers: {
-        Authorization: `Bearer ${token.value}`,
-      },
-    })
+    const data = await getRepairStatistics(
+      userId.value,
+      token.value
+    )
 
-    if (!res.ok) throw new Error('Load stats failed')
+    statsItemsList.value[0].value = data.total || 0
+    statsItemsList.value[1].value = data.pending || 0
+    statsItemsList.value[2].value = data.in_progress || 0
+    statsItemsList.value[3].value = data.completed || 0
 
-    const data = await res.json()
-
-    statsItems.value[0].value = data.total || 0
-    statsItems.value[1].value = data.pending || 0
-    statsItems.value[2].value = data.in_progress || 0
-    statsItems.value[3].value = data.completed || 0
   } catch (err) {
     console.error(err)
   }
 }
 
-// ฟังก์ชันอื่นๆ (คงเดิม)
-function formatDateTH(dateStr) {
-  if (!dateStr) return '-'
-  return new Date(dateStr).toLocaleDateString('th-TH')
-}
-
 async function fetchRecentRepairs() {
   if (!isAuthenticated.value) {
     logout()
+
     return
   }
 
   try {
-    const res = await fetch(`${API_BASE}/my-repairs/${userId.value}`, {
-      headers: {
-        Authorization: `Bearer ${token.value}`,
-      },
-    })
+    const data = await getMyRepairList(userId.value, token.value)
 
-    const data = await res.json()
-    if (!res.ok) throw new Error(data.message)
+    const sortedRepairList = data.sort(
+      (a, b) => new Date(b.rf_create_at) - new Date(a.rf_create_at),
+    )
 
-    const sorted = data.sort((a, b) => new Date(b.rf_create_at) - new Date(a.rf_create_at))
+    allMyRepairsList.value = sortedRepairList
+    recentRepairsList.value = sortedRepairList.slice(0, 5)
 
-    allMyRepairs.value = sorted
-    recentRepairs.value = sorted.slice(0, 5)
-
-    const defaultRepair = sorted.find((r) => r.rf_user_status === 'in_progress') || sorted[0]
+    const defaultRepair =
+      sortedRepairList.find((r) => r.rf_user_status === 'in_progress') || sortedRepairList[0]
 
     if (defaultRepair) {
       selectedTrackingCode.value = defaultRepair.rf_code
@@ -131,83 +169,29 @@ async function fetchRecentRepairs() {
 
 async function loadTimelineForCode(code) {
   if (!code) {
-    selectedTimelineSteps.value = []
+    selectedTimelineStepsList.value = []
+
     return
   }
 
   isTimelineLoading.value = true
   try {
-    const res = await fetch(`${API_BASE}/repair-requests/${code}`)
-    const data = await res.json()
-    if (!res.ok) throw new Error(data.message || 'โหลดข้อมูลไม่สำเร็จ')
+    const data = await getRepairDetailByCode(code)
+
     selectedRepairDetail.value = data
-    selectedTimelineSteps.value = buildTimelineFromRepair(data)
+    selectedTimelineStepsList.value = createRepairTimelineData(data)
   } catch (err) {
     console.error('โหลด timeline ไม่สำเร็จ:', err)
-    selectedTimelineSteps.value = []
+    selectedTimelineStepsList.value = []
   } finally {
     isTimelineLoading.value = false
   }
 }
 
-function formatDateTimeTH(value) {
-  if (!value) return null
-  const date = new Date(value).toLocaleDateString('th-TH', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  })
-  const time = new Date(value).toLocaleTimeString('th-TH', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  })
-  return `${date} เวลา ${time}`
-}
-
-function buildTimelineFromRepair(repairData) {
-  const timelineSteps = []
-  const statusConfigs = [
-    { key: 'rf_create_at', title: 'รอดำเนินการ', description: 'ระบบได้รับใบแจ้งซ่อมของคุณแล้ว' },
-    {
-      key: 'rf_in_process_at',
-      title: 'กำลังดำเนินการ',
-      description: 'เจ้าหน้าที่กำลังดำเนินการซ่อมแซม',
-    },
-    { key: 'rf_done_at', title: 'ดำเนินการเสร็จสิ้น', description: 'งานซ่อมเสร็จเรียบร้อยแล้ว' },
-  ]
-
-  let lastReachedIndex = -1
-  statusConfigs.forEach((status, index) => {
-    if (repairData[status.key]) lastReachedIndex = index
-  })
-
-  statusConfigs.forEach((status, index) => {
-    const isReached = index <= lastReachedIndex
-    const isCurrent = index === lastReachedIndex
-    const isLastStep = index === statusConfigs.length - 1
-
-    let stepState = 'upcoming'
-    if (isReached) {
-      if (isLastStep) stepState = 'completed'
-      else if (isCurrent) stepState = 'current'
-      else stepState = 'completed'
-    }
-
-    timelineSteps.push({
-      displayTime: repairData[status.key] ? formatDateTimeTH(repairData[status.key]) : null,
-      title: status.title,
-      description: isReached ? status.description : null,
-      stepState,
-    })
-  })
-  return timelineSteps
-}
-
 // 2. Computed สำหรับ Rows ที่จะแสดง (แปลง recentRepairs ให้เป็น Array ของ Array)
-const tableRows = computed(() => {
-  return allMyRepairs.value.map((item) => [
-    formatDateTH(item.rf_create_at),
+const tableRowsList = computed(() => {
+  return allMyRepairsList.value.map((item) => [
+    formatThaiShortDate(item.rf_create_at),
     item.rf_code,
     item.tt_name || '-',
     item.rf_urgency,
@@ -216,8 +200,8 @@ const tableRows = computed(() => {
 })
 
 // 3. Computed สำหรับ Raw Rows (เพื่อให้ TableComponent รู้ ID เวลากด)
-const tableRawRows = computed(() => {
-  return allMyRepairs.value.map((item) => ({
+const tableRawRowsList = computed(() => {
+  return allMyRepairsList.value.map((item) => ({
     rf_code: item.rf_code,
   }))
 })
@@ -230,65 +214,82 @@ const onRowClick = (idOrItem) => {
     loadTimelineForCode(code) // โหลดข้อมูลทันที
   }
 }
-
+/* Reload */
 onMounted(() => {
   fetchRepairStats()
-  fetchUserProfile()
   fetchRecentRepairs()
+  fetchUserProfileData()
 })
 </script>
 
 <template>
-  <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-8xl">
-    <div class="flex justify-between items-center mb-6">
+  <div class="bg-white rounded-xl shadow-md p-4 sm:p-6 lg:p-8 mx-auto max-w-8xl">
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
       <div>
-        <h1 class="text-2xl font-extrabold text-gray-900">สวัสดีคุณ{{ displayName }}</h1>
-        <p class="text-lg font-semibold text-gray-700">{{ displayDepartment }}</p>
+        <h1 class="text-xl sm:text-2xl font-extrabold text-gray-900">หน้าจอหลักของผู้ใช้งาน - สวัสดีคุณ{{ userDisplayName }}</h1>
+        <p class="text-base sm:text-lg font-semibold text-gray-700">{{ userDepartmentName }}</p>
       </div>
-      <repairButton />
+      <RepairButton class="self-start sm:self-auto" />
     </div>
 
-    <div class="mt-8 mb-8">
-      <cardHomeComponent :items="statsItems" @click="onCardClick" />
+    <div class="mt-6 mb-6 sm:mt-8 sm:mb-8">
+      <CardHomeComponent :items="statsItemsList" @click="onCardClick" />
     </div>
 
-    <div class="grid grid-cols-12 gap-6">
-      <div class="col-span-8 bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div class="lg:col-span-8 bg-white rounded-xl border border-slate-200 shadow-sm p-4 sm:p-5">
         <div class="border-b border-slate-200 pb-2 mb-4">
-          <h2 class="text-xl font-bold mb-1">รายการที่ฉันแจ้งซ่อม</h2>
-          <p class="text-xs text-gray-500">7 รายการแจ้งซ่อมล่าสุด (เรียงจากวันที่แจ้ง) สามารถกดรายการแจ้งซ่อมในตารางเพื่อดูรายละเอียด</p>
+          <h2 class="text-lg sm:text-xl font-bold mb-1">รายการที่ฉันแจ้งซ่อม</h2>
+          <p class="text-xs text-gray-500">
+            7 รายการแจ้งซ่อมล่าสุด (เรียงจากวันที่แจ้ง)
+            - สามารถเลือกรายการแจ้งซ่อมในตารางเพื่อดูรายละเอียดเพิ่มเติม
+          </p>
         </div>
 
-        <TableComponent
-          :columns="['วันที่', 'หมายเลขแจ้งซ่อม', 'ประเภทงาน', 'ความเร่งด่วน', 'สถานะงาน']"
-          :rows="tableRows"
-          :rawRows="tableRawRows"
-          :perPage="7"
-          :columnAlign="['left', 'left', 'left', 'center', 'center']"
-          mode="user"
-          :idColumnIndex="1"
-          :urgencyColumn="3"
-          :statusColumn="4"
-          :activeId="selectedTrackingCode"
-          @detail="onRowClick"
-        />
+        <div class="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
+          <TableComponent
+            :columns="['วันที่แจ้งซ่อม', 'หมายเลขแจ้งซ่อม', 'ประเภทงาน', 'ความเร่งด่วน', 'สถานะงาน']"
+            :rows="tableRowsList"
+            :rawRows="tableRawRowsList"
+            :perPage="7"
+            :columnAlign="['left', 'left', 'left', 'center', 'center']"
+            mode="user"
+            :idColumnIndex="1"
+            :urgencyColumn="3"
+            :statusColumn="4"
+            :activeId="selectedTrackingCode"
+            :action-column-index="5"
+            class="w-full"
+            @detail="onRowClick"
+          >
+            <template #cell-1="{ row }">
+              <a
+                href="#"
+                @click.prevent="router.push(`/main/repair-detail/${row[1]}`)"
+                class="text-blue-600 hover:text-blue-800 underline whitespace-nowrap"
+              >
+                {{ row[1] }}
+              </a>
+            </template>
+          </TableComponent>
+        </div>
       </div>
 
-      <div class="col-span-4 bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+      <div class="lg:col-span-4 bg-white rounded-xl border border-slate-200 shadow-sm p-4 sm:p-5">
         <div class="border-b border-slate-200 pb-3 mb-4">
           <div class="flex justify-between items-center mb-1">
-            <h2 class="text-xl font-bold">ตรวจสอบสถานะ</h2>
+            <h2 class="text-lg sm:text-xl font-bold">ตรวจสอบสถานะ</h2>
           </div>
           <div>
             <p class="text-sm text-gray-500 mt-1">
-              หมายเลขแจ้งซ่อม:
+              หมายเลขแจ้งซ่อม :
               <span v-if="selectedTrackingCode" class="font-semibold text-indigo-600">
                 #{{ selectedTrackingCode }}
               </span>
               <span v-else>-</span>
             </p>
             <p class="text-sm text-gray-500">
-              <span class="font-medium">ประเภท: </span>
+              <span class="font-medium">ประเภท : </span>
               <span
                 v-if="selectedRepairDetail"
                 class="text-sm font-semibold text-gray-600 break-words"
@@ -298,7 +299,7 @@ onMounted(() => {
             </p>
 
             <p class="text-sm text-gray-500">
-              <span class="font-medium">สถานที่: </span>
+              <span class="font-medium">สถานที่ : </span>
               <span
                 v-if="selectedRepairDetail"
                 class="text-sm font-semibold text-gray-600 break-words"
@@ -309,7 +310,7 @@ onMounted(() => {
               <span v-else>-</span>
             </p>
             <p class="text-sm text-gray-500 mt-1">
-              หัวข้อปัญหา:
+              เรื่องที่แจ้ง :
               <span
                 v-if="selectedRepairDetail"
                 class="text-sm font-semibold text-gray-600 break-words"
@@ -320,7 +321,7 @@ onMounted(() => {
             </p>
 
             <p class="text-sm text-gray-500 mt-1">
-              รายละเอียด/อาการ:
+              สาเหตุ/อาการ :
               <span
                 v-if="selectedRepairDetail"
                 class="text-sm font-semibold text-gray-600 break-words"
@@ -336,7 +337,7 @@ onMounted(() => {
           <p v-if="isTimelineLoading" class="text-sm text-gray-400 text-center py-4">
             กำลังโหลดสถานะการดำเนินงาน...
           </p>
-          <RepairStatusTimeline v-else :timeline-steps="selectedTimelineSteps" />
+          <RepairStatusTimeline v-else :timeline-steps="selectedTimelineStepsList" />
         </div>
       </div>
     </div>

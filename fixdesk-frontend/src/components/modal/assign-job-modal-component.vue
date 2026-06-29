@@ -1,13 +1,39 @@
+/**
+ * =====================================================================
+ * @file            assign-job-modal-component.vue
+ * @module          มอดูลจัดการงานซ่อม - มอบหมายงานให้ช่าง
+ * @layer           Component (Presentation Layer)
+ * @version         1.0.1
+ * @since           2025-10-21
+ * @author          เศรษฐพงศ์ หอมชื่น
+ * @contributors
+ *
+ * @lastModified    2026-02-27
+ * @lastModifiedBy  เศรษฐพงศ์ หอมชื่น
+ * ---------------------------------------------------------------------
+ * @description
+ *  โมดูล UI สำหรับเลือกช่างและมอบหมายงานซ่อม ให้ผู้ใช้เลือกช่าง,
+ *  กรองตามประเภทช่าง และยืนยันการมอบหมายงาน ส่ง event กลับไปยัง
+ *  parent เมื่อมอบหมายสำเร็จ
+ *  - แสดงรายการช่างว่าง
+ *  - เลือกช่างเพื่อมอบหมายงาน
+ *  - แสดงประเภทช่างและความพร้อม
+ * ---------------------------------------------------------------------
+ * @changelog
+ *
+ * =====================================================================
+ */
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import Swal from 'sweetalert2'
+import { Icon } from '@iconify/vue'
 
 const props = defineProps({
-  repairId: { type: [String, Number], required: true }
+  repairId: { type: [String, Number], required: true },
 })
 
 // ส่ง Event กลับไปหาแม่
-const emit = defineEmits(['close', 'success'])
+const emit = defineEmits(['close', 'completed'])
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000'
 
@@ -43,14 +69,14 @@ async function fetchTechnicians() {
       animation: false,
       showConfirmButton: false,
       timer: 3000,
-      timerProgressBar: true
+      timerProgressBar: true,
     })
     Toast.fire({
       title: 'เกิดข้อผิดพลาด',
       text: 'ไม่สามารถโหลดรายชื่อช่างได้',
       icon: 'error',
-      background: '#fee2e2',
-      color: '#dc2626'
+      background: '#FFFFFF',
+      color: '#dc2626',
     })
   }
 }
@@ -63,7 +89,7 @@ const filteredTechnicians = computed(() =>
       !searchTech.value ||
       `${t.us_first_name} ${t.us_last_name}`.toLowerCase().includes(searchTech.value.toLowerCase())
     return matchType && matchSearch
-  })
+  }),
 )
 
 // Methods
@@ -83,6 +109,10 @@ function closeDropdown(e) {
 }
 
 async function confirmAssign() {
+  console.log('🔵 [Assign Modal] confirmAssign called')
+  console.log('🔵 [Assign Modal] repairId:', props.repairId)
+  console.log('🔵 [Assign Modal] selectedTechnician:', selectedTechnician.value)
+
   if (!selectedTechnician.value) {
     const Toast = Swal.mixin({
       toast: true,
@@ -90,13 +120,13 @@ async function confirmAssign() {
       animation: false,
       showConfirmButton: false,
       timer: 2000,
-      timerProgressBar: true
+      timerProgressBar: true,
     })
     Toast.fire({
       title: 'กรุณาเลือกช่างผู้รับผิดชอบ',
       icon: 'warning',
-      background: '#fef3c7',
-      color: '#d97706'
+      background: '#FFFFFF',
+      color: '#d97706',
     })
     return
   }
@@ -104,14 +134,14 @@ async function confirmAssign() {
   loadingAssign.value = true
   try {
     // ดึง user id จาก token
-    let assignedBy = null;
-    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    let assignedBy = null
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token')
     if (token) {
       try {
-        const decoded = (await import('jwt-decode')).default(token);
-        assignedBy = decoded.us_id || decoded.id;
+        const decoded = (await import('jwt-decode')).default(token)
+        assignedBy = decoded.us_id || decoded.id
       } catch (err) {
-        assignedBy = null;
+        assignedBy = null
       }
     }
 
@@ -121,73 +151,106 @@ async function confirmAssign() {
       body: JSON.stringify({
         rf_code: props.repairId,
         technician_id: selectedTechnician.value,
+        is_lead: true, // มอบหมายเป็นผู้รับผิดชอบหลัก
         ra_assigned_by: assignedBy, // ส่ง id ผู้มอบหมายไปด้วย
       }),
     })
 
     const resBody = await res.json()
+    console.log('🟢 [Assign Modal] API Response:', { ok: res.ok, status: res.status, body: resBody })
 
-    if (!res.ok) {
-      const msg = resBody.message || 'มอบหมายงานไม่สำเร็จ'
-      if (msg.includes('มอบหมายแล้ว') || msg.includes('ถูกมอบหมายแล้ว')) {
-        const Toast = Swal.mixin({
-          toast: true,
-          position: 'top-end',
-          animation: false,
-          showConfirmButton: false,
-          timer: 2500,
-          timerProgressBar: true
-        })
-        Toast.fire({
-          title: 'แจ้งเตือน',
-          text: msg,
-          icon: 'info',
-          background: '#e0f2fe',
-          color: '#0277bd'
-        })
-        emit('success')
-        emit('close')
-        return
-      }
-      throw new Error(msg)
+    // ถ้า rate limit แจ้งเตือน user เพียงอย่างเดียว แล้วดำเนินการต่อโดยไม่ส่ง LINE
+    if (res.status === 429 || resBody.errorType === 'RATE_LIMIT_EXCEEDED') {
+      await Swal.fire({
+        toast: true,
+        position: 'top-end',
+        animation: false,
+        showConfirmButton: false,
+        icon: 'warning',
+        title: 'ถึงขีดจำกัดในการส่งแจ้งเตือน LINE',
+        text: 'ข้อมูลของคุณถูกบันทึกแล้ว',
+        timer: 1000,
+        timerProgressBar: true,
+        background: '#fef3c7',
+        color: '#92400e',
+      })
+      loadingAssign.value = false
+      emit('completed')
+      emit('close')
+      return
     }
 
-    const Toast = Swal.mixin({
+    // เช็คกรณี "มอบหมายแล้ว" แม้ว่า res.ok = true
+    const msg = resBody.message || ''
+    if (msg.includes('มอบหมายแล้ว') || msg.includes('ถูกมอบหมายแล้ว')) {
+      await Swal.fire({
+        toast: true,
+        position: 'top-end',
+        animation: false,
+        timer: 2500,
+        timerProgressBar: true,
+        title: 'แจ้งเตือน',
+        text: msg,
+        icon: 'info',
+        background: '#FFFFFF',
+        color: '#0277bd',
+      })
+      loadingAssign.value = false
+      console.log('🟡 [Assign Modal] Already assigned - emitting completed & close')
+      emit('completed')
+      emit('close')
+      return
+    }
+
+    if (!res.ok) {
+      await Swal.fire({
+        toast: true,
+        position: 'top-end',
+        animation: false,
+        timer: 3000,
+        timerProgressBar: true,
+        title: 'เกิดข้อผิดพลาด',
+        text: msg || 'มอบหมายงานไม่สำเร็จ',
+        icon: 'error',
+        background: '#FFFFFF',
+        color: '#dc2626',
+      })
+      loadingAssign.value = false
+      return
+    }
+
+    await Swal.fire({
       toast: true,
       position: 'top-end',
       animation: false,
-      showConfirmButton: false,
       timer: 3000,
       timerProgressBar: true,
       didOpen: (toast) => {
         toast.addEventListener('mouseenter', Swal.stopTimer)
         toast.addEventListener('mouseleave', Swal.resumeTimer)
-      }
-    })
-    Toast.fire({
+      },
       title: 'มอบหมายงานเรียบร้อยแล้ว',
       icon: 'success',
-      background: '#f0f9ff',
-      color: '#1e3a8a'
+      background: '#FFFFFF',
+      color: '#1e3a8a',
     })
-    emit('success')
+    loadingAssign.value = false
+    console.log('✅ [Assign Modal] Success - emitting completed & close')
+    emit('completed')
     emit('close')
-
   } catch (err) {
-    const Toast = Swal.mixin({
+    console.error('❌ [Assign Modal] Error:', err)
+    await Swal.fire({
       toast: true,
       position: 'top-end',
       animation: false,
-      showConfirmButton: false,
       timer: 3000,
-      timerProgressBar: true
-    })
-    Toast.fire({
+      timerProgressBar: true,
       title: 'เกิดข้อผิดพลาด',
       text: err.message,
       icon: 'error',
-      background: '#fee2e2',
-      color: '#dc2626'
+      background: '#FFFFFF',
+      color: '#dc2626',
     })
   } finally {
     loadingAssign.value = false
@@ -206,8 +269,8 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-    <div class="bg-white rounded-lg shadow-lg w-full max-w-xl p-8 relative">
+  <div class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black bg-opacity-40">
+    <div class="bg-white rounded-t-2xl sm:rounded-lg shadow-lg w-full sm:max-w-xl p-6 sm:p-8 relative max-h-[90dvh] flex flex-col">
       <h2 class="text-lg sm:text-xl font-bold text-black mb-6">มอบหมายงานให้ผู้รับผิดชอบหลัก</h2>
       <button
         @click="$emit('close')"
@@ -223,8 +286,9 @@ onBeforeUnmount(() => {
             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none flex justify-between items-center bg-white text-gray-700 h-10"
           >
             <span class="truncate">{{ selectedType || 'ประเภทช่างทั้งหมด' }}</span>
-            <img
-              src="/icon/sidebar/chevron-down-icon.svg"
+            <Icon
+              icon="meteor-icons:chevron-down"
+              style="color: gray"
               class="w-4 h-4 opacity-70 transition-transform duration-200 flex-shrink-0"
               :class="{ 'rotate-180': showAssignTypeFilter }"
             />
@@ -263,7 +327,7 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
-      <div class="space-y-2 overflow-y-auto max-h-60">
+      <div class="space-y-2 overflow-y-auto flex-1 min-h-0 max-h-60 sm:max-h-72">
         <div
           v-for="tech in filteredTechnicians"
           :key="tech.us_id"
@@ -294,14 +358,14 @@ onBeforeUnmount(() => {
       <div class="flex justify-end gap-3 mt-6">
         <button
           @click="$emit('close')"
-          class="px-5 py-2 font-medium text-gray-700 transition bg-gray-200 rounded-md hover:bg-gray-300"
+          class="flex-1 sm:flex-none px-5 py-2 font-medium text-white transition bg-neutral-300 rounded-md hover:bg-neutral-400"
         >
           ยกเลิก
         </button>
         <button
           @click="confirmAssign"
           :disabled="!selectedTechnician || loadingAssign"
-          class="px-5 py-2 font-medium text-white transition bg-[#1E48D1] rounded-md hover:bg-blue-900 disabled:opacity-50"
+          class="flex-1 sm:flex-none px-5 py-2 font-medium text-white transition bg-blue-700 rounded-md hover:bg-blue-800 disabled:opacity-50"
         >
           {{ loadingAssign ? 'กำลังมอบหมาย...' : 'ยืนยัน' }}
         </button>

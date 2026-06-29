@@ -1,27 +1,68 @@
 <script setup>
-/* =========================
-  Imports (external)
-========================= */
+/**
+ * =====================================================================
+ * @file            admin-home.view.vue
+ * @module          -
+ * @layer           View (Presentation Layer)
+ * @version         1.0.3
+ * @since           2025-10-21
+ * @author          เศรษฐพงศ์ หอมชื่น
+ * @contributors
+     - พชร ไพศรีสกุล
+     - นราธิป แสนทวีสุข
+     - ปฏิพัทธ์ จงนันทพันธ์กุล
+     - พิมลพรรณ มามาก
+ *
+ * @lastModified    2026-03-05
+ * @lastModifiedBy  เศรษฐพงศ์ หอมชื่น
+ * ---------------------------------------------------------------------
+ * @description
+ *  หน้าจอหลักสำหรับผู้ดูแลระบบ
+ *  ใช้สำหรับ:
+ *   - แสดงสถิติของงานซ่อม (รายเดือน / วันนี้ / กำลังดำเนินการ / เสร็จสิ้น 7 วัน)
+ *   - แสดงตารางรายการแจ้งซ่อมทั้งหมด
+ *
+ * @requires
+ *  - vue
+ *  - vue-router
+ *  - @/services/repair
+ *  - @/composables/useUserProfile
+ *  - @/composables/useAuthToken
+ *  - @/composables/useTruncateText
+ *  - @/components/card-home-component.vue
+ *  - @/components/table-component.vue
+ *  - @/components/button/repair-button-component.vue
+ *  - @/components/button/info-button-component.vue
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *   - แก้ไขข้อความคำอธิบายสถานะ
+ *     [2026-02-17, ปฏิพัทธ์ จงนันทพันธ์กุล] V1.0.0
+ *   - แก้ไขข้อความคำอธิบายสถานะ, แก้ไขการใช้สัญลักษณ์
+ *     [2026-02-20, ปฏิพัทธ์ จงนันทพันธ์กุล] V1.0.1
+ *   - ดึงข้อมูลชื่อผู้ใช้ :
+ *     [2026-02-21, พิมลพรรณ มามาก] V1.0.2
+ *   - ลบคำว่า "ที่ผ่านมา" ออกจากการ์ด V1.0.3
+ *     [2026-03-05, เศรษฐพงศ์ หอมชื่น] V1.0.3
+ * =====================================================================
+ */
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 
-/* =========================
-  Imports (components)
-========================= */
-import CardHomeComponent from '@/components/card-home-component.vue'
-import repairButtonComponent from '@/components/repair-button-component.vue'
-import TableComponent from '@/components/table-component.vue'
+import { getAdminRepairList } from '@/services/repair'
 
-/* =========================
-  Imports (composables)
-========================= */
+import CardHomeComponent from '@/components/card-home-component.vue'
+import TableComponent from '@/components/table-component.vue'
+import InfoButtonComponent from '@/components/button/info-button-component.vue'
+
 import { useUserProfile } from '@/composables/useUserProfile.js'
 import { useAuthToken } from '@/composables/useAuthToken'
+import { handleUnauthorized } from '@/utils/auth.util'
+import { useTruncateText } from '@/composables/useTruncateText.js'
 
-/* =========================
-  Constants
-========================= */
-const API_BASE = import.meta.env.VITE_API_BASE
+const { truncateSentences } = useTruncateText()
+
+
 const TH_LOCALE = 'th-TH'
 
 const STATUS = {
@@ -32,20 +73,11 @@ const STATUS = {
   cancelled: 'cancelled',
 }
 
-/* =========================
-  Router
-========================= */
 const router = useRouter()
 
-/* =========================
-  Composables
-========================= */
 const { token, isAuthenticated, logout } = useAuthToken()
-const { displayName, displayDepartment, fetchUserProfile } = useUserProfile(API_BASE)
+const { userDisplayName, userDepartmentName, fetchUserProfileData } = useUserProfile()
 
-/* =========================
-  State
-========================= */
 const repairRequests = ref([])
 const loading = ref(false)
 const error = ref(null)
@@ -99,14 +131,22 @@ function buildDetailHtml(r) {
 
   // NOTE: คงรูปแบบ </br> เดิมไว้เพื่อไม่กระทบ UI ของ TableComponent
   return (
-    'วันที่แจ้ง: ' +
+    'วันที่แจ้งซ่อม : ' +
     formatThaiDate(r.rf_create_at) +
     '</br>' +
-    'ชื่อผู้แจ้ง: ' +
+    'ชื่อผู้แจ้ง : ' +
     reporterName +
     '</br>' +
-    'หน่วยงาน: ' +
-    (r.department_name || '-')
+    'หน่วยงาน : ' +
+    (r.department_name || '-') +
+    '</br>' +
+    'เรื่องที่แจ้ง : ' +
+    truncateSentences(r.rf_problem, 1) +
+    '</br>' +
+    'สถานที่ : ' +
+    (r.bd_name ?? '-') + ' ' +
+    'ชั้น ' + (r.fl_name ?? '-') + ' ' +
+    (r.room_name ?? '-')
   )
 }
 
@@ -114,14 +154,7 @@ function mapRepairToRow(r) {
   const rawDate = toDateSafe(r.rf_create_at)
 
   return {
-    row: [
-      r.rf_code,
-      r.tt_name,
-      buildDetailHtml(r),
-      r.rf_urgency,
-      r.rf_user_status,
-      '',
-    ],
+    row: [r.rf_code, r.tt_name, buildDetailHtml(r), r.rf_urgency, r.rf_user_status, ''],
     meta: r,
     rawDate,
   }
@@ -146,23 +179,15 @@ async function fetchRepairRequests() {
       return
     }
 
-    const response = await fetch(`${API_BASE}/admin/repairs`, {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${token.value}`,
-        'Content-Type': 'application/json',
-      },
-    })
-
-    const payload = await response.json().catch(() => null)
-
-    if (!response.ok) {
-      throw new Error(payload?.message || 'โหลดข้อมูลล้มเหลว')
-    }
+    const payload = await getAdminRepairList(token.value)
 
     const repairs = normalizeRepairs(payload)
     repairRequests.value = repairs.map(mapRepairToRow)
   } catch (e) {
+    if (e?.status === 401 || e?.message?.includes('401')) {
+      handleUnauthorized(router)
+      return
+    }
     error.value = e?.message || 'เกิดข้อผิดพลาด'
   } finally {
     loading.value = false
@@ -217,8 +242,8 @@ const rowsForDisplay = computed(() => filteredRequests.value.map((item) => item.
 /* =========================
   Computed: Stats
 ========================= */
-const allTasks = computed(() =>
-  repairRequests.value.filter((r) => isCurrentMonth(r) && r.meta?.rf_user_status).length
+const allTasks = computed(
+  () => repairRequests.value.filter((r) => isCurrentMonth(r) && r.meta?.rf_user_status).length,
 )
 
 const todayTasks = computed(() => repairRequests.value.filter((r) => isToday(r)).length)
@@ -237,24 +262,24 @@ const completedTasks = computed(
 const statItems = computed(() => [
   {
     value: allTasks.value,
-    label: 'รายการแจ้งซ่อมทั้งหมดในเดือนนี้',
+    label: 'จำนวนงานซ่อมในเดือนนี้',
     colorClass: 'text-red-500',
   },
   {
     value: todayTasks.value,
-    label: 'รายการแจ้งซ่อมทั้งหมดภายในวันนี้',
+    label: 'จำนวนงานซ่อมในวันนี้',
     colorClass: 'text-amber-500',
     filterKey: 'today',
   },
   {
     value: progressTasks.value,
-    label: 'รายการแจ้งซ่อมที่กำลังดำเนินการ',
+    label: 'จำนวนงานซ่อมที่กำลังดำเนินการ',
     colorClass: 'text-blue-500',
     filterKey: 'in_progress',
   },
   {
     value: completedTasks.value,
-    label: 'รายการแจ้งซ่อมที่เสร็จสิ้นในระยะเวลา 7 วัน',
+    label: 'จำนวนงานซ่อมที่เสร็จสิ้นภายใน 7 วัน',
     colorClass: 'text-green-500',
     filterKey: 'completed_7days',
   },
@@ -268,15 +293,15 @@ function handleCardClick(item) {
 }
 
 function goToRepairDetail(ticketId) {
-  router.push(`/main/repair-detail/${ticketId}`)
+  router.push({ path: `/main/repair-detail/${ticketId}`, state: { fromAdmin: true } })
 }
 
 /* =========================
   Lifecycle
 ========================= */
 onMounted(() => {
+  fetchUserProfileData()
   fetchRepairRequests()
-  fetchUserProfile()
 })
 </script>
 
@@ -286,18 +311,14 @@ onMounted(() => {
     <div class="flex justify-between items-center mb-6">
       <div>
         <p class="text-2xl font-extrabold text-gray-900">
-          หน้าหลักผู้ดูแลระบบ สวัสดีคุณ {{ displayName }}
+          หน้าจอหลักของผู้ดูแลระบบ - สวัสดีคุณ{{ userDisplayName }}
         </p>
 
         <p class="text-lg font-semibold text-gray-700">
-          {{ displayDepartment }}
+          {{ userDepartmentName }}
         </p>
 
-        <p class="text-sm text-gray-500">ตรวจสอบสถานะและดำเนินการงานแจ้งซ่อม</p>
-      </div>
-
-      <div class="flex space-x-2">
-        <repairButtonComponent />
+        <p class="text-sm text-gray-500">ตรวจสอบสถานะของรายการแจ้งซ่อม และมอบหมายงานซ่อม</p>
       </div>
     </div>
 
@@ -310,10 +331,10 @@ onMounted(() => {
         :columns="[
           'หมายเลขแจ้งซ่อม',
           'ประเภทงาน',
-          'รายละเอียด',
+          'รายละเอียดโดยย่อ',
           'ความเร่งด่วน',
           'สถานะงาน',
-          'การดำเนินการ',
+          'ตัวดำเนินการ',
         ]"
         :rows="rowsForDisplay"
         :perPage="10"
@@ -321,17 +342,12 @@ onMounted(() => {
         :statusColumn="4"
         :columnAlign="['left', 'left', 'left', 'center', 'center', 'center']"
         :id-column-index="0"
+        :id-column-as-link="true"
+        :action-column-index="5"
         @detail="goToRepairDetail"
       >
         <template #cell-5="{ row }">
-          <div class="flex justify-center">
-            <button
-              @click="goToRepairDetail(row[0])"
-              class="flex items-center gap-2 px-2 py-2 rounded-md bg-[#1E48D1] hover:bg-[#163A9B] text-white"
-            >
-              <img src="/icon/info-icon.svg" class="h-4 w-4" />
-            </button>
-          </div>
+          <InfoButtonComponent @click="goToRepairDetail(row[0])" />
         </template>
       </TableComponent>
     </div>

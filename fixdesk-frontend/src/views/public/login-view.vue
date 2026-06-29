@@ -1,0 +1,157 @@
+<script setup>
+/**
+ * =====================================================================
+ * @file            login.view.vue
+ * @module          มอดูล Authentication - การจัดการสิทธิ์ผู้ใช้งาน
+ * @layer           View (Presentation Layer)
+ * @version         1.0.1
+ * @since           2025-10-22
+ * @author          พชร ไพศรีสกุล
+ * @lastModified    2026-02-20
+ * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
+ * ---------------------------------------------------------------------
+ * @description
+ *  หน้าจอสำหรับเข้าสู่ระบบ FixDesk
+ *  กรอกข้อมูลด้วย:
+ *    - ช่องกรอกชื่อผู้ใช้ (username)
+ *    - ช่องกรอกรหัสผ่าน (password)
+ *    - ตัวเลือก "จำฉันไว้" (isRememberMe)
+ *
+ * @requires
+ *  - @iconify/vue
+ *  - @/composables/useLogin
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ * - แก้ไขข้อความคำอธิบาย "จำฉันไว้"   [2026-02-17, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ * - แก้ไขข้อความปุ่มลงชื่อเข้าใช้        [2026-02-19, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ * - เพิ่มการกดดูรหัสผ่าน              [2026-03-16, พชร  ไพศรีสกุล]
+ * =====================================================================
+ */
+import { ref } from 'vue'
+import { Icon } from '@iconify/vue'
+import { useLogin } from '@/composables/useLogin'
+
+import LogoFIXDESK from '@/assets/icons/Logo.png'
+import Logo92Tech from '@/assets/icons/92Tech-logo.png'
+
+// ดึงข้อมูลและฟังก์ชันจาก composable
+const {
+  username, // ชื่อผู้ใช้ที่ป้อนเข้า
+  password, // รหัสผ่านที่ป้อนเข้า
+  errorMessage, // ข้อความข้อผิดพลาดจากการเข้าสู่ระบบ (หากมี)
+  isLoading, // สถานะการโหลด (จริง = กำลังประมวลผล, เท็จ = เสร็จสิ้น)
+  isRememberMe, // สถานะการบันทึกการเข้าสู่ระบบ
+  handleLogin, // ฟังก์ชันสำหรับการเข้าสู่ระบบ
+} = useLogin()
+
+const showPassword = ref(false)
+
+const togglePassword = () => {
+  showPassword.value = !showPassword.value
+}
+</script>
+
+<template>
+  <!-- หัวข้อหลัก - พื้นหลังและการจัดเรียง -->
+  <div
+    class="min-h-screen flex items-center justify-center bg-gradient-to-b from-blue-50 to-blue-200 bg-center px-4 py-8"
+  >
+    <div
+      class="relative overflow-x-hidden overflow-y-visible bg-white/95 rounded-xl shadow-xl w-full max-w-sm sm:max-w-xl lg:max-w-3xl flex flex-col lg:flex-row items-center gap-6 sm:gap-8 p-6 sm:p-10"
+    >
+      <div class="flex flex-col items-center justify-center flex-1">
+        <img
+          :src="Logo92Tech"
+          alt="92 Tech logo"
+          class="hidden md:block absolute top-4 left-4 w-8 sm:w-10"
+        />
+        <img :src="LogoFIXDESK" alt="FixDesk logo" class="w-32 sm:w-40 lg:w-48 h-auto" />
+      </div>
+
+      <!-- ส่วนฟอร์มเข้าสู่ระบบ -->
+      <div class="flex-1 flex flex-col items-center w-full">
+        <h1 class="text-2xl sm:text-3xl font-bold text-[#1E48D1] mb-4 sm:mb-6">เข้าสู่ระบบ</h1>
+        <form class="flex flex-col gap-4 w-full max-w-sm" @submit.prevent="handleLogin">
+          <input
+            v-model="username"
+            type="text"
+            aria-label="ชื่อผู้ใช้"
+            placeholder="ชื่อผู้ใช้"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 text-base placeholder-gray-400"
+          />
+
+          <div class="relative w-full">
+            <input
+              v-model="password"
+              autocomplete="current-password"
+              :type="showPassword ? 'text' : 'password'"
+              aria-label="รหัสผ่าน"
+              placeholder="รหัสผ่าน"
+              class="w-full px-3 py-2 pr-11 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 text-base placeholder-gray-400 transition"
+            />
+
+            <button
+              type="button"
+              aria-label="แสดงหรือซ่อนรหัสผ่าน"
+              @click="togglePassword"
+              class="absolute right-2 top-1/2 -translate-y-1/2 flex items-center justify-center w-8 h-8 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition"
+            >
+              <Icon :icon="showPassword ? 'mdi:eye-off-outline' : 'mdi:eye-outline'" width="20" />
+            </button>
+          </div>
+
+          <label class="flex items-center gap-2 text-sm text-gray-700 relative">
+            <input
+              v-model="isRememberMe"
+              type="checkbox"
+              class="h-4 w-4 rounded border-gray-300 text-[#1E48D1] focus:ring-[#1E48D1]"
+            />
+            <span>จำฉันไว้</span>
+
+            <span
+              class="group relative inline-flex items-center justify-center w-4 h-4 text-[10px] rounded-full text-gray-400 cursor-pointer select-none hover:text-gray-600 transition"
+              aria-label="คำอธิบายการจำฉันไว้"
+              tabindex="0"
+            >
+              <Icon icon="fluent:info-16-filled" width="16" height="16" style="color: #8e8e8e" />
+              <div
+                class="absolute z-50 bottom-full left-0 mt-2 w-72 max-w-[calc(100vw-4rem)] p-3 text-xs text-white bg-gray-800 rounded-lg opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity pointer-events-none text-left"
+              >
+                <p class="mb-1">หากเลือก ระบบจะบันทึกข้อมูลการเข้าสู่ระบบไว้ในอุปกรณ์นี้</p>
+                <ul class="list-disc list-outside pl-5 space-y-1 text-gray-200">
+                  <li>สามารถเข้าสู่ระบบได้โดยไม่ต้องกรอกชื่อผู้ใช้ และรหัสผ่านใหม่</li>
+                  <li>หากไม่มีการใช้งาน บัญชีจะออกจากระบบเองโดยอัตโนมัติเมื่อถึงเวลาที่กำหนด</li>
+                </ul>
+                <p class="text-red-500">
+                  คำเตือน!
+                  <span class="text-yellow-200">แนะนำให้ใช้ฟังก์ชันนี้บนอุปกรณ์ส่วนตัว</span>
+                </p>
+              </div>
+            </span>
+          </label>
+
+          <button
+            type="submit"
+            :disabled="isLoading"
+            class="w-full py-2 rounded-md bg-[#1E48D1] text-white font-medium text-base hover:bg-blue-700 transition-colors disabled:opacity-60"
+          >
+            {{ isLoading ? 'กำลังเข้าสู่ระบบ...' : 'ลงชื่อเข้าใช้' }}
+          </button>
+        </form>
+
+        <!-- ส่วนข้อมูลข้อผิดพลาด -->
+        <!-- Container สำหรับแสดงข้อความข้อผิดพลาด -->
+        <div class="min-h-[1.25rem] mt-3">
+          <!-- แสดงข้อความข้อผิดพลาด (ถ้ามี) -->
+          <p v-if="errorMessage" class="text-red-600 text-center text-sm font-medium">
+            {{ errorMessage }}
+          </p>
+        </div>
+      </div>
+      <span class="absolute bottom-2 sm:bottom-4 left-1/2 -translate-x-1/2 lg:left-6 lg:translate-x-0 text-[10px] sm:text-xs text-gray-400 whitespace-nowrap">
+        Powered by 92 Tech co,.ltd
+      </span>
+    </div>
+  </div>
+</template>

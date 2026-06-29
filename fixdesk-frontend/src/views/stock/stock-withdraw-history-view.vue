@@ -1,9 +1,67 @@
+
+/**
+ * =====================================================================
+ * @file            stock-withdraw-history-view.vue
+ * @module          -
+ * @layer           View (Presentation Layer)
+ * @version         1.0.2
+ * @since           2025-10-21
+ * @author          พชร ไพศรีสกุล
+ * @lastModified    2026-03-13
+ * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
+ * ---------------------------------------------------------------------
+ * @description
+ *  หน้าจอสำหรับแสดงประวัติการเบิกของทั้งหมดของผู้ดูแลคลัง
+ *  แสดงเฉพาะรายการเบิกที่มีให้ผลการอนุมัติแล้ว:
+ *   - approved
+ *   - rejected
+ *   - completed
+ *
+ *  การปรับปรุงล่าสุด:
+ *   - ปรับข้อความบางส่วนในหน้าจอให้ชัดเจนขึ้น
+ *   - เพิ่มการแสดง Toast แจ้งเตือนหลังจาก redirect
+ *     จากหน้าการดำเนินการก่อนหน้า
+ *   - ใช้ sessionStorage ควบคุมการแสดง Toast
+ *     เพื่อไม่ให้แสดงซ้ำเมื่อรีเฟรชหน้า
+ *
+ *  รองรับการค้นหาด้วย:
+ *   - หมายเลขรายการเบิก (sf_code)
+ *   - หน่วยงาน (us_department)
+ *   - รายละเอียดการเบิก
+ *  รองรับการกรองตาม:
+ *   - สถานะการเบิก
+ *   - วันที่สร้างใบเบิก
+ *  และสามารถกดดูรายละเอียดใบเบิกแต่ละรายการได้
+ *
+ * @requires
+ *  - vue
+ *  - vue-router
+ *  - sweetalert2
+ *  - @/components/table-component.vue
+ *  - @/components/filters/repair-filter-bar-component.vue
+ *  - @/components/button/info-button-component.vue
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *  - แก้ไขข้อความหัวตาราง                      [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *  - แก้ไขข้อความในตารางแสดงข้อมูล             [2026-02-20, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *  - ปรับข้อความในหน้าจอ และเพิ่ม Toast หลัง redirect
+ *    โดยควบคุมการแสดงผลผ่าน sessionStorage     [2026-02-21, ธนภัทร จันทร์งาม]
+ *  - แก้ไข alert         [2026-03-06, เศรษฐพงศ์ หอมชื่น]
+ *  - แก้ไขคำ alert  [2026-03-13, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *  - เปลี่ยนมาใช้ handleUnauthorized จาก auth.util แทนการเขียน Swal เอง
+ * =====================================================================
+ */
+
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import TableComponent from '@/components/table-component.vue'
 import RepairFilterBar from '@/components/filters/repair-filter-bar-component.vue'
+import InfoButtonComponent from '@/components/button/info-button-component.vue'
+
 import Sweetalert from 'sweetalert2'
+import { handleUnauthorized } from '@/utils/auth.util'
 
 defineOptions({ name: 'StockWithdrawHistoryView' })
 
@@ -12,8 +70,8 @@ const router = useRouter()
 const API_BASE = import.meta.env.VITE_API_BASE
 
 // ==================== Table ====================
-const columns = ['รหัสใบเบิกของ', 'หน่วยงาน', 'รายละเอียด', 'สถานะการเบิก', 'ตัวดำเนินการ']
-const tableRows = ref([])
+const columns = ['หมายเลขรายการเบิก', 'หน่วยงาน', 'รายละเอียดการเบิก', 'สถานะการเบิก', 'ตัวดำเนินการ']
+const tableRowsList = ref([])
 
 // ==================== Filters (ใช้กับ RepairFilterBar) ====================
 const searchInput = ref('')
@@ -48,32 +106,31 @@ async function loadStockForms() {
     })
 
     if (res.status === 401) {
-      throw new Error('TOKEN_EXPIRED')
+      handleUnauthorized(router)
+      return
     }
 
     const data = await res.json()
     if (!res.ok) throw new Error(data.message)
 
-    tableRows.value = data
-      .filter(item =>
-        ['approved', 'rejected', 'completed'].includes(item.sf_status),
-      )
-      .map(item => ({
+    tableRowsList.value = data
+      .filter((item) => ['approved', 'rejected', 'completed'].includes(item.sf_status))
+      .map((item) => ({
         row: [
           item.sf_code, // 0
           item.us_department || '-', // 1
-          'วันที่: ' +
-            new Date(item.sf_create_at).toLocaleDateString('th-TH') +
-            '<br>' +
-            'ผู้ขอเบิก: ' +
-            item.requester +
-            '<br>' +
-            'สถานที่: ' +
-            item.bd_name +
-            ' ' +
-            item.fl_name +
-            ' ' +
-            item.room_name, // 2
+          'วันที่เบิก : ' +
+          new Date(item.sf_create_at).toLocaleDateString('th-TH') +
+          '<br>' +
+          'ผู้ขอเบิก : ' +
+          item.requester +
+          '<br>' +
+          'สถานที่ : ' +
+          item.bd_name +
+          ' ' +
+          'ชั้น ' + item.fl_name +
+          ' ' +
+          item.room_name, // 2
           item.sf_status, // 3
           '', // 4 action
         ],
@@ -82,16 +139,7 @@ async function loadStockForms() {
         },
       }))
   } catch (err) {
-    if (err.message === 'TOKEN_EXPIRED') {
-      Sweetalert.fire({
-        title: 'Session หมดอายุ',
-        text: 'กรุณาเข้าสู่ระบบใหม่',
-        icon: 'warning',
-      })
-      router.push('/login')
-    } else {
-      console.error(err)
-    }
+    console.error(err)
   }
 }
 
@@ -99,7 +147,7 @@ async function loadStockForms() {
 const filteredRows = computed(() => {
   const q = searchInput.value.toLowerCase()
 
-  return tableRows.value.filter(item => {
+  return tableRowsList.value.filter((item) => {
     const row = item.row
     const status = row[3]
 
@@ -109,12 +157,10 @@ const filteredRows = computed(() => {
       row[2].toLowerCase().includes(q)
 
     const matchesStatus =
-      selectedStatuses.value.length === 0 ||
-      selectedStatuses.value.includes(status)
+      selectedStatuses.value.length === 0 || selectedStatuses.value.includes(status)
 
     const matchesDate =
-      !selectedDate.value ||
-      toLocalYMD(item.meta.createdDate) === selectedDate.value
+      !selectedDate.value || toLocalYMD(item.meta.createdDate) === selectedDate.value
 
     return matchesSearch && matchesStatus && matchesDate
   })
@@ -128,39 +174,41 @@ function openDetail(code) {
 // ==================== Lifecycle ====================
 onMounted(() => {
   loadStockForms()
+
+  // ✅ อ่าน success จากหน้าก่อน
+  const successMsg = sessionStorage.getItem('stockWithdrawSuccess')
+
+  if (successMsg) {
+    Sweetalert.fire({
+      toast: true,
+      position: 'top-end',
+      icon: 'success',
+      title: successMsg,
+      showConfirmButton: false,
+      timer: 2500,
+      timerProgressBar: true,
+    })
+
+    // ✅ ลบทิ้งทันที ป้องกันเด้งซ้ำ
+    sessionStorage.removeItem('stockWithdrawSuccess')
+  }
 })
 </script>
 
 <template>
-  <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-7xl">
-    <h1 class="text-xl font-bold mb-6">ประวัติการเบิกของ</h1>
+  <div class="bg-white rounded-xl shadow-md p-8 mx-auto max-w-8xl">
+    <h1 class="text-xl font-bold mb-6">ประวัติการเบิกของทั้งหมด</h1>
 
     <!-- Filters -->
-    <RepairFilterBar
-      mode="stock"
-      v-model:search="searchInput"
-      v-model:statuses="selectedStatuses"
-      v-model:date="selectedDate"
-      @reset="resetFilters"
-    />
+    <RepairFilterBar mode="stock" v-model:search="searchInput" v-model:statuses="selectedStatuses"
+      v-model:date="selectedDate" @reset="resetFilters" />
 
     <!-- Table -->
-    <TableComponent
-      :columns="columns"
-      :rows="filteredRows.map(i => i.row)"
-      :perPage="10"
-      :statusStockColumn="3"
-      :columnAlign="['left', 'left', 'left', 'center', 'center']"
-    >
+    <TableComponent :columns="columns" :rows="filteredRows.map((i) => i.row)" :perPage="10" :statusStockColumn="3"
+      :columnAlign="['left', 'left', 'left', 'center', 'center']" :id-column-index="0" :id-column-as-link="true" :action-column-index="4"
+      @detail="openDetail">
       <template #cell-4="{ row }">
-        <div class="flex justify-center">
-          <button
-            @click="openDetail(row[0])"
-            class="flex items-center gap-2 px-2 py-2 rounded-md bg-blue-500 text-white hover:bg-blue-600"
-          >
-            <img src="/icon/info-icon.svg" class="h-4 w-4" />
-          </button>
-        </div>
+        <InfoButtonComponent @click="openDetail(row[0])" />
       </template>
     </TableComponent>
   </div>

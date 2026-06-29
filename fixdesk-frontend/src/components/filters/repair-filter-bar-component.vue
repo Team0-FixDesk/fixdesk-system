@@ -1,5 +1,46 @@
+/**
+ * =====================================================================
+ * @file            repair-filter-bar.component.vue
+ * @layer           Component (Presentation Layer)
+ * @version         1.0.0
+ * @since           2026-01-07
+ * @author          พชร ไพศรีสกุล
+ * @lastModified    2026-02-20
+ * @lastModifiedBy  ปฏิพัทธ์ จงนันทพันธ์กุล
+ * ---------------------------------------------------------------------
+ * @description
+ *  คอมโพเนนต์ช่องค้นหา และตัวกรองข้อมูล
+ *
+ *  ความสามารถ:
+ *   - ค้นหาข้อมูลด้วยข้อความ (Search)
+ *   - กรองตามวันที่
+ *   - กรองตามสถานะ (Multi-select)
+ *   - กรองตามระดับความเร่งด่วน (เฉพาะโหมด repair)
+ *   - รีเซ็ตตัวกรองทั้งหมด
+ *
+ *  พฤติกรรมจะปรับตาม props:
+ *   - mode ('repair' | 'stock')
+ *   - showStatus (Boolean)
+ *   - showUrgencies (Boolean)
+ *
+ * @emits
+ *   update:search
+ *   update:statuses
+ *   update:urgencies
+ *   update:date
+ *   reset
+ *
+ * ---------------------------------------------------------------------
+ * @changelog
+ *  - แก้ไขข้อความคำอธิบาย                  [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *  - แก้ไขสีของช่องกรอกข้อมูล และตัวกรองข้อมูล  [2026-02-18, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ *  - แก้ไขข้อความคำอธิบายขณะ Hover         [2026-02-20, ปฏิพัทธ์ จงนันทพันธ์กุล]
+ * =====================================================================
+ */
+
 <script setup>
 import { ref, computed } from 'vue'
+import { Icon } from '@iconify/vue'
 
 /* ==================== Props ==================== */
 const props = defineProps({
@@ -32,6 +73,12 @@ const props = defineProps({
     type: Boolean,
     default: true,
   },
+
+  /* คุมว่าจะแสดง filter วันที่ไหม */
+  showDate: {
+    type: Boolean,
+    default: true,
+  },
 })
 
 const emit = defineEmits([
@@ -49,12 +96,11 @@ const isUrgencyOpen = ref(false)
 /* ==================== Mode ==================== */
 const isRepair = computed(() => props.mode === 'repair')
 const isStock = computed(() => props.mode === 'stock')
+const isAdmin = computed(() => props.mode === 'admin')
 
 /* ==================== UI Config ==================== */
 const searchPlaceholder = computed(() =>
-  isStock.value
-    ? 'ค้นหาใบเบิก / หน่วยงาน / รายละเอียด'
-    : 'ค้นหาใบแจ้งซ่อม / หน่วยงาน / ครุภัณฑ์',
+  isStock.value ? 'ค้นหาใบเบิก / หน่วยงาน / รายละเอียด' : 'ค้นหาหมายเลขแจ้งซ่อม/ประเภทงาน/รายละเอียด',
 )
 
 /* ==================== Status Options ==================== */
@@ -63,6 +109,12 @@ const statusOptions = computed(() => {
     return [
       { value: 'approved', label: 'อนุมัติแล้ว' },
       { value: 'rejected', label: 'ไม่อนุมัติ' },
+    ]
+  }else if (isAdmin.value) {
+    return [
+      { value: 'pending', label: 'รอดำเนินการ' },
+      { value: 'in_progress', label: 'กำลังดำเนินการ' },
+
     ]
   }
 
@@ -86,51 +138,44 @@ function toggleUrgency() {
 }
 
 function toggleValue(list, value, emitName) {
-  emit(
-    emitName,
-    list.includes(value)
-      ? list.filter(v => v !== value)
-      : [...list, value],
-  )
+  emit(emitName, list.includes(value) ? list.filter((v) => v !== value) : [...list, value])
 }
 </script>
 
 <template>
   <div class="mb-6">
     <div class="flex flex-wrap items-center justify-between gap-3">
-
       <!-- LEFT -->
-      <div class="flex flex-wrap items-center gap-3">
-
+      <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto">
         <!-- Search -->
         <input
           :value="search"
           @input="emit('update:search', $event.target.value)"
           type="text"
-          placeholder="ค้นหาใบแจ้งซ่อมหรืออื่นๆ"
+          placeholder="ค้นหารายการแจ้งซ่อม"
           :title="searchPlaceholder"
-          class="w-[260px] h-10 px-4 rounded-lg border border-gray-300 text-gray-700
-                 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+          class="w-full sm:w-[260px] h-10 px-4 rounded-lg border border-gray-300 text-gray-500 focus:ring-2 focus:ring-blue-500 focus:outline-none flex-shrink-0"
         />
 
         <!-- Date -->
         <input
+          v-if="showDate"
           type="date"
           :value="date"
           @input="emit('update:date', $event.target.value)"
-          class="h-10 px-3 rounded-lg border border-gray-300 text-gray-700"
+          class="h-10 px-3 rounded-lg border border-gray-300 text-gray-700 flex-shrink-0 min-w-[150px] w-full sm:w-auto"
         />
 
         <!-- Urgency (เฉพาะ Repair) -->
-        <div v-if="isRepair && showUrgencies" class="relative">
+        <div v-if="isRepair && showUrgencies" class="relative flex-shrink-0">
           <button
             @click.stop="toggleUrgency"
-            class="flex items-center gap-1 border border-gray-300 rounded-lg
-                   px-4 py-2 bg-white hover:bg-gray-50 text-gray-700"
+            class="flex items-center gap-1 border border-gray-300 rounded-lg px-4 py-2 bg-white hover:bg-gray-50 text-gray-500"
           >
             ความเร่งด่วน
-            <img
-              src="/icon/sidebar/chevron-down-icon.svg"
+            <Icon
+              icon="meteor-icons:chevron-down"
+              style="color: gray"
               class="w-4 h-4 opacity-70 transition-transform"
               :class="{ 'rotate-180': isUrgencyOpen }"
             />
@@ -138,8 +183,7 @@ function toggleValue(list, value, emitName) {
 
           <div
             v-if="isUrgencyOpen"
-            class="absolute left-0 mt-2 w-48 bg-white border border-gray-200
-                   rounded-md shadow-lg p-3 z-50 text-sm"
+            class="absolute left-0 sm:left-0 right-0 sm:right-auto mt-2 w-48 max-w-[calc(100vw-2rem)] bg-white border border-gray-200 rounded-md shadow-lg p-3 z-20 text-sm"
           >
             <label
               v-for="u in [
@@ -161,15 +205,15 @@ function toggleValue(list, value, emitName) {
         </div>
 
         <!-- Status -->
-        <div v-if="showStatus" class="relative">
+        <div v-if="showStatus" class="relative flex-shrink-0">
           <button
             @click.stop="toggleStatus"
-            class="flex items-center gap-1 border border-gray-300 rounded-lg
-                   px-4 py-2 bg-white hover:bg-gray-50 text-gray-700"
+            class="flex items-center gap-1 border border-gray-300 rounded-lg px-4 py-2 bg-white hover:bg-gray-50 text-gray-500"
           >
             สถานะ
-            <img
-              src="/icon/sidebar/chevron-down-icon.svg"
+            <Icon
+              icon="meteor-icons:chevron-down"
+              style="color: gray"
               class="w-4 h-4 opacity-70 transition-transform"
               :class="{ 'rotate-180': isStatusOpen }"
             />
@@ -177,8 +221,7 @@ function toggleValue(list, value, emitName) {
 
           <div
             v-if="isStatusOpen"
-            class="absolute left-0 mt-2 w-48 bg-white border border-gray-200
-                   rounded-md shadow-lg p-3 z-50 text-sm"
+            class="absolute left-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg p-3 z-20 text-sm"
           >
             <label
               v-for="s in statusOptions"
@@ -199,7 +242,7 @@ function toggleValue(list, value, emitName) {
         <button
           v-if="search || statuses.length || urgencies.length || date"
           @click="emit('reset')"
-          class="text-blue-600 hover:text-blue-700 text-sm font-medium"
+          class="text-blue-600 hover:text-blue-700 text-sm font-medium flex-shrink-0"
         >
           ล้างตัวกรอง
         </button>

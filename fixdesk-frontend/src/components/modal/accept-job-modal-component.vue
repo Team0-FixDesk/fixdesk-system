@@ -1,16 +1,45 @@
+/**
+ * =====================================================================
+ * @file            accept-job-modal-component.vue
+ * @module          โมดูลรับงาน
+ * @layer           Component (Presentation Layer)
+ * @version         1.0.0
+ * @since           2025-12-23
+ * @author
+ * @contributors
+ *
+ * @lastModified    2026-03-21
+ * @lastModifiedBy
+ * ---------------------------------------------------------------------
+ * @description
+ *  โมดัลสำหรับรับ/มอบหมายงานซ่อม รองรับการเลือกช่างเดี่ยวหรือเป็นทีม,
+ *  ค้นหาและกรองช่าง, เลือกประเภทการมอบหมาย และยืนยันการรับงาน
+ *  จะส่ง event `close` และ `success` กลับไปยัง parent component
+ *
+ * @requires
+ *  - vue
+ *  - sweetalert2
+ *  - @iconify/vue
+ * ---------------------------------------------------------------------
+ * @changelog
+ *
+ * =====================================================================
+ */
+
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import Swal from 'sweetalert2'
+import { Icon } from '@iconify/vue'
 
 const props = defineProps({
   repairCode: {
     type: String,
-    required: true
+    required: true,
   },
   currentUserId: {
     type: [Number, String],
-    default: null
-  }
+    default: null,
+  },
 })
 
 const emit = defineEmits(['close', 'success'])
@@ -46,7 +75,7 @@ const filteredTechnicians = computed(() =>
       `${t.us_first_name} ${t.us_last_name}`.toLowerCase().includes(searchTech.value.toLowerCase())
 
     return matchType && matchSearch
-  })
+  }),
 )
 
 // Methods
@@ -82,11 +111,11 @@ async function fetchTechnicians() {
 
     // Auto-select ตัวเองในโหมดทีม
     if (props.currentUserId) {
-        // ตรวจสอบว่าตัวเองอยู่ในลิสต์ไหม
-        const me = techs.find(t => t.us_id === props.currentUserId)
-        if (me) {
-            selectedTeam.value = [me.us_id]
-        }
+      // ตรวจสอบว่าตัวเองอยู่ในลิสต์ไหม
+      const me = techs.find((t) => t.us_id === props.currentUserId)
+      if (me) {
+        selectedTeam.value = [me.us_id]
+      }
     }
   } catch (err) {
     console.error('❌ โหลดข้อมูลช่างไม่สำเร็จ:', err)
@@ -98,7 +127,7 @@ async function checkAssignmentCount(rf_code) {
   try {
     const res = await fetch(
       `${API_BASE}/repair-assignment/count?rf_code=${encodeURIComponent(rf_code)}`,
-      { headers: getAuthHeaders() }
+      { headers: getAuthHeaders() },
     )
     if (!res.ok) return null
     const payload = await res.json()
@@ -167,22 +196,20 @@ async function confirmAccept() {
           animation: false,
           showConfirmButton: false,
           timer: 3000,
-          timerProgressBar: true
+          timerProgressBar: true,
         })
         Toast.fire({
           title: 'เกิดข้อผิดพลาด',
           text: payload.message || 'ไม่สามารถรับงานได้',
           icon: 'error',
-          background: '#fee2e2',
-          color: '#dc2626'
+          background: '#FFFFFF',
+          color: '#dc2626',
         })
         return
       }
 
       const count = await checkAssignmentCount(code)
-      if (count === 1) {
-        await setLeadForAssignment(code)
-      } else if (count === null) {
+      if (count === 1 || count === null) {
         await setLeadForAssignment(code)
       }
 
@@ -196,14 +223,14 @@ async function confirmAccept() {
         animation: false,
         showConfirmButton: false,
         timer: 3000,
-        timerProgressBar: true
+        timerProgressBar: true,
       })
       Toast.fire({
         title: 'เกิดข้อผิดพลาด',
         text: 'ขณะรับงาน',
         icon: 'error',
-        background: '#fee2e2',
-        color: '#dc2626'
+        background: '#FFFFFF',
+        color: '#dc2626',
       })
     }
     return
@@ -218,13 +245,13 @@ async function confirmAccept() {
         animation: false,
         showConfirmButton: false,
         timer: 2000,
-        timerProgressBar: true
+        timerProgressBar: true,
       })
       Toast.fire({
         title: 'โปรดเลือกช่างอย่างน้อย 1 คน',
         icon: 'warning',
-        background: '#fef3c7',
-        color: '#d97706'
+        background: '#FFFFFF',
+        color: '#d97706',
       })
       return
     }
@@ -248,14 +275,14 @@ async function confirmAccept() {
           animation: false,
           showConfirmButton: false,
           timer: 3000,
-          timerProgressBar: true
+          timerProgressBar: true,
         })
         Toast.fire({
           title: 'เกิดข้อผิดพลาด',
           text: payload.message || 'มอบหมายทีมไม่สำเร็จ',
           icon: 'error',
-          background: '#fee2e2',
-          color: '#dc2626'
+          background: '#FFFFFF',
+          color: '#dc2626',
         })
         return
       }
@@ -265,7 +292,7 @@ async function confirmAccept() {
         headers: getAuthHeaders(),
       })
 
-      if (!res2.ok) {
+      if (!res2.ok && res2.status !== 429) {
         const p2 = await res2.json().catch(() => ({}))
         const Toast = Swal.mixin({
           toast: true,
@@ -273,14 +300,14 @@ async function confirmAccept() {
           animation: false,
           showConfirmButton: false,
           timer: 3000,
-          timerProgressBar: true
+          timerProgressBar: true,
         })
         Toast.fire({
           title: 'เกิดข้อผิดพลาด',
           text: p2.message || 'รับงานหลังมอบหมายทีมไม่สำเร็จ',
           icon: 'error',
-          background: '#fee2e2',
-          color: '#dc2626'
+          background: '#FFFFFF',
+          color: '#dc2626',
         })
         return
       }
@@ -295,14 +322,14 @@ async function confirmAccept() {
         animation: false,
         showConfirmButton: false,
         timer: 3000,
-        timerProgressBar: true
+        timerProgressBar: true,
       })
       Toast.fire({
         title: 'เกิดข้อผิดพลาด',
         text: 'ขณะมอบหมายทีม/รับงาน',
         icon: 'error',
-        background: '#fee2e2',
-        color: '#dc2626'
+        background: '#FFFFFF',
+        color: '#dc2626',
       })
     }
   }
@@ -320,8 +347,8 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-    <div class="bg-white rounded-lg shadow-lg w-full max-w-xl p-8 relative">
+  <div class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black bg-opacity-40">
+    <div class="bg-white rounded-t-2xl sm:rounded-lg shadow-lg w-full sm:max-w-xl p-6 sm:p-8 relative max-h-[90dvh] flex flex-col">
       <h2 class="text-lg sm:text-xl font-bold text-black mb-6">รับงาน / มอบหมายทีม</h2>
 
       <button
@@ -333,17 +360,17 @@ onBeforeUnmount(() => {
 
       <div class="mb-4 flex gap-6">
         <label class="flex items-center gap-2 cursor-pointer">
-          <input type="radio" value="alone" v-model="acceptMode" class="accent-[#1E48D1]" />
+          <input type="radio" value="alone" v-model="acceptMode" class="w-4 h-4 text-blue-600 border-gray-300 cursor-pointer" />
           ทำงานคนเดียว
         </label>
 
         <label class="flex items-center gap-2 cursor-pointer">
-          <input type="radio" value="team" v-model="acceptMode" class="accent-[#1E48D1]" />
+          <input type="radio" value="team" v-model="acceptMode" class="w-4 h-4 text-blue-600 border-gray-300 cursor-pointer" />
           ทำงานเป็นทีม
         </label>
       </div>
 
-      <div v-if="acceptMode === 'team'">
+      <div v-if="acceptMode === 'team'" class="flex flex-col min-h-0 flex-1">
         <div class="flex flex-col sm:flex-row gap-3 mb-4">
           <div class="relative w-full sm:w-1/2">
             <button
@@ -351,8 +378,9 @@ onBeforeUnmount(() => {
               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none flex justify-between items-center bg-white text-gray-700 h-10"
             >
               <span class="truncate">{{ selectedType || 'ประเภทช่างทั้งหมด' }}</span>
-              <img
-                src="/icon/sidebar/chevron-down-icon.svg"
+              <Icon
+                icon="meteor-icons:chevron-down"
+                style="color: gray"
                 class="w-4 h-4 opacity-70 transition-transform duration-200 flex-shrink-0"
                 :class="{ 'rotate-180': showAssignTypeFilter }"
               />
@@ -392,7 +420,7 @@ onBeforeUnmount(() => {
           </div>
         </div>
 
-        <div class="space-y-2 overflow-y-auto max-h-60">
+        <div class="space-y-2 overflow-y-auto flex-1 min-h-0 max-h-60 sm:max-h-72">
           <div
             v-for="tech in filteredTechnicians"
             :key="tech.us_id"
@@ -411,7 +439,7 @@ onBeforeUnmount(() => {
               type="checkbox"
               :value="tech.us_id"
               v-model="selectedTeam"
-              class="w-5 h-5 mt-5 cursor-pointer border-2 border-[#1E48D1] accent-[#1E48D1]"
+              class="w-4 h-4 mt-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
             />
           </div>
 
@@ -424,13 +452,13 @@ onBeforeUnmount(() => {
       <div class="flex justify-end gap-3 mt-6">
         <button
           @click="$emit('close')"
-          class="px-5 py-2 font-medium text-gray-700 transition bg-gray-200 rounded-md hover:bg-gray-300"
+          class="flex-1 sm:flex-none px-5 py-2 font-medium text-white transition bg-neutral-300 rounded-md hover:bg-neutral-400"
         >
           ยกเลิก
         </button>
         <button
           @click="confirmAccept"
-          class="px-5 py-2 font-medium text-white transition bg-[#1E48D1] rounded-md hover:bg-blue-900"
+          class="flex-1 sm:flex-none px-5 py-2 font-medium text-white transition bg-blue-700 rounded-md hover:bg-blue-800"
         >
           ยืนยัน
         </button>

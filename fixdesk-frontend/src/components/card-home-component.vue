@@ -1,3 +1,25 @@
+/**
+ * =====================================================================
+ * @file            card-home-component.vue
+ * @layer           Component (Presentation Layer)
+ * @version         1.0.0
+ * @since
+ * @author
+ * @contributors
+ *
+ * @lastModified
+ * @lastModifiedBy
+ * @description
+ *  คอมโพเนนต์การ์ดสำหรับแดชบอร์ด ใช้แสดงสรุปค่าและป้ายกำกับของไอเท็มต่างๆ
+ * @features
+ *
+ * @usedBy
+ *
+ * @changelog
+ *
+ * =====================================================================
+ */
+
 <template>
   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
 
@@ -9,7 +31,7 @@
     >
       <div class="text-center">
         <h2 class="text-2xl font-bold" :class="item.colorClass">
-          {{ item.value }} {{ item.unit || 'งาน' }}
+          {{ item.value }} {{ itemUnit || 'งาน' }}
         </h2>
         <p class="text-gray-600 text-sm">{{ item.label }}</p>
       </div>
@@ -25,6 +47,11 @@ defineProps({
     type: Array,
     required: true,
     default: () => []
+  },
+  itemUnit: {
+    type: String,
+    required: false,
+    default: 'งาน'
   }
 })
 
