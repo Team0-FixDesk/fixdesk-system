@@ -3,12 +3,12 @@
  * =====================================================================
  * @file            table-component.vue
  * @layer           Component (Presentation Layer)
- * @version         1.1.0
+ * @version         1.2.0
  * @since
  * @author
  * @contributors
  *
- * @lastModified
+ * @lastModified    2026-06-29
  * @lastModifiedBy
  * @description
  *  คอมโพเนนต์ตารางทั่วไป ใช้แสดงข้อมูลแบบแถว-คอลัมน์ พร้อมรองรับ
@@ -21,10 +21,14 @@
  * @changelog
  *  - 1.1.0: เพิ่มมุมมองการ์ดสำหรับมือถือ + prop hiddenColumnsMobile
  *           + ย่อ pagination บนมือถือ
+ *  - 1.2.0: จำหน้า pagination ไว้ใน URL query param
+ *           รองรับการกลับมาหน้าเดิมหลังดูรายละเอียด, search/filter,
+ *           และเปลี่ยน route แล้วกลับมา
  *
  * =====================================================================
  */
 import { ref, computed, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
 const props = defineProps({
   columns: { type: Array, default: () => [] },
@@ -54,21 +58,48 @@ const props = defineProps({
     type: Number,
     default: null,
   },
+
+  // ชื่อ query param ที่ใช้จำหน้า pagination ใน URL
+  // กรณีมีตารางหลายอันในหน้าเดียวกัน ให้ตั้งชื่อต่างกัน เช่น "page1", "page2"
+  pageKey: { type: String, default: 'page' },
 })
 
 const emit = defineEmits(['detail'])
 
-const openMenuId = ref(null)
-const currentPage = ref(1)
+const route = useRoute()
+const router = useRouter()
 
-function getRowId(row) {
-  return row[props.idColumnIndex] ?? null
-}
+const openMenuId = ref(null)
+
+// อ่านหน้าจาก URL เมื่อเริ่มต้น
+const currentPage = ref(parseInt(route.query[props.pageKey]) || 1)
 
 const totalPages = computed(() => {
   const totalRows = props.rows.length
   return Math.max(1, Math.ceil(totalRows / props.perPage))
 })
+
+// sync currentPage → URL
+watch(currentPage, (val) => {
+  router.replace({
+    query: {
+      ...route.query,
+      // ถ้าเป็นหน้า 1 ให้ลบออกจาก URL เพื่อความสะอาด
+      [props.pageKey]: val === 1 ? undefined : String(val),
+    },
+  })
+})
+
+// sync URL → currentPage (รองรับกด Back/Forward ของ browser)
+watch(
+  () => route.query[props.pageKey],
+  (val) => {
+    const parsed = parseInt(val) || 1
+    if (parsed !== currentPage.value) {
+      currentPage.value = parsed
+    }
+  },
+)
 
 // Auto-reset currentPage เมื่อข้อมูลลดลงจนหน้าปัจจุบันไม่มีอยู่จริง
 watch(totalPages, (newTotalPages) => {
@@ -78,11 +109,14 @@ watch(totalPages, (newTotalPages) => {
 })
 
 // Reset pagination เมื่อข้อมูลเปลี่ยนแปลง (เช่น filter, search)
-watch(() => props.rows.length, () => {
-  if (currentPage.value > totalPages.value) {
-    currentPage.value = 1
-  }
-})
+watch(
+  () => props.rows.length,
+  () => {
+    if (currentPage.value > totalPages.value) {
+      currentPage.value = 1
+    }
+  },
+)
 
 const paginatedRows = computed(() => {
   // 1. แปลงเป็นตัวเลขให้ชัวร์ก่อนคำนวณ
@@ -95,7 +129,6 @@ const paginatedRows = computed(() => {
   const pageRows = props.rows.slice(startIndex, endIndex).map((row) => ({ row, isDummy: false }))
 
   // 3. คำนวณจำนวนแถวที่ขาด (Diff) แล้วเติมให้ครบ
-  // วิธีนี้ชัวร์กว่าการใช้ while loop เช็ค length
   const needed = limit - pageRows.length
 
   if (needed > 0) {
@@ -109,8 +142,6 @@ const paginatedRows = computed(() => {
 })
 
 // คอลัมน์อื่น ๆ (ไม่ใช่คอลัมน์หัวการ์ด/ID) ที่ต้องแสดงในมุมมองการ์ด
-// คือคอลัมน์ที่ไม่ถูกซ่อนทั้งจาก hiddenColumns และ hiddenColumnsMobile
-// และไม่ใช่ตัว idColumnIndex เอง (เพราะเอาไปใช้เป็นหัวการ์ดแล้ว)
 const mobileDetailColumnIndexes = computed(() => {
   return props.columns
     .map((_, index) => index)
@@ -127,7 +158,6 @@ function getAlignClass(columnIndex) {
   return align === 'left' ? 'text-left' : align === 'right' ? 'text-right' : 'text-center'
 }
 
-// ... (Functions renderBadge ต่างๆ เหมือนเดิม) ...
 function renderUrgencyBadge(type) {
   switch (type) {
     case 'high':
@@ -170,6 +200,7 @@ function renderStatusStockBadge(type) {
       return type
   }
 }
+
 function renderStatusStockInventoryBadge(type) {
   switch (type) {
     case 'in_stock':
@@ -182,6 +213,7 @@ function renderStatusStockInventoryBadge(type) {
       return type
   }
 }
+
 function renderTransactionTypeBadge(type) {
   switch (type) {
     case 'IN':
@@ -193,7 +225,6 @@ function renderTransactionTypeBadge(type) {
   }
 }
 
-// ฟังก์ชันกลาง: เลือก renderer ของ badge ตาม columnIndex (ใช้ร่วมกันทั้งตารางและการ์ด)
 function getBadgeHtml(columnIndex, cell) {
   if (columnIndex === props.urgencyColumn) return renderUrgencyBadge(cell)
   if (columnIndex === props.statusColumn) return renderStatusBadge(cell)
@@ -219,7 +250,7 @@ function getColumnWidth(columnIndex) {
   }
   return ''
 }
-// Mobile badge (w-auto) — ใช้เฉพาะใน card view
+
 function getBadgeHtmlMobile(columnIndex, cell) {
   const html = getBadgeHtml(columnIndex, cell)
   if (!html) return null
@@ -227,6 +258,10 @@ function getBadgeHtmlMobile(columnIndex, cell) {
     .replace(/w-36|w-24/g, 'w-auto')
     .replace(/h-8/g, 'h-7')
     .replace('inline-flex', 'inline-flex px-3 text-xs')
+}
+
+function getRowId(row) {
+  return row[props.idColumnIndex] ?? null
 }
 </script>
 
@@ -265,7 +300,7 @@ function getBadgeHtmlMobile(columnIndex, cell) {
               v-for="(cell, cellIndex) in item.row"
               :key="cellIndex"
               v-show="!hiddenColumns.includes(cellIndex)"
-              class="px-3 py-2 align-middle "
+              class="px-3 py-2 align-middle"
               :class="[
                 getAlignClass(cellIndex),
                 cellIndex === 0 ? 'whitespace-nowrap overflow-hidden' : 'whitespace-nowrap',
@@ -384,10 +419,11 @@ function getBadgeHtmlMobile(columnIndex, cell) {
         <div class="px-4 py-3 space-y-2">
           <template v-for="cellIndex in mobileDetailColumnIndexes" :key="cellIndex">
             <div
-            v-if="(cellIndex !== 0 || !isBadgeColumn(0)) && cellIndex !== props.actionColumnIndex"
-            class="flex items-start gap-2 text-sm">
+              v-if="(cellIndex !== 0 || !isBadgeColumn(0)) && cellIndex !== props.actionColumnIndex"
+              class="flex items-start gap-2 text-sm"
+            >
               <span class="text-gray-500 shrink-0 min-w-[110px]">{{ columns[cellIndex] }}</span>
-                <span class="text-gray-800 min-w-0 flex-1">
+              <span class="text-gray-800 min-w-0 flex-1">
                 <span
                   v-if="isBadgeColumn(cellIndex)"
                   v-html="getBadgeHtmlMobile(cellIndex, item.row[cellIndex])"
