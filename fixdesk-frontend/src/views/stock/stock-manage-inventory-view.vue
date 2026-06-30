@@ -150,7 +150,6 @@ watch(searchQuery, (val) => {
   debounceTimer = setTimeout(() => {
     debouncedQuery.value = val
   }, 3000)
-  console.log(300);
 
 })
 
@@ -174,7 +173,6 @@ const filteredRowList = computed(() => {
 
   return allRowList.value.filter((row) => {
     // 1. กรองตามคำค้นหา
-    console.log(row[8]);
 
     if (hasQuery) {
       const assetCode = String(row[1] || '').toLowerCase()
@@ -236,8 +234,6 @@ async function fetchAllStock() {
     if (!response.ok) throw new Error(`โหลด stock ไม่สำเร็จ (${response.status})`)
 
     const data = await response.json()
-    console.log('ข้อมูลดิบจาก API:', data)
-    console.log('ตัวอย่าง pd_status:', data[0]?.pd_status, typeof data[0]?.pd_status)
 
     // reset maps
     productIdToCategoryIdMap.value = {}
@@ -818,7 +814,7 @@ const confirmEditItem = async () => {
     formDataToSubmit.append('pd_asset_code', editForm.value.assetCode)
     formDataToSubmit.append('pd_quantity', editForm.value.quantity)
     formDataToSubmit.append('pd_unit_id', editForm.value.unit)
-    formDataToSubmit.append('status', editForm.value.status)
+    formDataToSubmit.append('pd_status', editForm.value.status)
 
     if (editForm.value.categoryId) {
       formDataToSubmit.append('pd_category_id', editForm.value.categoryId)
