@@ -49,6 +49,7 @@ import CardSummaryComponent from '@/components/card-home-component.vue'
 import ImportButtonComponent from '@/components/button/import-button-component.vue'
 import UniversalImportModal from '@/components/modal/universal-import-modal.vue'
 import { Icon } from '@iconify/vue'
+// import { useDebounceFn } from '@vueuse/core'
 
 const showImportModal = ref(false)
 
@@ -73,6 +74,7 @@ const columnList = [
   'จำนวน',
   'หน่วยนับ',
   'สถานะ',
+  'พร้อมใช้',
   'ตัวดำเนินการ',
 ]
 
@@ -83,11 +85,13 @@ const itemsNew = ref(0)
 const itemRequestWaiting = ref(0)
 const itemRequestDeclined = ref(0)
 const searchQuery = ref('')
+const debouncedQuery = ref('')
 const isDragOver = ref(false)
 
 // Modals State
 const showAddModal = ref(false)
 const showStatusFilter = ref(false)
+const showReadyFilter = ref(false)
 const showTypeFilter = ref(false)
 const showManageCategoryModal = ref(false)
 const showEditModal = ref(false)
@@ -99,6 +103,7 @@ const allRowList = ref([]) //
 const manageCategoryList = ref([]) //
 const filePreviewList = ref([]) //
 const selectedStatusList = ref([]) //
+const selectedReadyList = ref([]) //
 const selectedTypeList = ref([]) //
 const editFilePreviewList = ref([]) //
 
@@ -131,27 +136,65 @@ const editForm = ref({
   uploadImage: null,
 })
 
-const filteredRowList = computed(() => {
-  return allRowList.value.filter((row) => {
-    const productId = row[0]
-    const assetCode = String(row[1] || '').toLowerCase()
-    const name = String(row[2] || '').toLowerCase()
-    const categoryName = row[3]
-    const query = searchQuery.value.toLowerCase()
+// Debounce การ search — รอ 300ms หลังหยุดพิมพ์
+// const updateQuery = useDebounceFn((val) => {
+//   debouncedQuery.value = val
+// }, 300)
 
+// watch(searchQuery, (val) => updateQuery(val))
+
+// ถ้าไม่ใช้ VueUse ทำ debounce เองแบบนี้
+let debounceTimer = null
+watch(searchQuery, (val) => {
+  clearTimeout(debounceTimer)
+  debounceTimer = setTimeout(() => {
+    debouncedQuery.value = val
+  }, 3000)
+  console.log(300);
+
+})
+
+const filteredRowList = computed(() => {
+  const query = debouncedQuery.value.toLowerCase().trim() // คำนวณครั้งเดียวนอก loop
+  const hasQuery = query.length > 0
+  const hasCategory = selectedTypeList.value.length > 0
+  const hasStatus = selectedStatusList.value.length > 0
+  const hasReady = selectedReadyList.value.length > 0
+
+
+  // ถ้าไม่มี filter เลย return ทั้งหมดเลย
+  if (!hasQuery && !hasCategory && !hasStatus && !hasReady) {
+    return allRowList.value
+  }
+
+  // Pre-compute เป็น Set เพื่อให้ .has() O(1) แทน .includes() O(n)
+  const categorySet = hasCategory ? new Set(selectedTypeList.value) : null
+  const statusSet = hasStatus ? new Set(selectedStatusList.value) : null
+  const readySet = hasReady ? new Set(selectedReadyList.value) : null
+
+  return allRowList.value.filter((row) => {
     // 1. กรองตามคำค้นหา
-    const matchSearch = !query || name.includes(query) || assetCode.includes(query)
+    console.log(row[8]);
+
+    if (hasQuery) {
+      const assetCode = String(row[1] || '').toLowerCase()
+      const name = String(row[2] || '').toLowerCase()
+      if (!name.includes(query) && !assetCode.includes(query)) return false
+    }
 
     // 2. กรองตามหมวดหมู่
-    const matchCategory =
-      selectedTypeList.value.length === 0 || selectedTypeList.value.includes(categoryName)
+    if (categorySet && !categorySet.has(row[2])) return false
 
     // 3. กรองตามสถานะ stock
-    const stockStatus = stockStatusMap.value[productId]
-    const matchStatus =
-      selectedStatusList.value.length === 0 || selectedStatusList.value.includes(stockStatus)
+    if (statusSet) {
+      const stockStatus = stockStatusMap.value[row[0]]
+      if (!statusSet.has(stockStatus)) return false
+    }
 
-    return matchSearch && matchCategory && matchStatus
+    // 4. กรองตามสถานะ พร้อมใช้
+    if (readySet && !readySet.has(row[7])) return false
+
+    return true
   })
 })
 
@@ -193,6 +236,8 @@ async function fetchAllStock() {
     if (!response.ok) throw new Error(`โหลด stock ไม่สำเร็จ (${response.status})`)
 
     const data = await response.json()
+    console.log('ข้อมูลดิบจาก API:', data)
+    console.log('ตัวอย่าง pd_status:', data[0]?.pd_status, typeof data[0]?.pd_status)
 
     // reset maps
     productIdToCategoryIdMap.value = {}
@@ -203,6 +248,7 @@ async function fetchAllStock() {
       const productId = item.pd_id != null ? String(item.pd_id) : '-'
       const assetCode = item.pd_asset_code ?? '-'
       const quantity = item.pd_quantity ?? 0
+      const productStatus = item.pd_status
 
       // map: productId -> categoryId
       const categoryId =
@@ -232,7 +278,8 @@ async function fetchAllStock() {
         quantity, // 4
         item.units_name ?? '-', // 5
         stockStatus, // 6
-        'actions', // 7
+        productStatus, // 7
+        'actions', // 8
       ]
     })
 
@@ -409,12 +456,14 @@ const clearFilters = () => {
   searchQuery.value = ''
   selectedStatusList.value = []
   selectedTypeList.value = []
+  selectedReadyList.value = []
 }
 
 const closeDropdown = (e) => {
   if (!e.target.closest('.relative')) {
     showStatusFilter.value = false
     showTypeFilter.value = false
+    showReadyFilter.value = false
   }
 }
 
@@ -514,7 +563,7 @@ async function updateExistingProductQuantity(duplicateRow, newQuantity) {
     formDataToSubmit.append('pd_asset_code', duplicateRow[3] !== '-' ? duplicateRow[3] : '')
     formDataToSubmit.append('pd_quantity', newQuantity)
     formDataToSubmit.append('pd_unit_id', duplicateRow[5])
-    formDataToSubmit.append('status', duplicateRow[6] === 'active' ? 'active' : 'inactive')
+    formDataToSubmit.append('status', duplicateRow[6] === 'active' ? 'inactive' : 'active')
     if (categoryId != null) {
       formDataToSubmit.append('pd_category_id', categoryId)
     }
@@ -1010,7 +1059,7 @@ onBeforeUnmount(() => {
           class="text-gray-700 w-full sm:w-[260px] h-10 px-4 rounded-lg border border-gray-300 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
         />
 
-        <div class="">
+        <div class="relative">
           <button
             @click.stop="showStatusFilter = !showStatusFilter"
             class="flex items-center gap-1 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
@@ -1056,6 +1105,46 @@ onBeforeUnmount(() => {
                 class="w-4 h-4 text-red-600 rounded"
               />
               <span class="ml-2">สินค้าหมด</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="relative">
+          <button
+            @click.stop="showReadyFilter = !showReadyFilter"
+            class="flex items-center gap-1 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+          >
+            พร้อมใช้
+            <Icon
+              icon="meteor-icons:chevron-down"
+              style="color: gray"
+              class="w-4 h-4 transition-transform duration-200 opacity-70"
+              :class="{ 'rotate-180': showReadyFilter }"
+            />
+          </button>
+
+          <div
+            v-if="showReadyFilter"
+            class="absolute z-10 w-48 max-w-[90vw] p-3 mt-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-md shadow-lg"
+          >
+            <label class="flex items-center py-1 cursor-pointer hover:bg-gray-50">
+              <input
+                type="checkbox"
+                value="active"
+                v-model="selectedReadyList"
+                class="w-4 h-4 text-green-600 rounded"
+              />
+              <span class="ml-2">พร้อมใช้งาน</span>
+            </label>
+
+            <label class="flex items-center py-1 cursor-pointer hover:bg-gray-50">
+              <input
+                type="checkbox"
+                value="inactive"
+                v-model="selectedReadyList"
+                class="w-4 h-4 text-green-600 rounded"
+              />
+              <span class="ml-2">ไม่พร้อมใช้งาน</span>
             </label>
           </div>
         </div>
@@ -1120,7 +1209,7 @@ onBeforeUnmount(() => {
 
         <transition name="fade">
           <button
-            v-if="searchQuery || selectedStatusList.length || selectedTypeList.length"
+            v-if="searchQuery || selectedStatusList.length || selectedTypeList.length || selectedReadyList.length"
             @click="clearFilters"
             class="text-sm font-medium text-blue-600 hover:text-blue-700"
           >
@@ -1137,10 +1226,11 @@ onBeforeUnmount(() => {
         :idColumnIndex="1"
         :hiddenColumns="[0, 3]"
         :statusStockinventoryColumn="6"
-        :action-column-index="7"
-        :columnAlign="['left', 'left', 'center', 'center']"
+        :action-column-index="8"
+        :readyStatusColumn="7"
+        :columnAlign="['left', 'left', 'center', 'center', 'center']"
       >
-        <template #cell-7="{ row }">
+        <template #cell-8="{ row }">
           <TableActions
             :row-id="row[0]"
             :open-menu-id="openMenuId"

@@ -53,6 +53,7 @@ const props = defineProps({
 
   idColumnAsLink: { type: Boolean, default: false },
   rowHeightClass: { type: String, default: 'h-14' },
+  readyStatusColumn: { type: Number, default: null },
 
   actionColumnIndex: {
     type: Number,
@@ -225,12 +226,24 @@ function renderTransactionTypeBadge(type) {
   }
 }
 
+function renderReadyStatusBadge(type) {
+  switch (type) {
+    case 'active':
+      return `<span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-50 text-green-700 border border-green-200 font-medium text-xs"><span class="w-2 h-2 rounded-full bg-green-500"></span>พร้อมใช้งาน</span>`
+    case 'inactive':
+      return `<span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-50 text-red-700 border border-red-200 font-medium text-xs"><span class="w-2 h-2 rounded-full bg-red-500"></span>ไม่พร้อมใช้งาน</span>`
+    default:
+      return type
+  }
+}
+
 function getBadgeHtml(columnIndex, cell) {
   if (columnIndex === props.urgencyColumn) return renderUrgencyBadge(cell)
   if (columnIndex === props.statusColumn) return renderStatusBadge(cell)
   if (columnIndex === props.statusStockColumn) return renderStatusStockBadge(cell)
   if (columnIndex === props.statusStockinventoryColumn) return renderStatusStockInventoryBadge(cell)
   if (columnIndex === props.transactionTypeColumn) return renderTransactionTypeBadge(cell)
+  if (columnIndex === props.readyStatusColumn) return renderReadyStatusBadge(cell)
   return null
 }
 
@@ -240,7 +253,8 @@ function isBadgeColumn(columnIndex) {
     columnIndex === props.statusColumn ||
     columnIndex === props.statusStockColumn ||
     columnIndex === props.statusStockinventoryColumn ||
-    columnIndex === props.transactionTypeColumn
+    columnIndex === props.transactionTypeColumn ||
+    columnIndex === props.readyStatusColumn
   )
 }
 

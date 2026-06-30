@@ -130,7 +130,7 @@ module.exports = (db) => {
     async getAllProducts() {
       const sql = `
         SELECT pd.pd_id, pd.pd_asset_code, pd.pd_name, ct.ct_name,
-               pd.pd_quantity, un.units_name, pd.pd_updated_at, pd.pd_upload_image
+               pd.pd_quantity, un.units_name, pd.pd_updated_at, pd.pd_upload_image, pd_status
         FROM products pd
         LEFT JOIN categories ct ON pd.pd_category_id = ct.ct_id
         LEFT JOIN units un ON pd.pd_unit_id = un.units_id
