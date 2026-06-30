@@ -214,7 +214,7 @@ const fetchStockItemList = async () => {
     }
 
     const data = await response.json()
-    stockItemList.value = data.map((item) => ({
+    stockItemList.value = data.filter((item) => item.pd_status === 'active').map((item) => ({
       id: item.pd_id,
       name: item.pd_name,
       serialNumber: item.pd_asset_code || '-',
