@@ -205,7 +205,7 @@ function renderStatusStockBadge(type) {
 function renderStatusStockInventoryBadge(type) {
   switch (type) {
     case 'in_stock':
-      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-green-100 text-green-600 font-semibold">พร้อมใช้งาน</span>`
+      return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-green-100 text-green-600 font-semibold">พร้อมเบิก</span>`
     case 'low_stock':
       return `<span class="inline-flex justify-center items-center w-36 h-8 rounded-full bg-amber-100 text-amber-600 font-semibold">ใกล้หมด</span>`
     case 'out_of_stock':
@@ -229,9 +229,9 @@ function renderTransactionTypeBadge(type) {
 function renderReadyStatusBadge(type) {
   switch (type) {
     case 'active':
-      return `<span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-50 text-green-700 border border-green-200 font-medium text-xs"><span class="w-2 h-2 rounded-full bg-green-500"></span>พร้อมใช้งาน</span>`
+      return `<span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full"><span class="w-2 h-2 rounded-full bg-green-500"></span></span>`
     case 'inactive':
-      return `<span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-50 text-red-700 border border-red-200 font-medium text-xs"><span class="w-2 h-2 rounded-full bg-red-500"></span>ไม่พร้อมใช้งาน</span>`
+      return `<span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full"><span class="w-2 h-2 rounded-full bg-red-500"></span></span>`
     default:
       return type
   }
