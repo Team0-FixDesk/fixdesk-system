@@ -559,7 +559,7 @@ async function updateExistingProductQuantity(duplicateRow, newQuantity) {
     formDataToSubmit.append('pd_asset_code', duplicateRow[3] !== '-' ? duplicateRow[3] : '')
     formDataToSubmit.append('pd_quantity', newQuantity)
     formDataToSubmit.append('pd_unit_id', duplicateRow[5])
-    formDataToSubmit.append('status', duplicateRow[6] === 'active' ? 'inactive' : 'active')
+    formDataToSubmit.append('pd_status', duplicateRow[6] === 'active' ? 'inactive' : 'active')
     if (categoryId != null) {
       formDataToSubmit.append('pd_category_id', categoryId)
     }
@@ -631,7 +631,7 @@ const confirmAddItem = async () => {
   formDataToSubmit.append('pd_category_id', formData.value.categoryId)
   formDataToSubmit.append('pd_quantity', formData.value.quantity)
   formDataToSubmit.append('pd_unit_id', formData.value.unit)
-  formDataToSubmit.append('status', formData.value.status)
+  formDataToSubmit.append('pd_status', formData.value.status)
 
   if (filePreviewList.value.length > 0) {
     formDataToSubmit.append('pd_upload_image', filePreviewList.value[0].file)
@@ -952,7 +952,7 @@ const openEditModal = async (productIdFromTable) => {
     categoryId: categoryId != null ? String(categoryId) : '',
     quantity: row[4],
     unit: row[5],
-    status: row[6] === 'active' ? 'active' : 'inactive',
+    status: row[7] === 'active' ? 'active' : 'inactive',
     uploadImage: oldImage,
   }
 

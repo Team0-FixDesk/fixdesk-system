@@ -242,7 +242,7 @@ module.exports = (db) => {
       let sql = `
         UPDATE products SET
           pd_asset_code=?, pd_name=?, pd_detail=?, pd_category_id=?,
-          pd_quantity=?, pd_unit_id=?, pd_updated_at=NOW()
+          pd_quantity=?, pd_unit_id=?, pd_status=?, pd_updated_at=NOW()
       `;
       const params = [
         data.assetCode,
@@ -251,6 +251,7 @@ module.exports = (db) => {
         data.categoryId,
         data.quantity,
         unitId,
+        data.status,
       ];
 
       // ถ้ามีรูปใหม่ ให้ Update field รูปด้วย

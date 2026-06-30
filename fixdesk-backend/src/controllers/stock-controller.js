@@ -181,6 +181,7 @@ module.exports = (stockService) => {
           pd_category_id,
           pd_quantity,
           pd_unit_id,
+          pd_status,
         } = req.body;
 
         const data = {
@@ -190,6 +191,7 @@ module.exports = (stockService) => {
           categoryId: pd_category_id,
           quantity: pd_quantity,
           unitName: pd_unit_id,
+          status: pd_status,
         };
         const newFilename = req.file ? req.file.filename : null;
         const userId = req.user?.us_id || null; // ✅ ดึง userId
