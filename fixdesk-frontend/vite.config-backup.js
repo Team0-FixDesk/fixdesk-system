@@ -30,7 +30,6 @@ import IconsResolver from 'unplugin-icons/resolver'
 
 // https://vite.dev/config/
 export default defineConfig({
-base: '/fixdesk/',
   plugins: [
     vue(),
     vueDevTools(),
