@@ -91,8 +91,9 @@ import LogoutIcon from '@/assets/icons/sidebar/logout-icon.svg'
 import PersonIcon from '@/assets/icons/sidebar/person-icon.svg'
 import SettingIcon from '@/assets/icons/sidebar/settings-icon.svg'
 
+import { useRouter } from 'vue-router'
 
-
+const router = useRouter()
 
 defineExpose({ forceClose })
 
@@ -182,8 +183,8 @@ function logout(e) {
   localStorage.removeItem('session_user')
   sessionStorage.removeItem('token')
   sessionStorage.removeItem('session_user')
-
-  globalThis.location.href = '/#/login'
+  router.push('/login')
+  // globalThis.location.href = '/#/login'
 }
 
 // รีเซ็ตฟอร์มและข้อความข้อผิดพลาด
@@ -331,7 +332,11 @@ async function executeSave(type = '') {
     if (!res.ok) {
       console.log('Response data:', data)
       // ตรวจสอบว่าเป็นกรณีกรอกรหัสผ่านปัจจุบันไม่ถูกต้องหรือไม่
-      if (data.message && (data.message.includes('รหัสผ่านเดิมไม่ถูกต้อง') || data.message.includes('รหัสผ่านปัจจุบันไม่ถูกต้อง'))) {
+      if (
+        data.message &&
+        (data.message.includes('รหัสผ่านเดิมไม่ถูกต้อง') ||
+          data.message.includes('รหัสผ่านปัจจุบันไม่ถูกต้อง'))
+      ) {
         errors.value.tempOldPassword = 'รหัสผ่านปัจจุบันไม่ถูกต้อง'
       } else {
         // แสดง SweetAlert เฉพาะกรณีข้อผิดพลาดอื่น ๆ ที่ไม่ใช่รหัสผ่านผิด
@@ -345,7 +350,7 @@ async function executeSave(type = '') {
       return
     }
 
-  // สำเร็จ: แสดงข้อความแจ้งเตือนตามประเภทการบันทึก
+    // สำเร็จ: แสดงข้อความแจ้งเตือนตามประเภทการบันทึก
     Swal.fire({
       title: 'สำเร็จ',
       text: type === 'password' ? 'แก้ไขรหัสผ่านเรียบร้อย' : 'แก้ไขเบอร์โทรศัพท์เรียบร้อย',
@@ -424,7 +429,7 @@ watch(
   () => {
     // เคลียร์ข้อความข้อผิดพลาดจากฝั่งเซิร์ฟเวอร์เมื่อผู้ใช้แก้ไขช่องรหัสผ่านปัจจุบัน
     errors.value.tempOldPassword = ''
-  },
+  }
 )
 
 watch(
@@ -434,7 +439,7 @@ watch(
       showDropdown.value = false
       // อย่าปิดหน้าต่างป๊อปอัปเมื่อ Sidebar พับ เก็บเฉพาะเมนูดรอปดาวน์เท่านั้น
     }
-  },
+  }
 )
 </script>
 
@@ -495,13 +500,11 @@ watch(
 
   <!-- Teleport: popup ทั้งหมดไป mount ที่ body แทน sidebar -->
   <Teleport to="body">
-
     <!-- หน้าต่างตั้งค่าเบอร์โทรศัพท์ -->
-    <div
-      v-if="showPopupProfile"
-      class="fixed inset-0 z-50 bg-black/50 overflow-y-auto"
-    >
-      <div class="flex min-h-full items-end sm:items-center justify-center sm:p-4 text-center sm:p-0">
+    <div v-if="showPopupProfile" class="fixed inset-0 z-50 bg-black/50 overflow-y-auto">
+      <div
+        class="flex min-h-full items-end sm:items-center justify-center sm:p-4 text-center sm:p-0"
+      >
         <div
           class="relative bg-white w-full sm:max-w-2xl rounded-t-2xl sm:rounded-lg shadow-xl text-left overflow-hidden sm:my-8 transform transition-all"
         >
@@ -515,7 +518,9 @@ watch(
 
             <div class="space-y-4 sm:space-y-5">
               <div>
-                <label class="block text-sm sm:text-base font-medium mb-1 text-black">ชื่อ - นามสกุล (ภาษาไทย)</label>
+                <label class="block text-sm sm:text-base font-medium mb-1 text-black"
+                  >ชื่อ - นามสกุล (ภาษาไทย)</label
+                >
                 <input
                   type="text"
                   :value="getFullNameTH()"
@@ -525,7 +530,9 @@ watch(
               </div>
 
               <div>
-                <label class="block text-sm sm:text-base font-medium mb-1 text-black">ชื่อ - นามสกุล (ภาษาอังกฤษ)</label>
+                <label class="block text-sm sm:text-base font-medium mb-1 text-black"
+                  >ชื่อ - นามสกุล (ภาษาอังกฤษ)</label
+                >
                 <input
                   type="text"
                   :value="getFullNameEN()"
@@ -536,7 +543,9 @@ watch(
 
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label class="block text-sm sm:text-base font-medium mb-1 text-black">หน่วยงาน</label>
+                  <label class="block text-sm sm:text-base font-medium mb-1 text-black"
+                    >หน่วยงาน</label
+                  >
                   <input
                     v-model="editForm.us_department"
                     type="text"
@@ -556,7 +565,9 @@ watch(
                     class="w-full pl-3 pr-3 py-2 border border-gray-300 rounded-lg text-black text-sm sm:text-base"
                     placeholder="กรอกเบอร์โทร"
                   />
-                  <p v-if="errors.us_phone" class="text-red-500 text-xs sm:text-sm mt-1">{{ errors.us_phone }}</p>
+                  <p v-if="errors.us_phone" class="text-red-500 text-xs sm:text-sm mt-1">
+                    {{ errors.us_phone }}
+                  </p>
                 </div>
               </div>
 
@@ -570,7 +581,9 @@ watch(
                     :type="showOldPassword ? 'text' : 'password'"
                     :class="[
                       'w-full pl-3 pr-10 py-2 border rounded-lg text-black text-sm sm:text-base focus:ring-0 focus:outline-none transition-colors',
-                      errors.tempOldPassword ? 'border-red-500' : 'border-gray-300 focus:border-black',
+                      errors.tempOldPassword
+                        ? 'border-red-500'
+                        : 'border-gray-300 focus:border-black',
                     ]"
                     placeholder="กรอกรหัสผ่านปัจจุบัน"
                   />
@@ -579,14 +592,22 @@ watch(
                     @click="showOldPassword = !showOldPassword"
                     class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-black"
                   >
-                    <Icon :icon="showOldPassword ? 'mdi:eye-off' : 'mdi:eye'" width="20" height="20" />
+                    <Icon
+                      :icon="showOldPassword ? 'mdi:eye-off' : 'mdi:eye'"
+                      width="20"
+                      height="20"
+                    />
                   </button>
                 </div>
-                <p v-if="errors.tempOldPassword" class="text-red-500 text-xs sm:text-sm mt-1">{{ errors.tempOldPassword }}</p>
+                <p v-if="errors.tempOldPassword" class="text-red-500 text-xs sm:text-sm mt-1">
+                  {{ errors.tempOldPassword }}
+                </p>
               </div>
             </div>
 
-            <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 mt-6 pt-4 border-t border-gray-200">
+            <div
+              class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 mt-6 pt-4 border-t border-gray-200"
+            >
               <button
                 type="button"
                 @click="closeAllPopup"
@@ -608,11 +629,10 @@ watch(
     </div>
 
     <!-- หน้าต่างตั้งค่ารหัสผ่าน -->
-    <div
-      v-if="showPopupPassword"
-      class="fixed inset-0 z-50 bg-black/50 overflow-y-auto"
-    >
-      <div class="flex min-h-full items-end sm:items-center justify-center sm:p-4 text-center sm:p-0">
+    <div v-if="showPopupPassword" class="fixed inset-0 z-50 bg-black/50 overflow-y-auto">
+      <div
+        class="flex min-h-full items-end sm:items-center justify-center sm:p-4 text-center sm:p-0"
+      >
         <div
           class="relative bg-white w-full sm:max-w-2xl rounded-t-2xl sm:rounded-lg shadow-xl text-left overflow-hidden sm:my-8 transform transition-all"
         >
@@ -626,14 +646,18 @@ watch(
 
             <div class="space-y-4">
               <div>
-                <label class="block text-sm sm:text-base font-medium mb-1 text-black">ชื่อบัญชีผู้ใช้</label>
+                <label class="block text-sm sm:text-base font-medium mb-1 text-black"
+                  >ชื่อบัญชีผู้ใช้</label
+                >
                 <input
                   v-model="username"
                   type="text"
                   class="w-full pl-3 pr-3 py-2 border border-gray-300 rounded-lg text-black bg-gray-100 cursor-not-allowed text-sm sm:text-base"
                   disabled
                 />
-                <p v-if="errors.username" class="text-red-500 text-xs sm:text-sm mt-1">{{ errors.username }}</p>
+                <p v-if="errors.username" class="text-red-500 text-xs sm:text-sm mt-1">
+                  {{ errors.username }}
+                </p>
               </div>
 
               <div>
@@ -646,7 +670,9 @@ watch(
                     :type="showOldPassword ? 'text' : 'password'"
                     :class="[
                       'w-full pl-3 pr-10 py-2 border rounded-lg text-black text-sm sm:text-base focus:ring-0 focus:outline-none transition-colors',
-                      errors.tempOldPassword ? 'border-red-500' : 'border-gray-300 focus:border-black',
+                      errors.tempOldPassword
+                        ? 'border-red-500'
+                        : 'border-gray-300 focus:border-black',
                     ]"
                     placeholder="กรอกรหัสผ่านปัจจุบัน"
                   />
@@ -655,10 +681,16 @@ watch(
                     @click="showOldPassword = !showOldPassword"
                     class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-black"
                   >
-                    <Icon :icon="showOldPassword ? 'mdi:eye-off' : 'mdi:eye'" width="20" height="20" />
+                    <Icon
+                      :icon="showOldPassword ? 'mdi:eye-off' : 'mdi:eye'"
+                      width="20"
+                      height="20"
+                    />
                   </button>
                 </div>
-                <p v-if="errors.tempOldPassword" class="text-red-500 text-xs sm:text-sm mt-1">{{ errors.tempOldPassword }}</p>
+                <p v-if="errors.tempOldPassword" class="text-red-500 text-xs sm:text-sm mt-1">
+                  {{ errors.tempOldPassword }}
+                </p>
               </div>
 
               <div>
@@ -680,10 +712,16 @@ watch(
                     @click="showNewPassword = !showNewPassword"
                     class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-black"
                   >
-                    <Icon :icon="showNewPassword ? 'mdi:eye-off' : 'mdi:eye'" width="20" height="20" />
+                    <Icon
+                      :icon="showNewPassword ? 'mdi:eye-off' : 'mdi:eye'"
+                      width="20"
+                      height="20"
+                    />
                   </button>
                 </div>
-                <p v-if="errors.password" class="text-red-500 text-xs sm:text-sm mt-1">{{ errors.password }}</p>
+                <p v-if="errors.password" class="text-red-500 text-xs sm:text-sm mt-1">
+                  {{ errors.password }}
+                </p>
               </div>
 
               <div>
@@ -696,7 +734,9 @@ watch(
                     :type="showConfirmPassword ? 'text' : 'password'"
                     :class="[
                       'w-full pl-3 pr-10 py-2 border rounded-lg text-black text-sm sm:text-base focus:ring-0 focus:outline-none transition-colors',
-                      errors.confirmPassword ? 'border-red-500' : 'border-gray-300 focus:border-black',
+                      errors.confirmPassword
+                        ? 'border-red-500'
+                        : 'border-gray-300 focus:border-black',
                     ]"
                     placeholder="กรอกยืนยันรหัสผ่านใหม่"
                   />
@@ -705,14 +745,22 @@ watch(
                     @click="showConfirmPassword = !showConfirmPassword"
                     class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-black"
                   >
-                    <Icon :icon="showConfirmPassword ? 'mdi:eye-off' : 'mdi:eye'" width="20" height="20" />
+                    <Icon
+                      :icon="showConfirmPassword ? 'mdi:eye-off' : 'mdi:eye'"
+                      width="20"
+                      height="20"
+                    />
                   </button>
                 </div>
-                <p v-if="errors.confirmPassword" class="text-red-500 text-xs sm:text-sm mt-1">{{ errors.confirmPassword }}</p>
+                <p v-if="errors.confirmPassword" class="text-red-500 text-xs sm:text-sm mt-1">
+                  {{ errors.confirmPassword }}
+                </p>
               </div>
             </div>
 
-            <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 mt-6 pt-4 border-t border-gray-200">
+            <div
+              class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 mt-6 pt-4 border-t border-gray-200"
+            >
               <button
                 type="button"
                 @click="closeAllPopup"
@@ -732,6 +780,5 @@ watch(
         </div>
       </div>
     </div>
-
   </Teleport>
 </template>
