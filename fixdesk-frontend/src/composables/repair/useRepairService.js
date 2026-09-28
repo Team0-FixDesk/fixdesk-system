@@ -34,7 +34,7 @@ export function useRepairService(API_BASE_URL) {
     formDataToSend.append('existing_files', JSON.stringify(existingFileList || []))
 
     uploadedFileList.forEach((file) => {
-      formDataToSend.append('files', file)
+      formDataToSend.append('files[]', file)
     })
 
     const response = await fetch(`${API_BASE_URL}/repair-requests-with-files/${repairCode}`, {
@@ -73,7 +73,7 @@ export function useRepairService(API_BASE_URL) {
       formDataToSend.append('urgency', repairFormData.urgency || 'medium')
 
       uploadedFileList.forEach((file) => {
-        formDataToSend.append('files', file)
+        formDataToSend.append('files[]', file)
       })
 
       response = await fetch(`${API_BASE_URL}/repair-requests-with-files`, {
@@ -148,7 +148,7 @@ export function useRepairService(API_BASE_URL) {
       formDataToSend.append('skip_line_notification', 'true')
 
       uploadedFileList.forEach((file) => {
-        formDataToSend.append('files', file)
+        formDataToSend.append('files[]', file)
       })
 
       response = await fetch(`${API_BASE_URL}/repair-requests-with-files`, {

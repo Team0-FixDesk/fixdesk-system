@@ -1,0 +1,1028 @@
+{
+  "info": {
+    "name": "FixDesk Phase 1-3 (Laravel)",
+    "description": "ทดสอบ auth + repair flow (Phase 1), user/technician/location management (Phase 2) และ stock + Excel template (Phase 3) ของ backend Laravel ตัวใหม่. รัน request ตามลำดับในแต่ละ folder แล้ว token/rf_code/id ต่างๆ จะถูกเก็บลง collection variable ให้อัตโนมัติ ไม่ต้อง copy-paste เอง",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8000/api" },
+    { "key": "admin_token", "value": "" },
+    { "key": "tech_token", "value": "" },
+    { "key": "rf_code", "value": "" },
+    { "key": "uploaded_filename", "value": "" },
+    { "key": "new_user_id", "value": "" },
+    { "key": "new_tt_id", "value": "" },
+    { "key": "new_bd_id", "value": "" },
+    { "key": "new_fl_id", "value": "" },
+    { "key": "new_room_id", "value": "" },
+    { "key": "new_ct_id", "value": "" },
+    { "key": "new_pd_id", "value": "" },
+    { "key": "new_sf_code", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "0. Health Check",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/health"
+      }
+    },
+    {
+      "name": "1. Auth",
+      "item": [
+        {
+          "name": "Login (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const data = pm.response.json();",
+                  "if (data.token) { pm.collectionVariables.set('admin_token', data.token); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userName\": \"admin\",\n  \"password\": \"admin1234\"\n}"
+            },
+            "url": "{{base_url}}/login"
+          }
+        },
+        {
+          "name": "Login (Technician)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const data = pm.response.json();",
+                  "if (data.token) { pm.collectionVariables.set('tech_token', data.token); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userName\": \"tech01\",\n  \"password\": \"tech1234\"\n}"
+            },
+            "url": "{{base_url}}/login"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Repair (Public)",
+      "item": [
+        {
+          "name": "Create Repair (JSON, no files)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const data = pm.response.json();",
+                  "if (data.rf_code) { pm.collectionVariables.set('rf_code', data.rf_code); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"us_id\": 1,\n  \"repair_type_id\": 1,\n  \"room_id\": 1,\n  \"problem_detail\": \"แอร์ห้อง 101 เสีย\",\n  \"issue_description\": \"เปิดไม่ติด มีเสียงดัง\",\n  \"phone_number\": \"0800000000\",\n  \"urgency\": \"high\",\n  \"skip_line_notification\": true\n}"
+            },
+            "url": "{{base_url}}/repair-requests",
+            "description": "ไม่ต้อง login ก็สร้างได้ (endpoint นี้ไม่มี auth middleware เหมือนต้นฉบับ) — ตั้ง skip_line_notification เป็น true เพื่อไม่ต้องพึ่ง LINE credentials ตอนทดสอบ"
+          }
+        },
+        {
+          "name": "Create Repair (with file attachment)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const data = pm.response.json();",
+                  "if (data.rf_code) { pm.collectionVariables.set('rf_code', data.rf_code); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "us_id", "value": "1", "type": "text" },
+                { "key": "repair_type_id", "value": "1", "type": "text" },
+                { "key": "room_id", "value": "1", "type": "text" },
+                { "key": "problem_detail", "value": "แอร์ห้อง 101 เสีย", "type": "text" },
+                { "key": "issue_description", "value": "เปิดไม่ติด มีเสียงดัง", "type": "text" },
+                { "key": "phone_number", "value": "0800000000", "type": "text" },
+                { "key": "urgency", "value": "high", "type": "text" },
+                { "key": "skip_line_notification", "value": "true", "type": "text" },
+                { "key": "files[]", "type": "file", "src": [] }
+              ]
+            },
+            "url": "{{base_url}}/repair-requests-with-files",
+            "description": "⚠️ ก่อนกด Send ต้องคลิกที่ช่อง 'Select files' ตรงแถว files[] แล้วเลือกไฟล์รูป/วิดีโอจากเครื่องก่อนเสมอ ถ้าไม่เลือกไฟล์จะเจอ error 'EISDIR' (ห้ามใส่ชื่อ field เป็น 'files' เฉยๆ ไม่งั้น PHP จะเก็บได้แค่ไฟล์สุดท้ายถ้าแนบหลายไฟล์)"
+          }
+        },
+        {
+          "name": "Update Repair (JSON)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"us_id\": 1,\n  \"repair_type_id\": 1,\n  \"room_id\": 1,\n  \"problem_detail\": \"แอร์ห้อง 101 เสีย (แก้ไขรายละเอียด)\",\n  \"issue_description\": \"เปิดไม่ติดเลย\",\n  \"urgency\": \"medium\"\n}"
+            },
+            "url": "{{base_url}}/repair-requests/{{rf_code}}",
+            "description": "แก้ไขได้เฉพาะใบที่ยังสถานะ pending เท่านั้น (ตรงกับต้นฉบับ) — us_id ต้องส่งมาด้วยเสมอ ไม่งั้น DB จะปฏิเสธ (คอลัมน์ rf_us_id ห้ามเป็น NULL)"
+          }
+        },
+        {
+          "name": "Get Repair Detail",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/repair-requests/{{rf_code}}"
+          }
+        },
+        {
+          "name": "Get User Repairs (user_id=1)",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/my-repairs/1"
+          }
+        },
+        {
+          "name": "Get Repair Stats (user_id=1)",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/repair-stats/1"
+          }
+        },
+        {
+          "name": "Upload Files (standalone)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const data = pm.response.json();",
+                  "if (data.files && data.files[0]) { pm.collectionVariables.set('uploaded_filename', data.files[0].filename); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "files[]", "type": "file", "src": [] }
+              ]
+            },
+            "url": "{{base_url}}/upload-repair-files",
+            "description": "⚠️ ก่อนกด Send ต้องคลิกที่ช่อง 'Select files' ตรงแถว files[] แล้วเลือกไฟล์รูป/วิดีโอจากเครื่องก่อนเสมอ ถ้าไม่เลือกไฟล์จะเจอ error 'EISDIR'. ใช้ตอนต้องการอัปโหลดไฟล์ล่วงหน้าแล้วค่อยส่ง path แนบไปตอนสร้าง/แก้ใบแจ้งซ่อมแบบ JSON"
+          }
+        },
+        {
+          "name": "Delete File",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/delete-file/{{uploaded_filename}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Repair (Admin/Technician - ต้อง login ก่อน)",
+      "item": [
+        {
+          "name": "Get Admin Repairs (all)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": "{{base_url}}/admin/repairs"
+          }
+        },
+        {
+          "name": "Assign Individual (tech01 -> rf_code)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rf_code\": \"{{rf_code}}\",\n  \"technician_id\": 2,\n  \"is_lead\": true\n}"
+            },
+            "url": "{{base_url}}/assign-repair"
+          }
+        },
+        {
+          "name": "Assign Team",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rf_code\": \"{{rf_code}}\",\n  \"technician_ids\": [2],\n  \"lead_id\": 2\n}"
+            },
+            "url": "{{base_url}}/assign-repair-team"
+          }
+        },
+        {
+          "name": "Accept Job (as Technician)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{tech_token}}" }],
+            "url": "{{base_url}}/technician/accept-job/{{rf_code}}"
+          }
+        },
+        {
+          "name": "Get Technician Repairs (as tech01)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{tech_token}}" }],
+            "url": "{{base_url}}/technician/repairs"
+          }
+        },
+        {
+          "name": "Delete Repair",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": "{{base_url}}/my-repairs/{{rf_code}}",
+            "description": "ลบได้เฉพาะใบที่ยังสถานะ pending เท่านั้น — ถ้าเพิ่งทดสอบ Assign/Accept Job ไปแล้ว rf_code ปัจจุบันจะไม่ใช่ pending แล้ว ให้กลับไปกด 'Create Repair (JSON, no files)' ใหม่อีกรอบก่อน (จะได้ rf_code ใบใหม่ที่ยัง pending) แล้วค่อยมาลบ"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. User Management",
+      "item": [
+        {
+          "name": "Get Titles",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": "{{base_url}}/titles"
+          }
+        },
+        {
+          "name": "Get Roles",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": "{{base_url}}/roles"
+          }
+        },
+        {
+          "name": "Get Users (all)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": "{{base_url}}/users"
+          }
+        },
+        {
+          "name": "Create User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const data = pm.response.json();",
+                  "if (data.us_id) { pm.collectionVariables.set('new_user_id', data.us_id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"us_user_name\": \"user01\",\n  \"us_first_name_th\": \"สมชาย\",\n  \"us_last_name_th\": \"ใจดี\",\n  \"us_first_name_en\": \"Somchai\",\n  \"us_last_name_en\": \"Jaidee\",\n  \"us_phone\": \"0899999999\",\n  \"us_department\": \"HR\",\n  \"us_role_id\": 3,\n  \"us_job_title\": \"Staff\"\n}"
+            },
+            "url": "{{base_url}}/users",
+            "description": "endpoint นี้ไม่ต้อง login (ตรงกับต้นฉบับ) — us_first_name_th/us_last_name_th ต้องเป็นภาษาไทยล้วนเท่านั้น ไม่งั้นโดน validation reject. รหัสผ่านเริ่มต้นจะ gen อัตโนมัติจาก first_name_en + เบอร์ 4 ตัวท้าย + ตัวอักษรแรกของนามสกุล_en (ดูสูตรได้ใน UserService::generateDefaultPassword)"
+          }
+        },
+        {
+          "name": "Get User By Id (admin view)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": "{{base_url}}/users/{{new_user_id}}"
+          }
+        },
+        {
+          "name": "Update User",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"us_first_name_th\": \"สมชาย\",\n  \"us_last_name_th\": \"ใจดีมาก\",\n  \"us_role_id\": 3,\n  \"us_job_title\": \"Senior Staff\"\n}"
+            },
+            "url": "{{base_url}}/users/{{new_user_id}}"
+          }
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": "{{base_url}}/users/{{new_user_id}}/reset-password"
+          }
+        },
+        {
+          "name": "Get Personal Profile (no auth, /user/:id)",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/user/{{new_user_id}}"
+          }
+        },
+        {
+          "name": "Edit Personal Profile",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"us_phone\": \"0888888888\",\n  \"us_department\": \"HR (แก้ไขเอง)\",\n  \"oldPassword\": \"Somchai@9999J\"\n}"
+            },
+            "url": "{{base_url}}/edit-personal/{{new_user_id}}",
+            "description": "endpoint นี้ไม่ต้อง login — ต้องใส่ oldPassword ให้ถูก (ยกเว้น isFirstLogin=true) รหัสผ่าน default ของ user นี้คือ Somchai@9999J ตามสูตร generateDefaultPassword (firstNameEn@last4phoneLastInitial)"
+          }
+        },
+        {
+          "name": "Import Users",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"users\": [\n    {\n      \"username\": \"import01\",\n      \"first_name_th\": \"นำเข้า\",\n      \"last_name_th\": \"ทดสอบ\",\n      \"first_name_en\": \"Import\",\n      \"last_name_en\": \"Test\",\n      \"phone\": \"0877777777\",\n      \"role_name\": \"User\",\n      \"title_name\": \"นาย\",\n      \"department\": \"IT\",\n      \"position\": \"Tester\"\n    }\n  ]\n}"
+            },
+            "url": "{{base_url}}/users/import"
+          }
+        },
+        {
+          "name": "Delete User",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": "{{base_url}}/users/{{new_user_id}}",
+            "description": "รันตัวนี้ตัวสุดท้ายของโฟลเดอร์นี้ — ลบ user ที่สร้างไว้ทดสอบทิ้ง"
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Technician Management",
+      "item": [
+        {
+          "name": "Get Technicians (all)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": "{{base_url}}/technicians"
+          }
+        },
+        {
+          "name": "Get Technician Types",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/technician-types"
+          }
+        },
+        {
+          "name": "Create Technician Type",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const data = pm.response.json();",
+                  "if (data.tt_id) { pm.collectionVariables.set('new_tt_id', data.tt_id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tt_name\": \"ช่างแอร์\"\n}"
+            },
+            "url": "{{base_url}}/technician-types",
+            "description": "ไม่ต้อง login (ตรงกับต้นฉบับ)"
+          }
+        },
+        {
+          "name": "Update Technician Type",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tt_name\": \"ช่างแอร์ (แก้ไข)\"\n}"
+            },
+            "url": "{{base_url}}/technician-types/{{new_tt_id}}"
+          }
+        },
+        {
+          "name": "Get Technician Repairs (as tech01)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{tech_token}}" }],
+            "url": "{{base_url}}/technician/repairs"
+          }
+        },
+        {
+          "name": "Get Technician History (as tech01)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{tech_token}}" }],
+            "url": "{{base_url}}/technician/history",
+            "description": "แสดงเฉพาะงานที่สถานะ done — ถ้ายังไม่เคย accept+close งานไหนจะได้ [] ว่างๆ"
+          }
+        },
+        {
+          "name": "Delete Technician Type",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/technician-types/{{new_tt_id}}",
+            "description": "รันตัวนี้ตัวสุดท้าย — ถ้ามี user หรือใบแจ้งซ่อมผูกกับประเภทนี้อยู่จะลบไม่ได้ (DEPENDENCY_EXISTS)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Location Management",
+      "item": [
+        {
+          "name": "Get Buildings",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/buildings"
+          }
+        },
+        {
+          "name": "Create Building",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const data = pm.response.json();",
+                  "if (data.bd_id) { pm.collectionVariables.set('new_bd_id', data.bd_id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bd_name\": \"อาคาร 2\"\n}"
+            },
+            "url": "{{base_url}}/buildings"
+          }
+        },
+        {
+          "name": "Update Building",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bd_name\": \"อาคาร 2 (แก้ไข)\"\n}"
+            },
+            "url": "{{base_url}}/buildings/{{new_bd_id}}"
+          }
+        },
+        {
+          "name": "Get Floors (all)",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/floors"
+          }
+        },
+        {
+          "name": "Get Floors by Building",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/floors/{{new_bd_id}}"
+          }
+        },
+        {
+          "name": "Create Floor",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const data = pm.response.json();",
+                  "if (data.fl_id) { pm.collectionVariables.set('new_fl_id', data.fl_id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fl_name\": \"ชั้น 2\",\n  \"fl_bd_id\": {{new_bd_id}}\n}"
+            },
+            "url": "{{base_url}}/floors"
+          }
+        },
+        {
+          "name": "Update Floor",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fl_name\": \"ชั้น 2 (แก้ไข)\",\n  \"fl_bd_id\": {{new_bd_id}}\n}"
+            },
+            "url": "{{base_url}}/floors/{{new_fl_id}}"
+          }
+        },
+        {
+          "name": "Get Rooms (all)",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/rooms"
+          }
+        },
+        {
+          "name": "Get Rooms by Floor",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/rooms/{{new_fl_id}}"
+          }
+        },
+        {
+          "name": "Create Room",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const data = pm.response.json();",
+                  "if (data.room_id) { pm.collectionVariables.set('new_room_id', data.room_id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"room_name\": \"ห้อง 201\",\n  \"room_fl_id\": {{new_fl_id}}\n}"
+            },
+            "url": "{{base_url}}/rooms"
+          }
+        },
+        {
+          "name": "Update Room",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"room_name\": \"ห้อง 201 (แก้ไข)\",\n  \"room_fl_id\": {{new_fl_id}}\n}"
+            },
+            "url": "{{base_url}}/rooms/{{new_room_id}}"
+          }
+        },
+        {
+          "name": "Check Usage (room, not used)",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/locations/check-usage/room/{{new_room_id}}"
+          }
+        },
+        {
+          "name": "Import Locations",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"locations\": [\n    { \"building_name\": \"อาคาร 3\", \"floor_name\": \"ชั้น 1\", \"room_name\": \"ห้อง 301\" }\n  ]\n}"
+            },
+            "url": "{{base_url}}/locations/import",
+            "description": "สร้าง building/floor/room อัตโนมัติถ้ายังไม่มี (match ชื่อแบบ case-insensitive) — ใช้ import ข้อมูลสถานที่ทีละหลายรายการ"
+          }
+        },
+        {
+          "name": "Delete Room",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": "{{base_url}}/rooms/{{new_room_id}}",
+            "description": "ต้องลบ Room ก่อน Floor ก่อน Building เสมอ (ลำดับ dependency) — ถ้ามีใบแจ้งซ่อมผูกกับห้องนี้จะลบไม่ได้"
+          }
+        },
+        {
+          "name": "Delete Floor",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": "{{base_url}}/floors/{{new_fl_id}}"
+          }
+        },
+        {
+          "name": "Delete Building",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": "{{base_url}}/buildings/{{new_bd_id}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Stock Management",
+      "item": [
+        {
+          "name": "Get Categories",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/category"
+          }
+        },
+        {
+          "name": "Create Category",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const data = pm.response.json();",
+                  "if (data.ct_id) { pm.collectionVariables.set('new_ct_id', data.ct_id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ct_name\": \"วัสดุไฟฟ้า\"\n}"
+            },
+            "url": "{{base_url}}/category"
+          }
+        },
+        {
+          "name": "Update Category",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ct_name\": \"วัสดุไฟฟ้า (แก้ไข)\"\n}"
+            },
+            "url": "{{base_url}}/category/{{new_ct_id}}"
+          }
+        },
+        {
+          "name": "Get Units",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/units"
+          }
+        },
+        {
+          "name": "Add Product",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const data = pm.response.json();",
+                  "if (data.id) { pm.collectionVariables.set('new_pd_id', data.id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pd_name\": \"หลอดไฟ LED\",\n  \"pd_asset_code\": \"EL-001\",\n  \"pd_category_id\": {{new_ct_id}},\n  \"pd_quantity\": 50,\n  \"pd_unit_id\": \"หลอด\"\n}"
+            },
+            "url": "{{base_url}}/add-stock",
+            "description": "pd_unit_id ในนี้จริงๆ คือ 'ชื่อหน่วยนับ' เป็น text (ตรงกับต้นฉบับที่ frontend ส่งชื่อ unit มาตรงๆ ไม่ใช่ id) — ถ้ายังไม่มี unit นี้ในระบบจะสร้างให้อัตโนมัติ. ถ้าจะแนบรูปสินค้าด้วยให้เปลี่ยน Body เป็น form-data แล้วเพิ่ม key pd_upload_image ชนิด File"
+          }
+        },
+        {
+          "name": "Get All Products (show-stock)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": "{{base_url}}/show-stock"
+          }
+        },
+        {
+          "name": "Get Stock Transactions",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": "{{base_url}}/transactions",
+            "description": "ควรเห็น transaction ชนิด IN จำนวน 50 จากตอน Add Product"
+          }
+        },
+        {
+          "name": "Update Product",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pd_name\": \"หลอดไฟ LED 9W\",\n  \"pd_asset_code\": \"EL-001\",\n  \"pd_category_id\": {{new_ct_id}},\n  \"pd_quantity\": 60,\n  \"pd_unit_id\": \"หลอด\",\n  \"pd_status\": \"active\"\n}"
+            },
+            "url": "{{base_url}}/update-stock/{{new_pd_id}}",
+            "description": "quantity เปลี่ยนจาก 50 เป็น 60 จะบันทึก transaction IN ส่วนต่าง (+10) ให้อัตโนมัติ"
+          }
+        },
+        {
+          "name": "Import Stock",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    { \"pd_name\": \"ปลั๊กไฟ 3 ตา\", \"pd_asset_code\": \"EL-002\", \"pd_category_name\": \"วัสดุไฟฟ้า (แก้ไข)\", \"pd_quantity\": 20, \"pd_unit_name\": \"อัน\" }\n  ]\n}"
+            },
+            "url": "{{base_url}}/stock/import",
+            "description": "ถ้าชื่อสินค้า/asset code ซ้ำของเดิม จะบวกจำนวนเพิ่มแทนที่จะสร้างแถวใหม่ (ดู 'action':'updated_quantity' ใน response)"
+          }
+        },
+        {
+          "name": "Delete Product",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": "{{base_url}}/delete-stock/{{new_pd_id}}",
+            "description": "รันตัวนี้ก่อน Delete Category (มี dependency check กันลบหมวดหมู่ที่ยังมีสินค้าอยู่)"
+          }
+        },
+        {
+          "name": "Delete Category",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": "{{base_url}}/category/{{new_ct_id}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. Stock Withdraw & Approval",
+      "item": [
+        {
+          "name": "Withdraw (as Technician)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const data = pm.response.json();",
+                  "if (data.sf_code) { pm.collectionVariables.set('new_sf_code', data.sf_code); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{tech_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"repair_code\": \"{{rf_code}}\",\n  \"items\": [\n    { \"id\": {{new_pd_id}}, \"qty\": 5 }\n  ]\n}"
+            },
+            "url": "{{base_url}}/withdraw",
+            "description": "ต้องมี rf_code จริง (รัน folder 2 'Create Repair' ก่อน) และ new_pd_id ที่ยังไม่ถูกลบ (รัน folder 7 'Add Product' ก่อน แล้วอย่าเพิ่งลบ) — endpoint นี้ต้นฉบับ Node ประกาศซ้ำ 2 จุด ตัวที่ทำงานจริงคือฝั่ง technician ไม่ใช่ stock-routes.js"
+          }
+        },
+        {
+          "name": "Get All Stock Forms (admin)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": "{{base_url}}/stock-forms"
+          }
+        },
+        {
+          "name": "Get Stock Form Detail",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": "{{base_url}}/stock-forms/detail/{{new_sf_code}}"
+          }
+        },
+        {
+          "name": "Get User Stock Forms (user_id=2, tech01)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": "{{base_url}}/stock-forms/2"
+          }
+        },
+        {
+          "name": "Get My Stock Forms (as Technician)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{tech_token}}" }],
+            "url": "{{base_url}}/technician/my-stock-forms"
+          }
+        },
+        {
+          "name": "Approve Item",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sf_code\": \"{{new_sf_code}}\",\n  \"pd_id\": {{new_pd_id}},\n  \"status\": \"approved\"\n}"
+            },
+            "url": "{{base_url}}/stock-forms/detail/update-item-status",
+            "description": "อนุมัติแล้ว stock จะถูกตัดจริง (ลอง Get All Products ใน folder 7 ดูจำนวนที่ลดลง) — ถ้ารันซ้ำจะเจอ ALREADY_PROCESSED"
+          }
+        },
+        {
+          "name": "Update Multiple Items Status (batch)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sf_code\": \"{{new_sf_code}}\",\n  \"items\": [\n    { \"pd_id\": {{new_pd_id}}, \"status\": \"approved\" }\n  ]\n}"
+            },
+            "url": "{{base_url}}/stock-forms/detail/update-items-status-batch",
+            "description": "ถ้ารายการไหน status ไม่ใช่ waiting แล้ว (เช่นเพิ่งอนุมัติไปจาก request ก่อนหน้า) จะข้ามเงียบๆ ไม่ throw error"
+          }
+        },
+        {
+          "name": "Return Item",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sf_code\": \"{{new_sf_code}}\",\n  \"pd_id\": {{new_pd_id}},\n  \"quantity\": 2\n}"
+            },
+            "url": "{{base_url}}/stock-forms/return-item",
+            "description": "คืนได้ไม่เกินจำนวนที่ approved ไปแล้ว ลบด้วยจำนวนที่เคยคืนไปก่อนหน้า"
+          }
+        },
+        {
+          "name": "Update Form Status (manual override)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sf_code\": \"{{new_sf_code}}\",\n  \"status\": \"approved\"\n}"
+            },
+            "url": "{{base_url}}/stock-forms/update-status"
+          }
+        },
+        {
+          "name": "Close Job (as Technician)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{tech_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"done\",\n  \"tech_summary\": \"เปลี่ยนอุปกรณ์ใหม่เรียบร้อย\",\n  \"repair_method\": \"in_house\",\n  \"result_status\": \"completed\"\n}"
+            },
+            "url": "{{base_url}}/technician/close-job/{{rf_code}}",
+            "description": "ต้อง Assign + Accept Job (folder 3) ให้ rf_code นี้ก่อน และห้ามมีรายการเบิกที่ยังเป็น 'waiting' ค้างอยู่ (approve/reject ให้ครบก่อน) ไม่งั้นจะเจอ PENDING_STOCK_APPROVAL — ถ้าจะแนบรูปหลังซ่อมด้วย เปลี่ยน Body เป็น form-data แล้วเพิ่ม key tech_image_after ชนิด File (เลือกได้หลายไฟล์)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "9. Excel Templates",
+      "item": [
+        {
+          "name": "Download Users Template",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/download-template/users",
+            "description": "กด Send แล้วกด 'Save Response' > 'Save to a file' เพื่อดาวน์โหลดไฟล์ .xlsx มาเปิดดู"
+          }
+        },
+        {
+          "name": "Download Locations Template",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/download-template/locations"
+          }
+        },
+        {
+          "name": "Download Stocks Template",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/download-template/stocks"
+          }
+        },
+        {
+          "name": "Download Invalid Type (expect 404)",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/download-template/bogus"
+          }
+        }
+      ]
+    }
+  ]
+}
