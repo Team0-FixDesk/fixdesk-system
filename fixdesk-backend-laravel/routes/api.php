@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\LocationController;
+use App\Http\Controllers\PublicController;
 use App\Http\Controllers\RepairController;
 use App\Http\Controllers\StockController;
 use App\Http\Controllers\TechnicianController;
@@ -12,6 +13,14 @@ use Illuminate\Support\Facades\Route;
 
 /* ===================== AUTH ===================== */
 Route::post('/login', [AuthController::class, 'login']);
+
+/* ===================== PUBLIC: SEARCH (ไม่ต้อง login) ===================== */
+Route::get('/public/search', [PublicController::class, 'search']);
+
+/* ===================== PUBLIC: UPLOADED FILES ===================== */
+// Node เดิมเสิร์ฟ /uploads ที่ root แต่ frontend ต่อ URL เป็น ${VITE_API_BASE}/uploads/... และ base ของ Laravel มี /api นำหน้า
+// จึงต้องมี route นี้เพื่อให้รูปแจ้งซ่อม/รูปสินค้าแสดงได้โดยไม่ต้องแก้ frontend
+Route::get('/uploads/{path}', [PublicController::class, 'uploadedFile'])->where('path', '.*');
 
 /* ===================== REPAIR: FILE UPLOAD ===================== */
 Route::post('/upload-repair-files', [RepairController::class, 'uploadFiles']);
