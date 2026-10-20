@@ -171,7 +171,6 @@ function renderUrgencyBadge(type) {
       return type
   }
 }
-
 function renderStatusBadge(type) {
   switch (type) {
     case 'pending':
@@ -188,7 +187,6 @@ function renderStatusBadge(type) {
       return type
   }
 }
-
 function renderStatusStockBadge(type) {
   switch (type) {
     case 'waiting':
