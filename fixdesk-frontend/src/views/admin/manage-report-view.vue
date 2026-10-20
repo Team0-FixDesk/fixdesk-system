@@ -288,7 +288,6 @@ const getRepairFormHTML = (item, isPdf = false) => {
 const repairRequests = ref([])
 const loading = ref(false)
 const error = ref(null)
-const currentPage = ref(1)
 const perPage = 10
 
 // Selection
@@ -382,14 +381,9 @@ const filteredRows = computed(() => {
   })
 })
 
-const paginatedRows = computed(() => {
-  const start = (currentPage.value - 1) * perPage
-  return filteredRows.value.slice(start, start + perPage)
-})
-
 // ส่งแถวทั้งหมดที่ผ่านตัวกรองให้ table-component แบ่งหน้าเอง
 // (ห้ามส่งเฉพาะหน้าปัจจุบัน ไม่เช่นนั้นตารางจะเห็นแค่ 1 หน้า)
-const paginatedRowsForTable = computed(() => {
+const tableRows = computed(() => {
   return filteredRows.value.map(row => [
     '',
     formatDate(row.meta.rf_create_at),
@@ -404,7 +398,6 @@ const paginatedRowsForTable = computed(() => {
 // --- Watchers ---
 
 watch([selectedMonth, selectedYear], () => {
-  currentPage.value = 1
   selectedItems.value = []
 })
 
@@ -764,7 +757,7 @@ onMounted(() => {
 
               <div class="flex-1 flex flex-col overflow-x-auto">
                 <table-component :columns="['', 'วันที่', 'หมายเลขแจ้งซ่อม', 'ผู้แจ้ง', 'ประเภท', 'หน่วยงาน', 'สถานะ']"
-                  :rows="paginatedRowsForTable" :perPage="perPage" :idColumnIndex="2"
+                  :rows="tableRows" :perPage="perPage" :idColumnIndex="2"
                   :activeId="selectedItems[0] || null" :statusColumn="6"
                   :columnAlign="['center', 'left', 'left', 'left', 'center', 'left', 'center']" :hiddenColumns="[]"
                   @detail="handleRowClick" class="w-full" :id-column-as-link="false">
