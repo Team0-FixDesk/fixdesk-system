@@ -387,8 +387,10 @@ const paginatedRows = computed(() => {
   return filteredRows.value.slice(start, start + perPage)
 })
 
+// ส่งแถวทั้งหมดที่ผ่านตัวกรองให้ table-component แบ่งหน้าเอง
+// (ห้ามส่งเฉพาะหน้าปัจจุบัน ไม่เช่นนั้นตารางจะเห็นแค่ 1 หน้า)
 const paginatedRowsForTable = computed(() => {
-  return paginatedRows.value.map(row => [
+  return filteredRows.value.map(row => [
     '',
     formatDate(row.meta.rf_create_at),
     row.meta.rf_code,
