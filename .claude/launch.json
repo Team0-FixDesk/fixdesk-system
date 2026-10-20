@@ -1,0 +1,39 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "fixdesk-backend-laravel",
+      "runtimeExecutable": "C:\\Users\\uSeR\\.config\\herd-lite\\bin\\php.exe",
+      "runtimeArgs": [
+        "-d",
+        "upload_max_filesize=60M",
+        "-d",
+        "post_max_size=300M",
+        "-d",
+        "max_file_uploads=20",
+        "-d",
+        "memory_limit=512M",
+        "-S",
+        "127.0.0.1:8000",
+        "-t",
+        "C:\\xampp\\htdocs\\fixdesk-system\\fixdesk-backend-laravel\\public",
+        "C:\\xampp\\htdocs\\fixdesk-system\\fixdesk-backend-laravel\\dev-router.php"
+      ],
+      "port": 8000
+    },
+    {
+      "name": "fixdesk-frontend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "C:\\xampp\\htdocs\\fixdesk-system\\fixdesk-frontend",
+        "run",
+        "dev",
+        "--",
+        "--port",
+        "5173"
+      ],
+      "port": 5173
+    }
+  ]
+}
