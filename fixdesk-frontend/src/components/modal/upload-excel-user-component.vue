@@ -105,6 +105,13 @@ function processFile(file) {
       // Logic ตรวจสอบความถูกต้อง
       const isValidPhone = (p) => /^\d{9,10}$/.test(p)
 
+      // Excel มักเก็บเบอร์ที่พิมพ์ลงเซลล์ชนิดตัวเลขโดยตัดเลข 0 นำหน้าทิ้ง (0812345678 -> 812345678)
+      // เบอร์ไทยขึ้นต้นด้วย 0 เสมอ จึงเติมกลับให้เฉพาะเซลล์ที่เป็นตัวเลขและไม่ขึ้นต้นด้วย 0
+      const normalizePhone = (cell) => {
+        const text = getVal(cell).replace(/-/g, '').replace(/\s/g, '')
+        return typeof cell === 'number' && text && !text.startsWith('0') ? `0${text}` : text
+      }
+
       const users = dataRows
         .map((row, index) => {
           // Map ข้อมูลตามลำดับ Index (0-11)
@@ -117,8 +124,8 @@ function processFile(file) {
           const lastNameEn = getVal(row[6])
 
           // --- แก้ไขจุดนี้ (Clean Phone) ---
-          // รับค่ามา -> ลบขีด (-) ออก -> ลบช่องว่างออก
-          let phone = getVal(row[7]).replace(/-/g, '').replace(/\s/g, '')
+          // รับค่ามา -> ลบขีด (-) ออก -> ลบช่องว่างออก -> เติม 0 นำหน้าถ้า Excel เก็บเป็นตัวเลข
+          let phone = normalizePhone(row[7])
           // -----------------------------
 
           const department = getVal(row[8])
