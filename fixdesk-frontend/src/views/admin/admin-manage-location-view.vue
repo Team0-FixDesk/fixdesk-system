@@ -625,6 +625,12 @@ async function saveAddLocation() {
   }
 }
 
+// แสดงข้อความจาก backend (เช่น "ชื่ออาคารนี้มีอยู่แล้ว") ใต้ช่องที่เกี่ยวข้อง แล้วคงหน้าต่างเพิ่มสถานที่ไว้ให้แก้ไข
+function showFieldError(fieldName, message) {
+  validationErrors.value[fieldName] = true
+  errorMessages.value[fieldName] = message
+}
+
 async function bulkCreateLocation() {
   try {
     let buildingId = addForm.value.building_id
@@ -633,18 +639,27 @@ async function bulkCreateLocation() {
     if (addForm.value.building_mode === 'new') {
       const res = await fetch(`${API_BASE}/buildings`, { method: 'POST', headers: getAuthHeaders(), body: JSON.stringify({ bd_name: addForm.value.new_building_name.trim() }) })
       if (handleAuthError(res.status)) return
-      const data = await res.json(); buildingId = data.bd_id
+      const data = await res.json()
+      if (!res.ok) { showFieldError('newBuildingName', data.message || 'เพิ่มอาคารไม่สำเร็จ'); return }
+      buildingId = data.bd_id
     }
     if (addForm.value.floor_mode === 'new') {
       if (!buildingId) { Swal.fire({ icon: 'warning', title: 'กรุณาเลือกอาคาร' }); return }
       const res = await fetch(`${API_BASE}/floors`, { method: 'POST', headers: getAuthHeaders(), body: JSON.stringify({ fl_name: addForm.value.new_floor_name.trim(), fl_bd_id: buildingId }) })
       if (handleAuthError(res.status)) return
-      const data = await res.json(); floorId = data.fl_id
+      const data = await res.json()
+      if (!res.ok) { showFieldError('newFloorName', data.message || 'เพิ่มชั้นไม่สำเร็จ'); return }
+      floorId = data.fl_id
     }
     if (!floorId) { Swal.fire({ icon: 'warning', title: 'กรุณาเลือกชั้น' }); return }
 
     const res = await fetch(`${API_BASE}/rooms`, { method: 'POST', headers: getAuthHeaders(), body: JSON.stringify({ room_name: addForm.value.room_name.trim(), room_fl_id: floorId }) })
     if (handleAuthError(res.status)) return
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      showFieldError('roomName', data.message || 'เพิ่มห้องไม่สำเร็จ')
+      return
+    }
 
     showAddModal.value = false
     Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, icon: 'success', title: 'สร้างสถานที่เรียบร้อยแล้ว' })
