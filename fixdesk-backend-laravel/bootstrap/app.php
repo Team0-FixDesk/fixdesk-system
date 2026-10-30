@@ -17,6 +17,11 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => \App\Http\Middleware\RequireRole::class,
             'self.or.admin' => \App\Http\Middleware\EnsureSelfOrAdmin::class,
         ]);
+
+        // ส่งวันที่เป็น ISO 8601 เหมือน Node เดิม (ดูคำอธิบายที่ IsoDateResponse)
+        $middleware->api(append: [
+            \App\Http\Middleware\IsoDateResponse::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //
