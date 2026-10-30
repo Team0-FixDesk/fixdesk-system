@@ -68,10 +68,12 @@ tar --exclude='./public' \
     -cf - . | tar -xf - -C "$DEPLOY_DIR/laravel-app/"
 
 # โฟลเดอร์ที่ Laravel ต้องเขียนไฟล์ลงตอนรัน ต้องมีอยู่เสมอแม้ถูก exclude เนื้อหาออกแล้ว
-mkdir -p "$DEPLOY_DIR/laravel-app/storage/logs" \
-         "$DEPLOY_DIR/laravel-app/storage/framework/sessions" \
-         "$DEPLOY_DIR/laravel-app/storage/framework/views" \
-         "$DEPLOY_DIR/laravel-app/storage/framework/cache/data"
+# ใส่ .gitignore ไว้ข้างในด้วย (แบบเดียวกับที่ Laravel ใช้เอง) เพราะโปรแกรมอัปโหลดบางตัวข้ามโฟลเดอร์ว่าง
+# ซึ่งถ้า framework/views หายไป Laravel จะ error "Please provide a valid cache path"
+for dir in logs framework/sessions framework/views framework/cache/data; do
+  mkdir -p "$DEPLOY_DIR/laravel-app/storage/$dir"
+  printf '*\n!.gitignore\n' > "$DEPLOY_DIR/laravel-app/storage/$dir/.gitignore"
+done
 
 echo "==> คัดลอก public/ ของ Laravel ไปเป็น public_html"
 cp -r public/. "$DEPLOY_DIR/public_html/"
