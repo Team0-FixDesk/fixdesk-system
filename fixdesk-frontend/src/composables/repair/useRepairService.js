@@ -1,9 +1,12 @@
 import { decodeJwtToken } from '@/utils/jwt.util'
+import { getAuthHeader } from '@/utils/auth.util'
 // Composable สำหรับ wrapper การเรียก API ที่เกี่ยวกับใบแจ้งซ่อม
 // คืนค่า: ฟังก์ชัน fetchRepairDetail, updateRepair, createRepair
 export function useRepairService(API_BASE_URL) {
   async function fetchRepairDetail(repairCode) {
-    const response = await fetch(`${API_BASE_URL}/repair-requests/${repairCode}`)
+    const response = await fetch(`${API_BASE_URL}/repair-requests/${repairCode}`, {
+      headers: getAuthHeader(),
+    })
     if (!response.ok) {
       throw new Error('โหลดข้อมูลใบแจ้งซ่อมไม่สำเร็จ')
     }

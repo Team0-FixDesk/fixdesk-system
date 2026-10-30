@@ -1,3 +1,5 @@
+import { getAuthHeader } from '@/utils/auth.util'
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE
 
 // Helper: throw error พร้อม status เพื่อให้ view จับ 401 ได้
@@ -44,7 +46,9 @@ export async function getMyRepairList(targetUserId, userAuthenticationToken) {
 // 3. ฟังก์ชันดึงรายละเอียดการแจ้งซ่อม (ตามรหัสใบงาน)
 export async function getRepairDetailByCode(repairRequestCode) {
   // ดึงข้อมูลใบงานตามรหัสที่ส่งเข้ามา
-  const apiResponse = await fetch(`${API_BASE_URL}/repair-requests/${repairRequestCode}`)
+  const apiResponse = await fetch(`${API_BASE_URL}/repair-requests/${repairRequestCode}`, {
+    headers: getAuthHeader(),
+  })
   const responseData = await apiResponse.json()
 
   if (!apiResponse.ok) {

@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import Swal from 'sweetalert2'
+import { getAuthHeader } from '@/utils/auth.util'
 
 // Composable สำหรับการจัดการการอัปโหลดไฟล์ (drag & drop + preview)
 // รับไฟล์, ตรวจความถูกต้อง, เก็บ preview และลบไฟล์
@@ -108,7 +109,7 @@ export function useFileUpload(API_BASE_URL, options = {}) {
 
     if (item?.fromServer && item.serverPath) {
       const filename = item.serverPath.split('/').pop()
-      fetch(`${API_BASE_URL}/delete-file/${filename}`, { method: 'DELETE' })
+      fetch(`${API_BASE_URL}/delete-file/${filename}`, { method: 'DELETE', headers: getAuthHeader() })
       existingFileList.value = existingFileList.value.filter((p) => p !== item.serverPath)
     }
 

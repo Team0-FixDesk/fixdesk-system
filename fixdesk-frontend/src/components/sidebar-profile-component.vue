@@ -84,6 +84,7 @@ import { ref, watch, onMounted } from 'vue'
 import { jwtDecode } from 'jwt-decode'
 import Swal from 'sweetalert2'
 import { usePhoneNumberFormatter } from '@/composables/usePhoneFormat'
+import { getAuthHeader } from '@/utils/auth.util'
 import { Icon } from '@iconify/vue'
 import ChevronDownIcon from '@/assets/icons/sidebar/chevron-down-icon.svg'
 import ChevronUpIcon from '@/assets/icons/sidebar/chevron-up-icon.svg'
@@ -280,7 +281,7 @@ async function loadUserData() {
     const userId = tokenData.value?.us_id
     if (!userId) return
 
-    const res = await fetch(`${API_BASE}/user/${userId}`)
+    const res = await fetch(`${API_BASE}/user/${userId}`, { headers: getAuthHeader() })
     if (!res.ok) throw new Error('ไม่พบข้อมูลผู้ใช้')
 
     const data = await res.json()

@@ -110,6 +110,7 @@ import { useRoute, useRouter } from 'vue-router'
 import Swal from 'sweetalert2' // SweetAlert2 สำหรับแจ้งเตือน
 import { Icon } from '@iconify/vue' // ไอคอน SVG จาก Iconify
 import { jwtDecode } from 'jwt-decode' // ถอดรหัส JWT token
+import { getAuthHeader } from '@/utils/auth.util'
 
 import RepairStatusTimeline from '@/components/status-timeline-component.vue' // แสดง Timeline สถานะ
 import assignJobModalComponent from '@/components/modal/assign-job-modal-component.vue' // Modal มอบหมายงาน
@@ -579,7 +580,9 @@ function processAfterMediaFileList(rfTechImageAfter) {
  */
 async function fetchRepairDetail() {
   try {
-    const res = await fetch(`${API_BASE_URL}/repair-requests/${repairCode}?_=${Date.now()}`)
+    const res = await fetch(`${API_BASE_URL}/repair-requests/${repairCode}?_=${Date.now()}`, {
+      headers: getAuthHeader(),
+    })
     const data = await res.json()
 
     if (!res.ok) throw new Error(data.message || 'โหลดข้อมูลไม่สำเร็จ')

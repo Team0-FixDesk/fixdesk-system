@@ -34,7 +34,14 @@
  */
 
 import Swal from 'sweetalert2'
- 
+
+// ส่วนหัว Authorization สำหรับเรียก API ที่ต้องล็อกอิน (ถ้าไม่มี token คืนอ็อบเจ็กต์ว่าง ให้ backend ตอบ 401 เอง)
+// ใช้งาน: fetch(url, { headers: getAuthHeader() })
+export function getAuthHeader() {
+  const token = localStorage.getItem('token') || sessionStorage.getItem('token')
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
+
 // ฟังก์ชันสำหรับจัดการเมื่อ session หมดเวลา (HTTP 401)
 // ใช้งาน: handleUnauthorized(router) ตรงที่ response.status === 401
 export function handleUnauthorized(router) {
