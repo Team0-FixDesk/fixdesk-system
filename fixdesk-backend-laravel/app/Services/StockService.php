@@ -233,7 +233,7 @@ class StockService
                 u.us_department,
                 CONCAT(u.us_first_name_th, ' ', u.us_last_name_th) as requester,
                 b.bd_name, f.fl_name, r.room_name,
-                GROUP_CONCAT(CONCAT(pd.pd_name, ' x', sfd.sfd_qty) SEPARATOR '\n') as items")
+                GROUP_CONCAT(CONCAT(pd.pd_name, ' x', sfd.sfd_qty) ORDER BY sfd.sfd_id SEPARATOR '\n') as items")
             ->get()
             ->all();
     }
