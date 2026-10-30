@@ -51,7 +51,8 @@ echo "==> build vendor แบบ production (ไม่มี dev dependencies)"
 # แต่ shared hosting ทั่วไป (รวม Ruk-Com) มี gd เปิดอยู่แล้วเป็นค่า default เป็นแค่ข้อจำกัดของเครื่อง dev เท่านั้น
 "$COMPOSER" install --no-dev --optimize-autoloader --no-interaction --ignore-platform-reqs
 
-echo "==> คัดลอกไฟล์แอป (ยกเว้น public/, .git, deploy/)"
+echo "==> คัดลอกไฟล์แอป (ยกเว้น public/, .git, deploy/ และไฟล์ runtime ของเครื่อง dev ใน storage/)"
+# storage/ ของเครื่อง dev มี log, session และ view ที่คอมไพล์แล้ว ซึ่งไม่ควรขึ้นเซิร์ฟเวอร์จริง
 tar --exclude='./public' \
     --exclude='./.git' \
     --exclude='./deploy' \
@@ -59,7 +60,18 @@ tar --exclude='./public' \
     --exclude='./node_modules' \
     --exclude='./.env' \
     --exclude='./tests' \
+    --exclude='./storage/logs/*' \
+    --exclude='./storage/framework/sessions/*' \
+    --exclude='./storage/framework/views/*' \
+    --exclude='./storage/framework/cache/data/*' \
+    --exclude='./storage/framework/testing/*' \
     -cf - . | tar -xf - -C "$DEPLOY_DIR/laravel-app/"
+
+# โฟลเดอร์ที่ Laravel ต้องเขียนไฟล์ลงตอนรัน ต้องมีอยู่เสมอแม้ถูก exclude เนื้อหาออกแล้ว
+mkdir -p "$DEPLOY_DIR/laravel-app/storage/logs" \
+         "$DEPLOY_DIR/laravel-app/storage/framework/sessions" \
+         "$DEPLOY_DIR/laravel-app/storage/framework/views" \
+         "$DEPLOY_DIR/laravel-app/storage/framework/cache/data"
 
 echo "==> คัดลอก public/ ของ Laravel ไปเป็น public_html"
 cp -r public/. "$DEPLOY_DIR/public_html/"
