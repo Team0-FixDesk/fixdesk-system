@@ -71,7 +71,7 @@ MAIL_MAILER=log
 LINE_CHANNEL_ACCESS_TOKEN=
 LINE_CHANNEL_SECRET=
 LINE_GROUP_ID=
-FRONTEND_URL=http://localhost:5173/fixdesk/
+FRONTEND_URL=http://localhost:5173/fixdesk   # ไม่ใส่ / ท้าย (ลิงก์ในข้อความ LINE ต่อด้วย /#/login)
 ```
 
 สร้างค่า `APP_KEY` และ `JWT_SECRET`:
