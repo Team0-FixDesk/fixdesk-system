@@ -14,6 +14,8 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
             'auth.jwt' => \App\Http\Middleware\VerifyJwtToken::class,
+            'role' => \App\Http\Middleware\RequireRole::class,
+            'self.or.admin' => \App\Http\Middleware\EnsureSelfOrAdmin::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
