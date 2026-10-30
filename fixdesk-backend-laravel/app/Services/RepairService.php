@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -11,20 +12,28 @@ class RepairService
 {
     public function __construct(private LineNotificationService $lineNotification) {}
 
+    private const MAX_CODE_ATTEMPTS = 5;
+
     public function generateRfCode(): string
     {
-        $datePart = now()->format('Ymd');
-        $count = DB::table('repair_form')
-            ->whereRaw('DATE(rf_create_at) = CURDATE()')
-            ->count();
-        $running = str_pad((string) ($count + 1), 3, '0', STR_PAD_LEFT);
+        $prefix = 'RF'.now()->format('Ymd');
+        // ใช้เลขลำดับสูงสุดของวันนี้ +1 แทนการนับจำนวนแถว เพื่อไม่ให้ออกรหัสซ้ำเมื่อมีแถวของวันนั้นหายไป
+        // (กรณีไม่มีแถวหาย ผลเท่ากับ "จำนวน + 1" เหมือนเดิม)
+        $last = (int) DB::table('repair_form')
+            ->where('rf_code', 'like', $prefix.'%')
+            ->max(DB::raw('CAST(SUBSTRING(rf_code, '.(strlen($prefix) + 1).') AS UNSIGNED)'));
+        $running = str_pad((string) ($last + 1), 3, '0', STR_PAD_LEFT);
 
-        return "RF{$datePart}{$running}";
+        return $prefix.$running;
+    }
+
+    private function isDuplicateRfCode(QueryException $e): bool
+    {
+        return ($e->errorInfo[1] ?? null) === 1062 && str_contains($e->getMessage(), 'rf_code');
     }
 
     public function createRepair(array $data): array
     {
-        $rfCode = $this->generateRfCode();
         $imageData = ! empty($data['filePaths']) ? json_encode($data['filePaths']) : null;
 
         $location = DB::table('room as r')
@@ -34,23 +43,34 @@ class RepairService
             ->select('b.bd_name as building_name', 'f.fl_name as floor_name', 'r.room_name as room_name')
             ->first();
 
-        $insertId = DB::table('repair_form')->insertGetId([
-            'rf_code' => $rfCode,
-            'rf_us_id' => $data['usId'],
-            'rf_tt_id' => $data['repairTypeId'],
-            'rf_room_id' => $data['roomId'],
-            'rf_prop_number' => $data['assetCode'] ?? null,
-            'rf_problem' => $data['problemDetail'],
-            'rf_detail' => $data['issueDescription'] ?? null,
-            'rf_phone' => $data['phoneNumber'] ?? null,
-            'rf_urgency' => $data['urgency'] ?? 'medium',
-            'rf_image' => $imageData,
-            'rf_building_snapshot' => $location->building_name ?? null,
-            'rf_floor_snapshot' => $location->floor_name ?? null,
-            'rf_room_snapshot' => $location->room_name ?? null,
-            'rf_user_status' => 'pending',
-            'rf_create_at' => now(),
-        ], 'rf_id');
+        $insertId = null;
+        for ($attempt = 1; $insertId === null; $attempt++) {
+            $rfCode = $this->generateRfCode();
+            try {
+                $insertId = DB::table('repair_form')->insertGetId([
+                    'rf_code' => $rfCode,
+                    'rf_us_id' => $data['usId'],
+                    'rf_tt_id' => $data['repairTypeId'],
+                    'rf_room_id' => $data['roomId'],
+                    'rf_prop_number' => $data['assetCode'] ?? null,
+                    'rf_problem' => $data['problemDetail'],
+                    'rf_detail' => $data['issueDescription'] ?? null,
+                    'rf_phone' => $data['phoneNumber'] ?? null,
+                    'rf_urgency' => $data['urgency'] ?? 'medium',
+                    'rf_image' => $imageData,
+                    'rf_building_snapshot' => $location->building_name ?? null,
+                    'rf_floor_snapshot' => $location->floor_name ?? null,
+                    'rf_room_snapshot' => $location->room_name ?? null,
+                    'rf_user_status' => 'pending',
+                    'rf_create_at' => now(),
+                ], 'rf_id');
+            } catch (QueryException $e) {
+                // แจ้งซ่อมพร้อมกันแล้วได้รหัสเดียวกัน ให้ออกรหัสใหม่แล้วลองอีกครั้ง
+                if ($attempt >= self::MAX_CODE_ATTEMPTS || ! $this->isDuplicateRfCode($e)) {
+                    throw $e;
+                }
+            }
+        }
 
         $result = ['insertId' => $insertId, 'rfCode' => $rfCode];
 
