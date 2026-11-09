@@ -1,7 +1,7 @@
 {
   "info": {
-    "name": "FixDesk Phase 1-2 (Laravel)",
-    "description": "ทดสอบ auth + repair flow (Phase 1) และ user/technician/location management (Phase 2) ของ backend Laravel ตัวใหม่. รัน request ตามลำดับในแต่ละ folder แล้ว token/rf_code/id ต่างๆ จะถูกเก็บลง collection variable ให้อัตโนมัติ ไม่ต้อง copy-paste เอง",
+    "name": "FixDesk Phase 1-3 (Laravel)",
+    "description": "ทดสอบ auth + repair flow (Phase 1), user/technician/location management (Phase 2) และ stock + Excel template (Phase 3) ของ backend Laravel ตัวใหม่. รัน request ตามลำดับในแต่ละ folder แล้ว token/rf_code/id ต่างๆ จะถูกเก็บลง collection variable ให้อัตโนมัติ ไม่ต้อง copy-paste เอง",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -14,7 +14,10 @@
     { "key": "new_tt_id", "value": "" },
     { "key": "new_bd_id", "value": "" },
     { "key": "new_fl_id", "value": "" },
-    { "key": "new_room_id", "value": "" }
+    { "key": "new_room_id", "value": "" },
+    { "key": "new_ct_id", "value": "" },
+    { "key": "new_pd_id", "value": "" },
+    { "key": "new_sf_code", "value": "" }
   ],
   "item": [
     {
@@ -687,6 +690,336 @@
             "method": "DELETE",
             "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
             "url": "{{base_url}}/buildings/{{new_bd_id}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Stock Management",
+      "item": [
+        {
+          "name": "Get Categories",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/category"
+          }
+        },
+        {
+          "name": "Create Category",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const data = pm.response.json();",
+                  "if (data.ct_id) { pm.collectionVariables.set('new_ct_id', data.ct_id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ct_name\": \"วัสดุไฟฟ้า\"\n}"
+            },
+            "url": "{{base_url}}/category"
+          }
+        },
+        {
+          "name": "Update Category",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ct_name\": \"วัสดุไฟฟ้า (แก้ไข)\"\n}"
+            },
+            "url": "{{base_url}}/category/{{new_ct_id}}"
+          }
+        },
+        {
+          "name": "Get Units",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/units"
+          }
+        },
+        {
+          "name": "Add Product",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const data = pm.response.json();",
+                  "if (data.id) { pm.collectionVariables.set('new_pd_id', data.id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pd_name\": \"หลอดไฟ LED\",\n  \"pd_asset_code\": \"EL-001\",\n  \"pd_category_id\": {{new_ct_id}},\n  \"pd_quantity\": 50,\n  \"pd_unit_id\": \"หลอด\"\n}"
+            },
+            "url": "{{base_url}}/add-stock",
+            "description": "pd_unit_id ในนี้จริงๆ คือ 'ชื่อหน่วยนับ' เป็น text (ตรงกับต้นฉบับที่ frontend ส่งชื่อ unit มาตรงๆ ไม่ใช่ id) — ถ้ายังไม่มี unit นี้ในระบบจะสร้างให้อัตโนมัติ. ถ้าจะแนบรูปสินค้าด้วยให้เปลี่ยน Body เป็น form-data แล้วเพิ่ม key pd_upload_image ชนิด File"
+          }
+        },
+        {
+          "name": "Get All Products (show-stock)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": "{{base_url}}/show-stock"
+          }
+        },
+        {
+          "name": "Get Stock Transactions",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": "{{base_url}}/transactions",
+            "description": "ควรเห็น transaction ชนิด IN จำนวน 50 จากตอน Add Product"
+          }
+        },
+        {
+          "name": "Update Product",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pd_name\": \"หลอดไฟ LED 9W\",\n  \"pd_asset_code\": \"EL-001\",\n  \"pd_category_id\": {{new_ct_id}},\n  \"pd_quantity\": 60,\n  \"pd_unit_id\": \"หลอด\",\n  \"pd_status\": \"active\"\n}"
+            },
+            "url": "{{base_url}}/update-stock/{{new_pd_id}}",
+            "description": "quantity เปลี่ยนจาก 50 เป็น 60 จะบันทึก transaction IN ส่วนต่าง (+10) ให้อัตโนมัติ"
+          }
+        },
+        {
+          "name": "Import Stock",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    { \"pd_name\": \"ปลั๊กไฟ 3 ตา\", \"pd_asset_code\": \"EL-002\", \"pd_category_name\": \"วัสดุไฟฟ้า (แก้ไข)\", \"pd_quantity\": 20, \"pd_unit_name\": \"อัน\" }\n  ]\n}"
+            },
+            "url": "{{base_url}}/stock/import",
+            "description": "ถ้าชื่อสินค้า/asset code ซ้ำของเดิม จะบวกจำนวนเพิ่มแทนที่จะสร้างแถวใหม่ (ดู 'action':'updated_quantity' ใน response)"
+          }
+        },
+        {
+          "name": "Delete Product",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": "{{base_url}}/delete-stock/{{new_pd_id}}",
+            "description": "รันตัวนี้ก่อน Delete Category (มี dependency check กันลบหมวดหมู่ที่ยังมีสินค้าอยู่)"
+          }
+        },
+        {
+          "name": "Delete Category",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": "{{base_url}}/category/{{new_ct_id}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. Stock Withdraw & Approval",
+      "item": [
+        {
+          "name": "Withdraw (as Technician)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const data = pm.response.json();",
+                  "if (data.sf_code) { pm.collectionVariables.set('new_sf_code', data.sf_code); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{tech_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"repair_code\": \"{{rf_code}}\",\n  \"items\": [\n    { \"id\": {{new_pd_id}}, \"qty\": 5 }\n  ]\n}"
+            },
+            "url": "{{base_url}}/withdraw",
+            "description": "ต้องมี rf_code จริง (รัน folder 2 'Create Repair' ก่อน) และ new_pd_id ที่ยังไม่ถูกลบ (รัน folder 7 'Add Product' ก่อน แล้วอย่าเพิ่งลบ) — endpoint นี้ต้นฉบับ Node ประกาศซ้ำ 2 จุด ตัวที่ทำงานจริงคือฝั่ง technician ไม่ใช่ stock-routes.js"
+          }
+        },
+        {
+          "name": "Get All Stock Forms (admin)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": "{{base_url}}/stock-forms"
+          }
+        },
+        {
+          "name": "Get Stock Form Detail",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": "{{base_url}}/stock-forms/detail/{{new_sf_code}}"
+          }
+        },
+        {
+          "name": "Get User Stock Forms (user_id=2, tech01)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": "{{base_url}}/stock-forms/2"
+          }
+        },
+        {
+          "name": "Get My Stock Forms (as Technician)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{tech_token}}" }],
+            "url": "{{base_url}}/technician/my-stock-forms"
+          }
+        },
+        {
+          "name": "Approve Item",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sf_code\": \"{{new_sf_code}}\",\n  \"pd_id\": {{new_pd_id}},\n  \"status\": \"approved\"\n}"
+            },
+            "url": "{{base_url}}/stock-forms/detail/update-item-status",
+            "description": "อนุมัติแล้ว stock จะถูกตัดจริง (ลอง Get All Products ใน folder 7 ดูจำนวนที่ลดลง) — ถ้ารันซ้ำจะเจอ ALREADY_PROCESSED"
+          }
+        },
+        {
+          "name": "Update Multiple Items Status (batch)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sf_code\": \"{{new_sf_code}}\",\n  \"items\": [\n    { \"pd_id\": {{new_pd_id}}, \"status\": \"approved\" }\n  ]\n}"
+            },
+            "url": "{{base_url}}/stock-forms/detail/update-items-status-batch",
+            "description": "ถ้ารายการไหน status ไม่ใช่ waiting แล้ว (เช่นเพิ่งอนุมัติไปจาก request ก่อนหน้า) จะข้ามเงียบๆ ไม่ throw error"
+          }
+        },
+        {
+          "name": "Return Item",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sf_code\": \"{{new_sf_code}}\",\n  \"pd_id\": {{new_pd_id}},\n  \"quantity\": 2\n}"
+            },
+            "url": "{{base_url}}/stock-forms/return-item",
+            "description": "คืนได้ไม่เกินจำนวนที่ approved ไปแล้ว ลบด้วยจำนวนที่เคยคืนไปก่อนหน้า"
+          }
+        },
+        {
+          "name": "Update Form Status (manual override)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sf_code\": \"{{new_sf_code}}\",\n  \"status\": \"approved\"\n}"
+            },
+            "url": "{{base_url}}/stock-forms/update-status"
+          }
+        },
+        {
+          "name": "Close Job (as Technician)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{tech_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"done\",\n  \"tech_summary\": \"เปลี่ยนอุปกรณ์ใหม่เรียบร้อย\",\n  \"repair_method\": \"in_house\",\n  \"result_status\": \"completed\"\n}"
+            },
+            "url": "{{base_url}}/technician/close-job/{{rf_code}}",
+            "description": "ต้อง Assign + Accept Job (folder 3) ให้ rf_code นี้ก่อน และห้ามมีรายการเบิกที่ยังเป็น 'waiting' ค้างอยู่ (approve/reject ให้ครบก่อน) ไม่งั้นจะเจอ PENDING_STOCK_APPROVAL — ถ้าจะแนบรูปหลังซ่อมด้วย เปลี่ยน Body เป็น form-data แล้วเพิ่ม key tech_image_after ชนิด File (เลือกได้หลายไฟล์)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "9. Excel Templates",
+      "item": [
+        {
+          "name": "Download Users Template",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/download-template/users",
+            "description": "กด Send แล้วกด 'Save Response' > 'Save to a file' เพื่อดาวน์โหลดไฟล์ .xlsx มาเปิดดู"
+          }
+        },
+        {
+          "name": "Download Locations Template",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/download-template/locations"
+          }
+        },
+        {
+          "name": "Download Stocks Template",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/download-template/stocks"
+          }
+        },
+        {
+          "name": "Download Invalid Type (expect 404)",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/download-template/bogus"
           }
         }
       ]

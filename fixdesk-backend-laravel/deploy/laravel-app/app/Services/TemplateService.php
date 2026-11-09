@@ -7,6 +7,7 @@ use PhpOffice\PhpSpreadsheet\Cell\DataValidation;
 use PhpOffice\PhpSpreadsheet\RichText\RichText;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 
 /**
  * พอร์ตจาก fixdesk-backend/src/services/template-service.js (ExcelJS -> PhpSpreadsheet)
@@ -47,6 +48,9 @@ class TemplateService
 
         $example = ['user01' => 'somchai.j', $titles[0] ?? 'นาย', 'เจ้าหน้าที่ปฏิบัติการ', 'สมชาย', 'ใจดี', 'Somchai', 'Jaidee', '0812345678', 'แผนกไอที', in_array('User', $roles, true) ? 'User' : ($roles[0] ?? 'User'), '-'];
         $this->writeExampleRow($sheet, array_values($example));
+
+        // ช่องเบอร์โทรเป็นข้อความ (@) กัน Excel แปลงเป็นตัวเลขแล้วตัดเลข 0 นำหน้าทิ้ง
+        $sheet->getStyle('H2:H1000')->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_TEXT);
 
         $sheet->setCellValue('M1', 'หมายเหตุ: ช่องที่มีเครื่องหมาย * เป็นข้อมูลบังคับที่จำเป็นต้องระบุ');
         $sheet->getStyle('M1')->getFont()->setBold(true)->getColor()->setARGB(self::RED);

@@ -19,6 +19,10 @@ class LineNotificationService
 
     private const RETRY_DELAYS_MS = [500, 500, 500];
 
+    private const CONNECT_TIMEOUT_SECONDS = 3;
+
+    private const REQUEST_TIMEOUT_SECONDS = 8;
+
     private array $urgencyConfig = [
         'high' => ['bgColor' => '#FEE2E2', 'text' => '🔴 เร่งด่วนมาก', 'textColor' => '#991B1B'],
         'medium' => ['bgColor' => '#FEF3C7', 'text' => '🟡 ปานกลาง', 'textColor' => '#92400E'],
@@ -100,7 +104,9 @@ class LineNotificationService
     private function buildBody(string $headerText, string $headerColor, string $footerBoxColor, array $rows, array $data, string $altText, array $extraFooterLines = [], ?string $footerLabel = null, ?string $footerNote = null): array
     {
         $urgency = $this->urgencyConfig[$data['urgency'] ?? 'medium'] ?? $this->urgencyConfig['medium'];
-        $now = now()->timezone('Asia/Bangkok')->format('d/m/Y H:i:s');
+        // ปีเป็น พ.ศ. ให้ตรงกับข้อความเดิมของระบบ Node (toLocaleString 'th-TH' แสดงปี พ.ศ.)
+        $bangkokNow = now()->timezone('Asia/Bangkok');
+        $now = $bangkokNow->format('d/m/').($bangkokNow->year + 543).$bangkokNow->format(' H:i:s');
 
         $rowContents = array_map(fn ($row) => [
             'type' => 'box', 'layout' => 'baseline', 'spacing' => 'md',
@@ -148,7 +154,7 @@ class LineNotificationService
                     'type' => 'box', 'layout' => 'vertical',
                     'contents' => [[
                         'type' => 'button', 'style' => 'primary', 'color' => $headerColor,
-                        'action' => ['type' => 'uri', 'label' => $footerLabel, 'uri' => config('services.frontend_url').'/#/login'],
+                        'action' => ['type' => 'uri', 'label' => $footerLabel, 'uri' => rtrim((string) config('services.frontend_url'), '/').'/#/login'],
                     ]],
                 ] : null,
             ],
@@ -157,11 +163,21 @@ class LineNotificationService
 
     private function send(array $message, int $retryCount = 0): array
     {
-        $response = Http::withToken(config('services.line.channel_access_token'))
-            ->post('https://api.line.me/v2/bot/message/push', [
-                'to' => config('services.line.group_id'),
-                'messages' => [$message],
-            ]);
+        // การแจ้งเตือน LINE ต้องไม่ทำให้การทำงานหลักล้ม (เช่น แจ้งซ่อมได้ 500 ทั้งที่บันทึกลงฐานแล้ว)
+        // จึงจำกัดเวลา และจับ error ของการเชื่อมต่อ/หมดเวลา แล้วคืนผลเป็น success=false แทน
+        try {
+            $response = Http::withToken(config('services.line.channel_access_token'))
+                ->connectTimeout(self::CONNECT_TIMEOUT_SECONDS)
+                ->timeout(self::REQUEST_TIMEOUT_SECONDS)
+                ->post('https://api.line.me/v2/bot/message/push', [
+                    'to' => config('services.line.group_id'),
+                    'messages' => [$message],
+                ]);
+        } catch (\Throwable $e) {
+            Log::error('LINE notification could not be sent', ['error' => $e->getMessage()]);
+
+            return ['success' => false, 'message' => 'LINE notification failed: connection error'];
+        }
 
         if ($response->successful()) {
             return ['success' => true, 'message' => 'Notification sent'];
